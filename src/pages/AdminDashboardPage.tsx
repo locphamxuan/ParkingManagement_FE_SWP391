@@ -174,7 +174,7 @@ export default function AdminDashboardPage({ user, onLogout, onRefresh }: AdminD
                         <td className="px-4 py-3">
                           <span className={`px-3 py-1 rounded-full text-xs font-bold ${
                             row.status === 'active' ? 'bg-green-100 text-green-800' :
-                            row.status === 'inactive' ? 'bg-red-100 text-red-800' :
+                            row.status === 'paused' ? 'bg-red-100 text-red-800' :
                             'bg-gray-100 text-gray-800'
                           }`}>{row.status}</span>
                         </td>
@@ -210,7 +210,7 @@ export default function AdminDashboardPage({ user, onLogout, onRefresh }: AdminD
                     </p>
                     <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold ${
                       item.status === 'active' ? 'bg-green-100 text-green-800' :
-                      item.status === 'inactive' ? 'bg-red-100 text-red-800' :
+                      item.status === 'review' ? 'bg-yellow-100 text-yellow-800' :
                       'bg-gray-100 text-gray-800'
                     }`}>{item.status}</span>
                   </article>
@@ -341,8 +341,7 @@ export default function AdminDashboardPage({ user, onLogout, onRefresh }: AdminD
                         <td className="px-4 py-3 text-gray-600">{row.at}</td>
                         <td className="px-4 py-3">
                           <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold ${
-                            row.severity === 'critical' ? 'bg-red-100 text-red-800' :
-                            row.severity === 'high' ? 'bg-orange-100 text-orange-800' :
+                            row.severity === 'high' ? 'bg-red-100 text-red-800' :
                             row.severity === 'medium' ? 'bg-yellow-100 text-yellow-800' :
                             'bg-blue-100 text-blue-800'
                           }`}>{row.severity}</span>
