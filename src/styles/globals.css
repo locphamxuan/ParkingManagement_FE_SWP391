@@ -78,3 +78,28 @@ a {
   color: inherit;
   text-decoration: none;
 }
+
+/* Dropdown animations and trigger caret rotation */
+@keyframes radixDropdownIn {
+  from { opacity: 0; transform: translateY(-6px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes radixDropdownOut {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(-6px) scale(0.98); }
+}
+
+.radix-dropdown-content[data-state="open"] {
+  animation: radixDropdownIn 160ms cubic-bezier(.2,.9,.2,1);
+}
+.radix-dropdown-content[data-state="closed"] {
+  animation: radixDropdownOut 120ms cubic-bezier(.2,.9,.2,1);
+}
+
+button[aria-expanded="true"] .chev {
+  transform: rotate(180deg);
+}
+.chev {
+  transition: transform 160ms ease;
+}

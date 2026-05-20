@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import {
   ArrowRight,
@@ -16,6 +17,9 @@ import {
   ShieldCheck,
   Ticket,
   Wallet,
+  User,
+  ChevronDown,
+  LogOut,
 } from 'lucide-react';
 import type { LegacyModule } from '../data/mainFlow';
 import './HomePage.css';
@@ -26,6 +30,8 @@ interface HomePageProps {
   onOpenDashboard: () => void;
   onAction: (module: LegacyModule) => void;
   onOpenAdmin?: () => void;
+  user?: { fullName?: string; email?: string } | null;
+  onLogout?: () => void;
 }
 
 const navigationLinks = [
@@ -71,9 +77,21 @@ const benefits = [
   },
 ];
 
-export default function HomePage({ modules, onOpenAuth, onOpenDashboard, onAction, onOpenAdmin }: HomePageProps) {
+export default function HomePage({ modules, onOpenAuth, onOpenDashboard, onAction, onOpenAdmin, user, onLogout }: HomePageProps) {
   const productModules = modules.slice(0, 4);
   const serviceModules = modules.slice(4);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (!menuRef.current) return;
+      if (!menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+    }
+
+    document.addEventListener('click', handleClick);
+    return () => document.removeEventListener('click', handleClick);
+  }, []);
 
   return (
     <main className="home-view" id="top">
@@ -97,9 +115,9 @@ export default function HomePage({ modules, onOpenAuth, onOpenDashboard, onActio
                 {link.label}
               </a>
             ))}
-            <button className="home-admin-link" type="button" onClick={() => onOpenAdmin?.()}>
+            {/* <button className="home-admin-link" type="button" onClick={() => onOpenAdmin?.()}>
               Quản trị
-            </button>
+            </button> */}
           </nav>
 
           <div className="home-nav-meta">
@@ -107,9 +125,46 @@ export default function HomePage({ modules, onOpenAuth, onOpenDashboard, onActio
               <span>Hỗ trợ 24/7</span>
               <strong>1900 636 447</strong>
             </div>
-            <button className="ghost-button home-nav-button" type="button" onClick={() => onOpenAuth('login')}>
-              Đăng nhập
-            </button>
+            {user ? (
+              <div className="user-dropdown" ref={menuRef}>
+                <button
+                  type="button"
+                  aria-expanded={menuOpen}
+                  className="user-dropdown-button"
+                  onClick={() => setMenuOpen((v) => !v)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'ArrowDown') {
+                      e.preventDefault();
+                      setMenuOpen(true);
+                      setTimeout(() => {
+                        const first = menuRef.current?.querySelector<HTMLButtonElement>('.user-dropdown-item');
+                        first?.focus();
+                      }, 0);
+                    }
+                    if (e.key === 'Escape') setMenuOpen(false);
+                  }}
+                >
+                  <User size={16} style={{ marginRight: 8 }} />
+                  <span className="home-username">{user.fullName ?? user.email}</span>
+                  <ChevronDown size={14} className="chev" />
+                </button>
+
+                {menuOpen && (
+                  <div className="user-dropdown-menu" role="menu">
+                    <button type="button" className="user-dropdown-item" onClick={onOpenDashboard} role="menuitem">
+                      Hồ sơ
+                    </button>
+                    <button type="button" className="user-dropdown-item" onClick={onLogout} role="menuitem">
+                      <LogOut size={14} style={{ marginRight: 8 }} /> Đăng xuất
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <button className="ghost-button home-nav-button" type="button" onClick={() => onOpenAuth('login')}>
+                Đăng nhập
+              </button>
+            )}
           </div>
         </div>
       </header>

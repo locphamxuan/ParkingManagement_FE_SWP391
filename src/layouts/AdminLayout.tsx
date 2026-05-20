@@ -40,7 +40,7 @@ export function AdminLayout() {
           email={session?.email ?? MOCK_ADMIN.email}
           onLogout={() => {
             logout();
-            navigate('/admin/login', { replace: true });
+            navigate('/', { replace: true });
           }}
         />
           <main className="flex-1 p-4 md:p-6">
