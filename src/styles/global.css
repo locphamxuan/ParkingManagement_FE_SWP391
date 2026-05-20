@@ -1,0 +1,161 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap');
+
+:root {
+  color-scheme: light;
+  --bg: #f3f5f9;
+  --panel: #ffffff;
+  --line: #d8e0eb;
+  --text: #1f2a44;
+  --muted: #5f6b85;
+  --accent: #f97316;
+  --accent-soft: rgba(249, 115, 22, 0.12);
+  --danger: #dc2626;
+  --shadow: 0 16px 36px rgba(15, 23, 42, 0.1);
+  --radius-xl: 28px;
+  --radius-md: 16px;
+  --radius-sm: 12px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: 'Manrope', sans-serif;
+  color: var(--text);
+  background: linear-gradient(180deg, #f8fafc 0%, #eef2f7 45%, #e6ebf3 100%);
+  overflow-x: hidden;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.app-shell {
+  width: min(1360px, calc(100vw - 24px));
+  margin: 0 auto;
+  padding: 0 0 40px;
+  position: relative;
+}
+
+.panel {
+  position: relative;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--line);
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.eyebrow {
+  margin: 0 0 6px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--muted);
+}
+
+.hero-text {
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: 1.03rem;
+  line-height: 1.75;
+  max-width: 62ch;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-family: 'Space Grotesk', sans-serif;
+  letter-spacing: -0.03em;
+}
+
+h1 {
+  font-size: clamp(1.55rem, 2vw, 2rem);
+}
+
+.brand-lockup {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.brand-mark {
+  width: 54px;
+  height: 54px;
+  border-radius: 18px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  padding: 10px;
+  background: linear-gradient(180deg, rgba(249, 115, 22, 0.2), rgba(249, 115, 22, 0.04));
+  border: 1px solid rgba(249, 115, 22, 0.24);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.brand-mark span {
+  border-radius: 999px;
+  background: linear-gradient(180deg, #fdba74, #f97316);
+}
+
+.brand-mark span:nth-child(1) {
+  height: 100%;
+}
+
+.brand-mark span:nth-child(2) {
+  height: 74%;
+  align-self: end;
+}
+
+.brand-mark span:nth-child(3) {
+  height: 54%;
+  align-self: end;
+}
+
+.ghost-button {
+  padding: 13px 18px;
+  font-weight: 700;
+  color: var(--text);
+  background: #f8fafc;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+
+.primary-button {
+  padding: 13px 18px;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  font-weight: 700;
+  color: #ffffff;
+  background: linear-gradient(135deg, #fb923c, #f97316);
+  box-shadow: 0 12px 26px rgba(249, 115, 22, 0.24);
+}
+
+.primary-button:hover,
+.ghost-button:hover {
+  transform: translateY(-1px);
+}
+
+.primary-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+@media (max-width: 720px) {
+  .app-shell {
+    width: min(100vw, 1360px);
+    padding-top: 0;
+  }
+}

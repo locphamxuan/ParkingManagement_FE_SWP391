@@ -1,0 +1,105 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  --app-background: 0 0% 100%;
+  --app-foreground: 221 39% 19%;
+  --app-primary: 28 92% 58%;
+  --app-primary-foreground: 20 20% 98%;
+  --app-secondary: 220 23% 96%;
+  --app-secondary-foreground: 221 39% 19%;
+  --app-muted: 218 22% 94%;
+  --app-muted-foreground: 222 13% 44%;
+  --app-card: 0 0% 100%;
+  --app-card-foreground: 221 39% 19%;
+  --app-border: 214 20% 88%;
+  --app-input: 214 20% 88%;
+  --app-ring: 28 92% 58%;
+  --bg: #f3f5f9;
+  --panel: #ffffff;
+  --line: #d8e0eb;
+  --text: #1f2a44;
+  --muted: #5f6b85;
+  --accent: #f97316;
+  --accent-soft: rgba(249, 115, 22, 0.12);
+  --danger: #dc2626;
+  --shadow: 0 16px 36px rgba(15, 23, 42, 0.1);
+  --radius-xl: 28px;
+  --radius-md: 16px;
+  --radius-sm: 12px;
+}
+
+.admin-theme {
+  color-scheme: light;
+  --app-background: 35 60% 98%;
+  --app-foreground: 221 46% 10%;
+  --app-primary: 24 94% 54%;
+  --app-primary-foreground: 20 20% 98%;
+  --app-secondary: 32 72% 95%;
+  --app-secondary-foreground: 221 46% 10%;
+  --app-muted: 34 44% 96%;
+  --app-muted-foreground: 220 13% 26%;
+  --app-card: 0 0% 100%;
+  --app-card-foreground: 221 46% 10%;
+  --app-border: 28 36% 86%;
+  --app-input: 28 36% 86%;
+  --app-ring: 24 94% 54%;
+  --text: #111827;
+  --shadow: 0 16px 40px rgba(120, 83, 48, 0.12);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: 'Manrope', sans-serif;
+  background: linear-gradient(180deg, #f8fafc 0%, #eef2f7 45%, #e6ebf3 100%);
+  color: var(--text);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: 'Space Grotesk', sans-serif;
+  letter-spacing: -0.02em;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Dropdown animations and trigger caret rotation */
+@keyframes radixDropdownIn {
+  from { opacity: 0; transform: translateY(-6px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes radixDropdownOut {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(-6px) scale(0.98); }
+}
+
+.radix-dropdown-content[data-state="open"] {
+  animation: radixDropdownIn 160ms cubic-bezier(.2,.9,.2,1);
+}
+.radix-dropdown-content[data-state="closed"] {
+  animation: radixDropdownOut 120ms cubic-bezier(.2,.9,.2,1);
+}
+
+button[aria-expanded="true"] .chev {
+  transform: rotate(180deg);
+}
+.chev {
+  transition: transform 160ms ease;
+}
