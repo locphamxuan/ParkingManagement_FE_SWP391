@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Bell, ChevronDown, Search, User, LogOut } from 'lucide-react';
 import AdminUserDropdown from './AdminUserDropdown';
+import ManagerUserDropdown from './ManagerUserDropdown';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
@@ -8,9 +9,10 @@ interface NavbarProps {
   title: string;
   email: string;
   onLogout: () => void;
+  dropdownType?: 'admin' | 'manager';
 }
 
-export function Navbar({ title, email, onLogout }: NavbarProps) {
+export function Navbar({ title, email, onLogout, dropdownType = 'admin' }: NavbarProps) {
   return (
     <header className="sticky top-0 z-20 border-b border-border/80 bg-[rgba(255,250,243,0.86)] px-4 py-3 backdrop-blur-2xl">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -38,8 +40,12 @@ export function Navbar({ title, email, onLogout }: NavbarProps) {
             <span className="hidden sm:inline">Thông báo</span>
           </Button>
 
-          {/* Custom user dropdown (desktop) */}
-          <AdminUserDropdown email={email} onLogout={onLogout} />
+          {/* Custom user dropdown based on role */}
+          {dropdownType === 'manager' ? (
+            <ManagerUserDropdown email={email} onLogout={onLogout} />
+          ) : (
+            <AdminUserDropdown email={email} onLogout={onLogout} />
+          )}
           
         </div>
       </div>

@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { AdminLayout } from '@/layouts/AdminLayout';
+import { ManagerLayout } from '@/layouts/ManagerLayout';
 import { DashboardOverviewPage } from '@/pages/admin/DashboardOverviewPage';
 import { LoginPage } from '@/pages/admin/LoginPage';
 import { BuildingsPage } from '@/pages/admin/BuildingsPage';
@@ -9,6 +10,18 @@ import { AuditLogsPage } from '@/pages/admin/AuditLogsPage';
 import { FraudDetectionPage } from '@/pages/admin/FraudDetectionPage';
 import { SystemHealthPage } from '@/pages/admin/SystemHealthPage';
 import { ModulePlaceholderPage } from '@/pages/admin/ModulePlaceholderPage';
+import {
+  ManagerDashboardPage,
+  ManagerFloorsPage,
+  ManagerSlotsPage,
+  ManagerVehiclesPage,
+  ManagerPricingPage,
+  ManagerPackagesPage,
+  ManagerStaffPage,
+  ManagerRevenueReportPage,
+  ManagerFeedbackPage,
+  ManagerAuditLogsPage,
+} from '@/pages/manager';
 import { HomeRoute } from '@/pages/public/HomeRoute';
 import { DashboardRoute } from '@/pages/public/DashboardRoute';
 import { PublicLoginRoute, PublicRegisterRoute } from '@/pages/public/AuthRoutes';
@@ -59,6 +72,19 @@ export function AppRouter() {
             path="settings"
             element={<ModulePlaceholderPage title="Cài đặt" description="Cấu hình nền tảng, chính sách truy cập và tùy chọn vận hành." />}
           />
+        </Route>
+
+        <Route path="/manager/dashboard" element={<ManagerLayout />}>
+          <Route index element={<ManagerDashboardPage />} />
+          <Route path="floors" element={<ManagerFloorsPage />} />
+          <Route path="slots" element={<ManagerSlotsPage />} />
+          <Route path="vehicles" element={<ManagerVehiclesPage />} />
+          <Route path="pricing" element={<ManagerPricingPage />} />
+          <Route path="packages" element={<ManagerPackagesPage />} />
+          <Route path="staff" element={<ManagerStaffPage />} />
+          <Route path="revenue-report" element={<ManagerRevenueReportPage />} />
+          <Route path="feedback" element={<ManagerFeedbackPage />} />
+          <Route path="audit-logs" element={<ManagerAuditLogsPage />} />
         </Route>
       </Route>
 
