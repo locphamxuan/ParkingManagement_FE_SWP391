@@ -1,16 +1,57 @@
-# React + Vite
+# PBMS Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Frontend-only enterprise Admin console cho Parking Building Management System (PBMS), dùng React + TypeScript + Tailwind.
 
-Currently, two official plugins are available:
+## Chạy dự án
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```bash
+cd FE
+npm install
+npm run dev
+```
 
-## React Compiler
+## Mock Auth
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- Route public: `/`
+- Route login: `/admin/login`
+- Route protected: `/admin/dashboard`
+- Mock credential:
+	- email: `admin@pbms.com`
+	- password: `123456`
 
-## Expanding the ESLint configuration
+Session được lưu bằng localStorage qua Zustand persist.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Mock Data Architecture (de-couple để đổi BE nhanh)
+
+UI không import mock trực tiếp. Tất cả dữ liệu admin đi qua service layer:
+
+- Data entrypoint: `src/services/admin/index.ts`
+- Mock adapter: `src/services/admin/mockAdapter.ts`
+- API adapter: `src/services/admin/apiAdapter.ts`
+- Hook tiêu thụ cho UI: `src/hooks/useAdminDataset.ts`
+
+Quy trình đổi sang BE thật:
+
+1. Set biến môi trường `VITE_USE_MOCK_DATA=false`.
+2. Implement endpoint thật trong `src/services/admin/apiAdapter.ts`.
+3. Mapping response BE vào `AdminDataset` trong `src/services/admin/types.ts`.
+4. Xóa `src/services/admin/mockAdapter.ts` và `src/mock/data.ts` khi không cần nữa.
+
+Không cần sửa các page admin vì chúng chỉ đọc qua `useAdminDataset()`.
+
+## Cấu trúc chính
+
+```text
+src/
+	components/
+	hooks/
+	layouts/
+	mock/
+	pages/
+	routes/
+	services/
+	store/
+	styles/
+	types/
+	utils/
+```
