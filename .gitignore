@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Claude and API specs
+.claude
+openspec
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
