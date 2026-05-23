@@ -1,5 +1,8 @@
 import { useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
+import { Home } from 'lucide-react';
+import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
+import { CartoonCar3D } from '@/components/shared/CartoonCar3D';
 
 const initialForm = {
   fullName: '',
@@ -34,21 +37,22 @@ const promoPoints = [
   },
 ];
 
-export default function AuthPage({
-  mode,
-  notice,
-  onModeChange,
-  onBackHome,
-  onSubmit,
-  isLoading,
-}: AuthPageProps) {
+export default function AuthPage({ mode, notice, onModeChange, onBackHome, onSubmit, isLoading }: AuthPageProps) {
   const [form, setForm] = useState(initialForm);
 
-  const title = useMemo(
-    () => (mode === 'login' ? 'Đăng nhập vào PBMS' : 'Tạo tài khoản PBMS'),
-    [mode]
-  );
+  // 3D Mouse Tracking Tilt Motion Values
+  const mouseX = useMotionValue(0.5); // Range: 0 to 1
+  const mouseY = useMotionValue(0.5); // Range: 0 to 1
 
+  // Smooth springs for high-tactile response
+  const springX = useSpring(mouseX, { stiffness: 120, damping: 22 });
+  const springY = useSpring(mouseY, { stiffness: 120, damping: 22 });
+
+  // Map mouse positions to rotational angles
+  const rotateY = useTransform(springX, [0, 1], [-8, 8]);
+  const rotateX = useTransform(springY, [0, 1], [8, -8]);
+
+  const title = useMemo(() => (mode === 'login' ? 'Đăng nhập vào PBMS' : 'Tạo tài khoản PBMS'), [mode]);
   const description = useMemo(
     () =>
       mode === 'login'
@@ -57,212 +61,383 @@ export default function AuthPage({
     [mode]
   );
 
-  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = event.target;
-    setForm((current) => ({ ...current, [name]: value }));
-  };
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const { name, value } = e.target;
+    setForm((s) => ({ ...s, [name]: value }));
+  }
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
     const payload: Record<string, string> = {
       email: form.email.trim(),
       password: form.password,
-      ...(mode === 'register'
-        ? {
-            fullName: form.fullName.trim(),
-            phone: form.phone.trim(),
-          }
-        : {}),
+      ...(mode === 'register' ? { fullName: form.fullName.trim(), phone: form.phone.trim() } : {}),
     };
+    await onSubmit({ mode, payload });
+  }
 
-    try {
-      await onSubmit({ mode, payload });
-      setForm(initialForm);
-    } catch {
-      return;
-    }
-  };
+  function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const width = rect.width;
+    const height = rect.height;
+    const x = (e.clientX - rect.left) / width;
+    const y = (e.clientY - rect.top) / height;
+    mouseX.set(x);
+    mouseY.set(y);
+  }
+
+  function handleMouseLeave() {
+    mouseX.set(0.5);
+    mouseY.set(0.5);
+  }
 
   return (
-    <main className="min-h-screen p-7 grid items-center bg-gradient-to-br from-orange-50 via-amber-50 to-white radial-gradient-accent">
-      <section className="w-full max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-1 rounded-5xl overflow-hidden border border-black/8 bg-white/88 shadow-2xl shadow-black/12 backdrop-blur">
-        <aside className="relative min-h-xl p-8.5 text-orange-50 bg-gradient-to-br from-gray-950 via-gray-900 to-slate-950">
-          <div className="absolute inset-0 opacity-50">
-            <div className="absolute top-0 left-0 w-72 h-72 rounded-full bg-gradient-radial from-orange-600/26 to-transparent -translate-y-1/2 -translate-x-1/3"></div>
-            <div className="absolute inset-0 opacity-50 bg-gradient-to-r from-white/3 to-transparent via-gradient-to-b from-white/2 to-transparent"></div>
-          </div>
+    <main 
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      className="relative min-h-screen flex items-center justify-center bg-slate-950 text-slate-100 py-12 px-4 overflow-hidden selection:bg-orange-500 selection:text-white"
+      style={{ perspective: '1200px' }}
+    >
+      {/* Laser Scanning Line and perspective grid animations */}
+      <style>{`
+        @keyframes gridScroll {
+          0% {
+            background-position: 0 0;
+          }
+          100% {
+            background-position: 0 45px;
+          }
+        }
+        .cyber-grid-animate {
+          animation: gridScroll 3.5s linear infinite;
+        }
+        @keyframes scanline {
+          0% {
+            background-position: -200% 0;
+          }
+          100% {
+            background-position: 200% 0;
+          }
+        }
+        .input-scan-focus {
+          transition: all 0.3s ease;
+        }
+        .input-scan-focus:focus {
+          background-image: linear-gradient(90deg, rgba(15,23,42,0.85) 0%, rgba(249,115,22,0.06) 50%, rgba(15,23,42,0.85) 100%);
+          background-size: 200% 100%;
+          animation: scanline 2.5s linear infinite;
+        }
+      `}</style>
+      
+      {/* Background Neon Glow Vectors */}
+      <div className="absolute top-0 right-0 w-[550px] h-[550px] rounded-full bg-[radial-gradient(circle_at_center,rgba(249,115,22,0.08),transparent_60%)] pointer-events-none blur-3xl z-0" />
+      <div className="absolute bottom-0 left-0 w-[450px] h-[450px] rounded-full bg-[radial-gradient(circle_at_center,rgba(168,85,247,0.06),transparent_60%)] pointer-events-none blur-3xl z-0" />
 
-          <div className="relative z-1 grid content-between min-h-full gap-7">
-            <div className="flex justify-between gap-4 items-start">
-              <div className="inline-flex items-center gap-3.5">
-                <div className="w-14 h-14 rounded-4xl grid grid-cols-3 gap-1 p-2.5 bg-gradient-to-b from-orange-600/22 to-orange-600/6 border border-white/16 shadow-inner shadow-white/8" aria-hidden="true">
-                  <span />
-                  <span />
-                  <span />
-                </div>
-                <div>
-                  <strong className="block text-lg text-white">PBMS Parking</strong>
-                  <span className="block mt-0.5 text-xs text-orange-100 uppercase tracking-wider">Cloud Parking Platform</span>
-                </div>
+      {/* 3D Cyber-Grid Perspective Floor */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+        <div 
+          className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[200%] h-[50%] opacity-40"
+          style={{
+            perspective: '1000px',
+            transformStyle: 'preserve-3d'
+          }}
+        >
+          <div 
+            className="w-full h-full cyber-grid-animate"
+            style={{
+              transform: 'rotateX(75deg)',
+              transformOrigin: 'bottom center',
+              backgroundImage: `
+                linear-gradient(to right, rgba(249, 115, 22, 0.12) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(168, 85, 247, 0.12) 1px, transparent 1px)
+              `,
+              backgroundSize: '45px 45px',
+              maskImage: 'linear-gradient(to top, rgba(0,0,0,1) 10%, rgba(0,0,0,0) 80%)',
+              WebkitMaskImage: 'linear-gradient(to top, rgba(0,0,0,1) 10%, rgba(0,0,0,0) 80%)',
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Floating Sticky Back Button */}
+      <div className="absolute top-6 left-6 z-20">
+        <a 
+          href="/" 
+          className="inline-flex items-center gap-2 rounded-xl border border-white/5 bg-slate-900/60 backdrop-blur-md px-4 py-2.5 text-xs font-black uppercase tracking-widest text-orange-400 shadow-xl hover:border-orange-500/30 hover:shadow-[0_0_15px_rgba(249,115,22,0.25)] hover:scale-105 transition-all duration-300"
+        >
+          <Home size={14} className="stroke-[3]" />
+          Về trang chủ
+        </a>
+      </div>
+
+      {/* Core Center Auth Container with 3D Mouse Tilt */}
+      <motion.div 
+        style={{ 
+          rotateX, 
+          rotateY, 
+          transformStyle: "preserve-3d" 
+        }}
+        initial={{ opacity: 0, scale: 0.96, z: -100 }}
+        animate={{ opacity: 1, scale: 1, z: 0 }}
+        transition={{ type: "spring", stiffness: 100, damping: 18 }}
+        className="w-full max-w-4xl glass-panel-dark border border-white/5 shadow-2xl rounded-3xl overflow-hidden grid grid-cols-1 md:grid-cols-2 relative z-10"
+      >
+        {/* Left Interactive Promo Info Column */}
+        <div 
+          className="p-8 bg-gradient-to-br from-orange-600/90 via-orange-600 to-amber-600/85 text-white flex flex-col justify-between relative overflow-hidden preserve-3d"
+          style={{ transformStyle: "preserve-3d" }}
+        >
+          <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:16px_16px] pointer-events-none" />
+          
+          <div className="relative z-10" style={{ transform: "translateZ(30px)" }}>
+            <h2 className="text-3xl font-black tracking-tight">{title}</h2>
+            <p className="mt-3.5 text-xs font-bold text-orange-100 leading-relaxed">{description}</p>
+          </div>
+          
+          {/* HOLOGRAPHIC 3D RADAR SCANNER CORE */}
+          <div 
+            className="relative my-6 py-8 flex flex-col items-center justify-center min-h-[180px] z-10 preserve-3d"
+            style={{ transform: "translateZ(45px)", transformStyle: "preserve-3d" }}
+          >
+            {/* Ambient Background Glow behind the Radar */}
+            <div className="absolute w-36 h-36 rounded-full bg-[radial-gradient(circle_at_center,rgba(6,182,212,0.18),transparent_70%)] pointer-events-none blur-xl" />
+            
+            {/* Holographic Spark Particles */}
+            {[
+              { id: 1, left: "25%", color: "#06b6d4", delay: 0 },
+              { id: 2, left: "42%", color: "#fbbf24", delay: 1.2 },
+              { id: 3, left: "68%", color: "#06b6d4", delay: 2.4 },
+              { id: 4, left: "78%", color: "#fbbf24", delay: 0.6 },
+            ].map((spark) => (
+              <motion.span
+                key={spark.id}
+                initial={{ y: 20, opacity: 0, scale: 0.4 }}
+                animate={{ 
+                  y: [20, -60], 
+                  opacity: [0, 0.9, 0],
+                  scale: [0.4, 1.2, 0.3]
+                }}
+                transition={{
+                  repeat: Infinity,
+                  duration: 3.5,
+                  delay: spark.delay,
+                  ease: "easeInOut"
+                }}
+                className="absolute w-1.5 h-1.5 rounded-full pointer-events-none filter blur-[0.5px] z-0"
+                style={{
+                  left: spark.left,
+                  backgroundColor: spark.color,
+                  boxShadow: `0 0 8px ${spark.color}`
+                }}
+              />
+            ))}
+
+            {/* Rotating Holographic Radar SVG */}
+            <div className="relative w-44 h-44 flex items-center justify-center preserve-3d">
+              
+              {/* Outer Cyber Ring (Rotates Counter-Clockwise) */}
+              <motion.div
+                animate={{ rotate: -360 }}
+                transition={{ repeat: Infinity, duration: 18, ease: "linear" }}
+                className="absolute w-full h-full"
+              >
+                <svg viewBox="0 0 100 100" className="w-full h-full text-cyan-500/25">
+                  <circle cx="50" cy="50" r="46" fill="none" stroke="currentColor" strokeWidth="1" strokeDasharray="6 8 12 8" />
+                  <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" strokeWidth="0.5" strokeDasharray="2 4" />
+                </svg>
+              </motion.div>
+
+              {/* Inner Concentric Rings (Rotates Clockwise) */}
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ repeat: Infinity, duration: 12, ease: "linear" }}
+                className="absolute w-[80%] h-[80%]"
+              >
+                <svg viewBox="0 0 100 100" className="w-full h-full text-orange-500/30">
+                  <circle cx="50" cy="50" r="48" fill="none" stroke="currentColor" strokeWidth="1" strokeDasharray="30 15 10 15" />
+                  <path d="M 50,2 L 50,15 M 50,85 L 50,98 M 2,50 L 15,50 M 85,50 L 98,50" stroke="currentColor" strokeWidth="1" />
+                </svg>
+              </motion.div>
+
+              {/* Sweeping Radar Scanner Line */}
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ repeat: Infinity, duration: 4, ease: "linear" }}
+                className="absolute w-[90%] h-[90%] flex items-center justify-center"
+              >
+                <svg viewBox="0 0 100 100" className="w-full h-full">
+                  <defs>
+                    <radialGradient id="radarSweep" cx="50%" cy="50%" r="50%">
+                      <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.4" />
+                      <stop offset="80%" stopColor="#06b6d4" stopOpacity="0.1" />
+                      <stop offset="100%" stopColor="#06b6d4" stopOpacity="0" />
+                    </radialGradient>
+                  </defs>
+                  {/* Sweep sector */}
+                  <path d="M 50,50 L 50,5 A 45,45 0 0,1 85,25 Z" fill="url(#radarSweep)" />
+                  {/* Leading sweeping line */}
+                  <line x1="50" y1="50" x2="50" y2="5" stroke="#06b6d4" strokeWidth="1.5" className="shadow-[0_0_8px_#06b6d4]" />
+                </svg>
+              </motion.div>
+
+              {/* Central Glowing Smart Hub Shield Icon */}
+              <motion.div 
+                animate={{ 
+                  scale: [1, 1.06, 1],
+                  opacity: [0.85, 1, 0.85]
+                }}
+                transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
+                className="absolute w-14 h-14 bg-slate-950/90 rounded-full border border-cyan-500/50 flex items-center justify-center shadow-[0_0_20px_rgba(6,182,212,0.45)] backdrop-blur-md"
+              >
+                {/* 3D Wireframe Cube/Hexagon SVG inside core */}
+                <svg viewBox="0 0 24 24" className="w-7 h-7 text-cyan-400">
+                  <path 
+                    d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    strokeWidth="1.5" 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round"
+                    className="animate-pulse"
+                  />
+                </svg>
+              </motion.div>
+
+              {/* Small Glowing Target Node Pins (representing parked cars/slots detected by radar) */}
+              <div className="absolute inset-0">
+                {/* Slot 1 Target */}
+                <motion.div 
+                  animate={{ opacity: [0.2, 1, 0.2] }}
+                  transition={{ repeat: Infinity, duration: 1.5, delay: 0.2 }}
+                  className="absolute w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_6px_#10b981] top-[24%] left-[28%]"
+                />
+                {/* Slot 2 Target */}
+                <motion.div 
+                  animate={{ opacity: [1, 0.2, 1] }}
+                  transition={{ repeat: Infinity, duration: 2, delay: 0.5 }}
+                  className="absolute w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_6px_#06b6d4] bottom-[30%] right-[22%]"
+                />
+                {/* Slot 3 Target */}
+                <motion.div 
+                  animate={{ opacity: [0.3, 1, 0.3] }}
+                  transition={{ repeat: Infinity, duration: 1.8, delay: 0.8 }}
+                  className="absolute w-1.5 h-1.5 rounded-full bg-orange-500 shadow-[0_0_6px_#f97316] top-[40%] right-[32%]"
+                />
               </div>
 
-              <button className="px-3 py-2 rounded-lg border border-white/22 bg-white/12 text-orange-100 hover:text-white hover:bg-white/20 transition-colors font-bold text-sm" type="button" onClick={onBackHome}>
-                Về trang chủ
-              </button>
-            </div>
-
-            <div>
-              <p className="m-0 mb-2 text-xs uppercase tracking-wider text-orange-400">PBMS Account</p>
-              <h1 className="m-0 mb-3 text-2xl md:text-3xl leading-tight font-bold">Đăng nhập và đăng ký cùng một tông màu với trang home.</h1>
-              <p className="m-0 text-orange-200">
-                Giao diện tài khoản được chuyển sang phong cách parking branding: nền bãi đỗ xe, tông màu cam ấm,
-                card sáng và độ tương phản cao hơn để dễ sử dụng.
-              </p>
-            </div>
-
-            <div className="grid gap-4">
-              <article>
-                <strong className="block text-xl">24/7</strong>
-                <span className="text-sm text-orange-100">Hỗ trợ vận hành liên tục</span>
-              </article>
-              <article>
-                <strong className="block text-xl">01</strong>
-                <span className="text-sm text-orange-100">Hệ thống giao diện đồng nhất</span>
-              </article>
-              <article>
-                <strong className="block text-xl">PBMS</strong>
-                <span className="text-sm text-orange-100">Nhận diện rõ phần mềm bãi đỗ xe</span>
-              </article>
-            </div>
-
-            <div className="grid gap-3">
-              {promoPoints.map((point) => (
-                <article key={point.title}>
-                  <strong className="block font-bold text-sm">{point.title}</strong>
-                  <span className="block text-xs text-orange-100 mt-1">{point.text}</span>
-                </article>
-              ))}
             </div>
           </div>
-        </aside>
-
-        <section className="p-8.5">
-          <div className="mb-6">
-            <p className="m-0 mb-1 text-xs uppercase tracking-wider text-orange-600 font-bold">Tài khoản người dùng</p>
-            <h2 className="m-0 mb-3 text-2xl font-bold text-gray-900">{title}</h2>
-            <p className="m-0 text-sm text-gray-600">{description}</p>
+          
+          <div className="mt-4 space-y-4 relative z-10" style={{ transform: "translateZ(25px)" }}>
+            {promoPoints.map((p, idx) => (
+              <motion.div 
+                key={p.title} 
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.1 + idx * 0.08 }}
+                className="bg-white/10 border border-white/10 p-4 rounded-2xl backdrop-blur-sm shadow-lg"
+              >
+                <h4 className="font-black text-xs uppercase tracking-wider font-mono text-orange-100">{p.title}</h4>
+                <p className="text-xs mt-1.5 opacity-90 leading-relaxed font-semibold">{p.text}</p>
+              </motion.div>
+            ))}
           </div>
+        </div>
 
-          <div className="flex gap-3 mb-6 border-b border-gray-200 role-tablist">
-            <button
-              className={`pb-3 px-1 font-bold text-sm transition-colors border-b-2 ${
-                mode === 'login'
-                  ? 'text-orange-600 border-orange-600'
-                  : 'text-gray-500 border-transparent hover:text-gray-700 hover:border-gray-300'
+        {/* Right Input Form Column */}
+        <div className="p-8 flex flex-col justify-center bg-slate-900/10 backdrop-blur-md">
+          {notice?.message && (
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className={`mb-5 rounded-xl border p-3.5 text-xs font-black uppercase tracking-wider font-mono backdrop-blur-md ${
+                notice.type === 'success' 
+                  ? 'border-emerald-500/25 bg-emerald-950/20 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.1)]' 
+                  : 'border-rose-500/25 bg-rose-950/20 text-rose-400 shadow-[0_0_15px_rgba(244,63,94,0.1)]'
               }`}
-              type="button"
-              onClick={() => onModeChange('login')}
             >
-              Đăng nhập
-            </button>
-            <button
-              className={`pb-3 px-1 font-bold text-sm transition-colors border-b-2 ${
-                mode === 'register'
-                  ? 'text-orange-600 border-orange-600'
-                  : 'text-gray-500 border-transparent hover:text-gray-700 hover:border-gray-300'
-              }`}
-              type="button"
-              onClick={() => onModeChange('register')}
-            >
-              Đăng ký
-            </button>
-          </div>
+              {notice.message}
+            </motion.div>
+          )}
 
-          <div className={`mb-6 p-3 rounded-lg text-sm font-medium ${
-            notice?.type === 'success' ? 'bg-green-50 text-green-800 border border-green-200' :
-            notice?.type === 'error' ? 'bg-red-50 text-red-800 border border-red-200' :
-            'bg-blue-50 text-blue-800 border border-blue-200'
-          }`}>
-            {notice?.message || 'Sử dụng tài khoản của bạn để truy cập hệ thống parking PBMS.'}
-          </div>
-
-          <div className="mb-6 p-3 rounded-lg border border-amber-200 bg-amber-50">
-            <span className="block text-xs text-amber-600">Tài khoản demo</span>
-            <strong className="block text-amber-900 font-bold mt-1">user@pbms.vn</strong>
-            <small className="block text-xs text-amber-700 mt-1">Mật khẩu từ 6 ký tự trở lên</small>
-          </div>
-
-          <form className="grid gap-4" onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} className="space-y-4">
             {mode === 'register' && (
-              <div className="grid grid-cols-2 gap-4">
-                <label className="grid gap-1.5">
-                  <span className="font-bold text-sm text-gray-900">Họ và tên</span>
-                  <input
-                    id="fullName"
-                    name="fullName"
-                    type="text"
-                    placeholder="Nguyễn Văn A"
-                    value={form.fullName}
-                    onChange={handleChange}
-                    className="px-3 py-2.5 rounded-lg border border-gray-300 text-gray-900 placeholder-gray-500 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all"
+              <>
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono">Họ và tên</label>
+                  <input 
+                    name="fullName" 
+                    value={form.fullName} 
+                    onChange={handleChange} 
                     required
+                    className="block w-full rounded-xl border border-white/10 bg-slate-950/60 text-white placeholder-slate-600 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 text-sm h-11 px-4 transition-all duration-300 outline-none shadow-[inset_0_1px_2px_rgba(0,0,0,0.4)] focus:shadow-[0_0_15px_rgba(249,115,22,0.15)] input-scan-focus"
+                    placeholder="Nguyễn Văn A" 
                   />
-                </label>
-
-                <label className="grid gap-1.5">
-                  <span className="font-bold text-sm text-gray-900">Số điện thoại</span>
-                  <input
-                    id="phone"
-                    name="phone"
-                    type="tel"
-                    placeholder="0901234567"
-                    value={form.phone}
-                    onChange={handleChange}
-                    className="px-3 py-2.5 rounded-lg border border-gray-300 text-gray-900 placeholder-gray-500 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all"
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono">Số điện thoại</label>
+                  <input 
+                    name="phone" 
+                    value={form.phone} 
+                    onChange={handleChange} 
+                    required
+                    className="block w-full rounded-xl border border-white/10 bg-slate-950/60 text-white placeholder-slate-600 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 text-sm h-11 px-4 transition-all duration-300 outline-none shadow-[inset_0_1px_2px_rgba(0,0,0,0.4)] focus:shadow-[0_0_15px_rgba(249,115,22,0.15)] input-scan-focus"
+                    placeholder="0901234567" 
                   />
-                </label>
-              </div>
+                </div>
+              </>
             )}
 
-            <label className="grid gap-1.5">
-              <span className="font-bold text-sm text-gray-900">Email</span>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                placeholder="user@pbms.vn"
-                value={form.email}
-                onChange={handleChange}
-                className="px-3 py-2.5 rounded-lg border border-gray-300 text-gray-900 placeholder-gray-500 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all"
-                required
+            <div className="space-y-1.5">
+              <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono">Email</label>
+              <input 
+                name="email" 
+                value={form.email} 
+                onChange={handleChange} 
+                type="email" 
+                required 
+                className="block w-full rounded-xl border border-white/10 bg-slate-950/60 text-white placeholder-slate-600 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 text-sm h-11 px-4 transition-all duration-300 outline-none shadow-[inset_0_1px_2px_rgba(0,0,0,0.4)] focus:shadow-[0_0_15px_rgba(249,115,22,0.15)] input-scan-focus"
+                placeholder="user@pbms.vn" 
               />
-            </label>
+            </div>
 
-            <label className="grid gap-1.5">
-              <span className="font-bold text-sm text-gray-900">Mật khẩu</span>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                placeholder="Ít nhất 6 ký tự"
-                value={form.password}
-                onChange={handleChange}
-                className="px-3 py-2.5 rounded-lg border border-gray-300 text-gray-900 placeholder-gray-500 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all"
-                required
+            <div className="space-y-1.5">
+              <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono">Mật khẩu</label>
+              <input 
+                name="password" 
+                value={form.password} 
+                onChange={handleChange} 
+                type="password" 
+                required 
+                className="block w-full rounded-xl border border-white/10 bg-slate-950/60 text-white placeholder-slate-600 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 text-sm h-11 px-4 transition-all duration-300 outline-none shadow-[inset_0_1px_2px_rgba(0,0,0,0.4)] focus:shadow-[0_0_15px_rgba(249,115,22,0.15)] input-scan-focus"
+                placeholder="Ít nhất 6 ký tự" 
               />
-            </label>
+            </div>
 
-            <button 
-              className="mt-4 px-4 py-3 rounded-lg border border-orange-600/42 bg-orange-600 text-white font-bold hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-orange-600/20" 
-              type="submit" 
-              disabled={isLoading}
-            >
-              {isLoading ? 'Đang xử lý...' : mode === 'login' ? 'Đăng nhập vào hệ thống' : 'Tạo tài khoản'}
-            </button>
+            <div className="flex flex-col gap-4 pt-3">
+              <motion.button 
+                type="submit" 
+                disabled={isLoading} 
+                whileHover={{ scale: 1.015 }}
+                whileTap={{ scale: 0.96 }}
+                className="w-full h-11 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider transition-all duration-300 hover:shadow-[0_0_25px_rgba(249,115,22,0.45)] disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {isLoading ? 'Đang xử lý...' : mode === 'login' ? 'Đăng nhập' : 'Tạo tài khoản'}
+              </motion.button>
+              
+              <div className="text-center">
+                <button 
+                  type="button" 
+                  onClick={() => onModeChange(mode === 'login' ? 'register' : 'login')} 
+                  className="text-xs font-bold text-slate-400 hover:text-orange-400 underline transition-colors"
+                >
+                  {mode === 'login' ? 'Tạo tài khoản mới' : 'Đã có tài khoản? Đăng nhập'}
+                </button>
+              </div>
+            </div>
           </form>
-        </section>
-      </section>
+        </div>
+      </motion.div>
     </main>
   );
 }

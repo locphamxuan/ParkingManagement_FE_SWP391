@@ -1,7 +1,7 @@
 import { DataTable, type DataColumn } from '@/components/shared/DataTable';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { AnalyticsCard } from '@/components/shared/AnalyticsCard';
-import { useAdminDataset } from '@/hooks/useAdminDataset';
+import { useAdminDataset } from '@/hooks/admin/useAdminDataset';
 import type { FraudAlert } from '@/types';
 
 const fraudKpis = [

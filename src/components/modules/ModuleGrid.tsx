@@ -8,38 +8,34 @@ interface ModuleGridProps {
 
 export default function ModuleGrid({ modules, compact = false, onAction }: ModuleGridProps) {
   return (
-    <div className={`grid gap-4 ${compact ? 'grid-cols-3' : 'grid-cols-4'} max-lg:grid-cols-1`}>
+    <div className={`grid ${compact ? 'grid-cols-1 gap-4' : 'grid-cols-4 gap-4'} w-full`}> 
       {modules.map((module) => (
         <article
-          className={`p-5 rounded-lg border bg-white grid gap-3 min-h-56 ${
-            module.available ? 'border-gray-200' : 'bg-slate-50 border-gray-200'
-          }`}
           key={module.id}
+          className={`p-5 rounded-lg border ${module.available ? 'bg-white border-gray-200' : 'bg-gray-50 border-gray-100 opacity-80'}`}
         >
-          <div className="flex justify-between gap-2.5 items-start">
+          <div className="flex justify-between items-start gap-4">
             <div>
-              <p className="m-0 mb-1 text-gray-500 text-xs uppercase tracking-wider">{module.available ? 'San sang' : 'Sap ra mat'}</p>
-              <h3 className="m-0 text-base">{module.title}</h3>
+              <p className="text-xs uppercase text-gray-500">{module.available ? 'Sẵn sàng' : 'Sắp ra mắt'}</p>
+              <h3 className="mt-1 text-lg font-semibold">{module.title}</h3>
             </div>
-            <span className="px-2.5 py-1.5 rounded-full text-xs border border-orange-400/26 text-orange-700 bg-orange-100/10">
-              {module.available ? 'Mo ngay' : 'Cho them'}
+            <span className="px-3 py-1 rounded-full text-sm font-semibold text-orange-700 bg-orange-100">
+              {module.available ? 'Mở ngay' : 'Chờ thêm'}
             </span>
           </div>
 
-          <p className="m-0 text-gray-500 leading-relaxed">{module.description}</p>
+          <p className="mt-3 text-sm text-gray-600">{module.description}</p>
 
-          <button
-            className={`px-3.5 py-2.75 rounded-xl border font-bold transition-colors ${
-              module.available
-                ? 'border-orange-400/26 bg-orange-100/12 text-orange-800 hover:bg-orange-100/20'
-                : 'border-gray-300 bg-gray-100 text-gray-500 cursor-not-allowed'
-            }`}
-            type="button"
-            onClick={() => onAction(module)}
-            disabled={!module.available}
-          >
-            {module.actionLabel}
-          </button>
+          <div className="mt-4">
+            <button
+              className={`px-3 py-2 rounded-md font-semibold ${module.available ? 'bg-orange-600 text-white' : 'bg-gray-100 text-gray-400'}`}
+              type="button"
+              onClick={() => onAction(module)}
+              disabled={!module.available}
+            >
+              {module.actionLabel}
+            </button>
+          </div>
         </article>
       ))}
     </div>

@@ -1,121 +1,256 @@
-import { packageData } from '../../data/managerFlow';
+import { useCallback, useEffect, useState } from 'react';
+import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { DataTable, type DataColumn } from '@/components/shared/DataTable';
+import { StatusBadge } from '@/components/shared/StatusBadge';
+import { ModalForm } from '@/components/shared/ModalForm';
+import { useBuildingContext } from '@/hooks/useBuildingContext';
+import { managerApi, type LongTermPackage, type VehicleType } from '@/services/manager/managerApi';
 
-interface ManagerPackagesPageProps {
-  onClose?: () => void;
+interface FormState {
+  code: string;
+  name: string;
+  vehicleType: string;
+  durationDays: string;
+  price: string;
+  reservedSlots: string;
+  description: string;
+  isActive: boolean;
 }
 
-export default function ManagerPackagesPage({ onClose }: ManagerPackagesPageProps = {}) {
-  const totalActiveSubscriptions = packageData.reduce((sum, pkg) => sum + pkg.activeSubscriptions, 0);
-  const totalRevenue = packageData.reduce((sum, pkg) => sum + (pkg.price * pkg.activeSubscriptions), 0);
+const empty: FormState = {
+  code: '',
+  name: '',
+  vehicleType: '',
+  durationDays: '30',
+  price: '0',
+  reservedSlots: '0',
+  description: '',
+  isActive: true,
+};
+
+export function ManagerPackagesPage() {
+  const { buildingId } = useBuildingContext();
+  const [items, setItems] = useState<LongTermPackage[]>([]);
+  const [vts, setVts] = useState<VehicleType[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState<LongTermPackage | null>(null);
+  const [form, setForm] = useState<FormState>(empty);
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [list, vtList] = await Promise.all([
+        managerApi.packages.list(buildingId),
+        managerApi.vehicleTypes.list(buildingId),
+      ]);
+      setItems(list.data.items);
+      setVts(vtList.data.items);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Tải thất bại');
+    } finally {
+      setLoading(false);
+    }
+  }, [buildingId]);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  const openCreate = () => {
+    setEditing(null);
+    setForm({ ...empty, vehicleType: vts[0]?._id ?? '' });
+    setModalOpen(true);
+  };
+
+  const openEdit = (row: LongTermPackage) => {
+    setEditing(row);
+    setForm({
+      code: row.code,
+      name: row.name,
+      vehicleType: typeof row.vehicleType === 'string' ? row.vehicleType : row.vehicleType._id,
+      durationDays: String(row.durationDays),
+      price: String(row.price),
+      reservedSlots: String(row.reservedSlots),
+      description: row.description ?? '',
+      isActive: row.isActive,
+    });
+    setModalOpen(true);
+  };
+
+  const onSubmit = async () => {
+    if (!form.vehicleType) {
+      alert('Chọn loại xe trước');
+      return;
+    }
+    const payload = {
+      code: form.code.trim().toUpperCase(),
+      name: form.name.trim(),
+      vehicleType: form.vehicleType,
+      durationDays: Number(form.durationDays),
+      price: Number(form.price),
+      reservedSlots: Number(form.reservedSlots),
+      description: form.description.trim(),
+      isActive: form.isActive,
+    };
+    try {
+      if (editing) {
+        await managerApi.packages.update(buildingId, editing._id, payload);
+      } else {
+        await managerApi.packages.create(buildingId, payload);
+      }
+      setModalOpen(false);
+      refresh();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Lưu thất bại');
+    }
+  };
+
+  const onDelete = async (row: LongTermPackage) => {
+    if (!window.confirm(`Xóa gói "${row.name}"?`)) return;
+    try {
+      await managerApi.packages.remove(buildingId, row._id);
+      refresh();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Xóa thất bại');
+    }
+  };
+
+  const columns: DataColumn<LongTermPackage>[] = [
+    { key: 'code', title: 'Mã' },
+    { key: 'name', title: 'Tên' },
+    {
+      key: 'vehicleType',
+      title: 'Loại xe',
+      render: (row) => (typeof row.vehicleType === 'string' ? row.vehicleType : row.vehicleType.code),
+    },
+    { key: 'durationDays', title: 'Thời hạn (ngày)' },
+    {
+      key: 'price',
+      title: 'Giá',
+      render: (row) => `${row.price.toLocaleString('vi-VN')} đ`,
+    },
+    { key: 'reservedSlots', title: 'Slot dành riêng' },
+    {
+      key: 'isActive',
+      title: 'Trạng thái',
+      render: (row) => <StatusBadge status={row.isActive ? 'active' : 'inactive'} />,
+    },
+    {
+      key: 'actions',
+      title: '',
+      render: (row) => (
+        <div className="flex gap-1">
+          <Button size="sm" variant="ghost" onClick={() => openEdit(row)}>
+            <Pencil size={14} />
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => onDelete(row)}>
+            <Trash2 size={14} />
+          </Button>
+        </div>
+      ),
+    },
+  ];
 
   return (
-    <section className="p-6 border border-gray-200 rounded-lg bg-white grid gap-6">
-      <div className="flex justify-between gap-4 items-center">
-        <div>
-          <p className="mb-2 text-xs uppercase tracking-wider text-blue-400 font-bold">FR-MGR-08/10</p>
-          <h2 className="m-0 text-2xl font-bold">Goi dai han va chinh sach dat truoc</h2>
-        </div>
-        <button className="px-4 py-2.5 rounded-lg border border-blue-400/42 bg-blue-600 text-white font-bold hover:bg-blue-700 transition-colors" type="button">
-          Them goi moi
-        </button>
+    <div className="grid gap-4">
+      <div className="flex justify-end">
+        <Button onClick={openCreate} className="gap-2">
+          <Plus size={14} /> Thêm gói
+        </Button>
       </div>
+      {loading ? (
+        <div className="text-sm text-muted-foreground">Đang tải...</div>
+      ) : error ? (
+        <div className="text-sm text-red-600">{error}</div>
+      ) : (
+        <DataTable title="Gói dài hạn" rows={items} columns={columns} />
+      )}
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <article className="p-4 border border-gray-200 rounded-lg bg-gradient-to-br from-blue-50 to-white">
-          <p className="m-0 text-xs text-gray-600 mb-2">Tong goi</p>
-          <strong className="block text-2xl font-bold text-blue-600">{packageData.length}</strong>
-          <small className="text-xs text-gray-600">Loai goi</small>
-        </article>
-        <article className="p-4 border border-gray-200 rounded-lg bg-gradient-to-br from-green-50 to-white">
-          <p className="m-0 text-xs text-gray-600 mb-2">Khach dang ky</p>
-          <strong className="block text-2xl font-bold text-green-600">{totalActiveSubscriptions}</strong>
-          <small className="text-xs text-gray-600">Subscriptions</small>
-        </article>
-        <article className="p-4 border border-gray-200 rounded-lg bg-gradient-to-br from-yellow-50 to-white">
-          <p className="m-0 text-xs text-gray-600 mb-2">Doanh thu goi</p>
-          <strong className="block text-2xl font-bold text-yellow-600">{(totalRevenue / 1000000).toFixed(1)}B</strong>
-          <small className="text-xs text-gray-600">VND</small>
-        </article>
-      </div>
-
-      <div>
-        <h3 className="m-0 font-bold text-gray-900 mb-4">Cac goi dat chon available (FR-MGR-08)</h3>
-        <div className="grid gap-4 md:grid-cols-3">
-          {packageData.map((pkg) => {
-            const pkgRevenue = pkg.price * pkg.activeSubscriptions;
-            return (
-              <article key={pkg.id} className="p-4 border border-gray-200 rounded-lg bg-gradient-to-br from-gray-50 to-white hover:shadow-lg transition-shadow">
-                <div className="mb-3 pb-3 border-b border-gray-200">
-                  <h4 className="m-0 font-bold text-gray-900">{pkg.name}</h4>
-                  <p className="m-0 text-xs text-gray-600 mt-1">{pkg.description}</p>
-                </div>
-                <div className="space-y-2 mb-4">
-                  <p className="m-0 text-sm">
-                    <strong>Thoi han:</strong> <span className="text-blue-600 font-bold">{pkg.duration}</span>
-                  </p>
-                  <p className="m-0 text-sm">
-                    <strong>Slot:</strong> <span className="text-green-600 font-bold">{pkg.slotCount}</span>
-                  </p>
-                  <p className="m-0 text-lg font-bold text-yellow-600">
-                    {pkg.price.toLocaleString('vi-VN')}đ
-                  </p>
-                </div>
-                <div className="p-3 bg-blue-50 rounded border border-blue-200 mb-4">
-                  <p className="m-0 text-xs text-blue-900">
-                    <strong>Doanh thu:</strong> {(pkgRevenue / 1000000).toFixed(1)}B VND
-                  </p>
-                  <p className="m-0 text-xs text-blue-900 mt-1">
-                    <strong>Khach dang ky:</strong> {pkg.activeSubscriptions}
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  <button className="flex-1 px-3 py-2 rounded text-xs border border-blue-400 bg-blue-50 text-blue-600 font-bold hover:bg-blue-100">
-                    Chinh sua
-                  </button>
-                  <button className="flex-1 px-3 py-2 rounded text-xs border border-gray-300 bg-gray-100 text-gray-700 font-bold hover:bg-gray-200">
-                    Chi tiet
-                  </button>
-                </div>
-              </article>
-            );
-          })}
+      <ModalForm
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        title={editing ? 'Sửa gói dài hạn' : 'Thêm gói dài hạn'}
+        onSubmit={onSubmit}
+      >
+        <div className="grid gap-3 md:grid-cols-2">
+          <div className="grid gap-1.5">
+            <label className="text-xs uppercase text-muted-foreground">Mã</label>
+            <Input
+              value={form.code}
+              onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))}
+            />
+          </div>
+          <div className="grid gap-1.5">
+            <label className="text-xs uppercase text-muted-foreground">Tên</label>
+            <Input
+              value={form.name}
+              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+            />
+          </div>
+          <div className="grid gap-1.5">
+            <label className="text-xs uppercase text-muted-foreground">Loại xe</label>
+            <select
+              className="h-10 rounded-md border border-border bg-card px-3 text-sm"
+              value={form.vehicleType}
+              onChange={(e) => setForm((f) => ({ ...f, vehicleType: e.target.value }))}
+            >
+              <option value="">Chọn</option>
+              {vts.map((vt) => (
+                <option key={vt._id} value={vt._id}>
+                  {vt.code} - {vt.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="grid gap-1.5">
+            <label className="text-xs uppercase text-muted-foreground">Thời hạn (ngày)</label>
+            <Input
+              type="number"
+              min={1}
+              value={form.durationDays}
+              onChange={(e) => setForm((f) => ({ ...f, durationDays: e.target.value }))}
+            />
+          </div>
+          <div className="grid gap-1.5">
+            <label className="text-xs uppercase text-muted-foreground">Giá (VND)</label>
+            <Input
+              type="number"
+              min={0}
+              value={form.price}
+              onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))}
+            />
+          </div>
+          <div className="grid gap-1.5">
+            <label className="text-xs uppercase text-muted-foreground">Số slot dành riêng</label>
+            <Input
+              type="number"
+              min={0}
+              value={form.reservedSlots}
+              onChange={(e) => setForm((f) => ({ ...f, reservedSlots: e.target.value }))}
+            />
+          </div>
+          <div className="grid gap-1.5 md:col-span-2">
+            <label className="text-xs uppercase text-muted-foreground">Mô tả</label>
+            <Input
+              value={form.description}
+              onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+            />
+          </div>
+          <label className="flex items-center gap-2 text-sm md:col-span-2">
+            <input
+              type="checkbox"
+              checked={form.isActive}
+              onChange={(e) => setForm((f) => ({ ...f, isActive: e.target.checked }))}
+            />
+            <span>Đang mở bán</span>
+          </label>
         </div>
-      </div>
-
-      <article className="p-6 border border-gray-200 rounded-lg bg-gradient-to-br from-blue-50 to-white">
-        <h3 className="m-0 font-bold text-gray-900 mb-3">Chinh sach Dat truoc (FR-MGR-10)</h3>
-        <div className="grid gap-4 md:grid-cols-3 mb-4">
-          <div className="p-4 bg-white rounded border border-gray-200">
-            <p className="m-0 text-xs text-gray-600 mb-1"><strong>Ty le dat truoc</strong></p>
-            <p className="m-0 text-lg font-bold text-blue-600">20%</p>
-            <small className="text-xs text-gray-600">cua tong slot</small>
-          </div>
-          <div className="p-4 bg-white rounded border border-gray-200">
-            <p className="m-0 text-xs text-gray-600 mb-1"><strong>Thoi gian giu slot</strong></p>
-            <p className="m-0 text-lg font-bold text-green-600">30 phut</p>
-            <small className="text-xs text-gray-600">Toi da</small>
-          </div>
-          <div className="p-4 bg-white rounded border border-gray-200">
-            <p className="m-0 text-xs text-gray-600 mb-1"><strong>Chinh sach hoan tien</strong></p>
-            <p className="m-0 text-lg font-bold text-yellow-600">100%</p>
-            <small className="text-xs text-gray-600">neu huy truoc 30p</small>
-          </div>
-        </div>
-        <button className="w-full px-4 py-2.5 rounded-lg border border-blue-400/42 bg-blue-600 text-white font-bold hover:bg-blue-700 transition-colors">
-          Cap nhat chinh sach dat truoc
-        </button>
-      </article>
-
-      <article className="p-6 border border-gray-200 rounded-lg bg-gradient-to-br from-orange-50 to-white">
-        <h3 className="m-0 font-bold text-gray-900 mb-3">Luu y</h3>
-        <ul className="list-disc list-inside space-y-1 text-sm text-gray-700">
-          <li>Goi dai han cho phep khach hang dat mot slot trong thoi gian dai han (tuan/thang/quy)</li>
-          <li>Phuong thuc tinh gia: gia goi = gia hang ngay × so ngay</li>
-          <li>Dat truoc chi ap dung cho khach hang khong co goi dai han</li>
-          <li>Ty le dat truoc va chinh sach hoan tien duoc quy dinh boi Admin - Manager chi co the xem</li>
-          <li>Doanh thu goi duoc tinh vao doanh thu hom nay cua toa nha</li>
-        </ul>
-      </article>
-    </section>
+      </ModalForm>
+    </div>
   );
 }

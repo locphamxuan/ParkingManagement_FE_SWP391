@@ -1,91 +1,279 @@
-import { pricingData, policyPushLogsManager } from '../../data/managerFlow';
+import { useCallback, useEffect, useState } from 'react';
+import { Pencil, Plus, PowerOff } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { DataTable, type DataColumn } from '@/components/shared/DataTable';
+import { StatusBadge } from '@/components/shared/StatusBadge';
+import { ModalForm } from '@/components/shared/ModalForm';
+import { useBuildingContext } from '@/hooks/useBuildingContext';
+import { managerApi, type PricePolicy, type VehicleType } from '@/services/manager/managerApi';
 
-interface ManagerPricingPageProps {
-  onClose?: () => void;
+interface FormState {
+  name: string;
+  vehicleType: string;
+  hourlyRate: string;
+  dailyCap: string;
+  minRate: string;
+  maxRate: string;
+  fromTime: string;
+  toTime: string;
+  isActive: boolean;
 }
 
-export default function ManagerPricingPage({ onClose }: ManagerPricingPageProps = {}) {
+const empty: FormState = {
+  name: '',
+  vehicleType: '',
+  hourlyRate: '',
+  dailyCap: '',
+  minRate: '',
+  maxRate: '',
+  fromTime: '00:00',
+  toTime: '23:59',
+  isActive: true,
+};
+
+export function ManagerPricingPage() {
+  const { buildingId } = useBuildingContext();
+  const [items, setItems] = useState<PricePolicy[]>([]);
+  const [vts, setVts] = useState<VehicleType[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState<PricePolicy | null>(null);
+  const [form, setForm] = useState<FormState>(empty);
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [list, vtList] = await Promise.all([
+        managerApi.pricePolicies.list(buildingId),
+        managerApi.vehicleTypes.list(buildingId),
+      ]);
+      setItems(list.data.items);
+      setVts(vtList.data.items);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Tải thất bại');
+    } finally {
+      setLoading(false);
+    }
+  }, [buildingId]);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  const openCreate = () => {
+    setEditing(null);
+    setForm({ ...empty, vehicleType: vts[0]?._id ?? '' });
+    setModalOpen(true);
+  };
+
+  const openEdit = (row: PricePolicy) => {
+    setEditing(row);
+    setForm({
+      name: row.name,
+      vehicleType: typeof row.vehicleType === 'string' ? row.vehicleType : row.vehicleType._id,
+      hourlyRate: String(row.hourlyRate),
+      dailyCap: row.dailyCap != null ? String(row.dailyCap) : '',
+      minRate: String(row.minRate ?? 0),
+      maxRate: row.maxRate != null ? String(row.maxRate) : '',
+      fromTime: row.timeWindow?.from ?? '00:00',
+      toTime: row.timeWindow?.to ?? '23:59',
+      isActive: row.isActive,
+    });
+    setModalOpen(true);
+  };
+
+  const onSubmit = async () => {
+    if (!form.vehicleType) {
+      alert('Chọn loại xe trước');
+      return;
+    }
+    const payload = {
+      name: form.name.trim(),
+      vehicleType: form.vehicleType,
+      hourlyRate: Number(form.hourlyRate),
+      dailyCap: form.dailyCap ? Number(form.dailyCap) : null,
+      minRate: form.minRate ? Number(form.minRate) : 0,
+      maxRate: form.maxRate ? Number(form.maxRate) : null,
+      timeWindow: { from: form.fromTime, to: form.toTime },
+      isActive: form.isActive,
+    };
+    try {
+      if (editing) {
+        await managerApi.pricePolicies.update(buildingId, editing._id, payload);
+      } else {
+        await managerApi.pricePolicies.create(buildingId, payload);
+      }
+      setModalOpen(false);
+      refresh();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Lưu thất bại');
+    }
+  };
+
+  const deactivate = async (row: PricePolicy) => {
+    if (!window.confirm(`Vô hiệu hóa chính sách "${row.name}"?`)) return;
+    try {
+      await managerApi.pricePolicies.deactivate(buildingId, row._id);
+      refresh();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Thất bại');
+    }
+  };
+
+  const columns: DataColumn<PricePolicy>[] = [
+    { key: 'name', title: 'Tên chính sách' },
+    {
+      key: 'vehicleType',
+      title: 'Loại xe',
+      render: (row) => (typeof row.vehicleType === 'string' ? row.vehicleType : row.vehicleType.code),
+    },
+    {
+      key: 'hourlyRate',
+      title: 'Giá/giờ',
+      render: (row) => `${row.hourlyRate.toLocaleString('vi-VN')} đ`,
+    },
+    {
+      key: 'dailyCap',
+      title: 'Tối đa/ngày',
+      render: (row) =>
+        row.dailyCap != null ? `${row.dailyCap.toLocaleString('vi-VN')} đ` : '—',
+    },
+    {
+      key: 'timeWindow',
+      title: 'Khung giờ',
+      render: (row) =>
+        row.timeWindow ? `${row.timeWindow.from} – ${row.timeWindow.to}` : '—',
+    },
+    {
+      key: 'isActive',
+      title: 'Trạng thái',
+      render: (row) => <StatusBadge status={row.isActive ? 'active' : 'inactive'} />,
+    },
+    {
+      key: 'actions',
+      title: '',
+      render: (row) => (
+        <div className="flex gap-1">
+          <Button size="sm" variant="ghost" onClick={() => openEdit(row)}>
+            <Pencil size={14} />
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => deactivate(row)}>
+            <PowerOff size={14} />
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
   return (
-    <section className="p-6 border border-gray-200 rounded-lg bg-white grid gap-6">
-      <div className="flex justify-between gap-4 items-center">
-        <div>
-          <p className="mb-2 text-xs uppercase tracking-wider text-blue-400 font-bold">FR-MGR-06/07</p>
-          <h2 className="m-0 text-2xl font-bold">Bang gia va chinh sach</h2>
-        </div>
-        <button className="px-4 py-2.5 rounded-lg border border-blue-400/42 bg-blue-600 text-white font-bold hover:bg-blue-700 transition-colors" type="button">
-          Them bang gia
-        </button>
+    <div className="grid gap-4">
+      <div className="flex justify-end">
+        <Button onClick={openCreate} className="gap-2">
+          <Plus size={14} /> Tạo chính sách giá
+        </Button>
       </div>
+      {loading ? (
+        <div className="text-sm text-muted-foreground">Đang tải...</div>
+      ) : error ? (
+        <div className="text-sm text-red-600">{error}</div>
+      ) : (
+        <DataTable title="Bảng giá" rows={items} columns={columns} />
+      )}
 
-      <article>
-        <h3 className="m-0 font-bold text-gray-900 mb-4">Hang gia hien tai</h3>
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-sm">
-            <thead className="bg-gray-100 border-b border-gray-200">
-              <tr>
-                <th className="px-4 py-3 text-left font-bold text-gray-900">Loai xe</th>
-                <th className="px-4 py-3 text-left font-bold text-gray-900">Khung gio</th>
-                <th className="px-4 py-3 text-left font-bold text-gray-900">Gia/gio</th>
-                <th className="px-4 py-3 text-left font-bold text-gray-900">Gia toi da</th>
-                <th className="px-4 py-3 text-left font-bold text-gray-900">Cap nhat luc</th>
-                <th className="px-4 py-3 text-left font-bold text-gray-900">Boi</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pricingData.map((row) => (
-                <tr key={row.id} className="border-b border-gray-100 hover:bg-gray-50">
-                  <td className="px-4 py-3 text-gray-900 font-bold">{row.vehicleType}</td>
-                  <td className="px-4 py-3 text-gray-600">{row.timeSlot}</td>
-                  <td className="px-4 py-3 text-gray-600">{row.pricePerHour.toLocaleString('vi-VN')}đ</td>
-                  <td className="px-4 py-3 text-gray-600">{row.maxPrice.toLocaleString('vi-VN')}đ</td>
-                  <td className="px-4 py-3 text-gray-600">{row.lastUpdated}</td>
-                  <td className="px-4 py-3 text-gray-600">{row.updatedBy}</td>
-                </tr>
+      <ModalForm
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        title={editing ? 'Sửa chính sách giá' : 'Tạo chính sách giá'}
+        onSubmit={onSubmit}
+      >
+        <div className="grid gap-3 md:grid-cols-2">
+          <div className="grid gap-1.5 md:col-span-2">
+            <label className="text-xs uppercase text-muted-foreground">Tên</label>
+            <Input
+              value={form.name}
+              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+            />
+          </div>
+          <div className="grid gap-1.5">
+            <label className="text-xs uppercase text-muted-foreground">Loại xe</label>
+            <select
+              className="h-10 rounded-md border border-border bg-card px-3 text-sm"
+              value={form.vehicleType}
+              onChange={(e) => setForm((f) => ({ ...f, vehicleType: e.target.value }))}
+            >
+              <option value="">Chọn loại xe</option>
+              {vts.map((vt) => (
+                <option key={vt._id} value={vt._id}>
+                  {vt.code} - {vt.name}
+                </option>
               ))}
-            </tbody>
-          </table>
+            </select>
+          </div>
+          <div className="grid gap-1.5">
+            <label className="text-xs uppercase text-muted-foreground">Giá/giờ (VND)</label>
+            <Input
+              type="number"
+              min={0}
+              value={form.hourlyRate}
+              onChange={(e) => setForm((f) => ({ ...f, hourlyRate: e.target.value }))}
+            />
+          </div>
+          <div className="grid gap-1.5">
+            <label className="text-xs uppercase text-muted-foreground">Tối đa/ngày (tùy chọn)</label>
+            <Input
+              type="number"
+              min={0}
+              value={form.dailyCap}
+              onChange={(e) => setForm((f) => ({ ...f, dailyCap: e.target.value }))}
+            />
+          </div>
+          <div className="grid gap-1.5">
+            <label className="text-xs uppercase text-muted-foreground">Giá sàn</label>
+            <Input
+              type="number"
+              min={0}
+              value={form.minRate}
+              onChange={(e) => setForm((f) => ({ ...f, minRate: e.target.value }))}
+            />
+          </div>
+          <div className="grid gap-1.5">
+            <label className="text-xs uppercase text-muted-foreground">Giá trần</label>
+            <Input
+              type="number"
+              min={0}
+              value={form.maxRate}
+              onChange={(e) => setForm((f) => ({ ...f, maxRate: e.target.value }))}
+            />
+          </div>
+          <div className="grid gap-1.5">
+            <label className="text-xs uppercase text-muted-foreground">Từ</label>
+            <Input
+              type="time"
+              value={form.fromTime}
+              onChange={(e) => setForm((f) => ({ ...f, fromTime: e.target.value }))}
+            />
+          </div>
+          <div className="grid gap-1.5">
+            <label className="text-xs uppercase text-muted-foreground">Đến</label>
+            <Input
+              type="time"
+              value={form.toTime}
+              onChange={(e) => setForm((f) => ({ ...f, toTime: e.target.value }))}
+            />
+          </div>
+          <label className="flex items-center gap-2 text-sm md:col-span-2">
+            <input
+              type="checkbox"
+              checked={form.isActive}
+              onChange={(e) => setForm((f) => ({ ...f, isActive: e.target.checked }))}
+            />
+            <span>Đang áp dụng</span>
+          </label>
         </div>
-      </article>
-
-      <article className="p-6 border border-gray-200 rounded-lg bg-gradient-to-br from-blue-50 to-white">
-        <h3 className="m-0 font-bold text-gray-900 mb-4">Lich su thay doi gia (FR-MGR-07)</h3>
-        <div className="space-y-2">
-          {policyPushLogsManager.map((row) => (
-            <div key={row.id} className="flex justify-between items-center p-3 border border-gray-200 rounded bg-white">
-              <div>
-                <strong className="block text-gray-900">{row.policy}</strong>
-                <small className="text-gray-600">{row.id}</small>
-              </div>
-              <div className="text-right flex-1 mx-4">
-                <div className="text-xs">
-                  <span className="line-through text-gray-500">{row.oldValue}</span>
-                </div>
-                <div className="text-xs text-green-600 font-bold">
-                  → {row.newValue}
-                </div>
-              </div>
-              <div className="text-right">
-                <small className="block text-gray-600">{row.pushedAt}</small>
-              </div>
-              <span className={`px-3 py-1 rounded-full text-xs font-bold ml-4 ${
-                row.status === 'approved' ? 'bg-green-100 text-green-800' :
-                row.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                'bg-gray-100 text-gray-800'
-              }`}>{row.status}</span>
-            </div>
-          ))}
-        </div>
-      </article>
-
-      <article className="p-6 border border-gray-200 rounded-lg bg-gradient-to-br from-orange-50 to-white">
-        <h3 className="m-0 font-bold text-gray-900 mb-3">Luu y</h3>
-        <ul className="list-disc list-inside space-y-1 text-sm text-gray-700">
-          <li>Gia duoc quy dinh trong bien do cho phep boi Admin</li>
-          <li>Thay doi gia can duoc phe duyet truoc khi co hieu luc</li>
-          <li>Lich su thay doi duoc ghi lai day du de kiem toan</li>
-          <li>Gia toi da duoc tinh toan tu gia/gio va so gio toi da</li>
-        </ul>
-      </article>
-    </section>
+      </ModalForm>
+    </div>
   );
 }

@@ -34,23 +34,24 @@
 }
 
 .admin-theme {
-  color-scheme: light;
-  --app-background: 35 60% 98%;
-  --app-foreground: 221 46% 10%;
+  color-scheme: dark;
+  --app-background: 224 71% 4%;
+  --app-foreground: 210 40% 98%;
   --app-primary: 24 94% 54%;
   --app-primary-foreground: 20 20% 98%;
-  --app-secondary: 32 72% 95%;
-  --app-secondary-foreground: 221 46% 10%;
-  --app-muted: 34 44% 96%;
-  --app-muted-foreground: 220 13% 26%;
-  --app-card: 0 0% 100%;
-  --app-card-foreground: 221 46% 10%;
-  --app-border: 28 36% 86%;
-  --app-input: 28 36% 86%;
+  --app-secondary: 217 32% 12%;
+  --app-secondary-foreground: 210 40% 98%;
+  --app-muted: 217 32% 12%;
+  --app-muted-foreground: 215 20.2% 65.1%;
+  --app-card: 222 47% 11%;
+  --app-card-foreground: 210 40% 98%;
+  --app-border: 217 32.6% 17.5%;
+  --app-input: 217 32.6% 17.5%;
   --app-ring: 24 94% 54%;
-  --text: #111827;
-  --shadow: 0 16px 40px rgba(120, 83, 48, 0.12);
+  --text: #f8fafc;
+  --shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
 }
+
 
 * {
   box-sizing: border-box;
@@ -102,4 +103,291 @@ button[aria-expanded="true"] .chev {
 }
 .chev {
   transition: transform 160ms ease;
+}
+
+/* Glassmorphism & Premium UI components */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  box-shadow: 0 16px 36px rgba(120, 83, 48, 0.05);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.04);
+  transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.glass-card:hover {
+  transform: translateY(-4px);
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(249, 115, 22, 0.25);
+  box-shadow: 0 20px 40px rgba(249, 115, 22, 0.08);
+}
+
+/* Refined custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(203, 213, 225, 0.6);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.8);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+/* Input floating and glow effects */
+.premium-input {
+  transition: all 0.2s ease;
+}
+
+.premium-input:focus {
+  border-color: hsl(var(--app-primary));
+  box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.15);
+  background-color: #fff;
+}
+
+/* Smooth row focus */
+.premium-row {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.premium-row:hover {
+  background-color: rgba(249, 115, 22, 0.035) !important;
+}
+
+@layer utilities {
+  .perspective-1000 {
+    perspective: 1000px;
+    transform-style: preserve-3d;
+  }
+  .preserve-3d {
+    transform-style: preserve-3d;
+  }
+  .backface-hidden {
+    backface-visibility: hidden;
+  }
+  .isometric-grid {
+    transform: rotateX(60deg) rotateZ(-45deg);
+    transform-style: preserve-3d;
+  }
+  .isometric-mesh {
+    transform: rotateX(55deg) rotateZ(-45deg);
+    transform-style: preserve-3d;
+    transition: transform 0.6s cubic-bezier(0.25, 0.8, 0.25, 1);
+  }
+  .glass-panel-dark {
+    background: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  }
+  .glass-panel {
+    background: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(12px) saturate(160%);
+    -webkit-backdrop-filter: blur(12px) saturate(160%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  }
+  .border-glow-neon {
+    border-color: rgba(168, 85, 247, 0.35);
+    box-shadow: 0 0 15px rgba(168, 85, 247, 0.2), inset 0 0 15px rgba(168, 85, 247, 0.05);
+  }
+  .neon-glow-orange {
+    box-shadow: 0 0 15px hsla(24, 95%, 53%, 0.4), inset 0 0 15px hsla(24, 95%, 53%, 0.1);
+  }
+  .neon-glow-purple {
+    box-shadow: 0 0 15px hsla(263, 90%, 51%, 0.4), inset 0 0 15px hsla(263, 90%, 51%, 0.1);
+  }
+  .card-3d-hover {
+    transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.4s;
+  }
+  .card-3d-hover:hover {
+    transform: translateY(-8px) rotateX(4deg) rotateY(-2deg) translateZ(10px);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.4), 0 0 20px rgba(251, 146, 60, 0.2);
+  }
+  .tilt-card {
+    transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s;
+  }
+  .tilt-card:hover {
+    transform: translateY(-5px) rotateX(2.5deg) rotateY(-2.5deg) translateZ(6px);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.35), 0 0 20px rgba(168, 85, 247, 0.15);
+  }
+  
+  /* 3D Extruded Box Styling */
+  .box-3d {
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.3s ease;
+  }
+  .box-3d-face {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+  }
+  .box-3d-top {
+    transform: rotateX(0deg) translateZ(var(--box-h, 16px));
+  }
+  .box-3d-front {
+    height: var(--box-h, 16px);
+    transform: rotateX(-90deg) translateZ(var(--box-d, 32px));
+    transform-origin: bottom center;
+    bottom: 0;
+  }
+  .box-3d-right {
+    width: var(--box-h, 16px);
+    transform: rotateY(90deg) translateZ(var(--box-w, 48px));
+    transform-origin: center right;
+    right: 0;
+  }
+  .box-3d-back {
+    height: var(--box-h, 16px);
+    transform: rotateX(90deg) translateZ(0px);
+    transform-origin: top center;
+    top: 0;
+  }
+  .box-3d-left {
+    width: var(--box-h, 16px);
+    transform: rotateY(-90deg) translateZ(0px);
+    transform-origin: center left;
+    left: 0;
+  }
+
+  /* ============================================================ */
+  /* FUTURISTIC TECH COMMAND CENTER — PREMIUM UTILITY CLASSES     */
+  /* ============================================================ */
+
+  /* Ultra-saturated dark glassmorphism for command center cards */
+  .glass-premium {
+    background: rgba(15, 20, 40, 0.80);
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    box-shadow:
+      0 16px 40px rgba(0, 0, 0, 0.45),
+      0 0 0 0.5px rgba(255, 255, 255, 0.05) inset;
+  }
+
+  /* Animated gradient neon border that shifts between orange → cyan → violet */
+  .glow-border-pulse {
+    position: relative;
+  }
+  .glow-border-pulse::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      135deg,
+      rgba(249, 115, 22, 0.6),
+      rgba(6, 182, 212, 0.4),
+      rgba(168, 85, 247, 0.5),
+      rgba(249, 115, 22, 0.6)
+    );
+    background-size: 300% 300%;
+    animation: borderColorShift 6s ease infinite;
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Horizontal cyan laser scanline that sweeps top → bottom on a container */
+  .cyber-scanline {
+    position: relative;
+    overflow: hidden;
+  }
+  .cyber-scanline::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(6, 182, 212, 0.55), rgba(6, 182, 212, 0.85), rgba(6, 182,212, 0.55), transparent);
+    box-shadow: 0 0 12px 2px rgba(6, 182, 212, 0.4);
+    animation: scanlineSweep 4s linear infinite;
+    pointer-events: none;
+    z-index: 20;
+  }
+
+  /* Stagger fade-up animation — each child delays slightly for cascade effect */
+  .stagger-in > * {
+    opacity: 0;
+    transform: translateY(18px);
+    animation: staggerFadeUp 0.55s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+  }
+  .stagger-in > *:nth-child(1) { animation-delay: 0.05s; }
+  .stagger-in > *:nth-child(2) { animation-delay: 0.12s; }
+  .stagger-in > *:nth-child(3) { animation-delay: 0.19s; }
+  .stagger-in > *:nth-child(4) { animation-delay: 0.26s; }
+  .stagger-in > *:nth-child(5) { animation-delay: 0.33s; }
+  .stagger-in > *:nth-child(6) { animation-delay: 0.40s; }
+
+  /* Neon glow variants for status chips */
+  .neon-glow-emerald {
+    box-shadow: 0 0 12px rgba(16, 185, 129, 0.45), inset 0 0 8px rgba(16, 185, 129, 0.1);
+  }
+  .neon-glow-red {
+    box-shadow: 0 0 12px rgba(239, 68, 68, 0.5), inset 0 0 8px rgba(239, 68, 68, 0.1);
+  }
+  .neon-glow-cyan {
+    box-shadow: 0 0 12px rgba(6, 182, 212, 0.5), inset 0 0 8px rgba(6, 182, 212, 0.1);
+  }
+  .neon-glow-amber {
+    box-shadow: 0 0 12px rgba(245, 158, 11, 0.45), inset 0 0 8px rgba(245, 158, 11, 0.1);
+  }
+}
+
+/* ============================================================ */
+/* FUTURISTIC KEYFRAME ANIMATIONS                               */
+/* ============================================================ */
+
+@keyframes borderColorShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+@keyframes scanlineSweep {
+  0% { top: -2px; opacity: 0; }
+  5% { opacity: 1; }
+  95% { opacity: 1; }
+  100% { top: 100%; opacity: 0; }
+}
+
+@keyframes staggerFadeUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes animate-fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fadeIn {
+  animation: animate-fadeIn 0.4s ease forwards;
 }

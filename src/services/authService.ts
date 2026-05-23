@@ -1,31 +1,63 @@
-import { MOCK_ADMIN } from '@/utils/constants';
+import { requestJson } from '@/services/pbmsApi';
 
 export interface LoginInput {
   email: string;
   password: string;
 }
 
-export interface AuthSession {
-  token: string;
-  role: 'admin';
+interface ApiUser {
+  _id: string;
   email: string;
-  displayName: string;
+  fullName: string;
+  role: 'admin' | 'manager' | 'staff' | 'user';
+  assignedBuildings?: Array<{ _id?: string } | string>;
 }
 
-export async function mockLogin(input: LoginInput): Promise<AuthSession> {
-  await new Promise((resolve) => setTimeout(resolve, 500));
+interface ApiAuthResponse {
+  data?: {
+    token?: string;
+    user?: ApiUser;
+  };
+}
 
-  if (
-    input.email.toLowerCase() !== MOCK_ADMIN.email ||
-    input.password !== MOCK_ADMIN.password
-  ) {
-    throw new Error('Invalid credentials. Use admin@gmail.com / 1');
+export interface AuthSession {
+  token: string;
+  userId: string;
+  role: 'admin' | 'manager' | 'staff' | 'user';
+  email: string;
+  displayName: string;
+  assignedBuildingIds: string[];
+}
+
+export async function loginWithBackend(input: LoginInput): Promise<AuthSession> {
+  const payload = await requestJson<ApiAuthResponse>({
+    path: '/users/auth/login',
+    method: 'POST',
+    body: {
+      email: input.email,
+      password: input.password,
+    },
+  });
+
+  const token = payload?.data?.token;
+  const user = payload?.data?.user;
+
+  if (!token || !user) {
+    throw new Error('Phản hồi đăng nhập không hợp lệ từ máy chủ.');
   }
 
+  const assignedBuildingIds = Array.isArray(user.assignedBuildings)
+    ? user.assignedBuildings
+        .map((item) => (typeof item === 'string' ? item : String(item?._id || '')))
+        .filter(Boolean)
+    : [];
+
   return {
-    token: `mock-token-${Date.now()}`,
-    role: 'admin',
-    email: MOCK_ADMIN.email,
-    displayName: 'PBMS System Administrator',
+    token,
+    userId: String(user._id),
+    role: user.role,
+    email: user.email,
+    displayName: user.fullName,
+    assignedBuildingIds,
   };
 }

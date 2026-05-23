@@ -1,79 +1,251 @@
-import { floorData, gateData } from '../../data/managerFlow';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { DataTable, type DataColumn } from '@/components/shared/DataTable';
+import { StatusBadge } from '@/components/shared/StatusBadge';
+import { ModalForm } from '@/components/shared/ModalForm';
+import { useBuildingContext } from '@/hooks/useBuildingContext';
+import { managerApi, type Floor, type VehicleType } from '@/services/manager/managerApi';
 
-interface ManagerFloorsPageProps {
-  onClose?: () => void;
+interface FormState {
+  code: string;
+  name: string;
+  levelNumber: string;
+  capacity: string;
+  status: Floor['status'];
+  allowedVehicleTypes: string[];
 }
 
-export default function ManagerFloorsPage({ onClose }: ManagerFloorsPageProps = {}) {
+const empty: FormState = {
+  code: '',
+  name: '',
+  levelNumber: '1',
+  capacity: '0',
+  status: 'active',
+  allowedVehicleTypes: [],
+};
+
+export function ManagerFloorsPage() {
+  const { buildingId } = useBuildingContext();
+  const [items, setItems] = useState<Floor[]>([]);
+  const [vehicleTypes, setVehicleTypes] = useState<VehicleType[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState<Floor | null>(null);
+  const [form, setForm] = useState<FormState>(empty);
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [floors, vts] = await Promise.all([
+        managerApi.floors.list(buildingId),
+        managerApi.vehicleTypes.list(buildingId),
+      ]);
+      setItems(floors.data.items);
+      setVehicleTypes(vts.data.items);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Tải thất bại');
+    } finally {
+      setLoading(false);
+    }
+  }, [buildingId]);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  const openCreate = () => {
+    setEditing(null);
+    setForm(empty);
+    setModalOpen(true);
+  };
+
+  const openEdit = (row: Floor) => {
+    setEditing(row);
+    setForm({
+      code: row.code,
+      name: row.name,
+      levelNumber: String(row.levelNumber),
+      capacity: String(row.capacity),
+      status: row.status,
+      allowedVehicleTypes: row.allowedVehicleTypes.map((v) => (typeof v === 'string' ? v : v._id)),
+    });
+    setModalOpen(true);
+  };
+
+  const onSubmit = async () => {
+    const payload = {
+      code: form.code.trim().toUpperCase(),
+      name: form.name.trim(),
+      levelNumber: Number(form.levelNumber),
+      capacity: Number(form.capacity),
+      status: form.status,
+      allowedVehicleTypes: form.allowedVehicleTypes,
+    };
+    try {
+      if (editing) {
+        await managerApi.floors.update(buildingId, editing._id, payload as Parameters<typeof managerApi.floors.update>[2]);
+      } else {
+        await managerApi.floors.create(buildingId, payload as Parameters<typeof managerApi.floors.create>[1]);
+      }
+      setModalOpen(false);
+      refresh();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Lưu thất bại');
+    }
+  };
+
+  const onDelete = async (row: Floor) => {
+    if (!window.confirm(`Xóa tầng ${row.code}? Tầng phải không có ô đỗ.`)) return;
+    try {
+      await managerApi.floors.remove(buildingId, row._id);
+      refresh();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Xóa thất bại');
+    }
+  };
+
+  const toggleType = (id: string) => {
+    setForm((f) => ({
+      ...f,
+      allowedVehicleTypes: f.allowedVehicleTypes.includes(id)
+        ? f.allowedVehicleTypes.filter((x) => x !== id)
+        : [...f.allowedVehicleTypes, id],
+    }));
+  };
+
+  const columns: DataColumn<Floor>[] = useMemo(
+    () => [
+      { key: 'code', title: 'Mã tầng' },
+      { key: 'name', title: 'Tên tầng' },
+      { key: 'levelNumber', title: 'Số thứ tự' },
+      { key: 'capacity', title: 'Sức chứa' },
+      {
+        key: 'allowedVehicleTypes',
+        title: 'Loại xe cho phép',
+        render: (row) =>
+          row.allowedVehicleTypes
+            .map((v) => (typeof v === 'string' ? v : `${v.code}`))
+            .join(', ') || '—',
+      },
+      {
+        key: 'status',
+        title: 'Trạng thái',
+        render: (row) => <StatusBadge status={row.status} />,
+      },
+      {
+        key: 'actions',
+        title: '',
+        render: (row) => (
+          <div className="flex gap-1">
+            <Button size="sm" variant="ghost" onClick={() => openEdit(row)}>
+              <Pencil size={14} />
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => onDelete(row)}>
+              <Trash2 size={14} />
+            </Button>
+          </div>
+        ),
+      },
+    ],
+    [vehicleTypes]
+  );
+
   return (
-    <section className="p-6 border border-gray-200 rounded-lg bg-white grid gap-6">
-      <div className="flex justify-between gap-4 items-center">
-        <div>
-          <p className="mb-2 text-xs uppercase tracking-wider text-blue-400 font-bold">FR-MGR-02/03</p>
-          <h2 className="m-0 text-2xl font-bold">Quan ly tang va cong</h2>
-        </div>
-        <button className="px-4 py-2.5 rounded-lg border border-blue-400/42 bg-blue-600 text-white font-bold hover:bg-blue-700 transition-colors" type="button">
-          Them tang
-        </button>
+    <div className="grid gap-4">
+      <div className="flex justify-end">
+        <Button onClick={openCreate} className="gap-2">
+          <Plus size={14} /> Thêm tầng
+        </Button>
       </div>
-
-      <div className="grid gap-4 md:grid-cols-2">
-        {floorData.map((floor) => (
-          <article key={floor.id} className="p-4 border border-gray-200 rounded-lg bg-gradient-to-br from-gray-50 to-white">
-            <div className="mb-3 flex justify-between items-start">
-              <div>
-                <h3 className="m-0 font-bold text-gray-900">{floor.name}</h3>
-                <p className="m-0 text-xs text-gray-600 mt-1">Slot: {floor.availableSlots}/{floor.totalSlots}</p>
-              </div>
-              <span className="px-2 py-1 rounded bg-green-100 text-green-800 text-xs font-bold">{floor.occupancy}%</span>
+      {loading ? (
+        <div className="text-sm text-muted-foreground">Đang tải...</div>
+      ) : error ? (
+        <div className="text-sm text-red-600">{error}</div>
+      ) : (
+        <DataTable title="Tầng" rows={items} columns={columns} />
+      )}
+      <ModalForm
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        title={editing ? 'Sửa tầng' : 'Thêm tầng'}
+        onSubmit={onSubmit}
+      >
+        <div className="grid gap-3 md:grid-cols-2">
+          <div className="grid gap-1.5">
+            <label className="text-xs uppercase text-muted-foreground">Mã tầng</label>
+            <Input
+              value={form.code}
+              onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))}
+            />
+          </div>
+          <div className="grid gap-1.5">
+            <label className="text-xs uppercase text-muted-foreground">Tên tầng</label>
+            <Input
+              value={form.name}
+              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+            />
+          </div>
+          <div className="grid gap-1.5">
+            <label className="text-xs uppercase text-muted-foreground">Số thứ tự (-1=hầm, 1=trệt...)</label>
+            <Input
+              type="number"
+              value={form.levelNumber}
+              onChange={(e) => setForm((f) => ({ ...f, levelNumber: e.target.value }))}
+            />
+          </div>
+          <div className="grid gap-1.5">
+            <label className="text-xs uppercase text-muted-foreground">Sức chứa</label>
+            <Input
+              type="number"
+              min={0}
+              value={form.capacity}
+              onChange={(e) => setForm((f) => ({ ...f, capacity: e.target.value }))}
+            />
+          </div>
+          <div className="grid gap-1.5 md:col-span-2">
+            <label className="text-xs uppercase text-muted-foreground">Trạng thái</label>
+            <select
+              className="h-10 rounded-md border border-border bg-card px-3 text-sm"
+              value={form.status}
+              onChange={(e) => setForm((f) => ({ ...f, status: e.target.value as Floor['status'] }))}
+            >
+              <option value="active">Hoạt động</option>
+              <option value="inactive">Không hoạt động</option>
+              <option value="maintenance">Bảo trì</option>
+            </select>
+          </div>
+          <div className="grid gap-1.5 md:col-span-2">
+            <label className="text-xs uppercase text-muted-foreground">Loại xe được phép</label>
+            <div className="flex flex-wrap gap-2">
+              {vehicleTypes.length === 0 ? (
+                <p className="text-xs text-muted-foreground">Chưa có loại xe. Hãy tạo trước.</p>
+              ) : (
+                vehicleTypes.map((vt) => {
+                  const active = form.allowedVehicleTypes.includes(vt._id);
+                  return (
+                    <button
+                      type="button"
+                      key={vt._id}
+                      onClick={() => toggleType(vt._id)}
+                      className={`rounded-full border px-3 py-1 text-xs ${
+                        active
+                          ? 'border-primary bg-primary/15 text-primary'
+                          : 'border-border bg-muted/40 text-muted-foreground'
+                      }`}
+                    >
+                      {vt.code} - {vt.name}
+                    </button>
+                  );
+                })
+              )}
             </div>
-            <p className="m-0 text-sm text-gray-700 mb-2">
-              <strong>Loai xe:</strong> {floor.vehicleTypes.join(', ')}
-            </p>
-            <p className="m-0 text-sm text-gray-700 mb-3">
-              <strong>Cong:</strong> {floor.gates.join(', ')}
-            </p>
-            <div className="flex gap-2">
-              <button className="flex-1 px-2 py-1.5 rounded text-xs border border-blue-400 bg-blue-50 text-blue-600 font-bold hover:bg-blue-100">
-                Chinh sua
-              </button>
-              <button className="flex-1 px-2 py-1.5 rounded text-xs border border-gray-300 bg-gray-100 text-gray-700 font-bold hover:bg-gray-200">
-                Xem chi tiet
-              </button>
-            </div>
-          </article>
-        ))}
-      </div>
-
-      <article>
-        <h3 className="m-0 font-bold text-gray-900 mb-4">Chi tiet cong</h3>
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-sm">
-            <thead className="bg-gray-100 border-b border-gray-200">
-              <tr>
-                <th className="px-4 py-3 text-left font-bold text-gray-900">Cong</th>
-                <th className="px-4 py-3 text-left font-bold text-gray-900">Tang</th>
-                <th className="px-4 py-3 text-left font-bold text-gray-900">Loai</th>
-                <th className="px-4 py-3 text-left font-bold text-gray-900">Xe duoc phep</th>
-                <th className="px-4 py-3 text-left font-bold text-gray-900">Trang thai</th>
-              </tr>
-            </thead>
-            <tbody>
-              {gateData.map((row) => (
-                <tr key={row.id} className="border-b border-gray-100 hover:bg-gray-50">
-                  <td className="px-4 py-3 text-gray-900 font-bold">{row.name}</td>
-                  <td className="px-4 py-3 text-gray-600">{row.floor}</td>
-                  <td className="px-4 py-3 text-gray-600">{row.type}</td>
-                  <td className="px-4 py-3 text-gray-600">{row.allowedVehicles.join(', ')}</td>
-                  <td className="px-4 py-3">
-                    <span className="px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-800">{row.status}</span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          </div>
         </div>
-      </article>
-    </section>
+      </ModalForm>
+    </div>
   );
 }

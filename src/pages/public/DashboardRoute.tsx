@@ -1,20 +1,25 @@
-import { useCallback } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import DashboardPage from '@/pages/DashboardPage';
-import { mainFlowModules } from '@/data/mainFlow';
+import { useAuth } from '@/hooks/useAuth';
 
 export function DashboardRoute() {
   const navigate = useNavigate();
+  const { isAuthenticated, user } = useAuth();
 
-  const onLogout = useCallback(() => navigate('/', { replace: true }), [navigate]);
-  const onRefresh = useCallback(() => window.location.reload(), []);
-  const onAction = useCallback((module: any) => {
-    if (module.id === 'auth') navigate('/auth/login');
-  }, [navigate]);
+  useEffect(() => {
+    if (!isAuthenticated || !user) {
+      navigate('/auth/login', { replace: true });
+      return;
+    }
+    if (user.role === 'admin') navigate('/admin/dashboard', { replace: true });
+    else if (user.role === 'manager') navigate('/manager', { replace: true });
+    else if (user.role === 'staff') navigate('/staff', { replace: true });
+    else navigate('/', { replace: true });
+  }, [isAuthenticated, user, navigate]);
 
-  const mockUser = { fullName: 'Khach hang', email: 'user@pbms.vn', role: 'user', phone: '', isActive: true, lastLoginAt: undefined };
-
-  return <DashboardPage user={mockUser} onLogout={onLogout} onRefresh={onRefresh} modules={mainFlowModules} onAction={onAction} />;
+  return (
+    <div className="flex min-h-screen items-center justify-center text-sm text-muted-foreground">
+      Đang điều hướng...
+    </div>
+  );
 }
-
-export default DashboardRoute;

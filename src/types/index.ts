@@ -2,6 +2,7 @@ export type EntityStatus = 'active' | 'inactive' | 'maintenance' | 'warning' | '
 
 export interface Building {
   id: string;
+  backendId?: string;
   name: string;
   address: string;
   floors: number;
