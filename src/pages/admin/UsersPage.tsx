@@ -74,7 +74,7 @@ export function UsersPage() {
       fullName: user.name,
       email: user.email,
       password: '',
-      phone: '',
+      phone: user.phone || '',
       role: user.role,
     });
     setSelectedUser(user);
@@ -151,6 +151,7 @@ export function UsersPage() {
   const columns: DataColumn<UserRecord>[] = [
     { key: 'name', title: 'Người dùng' },
     { key: 'email', title: 'Email' },
+    { key: 'phone', title: 'Số điện thoại', render: (row) => row.phone || 'Chưa cập nhật' },
     { key: 'role', title: 'Vai trò', render: (row) => <StatusBadge status={row.role} /> },
     { key: 'status', title: 'Trạng thái', render: (row) => <StatusBadge status={row.status} /> },
     {
@@ -161,7 +162,74 @@ export function UsersPage() {
     {
       key: 'linkedPlates',
       title: 'Biển số liên kết',
-      render: (row) => row.linkedPlates.join(', '),
+      render: (row) => {
+        const locallyUpdatedRaw = localStorage.getItem('pbms.locallyUpdatedUsers');
+        const locallyUpdated = locallyUpdatedRaw ? JSON.parse(locallyUpdatedRaw) : {};
+        
+        // Case-insensitive and trimmed lookup
+        const targetEmail = (row.email || '').trim().toLowerCase();
+        const matchingKey = Object.keys(locallyUpdated).find(
+          (key) => key.trim().toLowerCase() === targetEmail
+        );
+        const localUser = matchingKey ? locallyUpdated[matchingKey] : null;
+
+        // Retrieve plates from simulated localStorage user registry if available
+        const localPlates: Array<{ plateNumber: string; vehicleType: 'car' | 'motorcycle'; isDefault?: boolean }> = localUser?.licensePlates || [];
+        
+        // Build a unique plate map to merge both sets preserving type and default status
+        const plateMap = new Map<string, { vehicleType: 'car' | 'motorcycle'; isDefault?: boolean }>();
+        
+        // Load local updates
+        localPlates.forEach((p) => {
+          if (p.plateNumber) {
+            plateMap.set(p.plateNumber.toUpperCase(), { vehicleType: p.vehicleType, isDefault: p.isDefault });
+          }
+        });
+        
+        // Merge with row.linkedPlates (defaulting to car if type is unspecified)
+        (row.linkedPlates || []).forEach((p) => {
+          const upper = p.toUpperCase();
+          if (!plateMap.has(upper)) {
+            plateMap.set(upper, { vehicleType: 'car', isDefault: false });
+          }
+        });
+
+        const mergedPlates = Array.from(plateMap.entries()).map(([plateNumber, info]) => ({
+          plateNumber,
+          vehicleType: info.vehicleType,
+          isDefault: info.isDefault,
+        }));
+
+        if (mergedPlates.length === 0) {
+          return <span className="text-muted-foreground italic text-xs">Chưa liên kết</span>;
+        }
+
+        return (
+          <div className="flex flex-wrap gap-1.5">
+            {mergedPlates.map((p) => (
+              <span
+                key={p.plateNumber}
+                className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[10px] font-mono font-black border tracking-wider transition-all duration-200 ${
+                  p.isDefault
+                    ? 'bg-amber-500/20 border-amber-500/30 text-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.1)]'
+                    : p.vehicleType === 'car'
+                    ? 'bg-blue-500/20 border-blue-500/30 text-blue-400'
+                    : 'bg-purple-500/20 border-purple-500/30 text-purple-400'
+                }`}
+                title={p.isDefault ? 'Biển số mặc định' : p.vehicleType === 'car' ? 'Ô tô' : 'Xe máy'}
+              >
+                <span>{p.vehicleType === 'car' ? '🚗' : '🏍️'}</span>
+                <span>{p.plateNumber}</span>
+                {p.isDefault && (
+                  <span className="text-[8px] font-sans font-extrabold uppercase tracking-normal opacity-95">
+                    (Mặc định)
+                  </span>
+                )}
+              </span>
+            ))}
+          </div>
+        );
+      },
     },
     {
       key: 'actions',

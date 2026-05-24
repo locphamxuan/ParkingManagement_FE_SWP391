@@ -22,13 +22,9 @@ yarn-error.log*
 .vscode/
 .idea/
 
-# Claude and API specs
-.claude
-openspec
+# openspec / api docs
+openspec/
+.claude/
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
 # system files
 .DS_Store

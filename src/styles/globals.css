@@ -391,3 +391,56 @@ button[aria-expanded="true"] .chev {
 .animate-fadeIn {
   animation: animate-fadeIn 0.4s ease forwards;
 }
+
+@keyframes modal-fadeIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -48%);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+}
+
+.animate-modalFadeIn {
+  animation: modal-fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Premium Dark Mode Override Styles for Status Badges in Admin/Manager Dashboard */
+.admin-theme .status-badge-success {
+  background-color: rgba(16, 185, 129, 0.15) !important;
+  color: #34d399 !important;
+  border-color: rgba(16, 185, 129, 0.3) !important;
+}
+
+.admin-theme .status-badge-warning {
+  background-color: rgba(245, 158, 11, 0.15) !important;
+  color: #fbbf24 !important;
+  border-color: rgba(245, 158, 11, 0.3) !important;
+}
+
+.admin-theme .status-badge-info {
+  background-color: rgba(14, 165, 233, 0.15) !important;
+  color: #38bdf8 !important;
+  border-color: rgba(14, 165, 233, 0.3) !important;
+}
+
+.admin-theme .status-badge-reserved {
+  background-color: rgba(139, 92, 246, 0.15) !important;
+  color: #a78bfa !important;
+  border-color: rgba(139, 92, 246, 0.3) !important;
+}
+
+.admin-theme .status-badge-danger {
+  background-color: rgba(244, 63, 94, 0.15) !important;
+  color: #fb7185 !important;
+  border-color: rgba(244, 63, 94, 0.3) !important;
+}
+
+.admin-theme .status-badge-default {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  color: #cbd5e1 !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+}
+

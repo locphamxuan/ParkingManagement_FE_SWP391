@@ -3,7 +3,29 @@ import { motion, useAnimation } from 'framer-motion';
 import { CartoonCar3D } from './CartoonCar3D';
 import { Activity, Info, Zap } from 'lucide-react';
 
-export function AnimatedParkingMap3D() {
+export interface AnimatedParkingMap3DProps {
+  rotateX?: any;
+  rotateZ?: any;
+  scale?: any;
+  x?: any;
+  y?: any;
+  interactive?: boolean;
+  selectedSlot?: string | null;
+  activeReservations?: Array<{ slotCode: string; plateNumber: string; vehicleType: 'car' | 'motorcycle' }>;
+  onSlotClick?: (slotCode: string) => void;
+}
+
+export function AnimatedParkingMap3D({
+  rotateX,
+  rotateZ,
+  scale,
+  x,
+  y,
+  interactive = false,
+  selectedSlot = null,
+  activeReservations = [],
+  onSlotClick
+}: AnimatedParkingMap3DProps = {}) {
   const [hudMessage, setHudMessage] = useState('Khởi động hệ thống mô phỏng...');
   const [simPhase, setSimPhase] = useState(0);
 
@@ -23,6 +45,15 @@ export function AnimatedParkingMap3D() {
   const [smokeParticles, setSmokeParticles] = useState<{ id: number; x: number; y: number }[]>([]);
 
   useEffect(() => {
+    if (interactive) {
+      setCarAState('parked');
+      setCarBState('parked');
+      setGateAOpen(false);
+      setGateBOpen(false);
+      setHudMessage('Vui lòng chọn một ô đỗ trống màu xanh trên sơ đồ.');
+      return;
+    }
+
     let active = true;
 
     async function runSimulationLoop() {
@@ -189,11 +220,11 @@ export function AnimatedParkingMap3D() {
           <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse shadow-[0_0_8px_#f97316]" />
           <span className="text-[10px] font-black uppercase tracking-wider text-slate-300 font-mono flex items-center gap-1.5">
             <Activity size={12} className="text-orange-400" />
-            LIVE SIMULATION V3.0
+            {interactive ? 'SƠ ĐỒ TƯƠNG TÁC ĐẶT CHỖ 3D' : 'LIVE SIMULATION V3.0'}
           </span>
         </div>
         <span className="text-[9px] font-mono font-black text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded border border-orange-500/20 uppercase tracking-widest">
-          ACTIVE MAP
+          {interactive ? 'CHỌN Ô ĐỖ' : 'ACTIVE MAP'}
         </span>
       </div>
 
@@ -227,14 +258,18 @@ export function AnimatedParkingMap3D() {
           </svg>
         )}
 
-        <div 
+        <motion.div 
           style={{
-            transform: 'rotateX(55deg) rotateZ(-45deg)',
             transformStyle: 'preserve-3d',
             width: '450px',
-            height: '240px'
+            height: '240px',
+            rotateX: rotateX ?? 55,
+            rotateZ: rotateZ ?? -45,
+            scale: scale ?? 1.0,
+            x: x ?? 0,
+            y: y ?? 0,
           }}
-          className="relative preserve-3d transition-transform duration-300"
+          className="relative preserve-3d"
         >
           {/* Architectural Asphalt Concrete Platform SVG Base */}
           <svg viewBox="0 0 450 240" className="absolute inset-0 w-full h-full overflow-visible z-0">
@@ -443,58 +478,76 @@ export function AnimatedParkingMap3D() {
 
           {/* Render 5 volumetric Parking slots with stoppers */}
           <div className="absolute top-[20px] left-[20px] right-[20px] h-[70px] grid grid-cols-5 gap-4 items-center justify-items-center">
-            {[1, 2, 3, 4, 5].map((id) => (
-              <div 
-                key={id}
-                className="w-[66px] h-[46px] rounded-xl border border-white/5 bg-slate-950/60 flex flex-col justify-between p-1.5 relative shadow-2xl transition-all duration-300 hover:border-cyan-500/20"
-              >
-                {/* EV Slot specific header glow */}
-                {id === 3 && (
-                  <div className="absolute inset-0 border border-cyan-500/20 rounded-xl bg-cyan-500/5 animate-pulse flex items-center justify-center">
-                    <Zap size={10} className="text-cyan-400 opacity-60 absolute top-1 right-1" />
-                  </div>
-                )}
-                
-                {/* Yellow-and-Black striped Stopper bump guard at the rear of each parking spot */}
-                <div 
-                  className="absolute top-1 left-2.5 right-2.5 h-[3px] rounded-xs preserve-3d"
-                  style={{
-                    transform: 'translateZ(1.5px)',
-                    backgroundImage: 'repeating-linear-gradient(45deg, #fbbf24, #fbbf24 3px, #0f172a 3px, #0f172a 6px)',
-                    border: '0.5px solid #78350f'
-                  }}
-                />
-                
-                <div className="flex justify-between items-center z-10 font-mono text-[8px] text-slate-500 font-extrabold uppercase mt-2">
-                  <span>S-{id}</span>
-                </div>
-                
-                {/* Static Parked Offroad G-Wagon in Slot 1 */}
-                {id === 1 && (
-                  <div className="absolute inset-0 flex items-center justify-center preserve-3d" style={{ transform: 'translateZ(4.5px)' }}>
-                    <CartoonCar3D type="offroad" color="#334155" state="parked" />
-                  </div>
-                )}
-                
-                {/* Static Parked Teal Sedan in Slot 2 to match mockup screenshot */}
-                {id === 2 && (
-                  <div className="absolute inset-0 flex items-center justify-center preserve-3d" style={{ transform: 'translateZ(4px)' }}>
-                    <CartoonCar3D type="sedan" color="#0e7490" state="parked" />
-                  </div>
-                )}
+            {[1, 2, 3, 4, 5].map((id) => {
+              const slotCode = `A-0${id}`;
+              const isEV = id === 3;
+              
+              // If interactive mode, check if slot is reserved in activeReservations
+              const reservation = interactive && activeReservations?.find((r) => r.slotCode === slotCode);
+              const isOccupied = interactive 
+                ? Boolean(reservation || id === 1 || id === 5) // slots A-01 and A-05 are occupied by default to look realistic
+                : (id === 1 || id === 2 || (id === 3 && carAState === 'parked') || (id === 4 && carBState === 'parked') || id === 5);
+              
+              const isSelected = interactive && selectedSlot === slotCode;
 
-                {/* Static Parked Yellow Crossover in Slot 5 */}
-                {id === 5 && (
-                  <div className="absolute inset-0 flex items-center justify-center preserve-3d" style={{ transform: 'translateZ(4.5px)' }}>
-                    <CartoonCar3D type="crossover" color="#eab308" state="parked" />
+              return (
+                <div 
+                  key={id}
+                  onClick={() => {
+                    if (interactive && !isOccupied && onSlotClick) {
+                      onSlotClick(slotCode);
+                    }
+                  }}
+                  className={`w-[66px] h-[46px] rounded-xl border flex flex-col justify-between p-1.5 relative shadow-2xl transition-all duration-300 ${
+                    interactive && !isOccupied ? 'cursor-pointer' : ''
+                  } ${
+                    isSelected
+                      ? 'border-orange-500 bg-orange-500/10 shadow-[0_0_15px_rgba(249,115,22,0.6)] scale-105 z-20'
+                      : isOccupied
+                      ? 'border-rose-500/80 bg-rose-500/5 shadow-[0_0_10px_rgba(244,63,94,0.3)]'
+                      : 'border-emerald-500 bg-emerald-500/5 shadow-[0_0_10px_rgba(16,185,129,0.3)] hover:border-emerald-400 hover:bg-emerald-500/10'
+                  }`}
+                >
+                  {/* EV Slot specific header glow */}
+                  {isEV && (
+                    <div className="absolute inset-0 border border-cyan-500/20 rounded-xl bg-cyan-500/5 flex items-center justify-center pointer-events-none">
+                      <Zap size={10} className="text-cyan-400 opacity-60 absolute top-1 right-1" />
+                    </div>
+                  )}
+                  
+                  {/* Yellow-and-Black striped Stopper bump guard */}
+                  <div 
+                    className="absolute top-1 left-2.5 right-2.5 h-[3px] rounded-xs pointer-events-none"
+                    style={{
+                      transform: 'translateZ(1.5px)',
+                      backgroundImage: 'repeating-linear-gradient(45deg, #fbbf24, #fbbf24 3px, #0f172a 3px, #0f172a 6px)',
+                      border: '0.5px solid #78350f'
+                    }}
+                  />
+                  
+                  <div className="flex justify-between items-center z-10 font-mono text-[8px] text-slate-500 font-extrabold uppercase mt-2 pointer-events-none">
+                    <span>{slotCode}</span>
+                    {isOccupied && <span className="text-rose-400 font-bold text-[7px] uppercase tracking-normal">FULL</span>}
+                    {!isOccupied && <span className="text-emerald-400 font-bold text-[7px] uppercase tracking-normal">FREE</span>}
                   </div>
-                )}
-              </div>
-            ))}
+                  
+                  {/* Render visual cars in slots */}
+                  {isOccupied && (
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ transform: 'translateZ(4px)' }}>
+                      <CartoonCar3D 
+                        type={id === 1 ? 'offroad' : id === 5 ? 'crossover' : 'sedan'} 
+                        color={id === 1 ? '#334155' : id === 5 ? '#eab308' : reservation?.vehicleType === 'motorcycle' ? '#be185d' : '#0e7490'} 
+                        state="parked" 
+                      />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
 
           {/* Floating exhaust smoke particles */}
-          {smokeParticles.map((p) => (
+          {!interactive && smokeParticles.map((p) => (
             <motion.span 
               key={p.id}
               initial={{ scale: 0.3, opacity: 0.8, z: 6 }}
@@ -510,104 +563,108 @@ export function AnimatedParkingMap3D() {
 
           {/* ANIMATED CARS IN SIMULATION */}
           {/* CAR A (Teal Sedan) */}
-          <motion.div 
-            animate={controlsCarA}
-            className="absolute preserve-3d"
-            style={{
-              width: '56px',
-              height: '36px',
-              left: '25px',
-              top: '0px',
-              transformStyle: 'preserve-3d',
-              willChange: 'transform'
-            }}
-          >
-            <CartoonCar3D type="sedan" color="#0e7490" state={carAState} />
-            
-            {/* Dynamic Conical Headlight Beams */}
-            {carAState === 'driving' && (
-              <div className="absolute overflow-visible pointer-events-none" style={{ left: '54px', top: '10px', width: '50px', height: '16px', transform: 'translateZ(3px)' }}>
-                <svg className="w-full h-full overflow-visible" opacity="0.35">
-                  <polygon points="0,8 50,0 50,16" fill="rgba(254, 240, 138, 0.75)" filter="blur(1.5px)" />
-                </svg>
-              </div>
-            )}
-          </motion.div>
+          {!interactive && (
+            <motion.div 
+              animate={controlsCarA}
+              className="absolute preserve-3d"
+              style={{
+                width: '56px',
+                height: '36px',
+                left: '25px',
+                top: '0px',
+                transformStyle: 'preserve-3d',
+                willChange: 'transform'
+              }}
+            >
+              <CartoonCar3D type="sedan" color="#0e7490" state={carAState} />
+              
+              {/* Dynamic Conical Headlight Beams */}
+              {carAState === 'driving' && (
+                <div className="absolute overflow-visible pointer-events-none" style={{ left: '54px', top: '10px', width: '50px', height: '16px', transform: 'translateZ(3px)' }}>
+                  <svg className="w-full h-full overflow-visible" opacity="0.35">
+                    <polygon points="0,8 50,0 50,16" fill="rgba(254, 240, 138, 0.75)" filter="blur(1.5px)" />
+                  </svg>
+                </div>
+              )}
+            </motion.div>
+          )}
 
           {/* CAR B (Fuchsia SUV) */}
-          <motion.div 
-            animate={controlsCarB}
-            className="absolute preserve-3d"
-            style={{
-              width: '58px',
-              height: '38px',
-              left: '25px',
-              top: '0px',
-              transformStyle: 'preserve-3d',
-              willChange: 'transform'
-            }}
-          >
-            <CartoonCar3D type="suv" color="#be185d" state={carBState} />
+          {!interactive && (
+            <motion.div 
+              animate={controlsCarB}
+              className="absolute preserve-3d"
+              style={{
+                width: '58px',
+                height: '38px',
+                left: '25px',
+                top: '0px',
+                transformStyle: 'preserve-3d',
+                willChange: 'transform'
+              }}
+            >
+              <CartoonCar3D type="suv" color="#be185d" state={carBState} />
 
-            {/* Dynamic Conical Headlight Beams */}
-            {carBState === 'driving' && (
-              <div className="absolute overflow-visible pointer-events-none" style={{ left: '56px', top: '11px', width: '50px', height: '16px', transform: 'translateZ(3.5px)' }}>
-                <svg className="w-full h-full overflow-visible" opacity="0.35">
-                  <polygon points="0,8 50,0 50,16" fill="rgba(254, 240, 138, 0.75)" filter="blur(1.5px)" />
-                </svg>
-              </div>
-            )}
+              {/* Dynamic Conical Headlight Beams */}
+              {carBState === 'driving' && (
+                <div className="absolute overflow-visible pointer-events-none" style={{ left: '56px', top: '11px', width: '50px', height: '16px', transform: 'translateZ(3.5px)' }}>
+                  <svg className="w-full h-full overflow-visible" opacity="0.35">
+                    <polygon points="0,8 50,0 50,16" fill="rgba(254, 240, 138, 0.75)" filter="blur(1.5px)" />
+                  </svg>
+                </div>
+              )}
 
-            {/* Holographic HUD Callout pinned to Fuchsia SUV roof (only when driving/exiting) */}
-            {carBState === 'driving' && (
-              <div className="absolute overflow-visible pointer-events-none" style={{ top: 0, left: 0, width: '100%', height: '100%', transformStyle: 'preserve-3d' }}>
-                
-                {/* SVG curved cyan leader line */}
-                <svg className="absolute overflow-visible pointer-events-none z-30" style={{ top: -75, left: -25, width: 80, height: 80 }}>
-                  <path 
-                    d="M 15,10 Q 55,35 44,70" 
-                    fill="none" 
-                    stroke="#06b6d4" 
-                    strokeWidth="1.5"
-                    strokeDasharray="3 3"
-                    className="animate-pulse"
-                  />
-                  {/* Glowing Cyan anchor dot pinned to the roof */}
-                  <circle cx="44" cy="70" r="3" fill="#06b6d4" className="shadow-[0_0_8px_#06b6d4]" />
-                </svg>
+              {/* Holographic HUD Callout pinned to Fuchsia SUV roof (only when driving/exiting) */}
+              {carBState === 'driving' && (
+                <div className="absolute overflow-visible pointer-events-none" style={{ top: 0, left: 0, width: '100%', height: '100%', transformStyle: 'preserve-3d' }}>
+                  
+                  {/* SVG curved cyan leader line */}
+                  <svg className="absolute overflow-visible pointer-events-none z-30" style={{ top: -75, left: -25, width: 80, height: 80 }}>
+                    <path 
+                      d="M 15,10 Q 55,35 44,70" 
+                      fill="none" 
+                      stroke="#06b6d4" 
+                      strokeWidth="1.5"
+                      strokeDasharray="3 3"
+                      className="animate-pulse"
+                    />
+                    {/* Glowing Cyan anchor dot pinned to the roof */}
+                    <circle cx="44" cy="70" r="3" fill="#06b6d4" className="shadow-[0_0_8px_#06b6d4]" />
+                  </svg>
 
-                {/* Counter-rotated HUD Card facing the user perfectly */}
-                <div 
-                  className="absolute glass-panel border border-cyan-500/40 rounded-xl p-2.5 tracking-wider uppercase font-mono shadow-2xl flex flex-col gap-0.5 pointer-events-auto"
-                  style={{
-                    width: '135px',
-                    height: '52px',
-                    left: '-105px',
-                    top: '-120px',
-                    transform: 'rotateZ(45deg) rotateX(-55deg) scale(0.95)',
-                    transformOrigin: 'bottom right',
-                    background: 'rgba(15, 23, 42, 0.85)',
-                    boxShadow: '0 8px 32px 0 rgba(6, 182, 212, 0.25)',
-                    borderColor: 'rgba(6, 182, 212, 0.4)'
-                  }}
-                >
-                  <div className="flex justify-between items-center text-[9px] font-black text-white border-b border-cyan-500/20 pb-1 mb-1">
-                    <span>FUCHSIA_SUV_99</span>
-                    <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
-                  </div>
-                  <div className="text-[7.5px] font-bold text-cyan-300 flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_6px_#10b981]" />
-                    STS: DISPATCH_ENGAGED
-                  </div>
-                  <div className="text-[7.5px] font-bold text-cyan-300/80">
-                    TRAKS: SCAN_CLEAR_OK
+                  {/* Counter-rotated HUD Card facing the user perfectly */}
+                  <div 
+                    className="absolute glass-panel border border-cyan-500/40 rounded-xl p-2.5 tracking-wider uppercase font-mono shadow-2xl flex flex-col gap-0.5 pointer-events-auto"
+                    style={{
+                      width: '135px',
+                      height: '52px',
+                      left: '-105px',
+                      top: '-120px',
+                      transform: 'rotateZ(45deg) rotateX(-55deg) scale(0.95)',
+                      transformOrigin: 'bottom right',
+                      background: 'rgba(15, 23, 42, 0.85)',
+                      boxShadow: '0 8px 32px 0 rgba(6, 182, 212, 0.25)',
+                      borderColor: 'rgba(6, 182, 212, 0.4)'
+                    }}
+                  >
+                    <div className="flex justify-between items-center text-[9px] font-black text-white border-b border-cyan-500/20 pb-1 mb-1">
+                      <span>FUCHSIA_SUV_99</span>
+                      <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
+                    </div>
+                    <div className="text-[7.5px] font-bold text-cyan-300 flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_6px_#10b981]" />
+                      STS: DISPATCH_ENGAGED
+                    </div>
+                    <div className="text-[7.5px] font-bold text-cyan-300/80">
+                      TRAKS: SCAN_CLEAR_OK
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
-          </motion.div>
+              )}
+            </motion.div>
+          )}
 
-        </div>
+        </motion.div>
       </div>
 
       {/* Cyber HUD Status Panel */}

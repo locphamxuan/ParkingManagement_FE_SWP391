@@ -39,8 +39,8 @@ export const mainFlowModules: LegacyModule[] = [
     id: 'reservations',
     title: 'Đặt chỗ trước',
     description: 'Đặt trước chỗ đỗ theo nhu cầu của khách hàng.',
-    actionLabel: 'Sắp ra mắt',
-    available: false,
+    actionLabel: 'Đặt chỗ ngay',
+    available: true,
   },
   {
     id: 'sessions',

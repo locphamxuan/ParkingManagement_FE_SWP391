@@ -12,6 +12,7 @@ import { SystemHealthPage } from '@/pages/admin/SystemHealthPage';
 import { ModulePlaceholderPage } from '@/pages/admin/ModulePlaceholderPage';
 import { HomeRoute } from '@/pages/public/HomeRoute';
 import ProfilePage from '@/pages/public/ProfilePage';
+import ReservationsPage from '@/pages/public/ReservationsPage';
 import { PublicLoginRoute, PublicRegisterRoute } from '@/pages/public/AuthRoutes';
 import { ProtectedRoute } from '@/routes/ProtectedRoute';
 import { ManagerLayout } from '@/layouts/ManagerLayout';
@@ -40,6 +41,7 @@ export function AppRouter() {
       <Route path="/auth/login" element={<PublicLoginRoute />} />
       <Route path="/auth/register" element={<PublicRegisterRoute />} />
       <Route path="/profile" element={<ProfilePage />} />
+      <Route path="/reservations" element={<ReservationsPage />} />
 
       <Route path="/manager/login" element={<Navigate to="/auth/login" replace />} />
       <Route path="/manager" element={<Navigate to="/manager/dashboard" replace />} />

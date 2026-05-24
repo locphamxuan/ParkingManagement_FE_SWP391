@@ -17,7 +17,7 @@ export function Modal({ open, onOpenChange, title, children }: ModalProps) {
         <Dialog.Overlay className="fixed inset-0 z-40 bg-stone-950/40 backdrop-blur-md transition-all duration-300 animate-fadeIn" />
         <Dialog.Content
           className={cn(
-            'fixed left-1/2 top-1/2 z-50 w-[92vw] max-w-2xl -translate-x-1/2 -translate-y-1/2 rounded-3xl border border-stone-200/45 bg-white/95 p-6 shadow-2xl backdrop-blur-xl animate-fadeIn focus:outline-none'
+            'fixed left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 w-[92vw] max-w-2xl rounded-3xl border border-stone-200/45 bg-white/95 p-6 shadow-2xl backdrop-blur-xl animate-modalFadeIn focus:outline-none'
           )}
         >
           <div className="mb-5 flex items-center justify-between">
