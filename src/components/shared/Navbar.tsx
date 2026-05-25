@@ -22,7 +22,7 @@ export function Navbar({ title, email, onLogout }: NavbarProps) {
         </div>
 
         <div className="flex flex-1 items-center justify-end gap-3">
-          <div className="relative hidden w-full max-w-md md:block">
+          {/* <div className="relative hidden w-full max-w-md md:block">
             <Search
               className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500"
               size={15}
@@ -31,7 +31,7 @@ export function Navbar({ title, email, onLogout }: NavbarProps) {
               className="border-white/10 bg-slate-800/70 pl-10 text-slate-200 shadow-none placeholder:text-slate-500 rounded-full h-9.5 focus:border-orange-500/40"
               placeholder="Tìm kiếm nhanh..."
             />
-          </div>
+          </div> */}
 
           <Button variant="secondary" size="sm" className="gap-2 rounded-full border border-white/10 bg-slate-800/70 hover:bg-slate-700/80 text-slate-300 hover:text-white shadow-sm h-9.5 px-4 transition-all">
             <Bell size={14} className="text-slate-400" />

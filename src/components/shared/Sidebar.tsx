@@ -31,11 +31,10 @@ const modules = [
   { to: 'wallet-governance', label: 'Quản lý ví', icon: Wallet },
   { to: 'pricing-policies', label: 'Chính sách giá', icon: NotebookPen },
   { to: 'policy-push-logs', label: 'Lịch sử đẩy chính sách', icon: FileSearch },
-  { to: 'audit-logs', label: 'Nhật ký kiểm toán', icon: Activity },
-  { to: 'fraud-detection', label: 'Phát hiện gian lận', icon: ShieldAlert },
-  { to: 'system-health', label: 'Tình trạng hệ thống', icon: Gauge },
-  { to: 'notifications', label: 'Thông báo', icon: Bell },
-  { to: 'settings', label: 'Cài đặt', icon: Settings },
+  
+ 
+ 
+ 
 ] as const;
 
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
