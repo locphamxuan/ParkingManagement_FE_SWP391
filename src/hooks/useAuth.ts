@@ -39,5 +39,6 @@ export function useAuth() {
     error,
     isAdmin: Boolean(session?.token) && session?.role === 'admin',
     isManager: Boolean(session?.token) && session?.role === 'manager',
+    isStaff: Boolean(session?.token) && session?.role === 'staff',
   };
 }
