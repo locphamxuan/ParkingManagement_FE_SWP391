@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -17,28 +17,23 @@ import {
 import { AnimatedParkingMap3D } from '@/components/shared/AnimatedParkingMap3D';
 import { useAuth } from '@/hooks/useAuth';
 import { listUserBuildingViews, type UserBuildingView } from '@/pages/User/mockBuildingsData';
-
-type VehicleType = 'car' | 'motorcycle';
-type ReservationStatus = 'active' | 'cancelled' | 'completed';
-
-interface ReservationRecord {
-  id: string;
-  userId: string;
-  buildingId: string;
-  buildingName: string;
-  slotCode: string;
-  plateNumber: string;
-  vehicleType: VehicleType;
-  scheduledAt: string;
-  createdAt: string;
-  status: ReservationStatus;
-}
+import {
+  cancelUserReservation,
+  createUserReservation,
+  getReservationPolicyByBuilding,
+  listParkingSlotsByBuilding,
+  listUserReservations,
+  slotSupportsVehicle,
+  type ReservationVehicleType,
+  type UserParkingSlotRecord,
+  type UserReservationPolicyRecord,
+  type UserReservationRecord,
+} from '@/pages/User/mockReservationsData';
 
 interface ReservationLocationState {
   buildingId?: string;
 }
 
-const RESERVATION_STORAGE_KEY = 'pbms.reservations';
 const DATETIME_LOCAL_SLICE_END = 16;
 
 function toDateTimeLocalValue(date: Date): string {
@@ -50,77 +45,6 @@ function defaultScheduleValue(): string {
   const next = new Date(Date.now() + 30 * 60_000);
   next.setSeconds(0, 0);
   return toDateTimeLocalValue(next);
-}
-
-function parseStoredReservations(raw: string | null): ReservationRecord[] {
-  if (!raw) return [];
-
-  try {
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-
-    return parsed
-      .map((item, index): ReservationRecord | null => {
-        if (!item || typeof item !== 'object') return null;
-
-        const vehicleType: VehicleType =
-          (item as { vehicleType?: string }).vehicleType === 'motorcycle' ? 'motorcycle' : 'car';
-        const statusRaw = (item as { status?: string }).status;
-        const status: ReservationStatus =
-          statusRaw === 'cancelled' || statusRaw === 'completed' ? statusRaw : 'active';
-
-        const id =
-          typeof (item as { id?: unknown }).id === 'string'
-            ? (item as { id: string }).id
-            : `RSV-LEGACY-${index + 1}`;
-        const userId =
-          typeof (item as { userId?: unknown }).userId === 'string'
-            ? (item as { userId: string }).userId
-            : '';
-        if (!userId) return null;
-
-        const buildingId =
-          typeof (item as { buildingId?: unknown }).buildingId === 'string'
-            ? (item as { buildingId: string }).buildingId
-            : 'legacy-building';
-        const buildingName =
-          typeof (item as { buildingName?: unknown }).buildingName === 'string'
-            ? (item as { buildingName: string }).buildingName
-            : 'Tòa nhà mặc định';
-        const slotCode =
-          typeof (item as { slotCode?: unknown }).slotCode === 'string'
-            ? (item as { slotCode: string }).slotCode
-            : 'A-02';
-        const plateNumber =
-          typeof (item as { plateNumber?: unknown }).plateNumber === 'string'
-            ? (item as { plateNumber: string }).plateNumber
-            : '--';
-        const scheduledAt =
-          typeof (item as { scheduledAt?: unknown }).scheduledAt === 'string'
-            ? (item as { scheduledAt: string }).scheduledAt
-            : defaultScheduleValue();
-        const createdAt =
-          typeof (item as { createdAt?: unknown }).createdAt === 'string'
-            ? (item as { createdAt: string }).createdAt
-            : new Date().toISOString();
-
-        return {
-          id,
-          userId,
-          buildingId,
-          buildingName,
-          slotCode,
-          plateNumber,
-          vehicleType,
-          scheduledAt,
-          createdAt,
-          status,
-        };
-      })
-      .filter((item): item is ReservationRecord => Boolean(item));
-  } catch {
-    return [];
-  }
 }
 
 function formatDateTime(value: string): string {
@@ -135,7 +59,7 @@ function formatDateTime(value: string): string {
   });
 }
 
-function vehicleTypeLabel(value: VehicleType): string {
+function vehicleTypeLabel(value: ReservationVehicleType): string {
   return value === 'car' ? 'Ô tô' : 'Xe máy';
 }
 
@@ -143,17 +67,19 @@ export default function ReservationsPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { session } = useAuth();
-
   const state = (location.state as ReservationLocationState | null) ?? null;
 
   const [rows, setRows] = useState<UserBuildingView[]>([]);
+  const [slots, setSlots] = useState<UserParkingSlotRecord[]>([]);
+  const [reservationPolicy, setReservationPolicy] = useState<UserReservationPolicyRecord | null>(null);
+  const [reservations, setReservations] = useState<UserReservationRecord[]>([]);
   const [isLoadingBuildings, setIsLoadingBuildings] = useState(true);
-  const [reservations, setReservations] = useState<ReservationRecord[]>(() =>
-    parseStoredReservations(localStorage.getItem(RESERVATION_STORAGE_KEY)),
-  );
+  const [isLoadingSlots, setIsLoadingSlots] = useState(false);
+  const [isLoadingReservations, setIsLoadingReservations] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [selectedBuildingId, setSelectedBuildingId] = useState('');
-  const [selectedVehicleType, setSelectedVehicleType] = useState<VehicleType | ''>('');
+  const [selectedVehicleType, setSelectedVehicleType] = useState<ReservationVehicleType | ''>('');
   const [scheduledAt, setScheduledAt] = useState(defaultScheduleValue());
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [selectedPlate, setSelectedPlate] = useState('');
@@ -189,19 +115,63 @@ export default function ReservationsPage() {
     };
   }, [state?.buildingId]);
 
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadReservations() {
+      if (!user?.userId) {
+        if (!ignore) setIsLoadingReservations(false);
+        return;
+      }
+      setIsLoadingReservations(true);
+      const data = await listUserReservations(user.userId);
+      if (ignore) return;
+      setReservations(data);
+      setIsLoadingReservations(false);
+    }
+
+    loadReservations();
+    return () => {
+      ignore = true;
+    };
+  }, [user?.userId]);
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadBuildingMeta() {
+      if (!selectedBuildingId) {
+        setSlots([]);
+        setReservationPolicy(null);
+        return;
+      }
+
+      setIsLoadingSlots(true);
+      const [slotRows, policy] = await Promise.all([
+        listParkingSlotsByBuilding(selectedBuildingId),
+        getReservationPolicyByBuilding(selectedBuildingId),
+      ]);
+      if (ignore) return;
+
+      setSlots(slotRows);
+      setReservationPolicy(policy);
+      setIsLoadingSlots(false);
+    }
+
+    loadBuildingMeta();
+    return () => {
+      ignore = true;
+    };
+  }, [selectedBuildingId]);
+
   const selectedBuilding = useMemo(
     () => rows.find((row) => row.building._id === selectedBuildingId) || null,
     [rows, selectedBuildingId],
   );
 
-  const userReservations = useMemo(() => {
-    if (!user) return [];
-    return reservations.filter((row) => row.userId === user.userId);
-  }, [reservations, user]);
-
   const activeReservations = useMemo(
-    () => userReservations.filter((row) => row.status === 'active'),
-    [userReservations],
+    () => reservations.filter((row) => row.status === 'active'),
+    [reservations],
   );
 
   const activeReservationsForSelectedBuilding = useMemo(
@@ -214,8 +184,6 @@ export default function ReservationsPage() {
     return user.licensePlates.filter((plate) => plate.vehicleType === selectedVehicleType);
   }, [user, selectedVehicleType]);
 
-  const reservationPolicy = selectedBuilding?.reservationPolicy || null;
-
   const minDateTime = useMemo(() => {
     const leadMinutes = reservationPolicy?.minAdvanceMinutes ?? 15;
     return toDateTimeLocalValue(new Date(Date.now() + leadMinutes * 60_000));
@@ -226,10 +194,37 @@ export default function ReservationsPage() {
     return toDateTimeLocalValue(new Date(Date.now() + maxHours * 3_600_000));
   }, [reservationPolicy?.maxAdvanceHours]);
 
-  const saveReservations = (next: ReservationRecord[]) => {
-    setReservations(next);
-    localStorage.setItem(RESERVATION_STORAGE_KEY, JSON.stringify(next));
-  };
+  const unavailableSlotCodes = useMemo(() => {
+    const codes = new Set<string>();
+    const reservedInActive = new Set(activeReservationsForSelectedBuilding.map((row) => row.slotCode));
+
+    slots.forEach((slot) => {
+      const notAvailableByStatus = slot.status !== 'available';
+      const notReservable = !slot.reservable;
+      const notMatchVehicle = selectedVehicleType
+        ? !slotSupportsVehicle(slot, selectedVehicleType)
+        : true;
+
+      if (notAvailableByStatus || notReservable || notMatchVehicle || reservedInActive.has(slot.code)) {
+        codes.add(slot.code);
+      }
+    });
+
+    return Array.from(codes);
+  }, [activeReservationsForSelectedBuilding, selectedVehicleType, slots]);
+
+  const availableSlotCount = useMemo(() => {
+    if (!selectedVehicleType) return 0;
+    const unavailable = new Set(unavailableSlotCodes);
+    return slots.filter((slot) => !unavailable.has(slot.code)).length;
+  }, [selectedVehicleType, slots, unavailableSlotCodes]);
+
+  useEffect(() => {
+    if (!selectedSlot) return;
+    if (unavailableSlotCodes.includes(selectedSlot)) {
+      setSelectedSlot(null);
+    }
+  }, [selectedSlot, unavailableSlotCodes]);
 
   if (!session || !user) {
     return <Navigate to="/auth/login" replace />;
@@ -238,9 +233,8 @@ export default function ReservationsPage() {
   const canOpenBookingForm = Boolean(
     selectedBuildingId && selectedVehicleType && scheduledAt && reservationPolicy?.isActive !== false,
   );
-
   const canSubmit = Boolean(
-    canOpenBookingForm && selectedSlot && selectedPlate && !isLoadingBuildings,
+    canOpenBookingForm && selectedSlot && selectedPlate && !isLoadingSlots && !isSubmitting,
   );
 
   const handleSlotClick = (slotCode: string) => {
@@ -263,6 +257,10 @@ export default function ReservationsPage() {
       setBookingError('Tòa nhà này đang tạm dừng đặt chỗ trước.');
       return;
     }
+    if (unavailableSlotCodes.includes(slotCode)) {
+      setBookingError('Ô đỗ này hiện không khả dụng.');
+      return;
+    }
 
     setSelectedSlot(slotCode);
 
@@ -280,7 +278,7 @@ export default function ReservationsPage() {
     setBookingSuccess(null);
   };
 
-  const handleConfirmBooking = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleConfirmBooking = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setBookingError(null);
     setBookingSuccess(null);
@@ -305,11 +303,6 @@ export default function ReservationsPage() {
       setBookingError('Vui lòng chọn biển số xe.');
       return;
     }
-    if (reservationPolicy?.isActive === false) {
-      setBookingError('Tòa nhà này đang tạm dừng đặt chỗ trước.');
-      return;
-    }
-
     if (activeReservations.length >= user.licensePlates.length) {
       setBookingError(
         `Bạn đã đặt tối đa ${user.licensePlates.length} lượt đang giữ. Vui lòng hủy hoặc hoàn tất lượt cũ.`,
@@ -317,66 +310,36 @@ export default function ReservationsPage() {
       return;
     }
 
-    const scheduledAtTime = new Date(scheduledAt).getTime();
-    if (Number.isNaN(scheduledAtTime)) {
-      setBookingError('Thời gian đặt chỗ không hợp lệ.');
-      return;
-    }
+    setIsSubmitting(true);
+    try {
+      await createUserReservation({
+        userId: user.userId,
+        buildingId: selectedBuilding.building._id,
+        buildingName: selectedBuilding.building.name,
+        slotCode: selectedSlot,
+        plateNumber: selectedPlate,
+        vehicleType: selectedVehicleType,
+        scheduledAt,
+      });
 
-    const minAllowedTime = new Date(minDateTime).getTime();
-    const maxAllowedTime = new Date(maxDateTime).getTime();
-    if (scheduledAtTime < minAllowedTime || scheduledAtTime > maxAllowedTime) {
-      setBookingError(
-        `Thời gian đặt chỗ phải nằm trong khoảng ${formatDateTime(minDateTime)} - ${formatDateTime(maxDateTime)}.`,
+      const nextReservations = await listUserReservations(user.userId);
+      setReservations(nextReservations);
+      setBookingSuccess(
+        `Đặt chỗ thành công: ${selectedBuilding.building.name} - ${selectedSlot} - ${selectedPlate}.`,
       );
-      return;
+      setSelectedSlot(null);
+      setSelectedPlate('');
+    } catch (error) {
+      setBookingError(error instanceof Error ? error.message : 'Không thể tạo lượt đặt chỗ.');
+    } finally {
+      setIsSubmitting(false);
     }
-
-    const isPlateBusy = activeReservations.some((entry) => entry.plateNumber === selectedPlate);
-    if (isPlateBusy) {
-      setBookingError('Biển số này đang được dùng cho lượt đặt chỗ khác.');
-      return;
-    }
-
-    const isSlotBusy = reservations.some(
-      (entry) =>
-        entry.status === 'active' &&
-        entry.buildingId === selectedBuilding.building._id &&
-        entry.slotCode === selectedSlot,
-    );
-    if (isSlotBusy) {
-      setBookingError('Ô đỗ vừa được đặt, vui lòng chọn ô khác.');
-      return;
-    }
-
-    const newReservation: ReservationRecord = {
-      id: `RSV-${Math.floor(1000 + Math.random() * 9000)}`,
-      userId: user.userId,
-      buildingId: selectedBuilding.building._id,
-      buildingName: selectedBuilding.building.name,
-      slotCode: selectedSlot,
-      plateNumber: selectedPlate,
-      vehicleType: selectedVehicleType,
-      scheduledAt,
-      createdAt: new Date().toISOString(),
-      status: 'active',
-    };
-
-    const next = [newReservation, ...reservations];
-    saveReservations(next);
-
-    setBookingSuccess(
-      `Đặt chỗ thành công: ${selectedBuilding.building.name} - ${selectedSlot} - ${selectedPlate}.`,
-    );
-    setSelectedSlot(null);
-    setSelectedPlate('');
   };
 
-  const handleCancelReservation = (reservationId: string) => {
-    const next = reservations.map((entry) =>
-      entry.id === reservationId ? { ...entry, status: 'cancelled' as const } : entry,
-    );
-    saveReservations(next);
+  const handleCancelReservation = async (reservationId: string) => {
+    await cancelUserReservation(reservationId, user.userId);
+    const nextReservations = await listUserReservations(user.userId);
+    setReservations(nextReservations);
   };
 
   return (
@@ -433,9 +396,14 @@ export default function ReservationsPage() {
 
         <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
           <section className="rounded-3xl border border-white/10 bg-slate-900/55 p-6">
-            <div className="mb-4 flex items-center gap-2">
-              <ParkingCircle size={18} className="text-cyan-300" />
-              <h2 className="text-sm font-black uppercase tracking-wider text-white">Bản đồ slot</h2>
+            <div className="mb-4 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <ParkingCircle size={18} className="text-cyan-300" />
+                <h2 className="text-sm font-black uppercase tracking-wider text-white">Bản đồ slot</h2>
+              </div>
+              <p className="text-xs font-bold text-slate-400">
+                Khả dụng: <span className="text-emerald-300">{availableSlotCount}</span> / {slots.length}
+              </p>
             </div>
             <AnimatedParkingMap3D
               interactive
@@ -445,6 +413,7 @@ export default function ReservationsPage() {
                 plateNumber: item.plateNumber,
                 vehicleType: item.vehicleType,
               }))}
+              interactiveUnavailableSlots={unavailableSlotCodes}
               onSlotClick={handleSlotClick}
             />
           </section>
@@ -483,7 +452,7 @@ export default function ReservationsPage() {
                   <select
                     value={selectedVehicleType}
                     onChange={(event) => {
-                      const next = event.target.value as VehicleType | '';
+                      const next = event.target.value as ReservationVehicleType | '';
                       setSelectedVehicleType(next);
                       setSelectedSlot(null);
                       setSelectedPlate('');
@@ -491,8 +460,8 @@ export default function ReservationsPage() {
                     className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-semibold text-white outline-none focus:border-orange-400/60"
                   >
                     <option value="">-- Chọn loại xe --</option>
-                    <option value="car">O to</option>
-                    <option value="motorcycle">Xe may</option>
+                    <option value="car">Ô tô</option>
+                    <option value="motorcycle">Xe máy</option>
                   </select>
                 </label>
 
@@ -552,7 +521,7 @@ export default function ReservationsPage() {
                   disabled={!canSubmit}
                   className="h-11 w-full rounded-xl bg-gradient-to-r from-orange-500 to-amber-400 text-sm font-black uppercase tracking-wider text-slate-950 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Đặt chỗ
+                  {isSubmitting ? 'Đang xử lý...' : 'Đặt chỗ'}
                 </button>
 
                 {!canOpenBookingForm ? (
@@ -569,13 +538,13 @@ export default function ReservationsPage() {
                   Lịch sử đặt chỗ
                 </h2>
                 <span className="rounded-full bg-slate-950 px-2 py-1 text-[11px] font-bold text-slate-400">
-                  {userReservations.length}
+                  {isLoadingReservations ? '...' : reservations.length}
                 </span>
               </div>
 
               <div className="space-y-3">
-                {userReservations.length > 0 ? (
-                  userReservations.map((entry) => (
+                {reservations.length > 0 ? (
+                  reservations.map((entry) => (
                     <div
                       key={entry.id}
                       className="rounded-2xl border border-white/10 bg-slate-950/70 p-4"
@@ -620,15 +589,20 @@ export default function ReservationsPage() {
                   ))
                 ) : (
                   <p className="rounded-2xl border border-white/10 bg-slate-950/60 p-4 text-center text-xs font-semibold text-slate-500">
-                    Chưa có lượt đặt chỗ nào.
+                    {isLoadingReservations ? 'Đang tải lịch sử...' : 'Chưa có lượt đặt chỗ nào.'}
                   </p>
                 )}
               </div>
             </div>
+
+            {isLoadingBuildings || isLoadingSlots ? (
+              <p className="text-xs font-semibold text-slate-500">
+                Đang tải dữ liệu tòa nhà và danh sách slot...
+              </p>
+            ) : null}
           </aside>
         </div>
       </div>
     </main>
   );
 }
-

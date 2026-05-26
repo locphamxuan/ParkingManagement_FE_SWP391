@@ -12,6 +12,7 @@ export interface AnimatedParkingMap3DProps {
   interactive?: boolean;
   selectedSlot?: string | null;
   activeReservations?: Array<{ slotCode: string; plateNumber: string; vehicleType: 'car' | 'motorcycle' }>;
+  interactiveUnavailableSlots?: string[];
   onSlotClick?: (slotCode: string) => void;
 }
 
@@ -24,6 +25,7 @@ export function AnimatedParkingMap3D({
   interactive = false,
   selectedSlot = null,
   activeReservations = [],
+  interactiveUnavailableSlots = [],
   onSlotClick
 }: AnimatedParkingMap3DProps = {}) {
   const [hudMessage, setHudMessage] = useState('Khởi động hệ thống mô phỏng...');
@@ -484,8 +486,9 @@ export function AnimatedParkingMap3D({
               
               // If interactive mode, check if slot is reserved in activeReservations
               const reservation = interactive && activeReservations?.find((r) => r.slotCode === slotCode);
+              const blockedBySlotStatus = interactiveUnavailableSlots.includes(slotCode);
               const isOccupied = interactive 
-                ? Boolean(reservation || id === 1 || id === 5) // slots A-01 and A-05 are occupied by default to look realistic
+                ? Boolean(reservation || blockedBySlotStatus)
                 : (id === 1 || id === 2 || (id === 3 && carAState === 'parked') || (id === 4 && carBState === 'parked') || id === 5);
               
               const isSelected = interactive && selectedSlot === slotCode;
