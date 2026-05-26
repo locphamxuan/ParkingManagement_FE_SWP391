@@ -13,6 +13,7 @@ import {
   ParkingCircle,
   Trash2,
   User,
+  WalletCards,
 } from 'lucide-react';
 import { AnimatedParkingMap3D } from '@/components/shared/AnimatedParkingMap3D';
 import { useAuth } from '@/hooks/useAuth';
@@ -20,14 +21,19 @@ import { listUserBuildingViews, type UserBuildingView } from '@/pages/User/mockB
 import {
   cancelUserReservation,
   createUserReservation,
-  getReservationPolicyByBuilding,
+  getUserWalletBalance,
   listParkingSlotsByBuilding,
+  listReservationPolicies,
+  listUserPayments,
   listUserReservations,
+  listUserWalletTransactions,
   slotSupportsVehicle,
   type ReservationVehicleType,
   type UserParkingSlotRecord,
+  type UserPaymentRecord,
   type UserReservationPolicyRecord,
   type UserReservationRecord,
+  type UserWalletTransactionRecord,
 } from '@/pages/User/mockReservationsData';
 
 interface ReservationLocationState {
@@ -35,6 +41,11 @@ interface ReservationLocationState {
 }
 
 const DATETIME_LOCAL_SLICE_END = 16;
+const money = new Intl.NumberFormat('vi-VN', {
+  style: 'currency',
+  currency: 'VND',
+  maximumFractionDigits: 0,
+});
 
 function toDateTimeLocalValue(date: Date): string {
   const tzOffsetMs = date.getTimezoneOffset() * 60_000;
@@ -59,8 +70,16 @@ function formatDateTime(value: string): string {
   });
 }
 
+function formatMoney(value: number): string {
+  return money.format(value);
+}
+
 function vehicleTypeLabel(value: ReservationVehicleType): string {
   return value === 'car' ? 'Ô tô' : 'Xe máy';
+}
+
+function paymentTypeLabel(type: UserPaymentRecord['type']): string {
+  return type === 'reservation_refund' ? 'Hoàn tiền hủy đặt chỗ' : 'Giữ chỗ';
 }
 
 export default function ReservationsPage() {
@@ -71,11 +90,15 @@ export default function ReservationsPage() {
 
   const [rows, setRows] = useState<UserBuildingView[]>([]);
   const [slots, setSlots] = useState<UserParkingSlotRecord[]>([]);
-  const [reservationPolicy, setReservationPolicy] = useState<UserReservationPolicyRecord | null>(null);
+  const [policies, setPolicies] = useState<UserReservationPolicyRecord[]>([]);
   const [reservations, setReservations] = useState<UserReservationRecord[]>([]);
+  const [payments, setPayments] = useState<UserPaymentRecord[]>([]);
+  const [walletTransactions, setWalletTransactions] = useState<UserWalletTransactionRecord[]>([]);
+  const [walletBalance, setWalletBalance] = useState(0);
+
   const [isLoadingBuildings, setIsLoadingBuildings] = useState(true);
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
-  const [isLoadingReservations, setIsLoadingReservations] = useState(true);
+  const [isLoadingUserData, setIsLoadingUserData] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [selectedBuildingId, setSelectedBuildingId] = useState('');
@@ -98,18 +121,22 @@ export default function ReservationsPage() {
   useEffect(() => {
     let ignore = false;
 
-    async function loadBuildings() {
+    async function loadStaticData() {
       setIsLoadingBuildings(true);
-      const data = await listUserBuildingViews();
+      const [buildingRows, policyRows] = await Promise.all([
+        listUserBuildingViews(),
+        listReservationPolicies(),
+      ]);
       if (ignore) return;
 
-      setRows(data);
-      const preferredBuildingId = state?.buildingId || data[0]?.building._id || '';
+      setRows(buildingRows);
+      setPolicies(policyRows);
+      const preferredBuildingId = state?.buildingId || buildingRows[0]?.building._id || '';
       setSelectedBuildingId((current) => current || preferredBuildingId);
       setIsLoadingBuildings(false);
     }
 
-    loadBuildings();
+    loadStaticData();
     return () => {
       ignore = true;
     };
@@ -118,19 +145,29 @@ export default function ReservationsPage() {
   useEffect(() => {
     let ignore = false;
 
-    async function loadReservations() {
+    async function loadUserData() {
       if (!user?.userId) {
-        if (!ignore) setIsLoadingReservations(false);
+        if (!ignore) setIsLoadingUserData(false);
         return;
       }
-      setIsLoadingReservations(true);
-      const data = await listUserReservations(user.userId);
+
+      setIsLoadingUserData(true);
+      const [reservationRows, paymentRows, walletTxRows, balance] = await Promise.all([
+        listUserReservations(user.userId),
+        listUserPayments(user.userId),
+        listUserWalletTransactions(user.userId),
+        getUserWalletBalance(user.userId),
+      ]);
+
       if (ignore) return;
-      setReservations(data);
-      setIsLoadingReservations(false);
+      setReservations(reservationRows);
+      setPayments(paymentRows);
+      setWalletTransactions(walletTxRows);
+      setWalletBalance(balance);
+      setIsLoadingUserData(false);
     }
 
-    loadReservations();
+    loadUserData();
     return () => {
       ignore = true;
     };
@@ -139,34 +176,37 @@ export default function ReservationsPage() {
   useEffect(() => {
     let ignore = false;
 
-    async function loadBuildingMeta() {
+    async function loadSlots() {
       if (!selectedBuildingId) {
         setSlots([]);
-        setReservationPolicy(null);
         return;
       }
 
       setIsLoadingSlots(true);
-      const [slotRows, policy] = await Promise.all([
-        listParkingSlotsByBuilding(selectedBuildingId),
-        getReservationPolicyByBuilding(selectedBuildingId),
-      ]);
+      const slotRows = await listParkingSlotsByBuilding(selectedBuildingId);
       if (ignore) return;
-
       setSlots(slotRows);
-      setReservationPolicy(policy);
       setIsLoadingSlots(false);
     }
 
-    loadBuildingMeta();
+    loadSlots();
     return () => {
       ignore = true;
     };
   }, [selectedBuildingId]);
 
+  const policyByBuildingId = useMemo(() => {
+    return new Map(policies.map((item) => [item.buildingId, item]));
+  }, [policies]);
+
   const selectedBuilding = useMemo(
     () => rows.find((row) => row.building._id === selectedBuildingId) || null,
     [rows, selectedBuildingId],
+  );
+
+  const reservationPolicy = useMemo(
+    () => policyByBuildingId.get(selectedBuildingId) || null,
+    [policyByBuildingId, selectedBuildingId],
   );
 
   const activeReservations = useMemo(
@@ -236,6 +276,20 @@ export default function ReservationsPage() {
   const canSubmit = Boolean(
     canOpenBookingForm && selectedSlot && selectedPlate && !isLoadingSlots && !isSubmitting,
   );
+
+  const refreshUserData = async () => {
+    const [reservationRows, paymentRows, walletTxRows, balance] = await Promise.all([
+      listUserReservations(user.userId),
+      listUserPayments(user.userId),
+      listUserWalletTransactions(user.userId),
+      getUserWalletBalance(user.userId),
+    ]);
+
+    setReservations(reservationRows);
+    setPayments(paymentRows);
+    setWalletTransactions(walletTxRows);
+    setWalletBalance(balance);
+  };
 
   const handleSlotClick = (slotCode: string) => {
     setBookingError(null);
@@ -312,7 +366,7 @@ export default function ReservationsPage() {
 
     setIsSubmitting(true);
     try {
-      await createUserReservation({
+      const created = await createUserReservation({
         userId: user.userId,
         buildingId: selectedBuilding.building._id,
         buildingName: selectedBuilding.building.name,
@@ -322,10 +376,9 @@ export default function ReservationsPage() {
         scheduledAt,
       });
 
-      const nextReservations = await listUserReservations(user.userId);
-      setReservations(nextReservations);
+      await refreshUserData();
       setBookingSuccess(
-        `Đặt chỗ thành công: ${selectedBuilding.building.name} - ${selectedSlot} - ${selectedPlate}.`,
+        `Đặt chỗ thành công: ${selectedBuilding.building.name} - ${selectedSlot} - ${selectedPlate}. Đã giữ ${formatMoney(created.amountPaid)} trong ví.`,
       );
       setSelectedSlot(null);
       setSelectedPlate('');
@@ -337,9 +390,18 @@ export default function ReservationsPage() {
   };
 
   const handleCancelReservation = async (reservationId: string) => {
-    await cancelUserReservation(reservationId, user.userId);
-    const nextReservations = await listUserReservations(user.userId);
-    setReservations(nextReservations);
+    setBookingError(null);
+    setBookingSuccess(null);
+
+    try {
+      const result = await cancelUserReservation(reservationId, user.userId);
+      await refreshUserData();
+      setBookingSuccess(
+        `Đã hủy lượt đặt ${result.reservation.slotCode}. Hoàn ${result.refundPercent}%: ${formatMoney(result.refundAmount)}.`,
+      );
+    } catch (error) {
+      setBookingError(error instanceof Error ? error.message : 'Không thể hủy lượt đặt.');
+    }
   };
 
   return (
@@ -373,10 +435,10 @@ export default function ReservationsPage() {
           animate={{ opacity: 1, y: 0 }}
           className="mb-6 rounded-3xl border border-white/10 bg-slate-900/50 p-6"
         >
-          <p className="text-xs font-black uppercase tracking-[0.24em] text-orange-300">FR-USR-03</p>
-          <h1 className="mt-2 text-2xl font-black text-white md:text-3xl">Đặt chỗ trước</h1>
+          <p className="text-xs font-black uppercase tracking-[0.24em] text-orange-300">FR-USR-03 + FR-USR-04</p>
+          <h1 className="mt-2 text-2xl font-black text-white md:text-3xl">Đặt chỗ và hủy đặt chỗ</h1>
           <p className="mt-2 text-sm font-semibold text-slate-400">
-            Chọn tòa nhà, loại xe và thời gian đặt chỗ trước khi giữ chỗ.
+            Chọn tòa nhà, loại xe, thời gian đặt chỗ. Khi hủy, hệ thống hoàn tiền theo chính sách.
           </p>
         </motion.div>
 
@@ -486,10 +548,9 @@ export default function ReservationsPage() {
                     <p className="mt-1 text-lg font-black text-white">{selectedSlot || '--'}</p>
                   </div>
                   <div className="rounded-xl border border-white/10 bg-slate-950/60 p-3">
-                    <p className="text-[10px] font-bold uppercase text-slate-500">Policy</p>
+                    <p className="text-[10px] font-bold uppercase text-slate-500">Chính sách hoàn</p>
                     <p className="mt-1 text-xs font-bold text-slate-300">
-                      Min {reservationPolicy?.minAdvanceMinutes ?? 15}p / Max{' '}
-                      {reservationPolicy?.maxAdvanceHours ?? 72}h
+                      Hoàn {reservationPolicy?.refundPercent ?? 0}% khi hủy
                     </p>
                   </div>
                 </div>
@@ -523,12 +584,6 @@ export default function ReservationsPage() {
                 >
                   {isSubmitting ? 'Đang xử lý...' : 'Đặt chỗ'}
                 </button>
-
-                {!canOpenBookingForm ? (
-                  <p className="text-xs font-semibold text-slate-500">
-                    Chọn đủ thông tin bên trên, sau đó bấm vào slot màu xanh trên bản đồ.
-                  </p>
-                ) : null}
               </div>
             </form>
 
@@ -538,60 +593,127 @@ export default function ReservationsPage() {
                   Lịch sử đặt chỗ
                 </h2>
                 <span className="rounded-full bg-slate-950 px-2 py-1 text-[11px] font-bold text-slate-400">
-                  {isLoadingReservations ? '...' : reservations.length}
+                  {isLoadingUserData ? '...' : reservations.length}
                 </span>
               </div>
 
               <div className="space-y-3">
                 {reservations.length > 0 ? (
-                  reservations.map((entry) => (
-                    <div
-                      key={entry.id}
-                      className="rounded-2xl border border-white/10 bg-slate-950/70 p-4"
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <p className="text-xs font-black text-orange-300">{entry.id}</p>
-                        <p className="text-[10px] font-black uppercase text-slate-400">
-                          {entry.status}
-                        </p>
-                      </div>
+                  reservations.map((entry) => {
+                    const refundPolicyPercent = policyByBuildingId.get(entry.buildingId)?.refundPercent ?? 0;
+                    return (
+                      <div
+                        key={entry.id}
+                        className="rounded-2xl border border-white/10 bg-slate-950/70 p-4"
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-xs font-black text-orange-300">{entry.id}</p>
+                          <p className="text-[10px] font-black uppercase text-slate-400">
+                            {entry.status}
+                          </p>
+                        </div>
 
-                      <div className="mt-2 space-y-1 text-xs font-semibold text-slate-300">
-                        <p className="flex items-center gap-2">
-                          <Building2 size={13} className="text-cyan-300" />
-                          {entry.buildingName}
-                        </p>
-                        <p className="flex items-center gap-2">
-                          {entry.vehicleType === 'car' ? (
-                            <Car size={13} className="text-cyan-300" />
+                        <div className="mt-2 space-y-1 text-xs font-semibold text-slate-300">
+                          <p className="flex items-center gap-2">
+                            <Building2 size={13} className="text-cyan-300" />
+                            {entry.buildingName}
+                          </p>
+                          <p className="flex items-center gap-2">
+                            {entry.vehicleType === 'car' ? (
+                              <Car size={13} className="text-cyan-300" />
+                            ) : (
+                              <Bike size={13} className="text-purple-300" />
+                            )}
+                            {entry.plateNumber} - Slot {entry.slotCode}
+                          </p>
+                          <p className="flex items-center gap-2">
+                            <Clock3 size={13} className="text-orange-300" />
+                            {formatDateTime(entry.scheduledAt)}
+                          </p>
+                          <p className="text-[11px] text-slate-400">
+                            Tiền đã giữ: <span className="font-black text-orange-300">{formatMoney(entry.amountPaid)}</span>
+                          </p>
+                          {entry.status === 'cancelled' ? (
+                            <p className="text-[11px] text-emerald-300">
+                              Đã hoàn: {formatMoney(entry.refundAmount || 0)} ({entry.refundPercent || refundPolicyPercent}%)
+                            </p>
                           ) : (
-                            <Bike size={13} className="text-purple-300" />
+                            <p className="text-[11px] text-slate-400">
+                              Hủy lúc này được hoàn: {refundPolicyPercent}% ({formatMoney(Math.round((entry.amountPaid * refundPolicyPercent) / 100))})
+                            </p>
                           )}
-                          {entry.plateNumber} - Slot {entry.slotCode}
-                        </p>
-                        <p className="flex items-center gap-2">
-                          <Clock3 size={13} className="text-orange-300" />
-                          {formatDateTime(entry.scheduledAt)}
-                        </p>
-                      </div>
+                        </div>
 
-                      {entry.status === 'active' ? (
-                        <button
-                          type="button"
-                          onClick={() => handleCancelReservation(entry.id)}
-                          className="mt-3 inline-flex items-center gap-2 rounded-lg border border-rose-400/35 bg-rose-500/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-wider text-rose-300"
-                        >
-                          <Trash2 size={12} />
-                          Hủy lượt đặt
-                        </button>
-                      ) : null}
-                    </div>
-                  ))
+                        {entry.status === 'active' ? (
+                          <button
+                            type="button"
+                            onClick={() => handleCancelReservation(entry.id)}
+                            className="mt-3 inline-flex items-center gap-2 rounded-lg border border-rose-400/35 bg-rose-500/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-wider text-rose-300"
+                          >
+                            <Trash2 size={12} />
+                            Hủy và hoàn tiền
+                          </button>
+                        ) : null}
+                      </div>
+                    );
+                  })
                 ) : (
                   <p className="rounded-2xl border border-white/10 bg-slate-950/60 p-4 text-center text-xs font-semibold text-slate-500">
-                    {isLoadingReservations ? 'Đang tải lịch sử...' : 'Chưa có lượt đặt chỗ nào.'}
+                    {isLoadingUserData ? 'Đang tải lịch sử...' : 'Chưa có lượt đặt chỗ nào.'}
                   </p>
                 )}
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-white/10 bg-slate-900/55 p-6">
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="flex items-center gap-2 text-sm font-black uppercase tracking-wider text-white">
+                  <WalletCards size={16} className="text-cyan-300" />
+                  Ví và giao dịch hoàn tiền
+                </h2>
+                <p className="text-xs font-black text-emerald-300">{formatMoney(walletBalance)}</p>
+              </div>
+
+              <div className="space-y-3">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Payments</p>
+                {payments.slice(0, 4).map((payment) => (
+                  <div key={payment.id} className="rounded-xl border border-white/10 bg-slate-950/60 p-3">
+                    <p className="text-xs font-bold text-white">{paymentTypeLabel(payment.type)}</p>
+                    <p className="mt-1 text-[11px] text-slate-400">{payment.note}</p>
+                    <p
+                      className={`mt-1 text-xs font-black ${
+                        payment.direction === 'credit' ? 'text-emerald-300' : 'text-orange-300'
+                      }`}
+                    >
+                      {payment.direction === 'credit' ? '+' : '-'}
+                      {formatMoney(payment.amount)}
+                    </p>
+                  </div>
+                ))}
+
+                <p className="pt-2 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  Wallet Transactions
+                </p>
+                {walletTransactions.slice(0, 4).map((tx) => (
+                  <div key={tx.id} className="rounded-xl border border-white/10 bg-slate-950/60 p-3">
+                    <p className="text-xs font-bold text-white">{tx.description}</p>
+                    <p className="mt-1 text-[11px] text-slate-400">{formatDateTime(tx.createdAt)}</p>
+                    <p
+                      className={`mt-1 text-xs font-black ${
+                        tx.type === 'credit' ? 'text-emerald-300' : 'text-orange-300'
+                      }`}
+                    >
+                      {tx.type === 'credit' ? '+' : '-'}
+                      {formatMoney(tx.amount)} • Số dư: {formatMoney(tx.balanceAfter)}
+                    </p>
+                  </div>
+                ))}
+
+                {payments.length === 0 && walletTransactions.length === 0 ? (
+                  <p className="rounded-xl border border-white/10 bg-slate-950/60 p-3 text-xs font-semibold text-slate-500">
+                    Chưa có giao dịch thanh toán hoặc hoàn tiền.
+                  </p>
+                ) : null}
               </div>
             </div>
 
