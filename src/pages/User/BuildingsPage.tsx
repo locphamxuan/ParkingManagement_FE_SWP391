@@ -155,7 +155,7 @@ function TeamList({
           ))}
         </div>
       ) : (
-        <p className="mt-3 text-xs font-semibold text-slate-500">Chua cap nhat danh sach.</p>
+        <p className="mt-3 text-xs font-semibold text-slate-500">Chưa cập nhật danh sách.</p>
       )}
     </div>
   );
@@ -182,7 +182,7 @@ export default function BuildingsPage() {
         setSelectedId(data[0]?.building._id || '');
       } catch (err) {
         if (ignore) return;
-        setError(err instanceof Error ? err.message : 'Khong the tai thong tin toa nha.');
+        setError(err instanceof Error ? err.message : 'Không thể tải thông tin tòa nhà.');
       } finally {
         if (!ignore) setIsLoading(false);
       }
@@ -221,11 +221,11 @@ export default function BuildingsPage() {
             className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-slate-900 px-4 py-2 text-xs font-black uppercase tracking-wider text-orange-300 transition hover:border-orange-400/40"
           >
             <ArrowLeft size={14} />
-            Trang chu
+            Trang chủ
           </button>
           <div className="hidden items-center gap-2 text-xs font-bold text-slate-400 sm:flex">
             <PhoneCall size={14} className="text-emerald-300" />
-            Ho tro 1900 636 447
+            Hỗ trợ 1900 636 447
           </div>
         </div>
       </div>
@@ -244,12 +244,15 @@ export default function BuildingsPage() {
               Thông tin tòa nhà gửi xe
             </h1>
             <p className="mt-3 max-w-2xl text-sm font-semibold leading-relaxed text-slate-400">
-              Xem giờ mở cửa, bảng giá và số slot còn trong trước khi di chuyển hoặc đặt chỗ.
+              Xem giờ mở cửa, bảng giá và số slot còn trống trước khi di chuyển hoặc đặt chỗ.
             </p>
           </div>
 
           <label className="relative block">
-            <Search size={17} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
+            <Search
+              size={17}
+              className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"
+            />
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
@@ -321,7 +324,7 @@ export default function BuildingsPage() {
                   </div>
                   <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
                     <CarFront size={18} className="text-cyan-300" />
-                    <p className="mt-3 text-xs font-bold uppercase text-slate-500">Tổng Slot</p>
+                    <p className="mt-3 text-xs font-bold uppercase text-slate-500">Tổng slot</p>
                     <p className="mt-1 text-lg font-black text-white">{selectedRow.slots.total || 0}</p>
                   </div>
                 </div>
@@ -344,13 +347,13 @@ export default function BuildingsPage() {
                   <div className="mb-3 flex items-center gap-2">
                     <Users size={18} className="text-cyan-300" />
                     <h3 className="text-sm font-black uppercase tracking-wider text-white">
-                      Nhan su van hanh
+                      Nhân sự vận hành
                     </h3>
                   </div>
 
                   <div className="grid gap-3 sm:grid-cols-2">
-                    <TeamList title="Manager" members={selectedRow.team?.managers || []} />
-                    <TeamList title="Staff" members={selectedRow.team?.staff || []} />
+                    <TeamList title="Quản lý" members={selectedRow.team?.managers || []} />
+                    <TeamList title="Nhân viên" members={selectedRow.team?.staff || []} />
                   </div>
                 </div>
 
@@ -381,24 +384,24 @@ export default function BuildingsPage() {
                             </div>
                             <p className="text-right text-sm font-black text-orange-300">
                               {formatMoney(policy.hourlyRate)}
-                              <span className="block text-[10px] font-bold uppercase text-slate-500">/ gio</span>
+                              <span className="block text-[10px] font-bold uppercase text-slate-500">/ giờ</span>
                             </p>
                           </div>
                           <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-bold text-slate-300">
                             <span className="rounded-full bg-white/5 px-3 py-1">
-                              Tran ngay: {formatMoney(policy.dailyCap)}
+                              Trần ngày: {formatMoney(policy.dailyCap)}
                             </span>
                             <span className="rounded-full bg-white/5 px-3 py-1">
-                              Khung gio: {formatHours(policy.timeWindow?.from, policy.timeWindow?.to)}
+                              Khung giờ: {formatHours(policy.timeWindow?.from, policy.timeWindow?.to)}
                             </span>
                           </div>
                         </div>
                       ))
                     ) : (
                       <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-4 text-sm font-semibold text-slate-400">
-                        Chua co chinh sach gia rieng. Gia mac dinh:{' '}
+                        Chưa có chính sách giá riêng. Giá mặc định:{' '}
                         <span className="font-black text-orange-300">
-                          {formatMoney(selectedRow.building.pricing?.hourlyRate)}/gio
+                          {formatMoney(selectedRow.building.pricing?.hourlyRate)}/giờ
                         </span>
                       </div>
                     )}
@@ -407,7 +410,11 @@ export default function BuildingsPage() {
 
                 <button
                   type="button"
-                  onClick={() => navigate('/reservations')}
+                  onClick={() =>
+                    navigate('/reservations', {
+                      state: { buildingId: selectedRow.building._id },
+                    })
+                  }
                   className="mt-7 w-full rounded-2xl bg-gradient-to-r from-orange-500 to-amber-400 px-5 py-3 text-sm font-black uppercase tracking-wider text-slate-950 transition hover:scale-[1.01]"
                 >
                   Đặt chỗ tại tòa nhà này

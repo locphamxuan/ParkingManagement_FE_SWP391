@@ -1,4 +1,4 @@
-export type BuildingStatus = 'active' | 'inactive' | 'maintenance';
+﻿export type BuildingStatus = 'active' | 'inactive' | 'maintenance';
 
 export interface UserBuilding {
   _id: string;
@@ -33,9 +33,17 @@ export interface UserBuildingContact {
   phone?: string;
 }
 
+export interface UserReservationPolicy {
+  minAdvanceMinutes: number;
+  maxAdvanceHours: number;
+  maxHoldMinutes: number;
+  isActive: boolean;
+}
+
 export interface UserBuildingView {
   building: UserBuilding;
   pricePolicies: UserPricePolicy[];
+  reservationPolicy?: UserReservationPolicy;
   team?: {
     managers: UserBuildingContact[];
     staff: UserBuildingContact[];
@@ -59,7 +67,7 @@ const BUILDING_MOCK_DATA: UserBuildingView[] = [
       status: 'active',
       operatingHours: { open: '06:00', close: '23:00' },
       pricing: { hourlyRate: 15000, dailyCap: 120000, motorcycleMultiplier: 0.45 },
-      address: { fullAddress: 'Khu do xe trung tam, TP. Ho Chi Minh' },
+      address: { fullAddress: 'Khu đỗ xe trung tâm, TP. Hồ Chí Minh' },
       contactPhone: '1900 636 447',
     },
     pricePolicies: [
@@ -82,6 +90,12 @@ const BUILDING_MOCK_DATA: UserBuildingView[] = [
         isActive: true,
       },
     ],
+    reservationPolicy: {
+      minAdvanceMinutes: 15,
+      maxAdvanceHours: 72,
+      maxHoldMinutes: 30,
+      isActive: true,
+    },
     team: {
       managers: [
         {
@@ -117,7 +131,7 @@ const BUILDING_MOCK_DATA: UserBuildingView[] = [
       status: 'active',
       operatingHours: { open: '00:00', close: '23:59' },
       pricing: { hourlyRate: 12000, dailyCap: 100000, motorcycleMultiplier: 0.5 },
-      address: { fullAddress: 'Quan 7, TP. Ho Chi Minh' },
+      address: { fullAddress: 'Quận 7, TP. Hồ Chí Minh' },
       contactPhone: '028 7300 8899',
     },
     pricePolicies: [
@@ -131,6 +145,12 @@ const BUILDING_MOCK_DATA: UserBuildingView[] = [
         isActive: true,
       },
     ],
+    reservationPolicy: {
+      minAdvanceMinutes: 10,
+      maxAdvanceHours: 48,
+      maxHoldMinutes: 20,
+      isActive: true,
+    },
     team: {
       managers: [
         {
@@ -167,3 +187,4 @@ const BUILDING_MOCK_DATA: UserBuildingView[] = [
 export async function listUserBuildingViews(): Promise<UserBuildingView[]> {
   return BUILDING_MOCK_DATA;
 }
+
