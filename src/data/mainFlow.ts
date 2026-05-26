@@ -32,8 +32,8 @@ export const mainFlowModules: LegacyModule[] = [
     id: 'buildings',
     title: 'Bãi đỗ / Tòa nhà',
     description: 'Danh sách bãi đang hoạt động, tầng và chỗ đỗ xe.',
-    actionLabel: 'Sắp ra mắt',
-    available: false,
+    actionLabel: 'Xem tòa nhà',
+    available: true,
   },
   {
     id: 'reservations',

@@ -11,6 +11,7 @@ import { FraudDetectionPage } from '@/pages/admin/FraudDetectionPage';
 import { SystemHealthPage } from '@/pages/admin/SystemHealthPage';
 import { ModulePlaceholderPage } from '@/pages/admin/ModulePlaceholderPage';
 import { HomeRoute } from '@/pages/public/HomeRoute';
+import BuildingsUserPage from '@/pages/User/BuildingsPage';
 import ProfilePage from '@/pages/public/ProfilePage';
 import ReservationsPage from '@/pages/public/ReservationsPage';
 import { PublicLoginRoute, PublicRegisterRoute } from '@/pages/public/AuthRoutes';
@@ -40,6 +41,7 @@ export function AppRouter() {
       <Route path="/dashboard" element={<Navigate to="/" replace />} />
       <Route path="/auth/login" element={<PublicLoginRoute />} />
       <Route path="/auth/register" element={<PublicRegisterRoute />} />
+      <Route path="/buildings" element={<BuildingsUserPage />} />
       <Route path="/profile" element={<ProfilePage />} />
       <Route path="/reservations" element={<ReservationsPage />} />
 

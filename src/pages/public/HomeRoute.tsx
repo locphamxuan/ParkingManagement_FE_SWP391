@@ -36,6 +36,7 @@ export function HomeRoute() {
     (module: any) => {
       if (module.id === 'auth') return onOpenAuth('login');
       if (module.id === 'profile') return onViewProfile();
+      if (module.id === 'buildings') return navigate('/buildings');
       if (module.id === 'reservations') return navigate('/reservations');
       return undefined;
     },
