@@ -30,6 +30,11 @@ import { ManagerPricingPage } from '@/pages/manager/ManagerPricingPage';
 import { ManagerReservationPolicyPage } from '@/pages/manager/ManagerReservationPolicyPage';
 import { ManagerPackagesPage } from '@/pages/manager/ManagerPackagesPage';
 import { ManagerShiftsPage } from '@/pages/manager/ManagerShiftsPage';
+import { StaffLayout } from '@/layouts/StaffLayout';
+import { StaffDashboardPage } from '@/pages/staff/StaffDashboardPage';
+import { StaffSessionsPage } from '@/pages/staff/StaffSessionsPage';
+import { StaffShiftsPage } from '@/pages/staff/StaffShiftsPage';
+import { StaffProtectedRoute } from '@/routes/StaffProtectedRoute';
 
 export function AppRouter() {
   return (
@@ -69,6 +74,17 @@ export function AppRouter() {
               />
             }
           />
+        </Route>
+      </Route>
+
+      <Route path="/staff/login" element={<Navigate to="/auth/login" replace />} />
+      <Route path="/staff" element={<Navigate to="/staff/dashboard" replace />} />
+      <Route element={<StaffProtectedRoute />}>
+        <Route path="/staff" element={<StaffLayout />}>
+          <Route index element={<StaffDashboardPage />} />
+          <Route path="dashboard" element={<StaffDashboardPage />} />
+          <Route path="my-shifts" element={<StaffShiftsPage />} />
+          <Route path="sessions" element={<StaffSessionsPage />} />
         </Route>
       </Route>
 
