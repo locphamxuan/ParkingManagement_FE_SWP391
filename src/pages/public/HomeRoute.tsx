@@ -38,6 +38,7 @@ export function HomeRoute() {
       if (module.id === 'profile') return onViewProfile();
       if (module.id === 'buildings') return navigate('/buildings');
       if (module.id === 'reservations') return navigate('/reservations');
+      if (module.id === 'payments') return navigate('/long-term-subscriptions');
       return undefined;
     },
     [navigate, onOpenAuth, onViewProfile]

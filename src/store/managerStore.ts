@@ -45,7 +45,7 @@ export const useManagerStore = create<ManagerState>()(
           });
           return buildings;
         } catch (error) {
-          const message = error instanceof Error ? error.message : 'Táº£i danh sÃ¡ch tÃ²a nhÃ  tháº¥t báº¡i';
+          const message = error instanceof Error ? error.message : 'Tải danh sách tòa nhà thất bại';
           set({ error: message, isLoading: false });
           throw error;
         }

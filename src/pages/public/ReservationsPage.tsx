@@ -420,6 +420,15 @@ export default function ReservationsPage() {
             <ArrowLeft size={14} />
             Trang chủ
           </button>
+          <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => navigate('/long-term-subscriptions')}
+            className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-slate-950 px-4 py-2 text-xs font-black uppercase tracking-wider text-emerald-300"
+          >
+            <CalendarClock size={14} />
+            Gói dài hạn
+          </button>
           <button
             type="button"
             onClick={() => navigate('/profile')}
@@ -428,6 +437,7 @@ export default function ReservationsPage() {
             <User size={14} />
             Hồ sơ
           </button>
+        </div>
         </motion.div>
 
         <motion.div
@@ -728,3 +738,4 @@ export default function ReservationsPage() {
     </main>
   );
 }
+
