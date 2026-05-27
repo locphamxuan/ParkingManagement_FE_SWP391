@@ -11,8 +11,10 @@ import { FraudDetectionPage } from '@/pages/admin/FraudDetectionPage';
 import { SystemHealthPage } from '@/pages/admin/SystemHealthPage';
 import { ModulePlaceholderPage } from '@/pages/admin/ModulePlaceholderPage';
 import { HomeRoute } from '@/pages/public/HomeRoute';
+import BuildingsUserPage from '@/pages/User/BuildingsPage';
 import ProfilePage from '@/pages/public/ProfilePage';
 import ReservationsPage from '@/pages/public/ReservationsPage';
+import LongTermSubscriptionsPage from '@/pages/public/LongTermSubscriptionsPage';
 import { PublicLoginRoute, PublicRegisterRoute } from '@/pages/public/AuthRoutes';
 import { ProtectedRoute } from '@/routes/ProtectedRoute';
 import { ManagerLayout } from '@/layouts/ManagerLayout';
@@ -45,8 +47,10 @@ export function AppRouter() {
       <Route path="/dashboard" element={<Navigate to="/" replace />} />
       <Route path="/auth/login" element={<PublicLoginRoute />} />
       <Route path="/auth/register" element={<PublicRegisterRoute />} />
+      <Route path="/buildings" element={<BuildingsUserPage />} />
       <Route path="/profile" element={<ProfilePage />} />
       <Route path="/reservations" element={<ReservationsPage />} />
+      <Route path="/long-term-subscriptions" element={<LongTermSubscriptionsPage />} />
 
       <Route path="/manager/login" element={<Navigate to="/auth/login" replace />} />
       <Route path="/manager" element={<Navigate to="/manager/dashboard" replace />} />

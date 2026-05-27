@@ -1,502 +1,741 @@
-import { useMemo, useState, useEffect } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useAuth } from '@/hooks/useAuth';
-import { AnimatedParkingMap3D } from '@/components/shared/AnimatedParkingMap3D';
+import { useEffect, useMemo, useState } from 'react';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import {
-  ArrowLeft,
-  Calendar,
-  Car,
-  Bike,
-  Plus,
   AlertTriangle,
+  ArrowLeft,
+  Bike,
+  Building2,
+  CalendarClock,
+  Car,
   CheckCircle2,
-  X,
-  User,
-  ShieldAlert,
-  Clock,
+  Clock3,
+  ParkingCircle,
   Trash2,
-  ParkingCircle
+  User,
+  WalletCards,
 } from 'lucide-react';
+import { AnimatedParkingMap3D } from '@/components/shared/AnimatedParkingMap3D';
+import { useAuth } from '@/hooks/useAuth';
+import { listUserBuildingViews, type UserBuildingView } from '@/pages/User/mockBuildingsData';
+import {
+  cancelUserReservation,
+  createUserReservation,
+  getUserWalletBalance,
+  listParkingSlotsByBuilding,
+  listReservationPolicies,
+  listUserPayments,
+  listUserReservations,
+  listUserWalletTransactions,
+  slotSupportsVehicle,
+  type ReservationVehicleType,
+  type UserParkingSlotRecord,
+  type UserPaymentRecord,
+  type UserReservationPolicyRecord,
+  type UserReservationRecord,
+  type UserWalletTransactionRecord,
+} from '@/pages/User/mockReservationsData';
 
-interface Reservation {
-  id: string;
-  userId: string;
-  slotCode: string;
-  plateNumber: string;
-  vehicleType: 'car' | 'motorcycle';
-  startTime: string;
-  status: 'active' | 'cancelled' | 'completed';
+interface ReservationLocationState {
+  buildingId?: string;
 }
 
-const MAX_RED_REDIRECT_SECONDS = 3;
+const DATETIME_LOCAL_SLICE_END = 16;
+const money = new Intl.NumberFormat('vi-VN', {
+  style: 'currency',
+  currency: 'VND',
+  maximumFractionDigits: 0,
+});
+
+function toDateTimeLocalValue(date: Date): string {
+  const tzOffsetMs = date.getTimezoneOffset() * 60_000;
+  return new Date(date.getTime() - tzOffsetMs).toISOString().slice(0, DATETIME_LOCAL_SLICE_END);
+}
+
+function defaultScheduleValue(): string {
+  const next = new Date(Date.now() + 30 * 60_000);
+  next.setSeconds(0, 0);
+  return toDateTimeLocalValue(next);
+}
+
+function formatDateTime(value: string): string {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleString('vi-VN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+}
+
+function formatMoney(value: number): string {
+  return money.format(value);
+}
+
+function vehicleTypeLabel(value: ReservationVehicleType): string {
+  return value === 'car' ? 'Ô tô' : 'Xe máy';
+}
+
+function paymentTypeLabel(type: UserPaymentRecord['type']): string {
+  return type === 'reservation_refund' ? 'Hoàn tiền hủy đặt chỗ' : 'Giữ chỗ';
+}
 
 export default function ReservationsPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { session } = useAuth();
-  
-  // Simulated database of system-wide reservations
-  const [reservations, setReservations] = useState<Reservation[]>(() => {
-    const stored = localStorage.getItem('pbms.reservations');
-    return stored ? JSON.parse(stored) : [];
-  });
+  const state = (location.state as ReservationLocationState | null) ?? null;
 
+  const [rows, setRows] = useState<UserBuildingView[]>([]);
+  const [slots, setSlots] = useState<UserParkingSlotRecord[]>([]);
+  const [policies, setPolicies] = useState<UserReservationPolicyRecord[]>([]);
+  const [reservations, setReservations] = useState<UserReservationRecord[]>([]);
+  const [payments, setPayments] = useState<UserPaymentRecord[]>([]);
+  const [walletTransactions, setWalletTransactions] = useState<UserWalletTransactionRecord[]>([]);
+  const [walletBalance, setWalletBalance] = useState(0);
+
+  const [isLoadingBuildings, setIsLoadingBuildings] = useState(true);
+  const [isLoadingSlots, setIsLoadingSlots] = useState(false);
+  const [isLoadingUserData, setIsLoadingUserData] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [selectedBuildingId, setSelectedBuildingId] = useState('');
+  const [selectedVehicleType, setSelectedVehicleType] = useState<ReservationVehicleType | ''>('');
+  const [scheduledAt, setScheduledAt] = useState(defaultScheduleValue());
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
-  const [selectedPlate, setSelectedPlate] = useState<string>('');
-  const [bookingSuccess, setBookingSuccess] = useState<string | null>(null);
+  const [selectedPlate, setSelectedPlate] = useState('');
   const [bookingError, setBookingError] = useState<string | null>(null);
-
-  // Modal redirect countdown for users with no registered plates
-  const [redirectSeconds, setRedirectSeconds] = useState(MAX_RED_REDIRECT_SECONDS);
-  const [showRedirectModal, setShowRedirectModal] = useState(false);
+  const [bookingSuccess, setBookingSuccess] = useState<string | null>(null);
 
   const user = useMemo(() => {
     if (!session) return null;
     return {
       userId: session.userId,
       fullName: session.displayName,
-      email: session.email,
-      phone: session.phone || '',
       licensePlates: session.licensePlates || [],
     };
   }, [session]);
 
-  // Determine active bookings for the logged-in user
-  const userReservations = useMemo(() => {
-    if (!user) return [];
-    return reservations.filter((r) => r.userId === user.userId);
-  }, [reservations, user]);
-
-  const activeReservations = useMemo(() => {
-    return userReservations.filter((r) => r.status === 'active');
-  }, [userReservations]);
-
-  // Handle 0 plates warning modal on page mount
   useEffect(() => {
-    if (user && user.licensePlates.length === 0) {
-      setShowRedirectModal(true);
-      const timer = setInterval(() => {
-        setRedirectSeconds((prev) => {
-          if (prev <= 1) {
-            clearInterval(timer);
-            navigate('/profile');
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-      return () => clearInterval(timer);
-    }
-  }, [user, navigate]);
+    let ignore = false;
 
-  // Persist reservations in localStorage whenever state updates
-  const saveReservations = (updatedList: Reservation[]) => {
-    setReservations(updatedList);
-    localStorage.setItem('pbms.reservations', JSON.stringify(updatedList));
-  };
+    async function loadStaticData() {
+      setIsLoadingBuildings(true);
+      const [buildingRows, policyRows] = await Promise.all([
+        listUserBuildingViews(),
+        listReservationPolicies(),
+      ]);
+      if (ignore) return;
+
+      setRows(buildingRows);
+      setPolicies(policyRows);
+      const preferredBuildingId = state?.buildingId || buildingRows[0]?.building._id || '';
+      setSelectedBuildingId((current) => current || preferredBuildingId);
+      setIsLoadingBuildings(false);
+    }
+
+    loadStaticData();
+    return () => {
+      ignore = true;
+    };
+  }, [state?.buildingId]);
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadUserData() {
+      if (!user?.userId) {
+        if (!ignore) setIsLoadingUserData(false);
+        return;
+      }
+
+      setIsLoadingUserData(true);
+      const [reservationRows, paymentRows, walletTxRows, balance] = await Promise.all([
+        listUserReservations(user.userId),
+        listUserPayments(user.userId),
+        listUserWalletTransactions(user.userId),
+        getUserWalletBalance(user.userId),
+      ]);
+
+      if (ignore) return;
+      setReservations(reservationRows);
+      setPayments(paymentRows);
+      setWalletTransactions(walletTxRows);
+      setWalletBalance(balance);
+      setIsLoadingUserData(false);
+    }
+
+    loadUserData();
+    return () => {
+      ignore = true;
+    };
+  }, [user?.userId]);
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadSlots() {
+      if (!selectedBuildingId) {
+        setSlots([]);
+        return;
+      }
+
+      setIsLoadingSlots(true);
+      const slotRows = await listParkingSlotsByBuilding(selectedBuildingId);
+      if (ignore) return;
+      setSlots(slotRows);
+      setIsLoadingSlots(false);
+    }
+
+    loadSlots();
+    return () => {
+      ignore = true;
+    };
+  }, [selectedBuildingId]);
+
+  const policyByBuildingId = useMemo(() => {
+    return new Map(policies.map((item) => [item.buildingId, item]));
+  }, [policies]);
+
+  const selectedBuilding = useMemo(
+    () => rows.find((row) => row.building._id === selectedBuildingId) || null,
+    [rows, selectedBuildingId],
+  );
+
+  const reservationPolicy = useMemo(
+    () => policyByBuildingId.get(selectedBuildingId) || null,
+    [policyByBuildingId, selectedBuildingId],
+  );
+
+  const activeReservations = useMemo(
+    () => reservations.filter((row) => row.status === 'active'),
+    [reservations],
+  );
+
+  const activeReservationsForSelectedBuilding = useMemo(
+    () => activeReservations.filter((row) => row.buildingId === selectedBuildingId),
+    [activeReservations, selectedBuildingId],
+  );
+
+  const plateOptions = useMemo(() => {
+    if (!user || !selectedVehicleType) return [];
+    return user.licensePlates.filter((plate) => plate.vehicleType === selectedVehicleType);
+  }, [user, selectedVehicleType]);
+
+  const minDateTime = useMemo(() => {
+    const leadMinutes = reservationPolicy?.minAdvanceMinutes ?? 15;
+    return toDateTimeLocalValue(new Date(Date.now() + leadMinutes * 60_000));
+  }, [reservationPolicy?.minAdvanceMinutes]);
+
+  const maxDateTime = useMemo(() => {
+    const maxHours = reservationPolicy?.maxAdvanceHours ?? 72;
+    return toDateTimeLocalValue(new Date(Date.now() + maxHours * 3_600_000));
+  }, [reservationPolicy?.maxAdvanceHours]);
+
+  const unavailableSlotCodes = useMemo(() => {
+    const codes = new Set<string>();
+    const reservedInActive = new Set(activeReservationsForSelectedBuilding.map((row) => row.slotCode));
+
+    slots.forEach((slot) => {
+      const notAvailableByStatus = slot.status !== 'available';
+      const notReservable = !slot.reservable;
+      const notMatchVehicle = selectedVehicleType
+        ? !slotSupportsVehicle(slot, selectedVehicleType)
+        : true;
+
+      if (notAvailableByStatus || notReservable || notMatchVehicle || reservedInActive.has(slot.code)) {
+        codes.add(slot.code);
+      }
+    });
+
+    return Array.from(codes);
+  }, [activeReservationsForSelectedBuilding, selectedVehicleType, slots]);
+
+  const availableSlotCount = useMemo(() => {
+    if (!selectedVehicleType) return 0;
+    const unavailable = new Set(unavailableSlotCodes);
+    return slots.filter((slot) => !unavailable.has(slot.code)).length;
+  }, [selectedVehicleType, slots, unavailableSlotCodes]);
+
+  useEffect(() => {
+    if (!selectedSlot) return;
+    if (unavailableSlotCodes.includes(selectedSlot)) {
+      setSelectedSlot(null);
+    }
+  }, [selectedSlot, unavailableSlotCodes]);
 
   if (!session || !user) {
     return <Navigate to="/auth/login" replace />;
   }
 
+  const canOpenBookingForm = Boolean(
+    selectedBuildingId && selectedVehicleType && scheduledAt && reservationPolicy?.isActive !== false,
+  );
+  const canSubmit = Boolean(
+    canOpenBookingForm && selectedSlot && selectedPlate && !isLoadingSlots && !isSubmitting,
+  );
+
+  const refreshUserData = async () => {
+    const [reservationRows, paymentRows, walletTxRows, balance] = await Promise.all([
+      listUserReservations(user.userId),
+      listUserPayments(user.userId),
+      listUserWalletTransactions(user.userId),
+      getUserWalletBalance(user.userId),
+    ]);
+
+    setReservations(reservationRows);
+    setPayments(paymentRows);
+    setWalletTransactions(walletTxRows);
+    setWalletBalance(balance);
+  };
+
   const handleSlotClick = (slotCode: string) => {
     setBookingError(null);
     setBookingSuccess(null);
 
-    // Guard: Check active reservation limits
-    if (activeReservations.length >= user.licensePlates.length) {
-      setBookingError(
-        `Bạn đã đạt giới hạn đặt chỗ tối đa! (Giới hạn tối đa bằng số xe đã liên kết: ${user.licensePlates.length} ô đỗ). Hãy hoàn thành hoặc hủy các lượt đặt chỗ trước để đặt lượt mới.`
-      );
-      setSelectedSlot(null);
+    if (!selectedBuildingId) {
+      setBookingError('Vui lòng chọn tòa nhà trước khi chọn ô đỗ.');
+      return;
+    }
+    if (!selectedVehicleType) {
+      setBookingError('Vui lòng chọn loại xe trước khi chọn ô đỗ.');
+      return;
+    }
+    if (!scheduledAt) {
+      setBookingError('Vui lòng chọn thời gian đặt chỗ.');
+      return;
+    }
+    if (reservationPolicy?.isActive === false) {
+      setBookingError('Tòa nhà này đang tạm dừng đặt chỗ trước.');
+      return;
+    }
+    if (unavailableSlotCodes.includes(slotCode)) {
+      setBookingError('Ô đỗ này hiện không khả dụng.');
       return;
     }
 
     setSelectedSlot(slotCode);
-    
-    // Auto-select first available plate that is not currently in an active reservation
-    const unusedPlate = user.licensePlates.find(
-      (p) => !activeReservations.some((ar) => ar.plateNumber === p.plateNumber)
+
+    const firstAvailablePlate = plateOptions.find(
+      (plate) => !activeReservations.some((entry) => entry.plateNumber === plate.plateNumber),
     );
-    setSelectedPlate(unusedPlate ? unusedPlate.plateNumber : '');
+    setSelectedPlate(firstAvailablePlate?.plateNumber || '');
   };
 
-  const handleConfirmBooking = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleBuildingChange = (buildingId: string) => {
+    setSelectedBuildingId(buildingId);
+    setSelectedSlot(null);
+    setSelectedPlate('');
+    setBookingError(null);
+    setBookingSuccess(null);
+  };
+
+  const handleConfirmBooking = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     setBookingError(null);
     setBookingSuccess(null);
 
-    if (!selectedSlot) return;
-
+    if (!selectedBuilding) {
+      setBookingError('Không tìm thấy tòa nhà.');
+      return;
+    }
+    if (!selectedVehicleType) {
+      setBookingError('Vui lòng chọn loại xe.');
+      return;
+    }
+    if (!scheduledAt) {
+      setBookingError('Vui lòng chọn thời gian đặt chỗ.');
+      return;
+    }
+    if (!selectedSlot) {
+      setBookingError('Vui lòng chọn ô đỗ trên bản đồ.');
+      return;
+    }
     if (!selectedPlate) {
-      setBookingError('Vui lòng chọn biển số xe để liên kết với ô đỗ này!');
+      setBookingError('Vui lòng chọn biển số xe.');
+      return;
+    }
+    if (activeReservations.length >= user.licensePlates.length) {
+      setBookingError(
+        `Bạn đã đặt tối đa ${user.licensePlates.length} lượt đang giữ. Vui lòng hủy hoặc hoàn tất lượt cũ.`,
+      );
       return;
     }
 
-    // Guard: Prevent double-booking same plate on active spots
-    const isPlateDoubleBooked = activeReservations.some(
-      (ar) => ar.plateNumber === selectedPlate
-    );
-    if (isPlateDoubleBooked) {
-      setBookingError('Biển số xe này đã được sử dụng cho một lượt đặt chỗ khác đang diễn ra!');
-      return;
+    setIsSubmitting(true);
+    try {
+      const created = await createUserReservation({
+        userId: user.userId,
+        buildingId: selectedBuilding.building._id,
+        buildingName: selectedBuilding.building.name,
+        slotCode: selectedSlot,
+        plateNumber: selectedPlate,
+        vehicleType: selectedVehicleType,
+        scheduledAt,
+      });
+
+      await refreshUserData();
+      setBookingSuccess(
+        `Đặt chỗ thành công: ${selectedBuilding.building.name} - ${selectedSlot} - ${selectedPlate}. Đã giữ ${formatMoney(created.amountPaid)} trong ví.`,
+      );
+      setSelectedSlot(null);
+      setSelectedPlate('');
+    } catch (error) {
+      setBookingError(error instanceof Error ? error.message : 'Không thể tạo lượt đặt chỗ.');
+    } finally {
+      setIsSubmitting(false);
     }
-
-    const plateInfo = user.licensePlates.find((p) => p.plateNumber === selectedPlate);
-    if (!plateInfo) return;
-
-    const newReservation: Reservation = {
-      id: `RSV-${Math.floor(1000 + Math.random() * 9000)}`,
-      userId: user.userId,
-      slotCode: selectedSlot,
-      plateNumber: plateInfo.plateNumber,
-      vehicleType: plateInfo.vehicleType,
-      startTime: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) + ' ' + new Date().toLocaleDateString('vi-VN'),
-      status: 'active',
-    };
-
-    const updated = [newReservation, ...reservations];
-    saveReservations(updated);
-
-    setBookingSuccess(`Đặt chỗ thành công ô đỗ ${selectedSlot} cho xe ${selectedPlate}!`);
-    setSelectedSlot(null);
-    setSelectedPlate('');
-    setTimeout(() => setBookingSuccess(null), 4000);
   };
 
-  const handleCancelReservation = (resId: string) => {
-    if (!window.confirm('Bạn có chắc chắn muốn hủy lượt đặt chỗ này?')) return;
-    
-    const updated = reservations.map((r) => {
-      if (r.id === resId) {
-        return { ...r, status: 'cancelled' as const };
-      }
-      return r;
-    });
-    saveReservations(updated);
-  };
+  const handleCancelReservation = async (reservationId: string) => {
+    setBookingError(null);
+    setBookingSuccess(null);
 
-  const selectedPlateDetails = user.licensePlates.find((p) => p.plateNumber === selectedPlate);
+    try {
+      const result = await cancelUserReservation(reservationId, user.userId);
+      await refreshUserData();
+      setBookingSuccess(
+        `Đã hủy lượt đặt ${result.reservation.slotCode}. Hoàn ${result.refundPercent}%: ${formatMoney(result.refundAmount)}.`,
+      );
+    } catch (error) {
+      setBookingError(error instanceof Error ? error.message : 'Không thể hủy lượt đặt.');
+    }
+  };
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100 font-sans relative overflow-hidden selection:bg-orange-500 selection:text-white">
-      {/* Background Cyber Glowing Accents */}
-      <div className="absolute top-0 left-0 w-[500px] h-[500px] rounded-full bg-[radial-gradient(circle_at_center,rgba(249,115,22,0.06),transparent_60%)] pointer-events-none blur-3xl" />
-      <div className="absolute bottom-0 right-0 w-[450px] h-[450px] rounded-full bg-[radial-gradient(circle_at_center,rgba(168,85,247,0.05),transparent_60%)] pointer-events-none blur-3xl" />
-
-      {/* 0-Plate Block Warning Modal overlay */}
-      <AnimatePresence>
-        {showRedirectModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="max-w-md w-full mx-4 rounded-3xl border border-rose-500/30 bg-slate-900/90 p-8 shadow-2xl relative text-center space-y-6"
-            >
-              <div className="mx-auto w-16 h-16 rounded-2xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-400">
-                <ShieldAlert size={36} className="stroke-[2.5]" />
-              </div>
-              <div className="space-y-2">
-                <h3 className="text-xl font-black uppercase tracking-wider text-rose-400 font-mono">Chưa liên kết biển số</h3>
-                <p className="text-sm text-slate-300 font-semibold leading-relaxed">
-                  Bạn chưa liên kết biển số xe nào vào tài khoản! Vui lòng liên kết ít nhất 1 biển số xe trước khi thực hiện đặt chỗ.
-                </p>
-              </div>
-              <div className="bg-slate-950/60 rounded-xl p-3.5 border border-white/5 font-mono text-xs text-slate-400">
-                Hệ thống tự động chuyển hướng sau <span className="text-rose-400 font-black text-sm">{redirectSeconds}</span> giây...
-              </div>
-              <button
-                type="button"
-                onClick={() => navigate('/profile')}
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 font-black text-xs uppercase tracking-widest hover:scale-[1.02] hover:shadow-[0_0_20px_rgba(249,115,22,0.35)] transition-all duration-300"
-              >
-                Cập nhật ngay
-              </button>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8 relative z-10">
-
-        {/* Sticky Glass Panel Header */}
+    <main className="min-h-screen bg-slate-950 text-slate-100">
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <motion.div
-          initial={{ opacity: 0, y: -15 }}
+          initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-8 flex items-center justify-between gap-4 rounded-3xl border border-white/5 bg-slate-900/60 p-4 backdrop-blur-md shadow-2xl"
+          className="mb-6 flex items-center justify-between rounded-2xl border border-white/10 bg-slate-900/70 p-4"
         >
           <button
             type="button"
-            className="inline-flex items-center gap-2 rounded-xl border border-white/5 bg-slate-950 px-4 py-2.5 text-xs font-black uppercase tracking-widest text-orange-400 hover:border-orange-500/30 hover:shadow-[0_0_15px_rgba(249,115,22,0.2)] transition-all duration-300 hover:scale-105"
-            onClick={() => navigate('/', { replace: true })}
+            onClick={() => navigate('/')}
+            className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-slate-950 px-4 py-2 text-xs font-black uppercase tracking-wider text-orange-300"
           >
-            <ArrowLeft size={14} className="stroke-[3]" />
-            Về trang chủ
+            <ArrowLeft size={14} />
+            Trang chủ
           </button>
-
+          <div className="flex items-center gap-2">
           <button
             type="button"
-            className="inline-flex items-center gap-2 rounded-xl border border-white/5 bg-slate-950 px-4 py-2.5 text-xs font-black uppercase tracking-widest text-orange-400 hover:border-orange-500/30 hover:shadow-[0_0_15px_rgba(249,115,22,0.2)] transition-all duration-300 hover:scale-105"
-            onClick={() => navigate('/profile')}
+            onClick={() => navigate('/long-term-subscriptions')}
+            className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-slate-950 px-4 py-2 text-xs font-black uppercase tracking-wider text-emerald-300"
           >
-            <User size={14} className="stroke-[3]" />
-            Hồ sơ cá nhân
+            <CalendarClock size={14} />
+            Gói dài hạn
           </button>
+          <button
+            type="button"
+            onClick={() => navigate('/profile')}
+            className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-slate-950 px-4 py-2 text-xs font-black uppercase tracking-wider text-orange-300"
+          >
+            <User size={14} />
+            Hồ sơ
+          </button>
+        </div>
         </motion.div>
 
-        {/* Dynamic Success Toast */}
-        <AnimatePresence>
-          {bookingSuccess && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="mb-6 rounded-2xl border border-emerald-500/25 bg-emerald-950/20 p-4 text-xs font-black uppercase tracking-wider font-mono text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.1)] backdrop-blur-md flex items-center gap-3"
-            >
-              <CheckCircle2 size={16} />
-              {bookingSuccess}
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6 rounded-3xl border border-white/10 bg-slate-900/50 p-6"
+        >
+          <p className="text-xs font-black uppercase tracking-[0.24em] text-orange-300">FR-USR-03 + FR-USR-04</p>
+          <h1 className="mt-2 text-2xl font-black text-white md:text-3xl">Đặt chỗ và hủy đặt chỗ</h1>
+          <p className="mt-2 text-sm font-semibold text-slate-400">
+            Chọn tòa nhà, loại xe, thời gian đặt chỗ. Khi hủy, hệ thống hoàn tiền theo chính sách.
+          </p>
+        </motion.div>
 
-        {/* Active limit warnings */}
-        <AnimatePresence>
-          {activeReservations.length >= user.licensePlates.length && user.licensePlates.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="mb-6 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-5 shadow-lg flex items-start gap-4"
-            >
-              <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400 shrink-0">
-                <AlertTriangle size={18} className="stroke-[2.5]" />
+        {bookingSuccess ? (
+          <div className="mb-4 flex items-center gap-2 rounded-2xl border border-emerald-400/30 bg-emerald-500/10 p-3 text-sm font-semibold text-emerald-300">
+            <CheckCircle2 size={16} />
+            {bookingSuccess}
+          </div>
+        ) : null}
+
+        {bookingError ? (
+          <div className="mb-4 flex items-center gap-2 rounded-2xl border border-rose-400/30 bg-rose-500/10 p-3 text-sm font-semibold text-rose-300">
+            <AlertTriangle size={16} />
+            {bookingError}
+          </div>
+        ) : null}
+
+        <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+          <section className="rounded-3xl border border-white/10 bg-slate-900/55 p-6">
+            <div className="mb-4 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <ParkingCircle size={18} className="text-cyan-300" />
+                <h2 className="text-sm font-black uppercase tracking-wider text-white">Bản đồ slot</h2>
               </div>
-              <div>
-                <h4 className="text-xs font-black uppercase tracking-wider text-amber-400 font-mono">Đạt giới hạn đặt chỗ tối đa</h4>
-                <p className="text-[11px] text-amber-200/80 mt-1 font-semibold leading-relaxed">
-                  Bạn đã đạt giới hạn đặt chỗ tối đa! Giới hạn đỗ đồng thời của tài khoản bằng đúng số lượng biển số xe liên kết của bạn: <span className="font-bold text-amber-400">{user.licensePlates.length} ô đỗ</span>. Vui lòng hoàn thành hoặc hủy các lượt đặt chỗ đang diễn ra để bắt đầu lượt mới.
-                </p>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">
-
-          {/* Left Panel: 3D interactive Map container */}
-          <motion.section
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ type: 'spring', stiffness: 90, damping: 16 }}
-            className="space-y-6 rounded-3xl border border-white/5 bg-slate-900/40 p-8 backdrop-blur-md shadow-2xl relative overflow-hidden"
-          >
-            <div className="space-y-1">
-              <p className="text-[10px] font-black uppercase tracking-[0.25em] text-orange-400 font-mono">Mô phỏng đỗ xe 3D</p>
-              <h1 className="text-3xl font-black tracking-tight text-white">
-                Sơ đồ bãi đỗ xe <span className="bg-gradient-to-r from-orange-400 via-amber-400 to-cyan-400 bg-clip-text text-transparent">tương tác thông minh</span>
-              </h1>
-              <p className="text-xs text-slate-400 font-semibold leading-relaxed pt-1">
-                Các ô đỗ màu xanh lá cây đại diện cho bãi đỗ trống. Bấm trực tiếp vào các ô đỗ khả dụng trên mô hình 3D bên dưới để chọn điểm đỗ của bạn.
+              <p className="text-xs font-bold text-slate-400">
+                Khả dụng: <span className="text-emerald-300">{availableSlotCount}</span> / {slots.length}
               </p>
             </div>
-
             <AnimatedParkingMap3D
-              interactive={true}
+              interactive
               selectedSlot={selectedSlot}
-              activeReservations={activeReservations}
+              activeReservations={activeReservationsForSelectedBuilding.map((item) => ({
+                slotCode: item.slotCode,
+                plateNumber: item.plateNumber,
+                vehicleType: item.vehicleType,
+              }))}
+              interactiveUnavailableSlots={unavailableSlotCodes}
               onSlotClick={handleSlotClick}
             />
-          </motion.section>
+          </section>
 
-          {/* Right Panel: Confirmation form and Active Bookings */}
-          <motion.aside
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ type: 'spring', stiffness: 90, damping: 16, delay: 0.1 }}
-            className="space-y-6"
-          >
-            {/* Interactive Booking Confirm Form card */}
-            <div className="rounded-3xl border border-white/5 bg-slate-900/30 p-8 backdrop-blur-md shadow-2xl flex flex-col gap-5 justify-between relative overflow-hidden">
-              <h2 className="text-xs font-black uppercase tracking-wider text-slate-400 font-mono flex items-center gap-2">
-                <ParkingCircle size={15} className="text-orange-400" />
-                Phiếu đăng ký đặt chỗ trước
-              </h2>
+          <aside className="space-y-6">
+            <form
+              onSubmit={handleConfirmBooking}
+              className="rounded-3xl border border-white/10 bg-slate-900/55 p-6"
+            >
+              <div className="mb-4 flex items-center gap-2">
+                <CalendarClock size={18} className="text-orange-300" />
+                <h2 className="text-sm font-black uppercase tracking-wider text-white">
+                  Form đặt chỗ
+                </h2>
+              </div>
 
-              <AnimatePresence mode="wait">
-                {selectedSlot ? (
-                  <motion.form
-                    key="booking-form"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    onSubmit={handleConfirmBooking}
-                    className="space-y-4"
+              <div className="space-y-4">
+                <label className="block">
+                  <span className="text-xs font-bold uppercase text-slate-400">Tòa nhà</span>
+                  <select
+                    value={selectedBuildingId}
+                    onChange={(event) => handleBuildingChange(event.target.value)}
+                    className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-semibold text-white outline-none focus:border-orange-400/60"
                   >
-                    {/* Error display inside Form */}
-                    {bookingError && (
-                      <div className="rounded-xl border border-rose-500/25 bg-rose-950/20 p-3.5 text-xs font-semibold text-rose-400 flex items-center gap-2">
-                        <AlertTriangle size={14} className="shrink-0" />
-                        <span>{bookingError}</span>
-                      </div>
-                    )}
+                    <option value="">-- Chọn tòa nhà --</option>
+                    {rows.map((row) => (
+                      <option key={row.building._id} value={row.building._id}>
+                        {row.building.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
 
-                    <div className="grid grid-cols-2 gap-3.5">
-                      <div className="rounded-2xl border border-white/5 bg-slate-950/70 p-4">
-                        <p className="text-[10px] font-black uppercase text-slate-500 font-mono">Ô đỗ được chọn</p>
-                        <p className="mt-1.5 text-lg font-mono font-black text-orange-400">{selectedSlot}</p>
-                      </div>
-                      <div className="rounded-2xl border border-white/5 bg-slate-950/70 p-4">
-                        <p className="text-[10px] font-black uppercase text-slate-500 font-mono">Loại ô đỗ</p>
-                        <p className="mt-1.5 text-sm font-bold text-slate-200">
-                          {selectedSlot === 'A-03' ? '🔋 Sạc điện (EV)' : '🚗 Tiêu chuẩn'}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Plates drop selector */}
-                    <div className="space-y-1.5">
-                      <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono">Chọn phương tiện sử dụng</label>
-                      <div className="relative">
-                        <select
-                          value={selectedPlate}
-                          onChange={(e) => {
-                            setSelectedPlate(e.target.value);
-                            setBookingError(null);
-                          }}
-                          required
-                          className="block w-full h-11 px-4 rounded-xl border border-white/10 bg-slate-950 text-white text-sm outline-none focus:border-orange-500 transition-all duration-300 font-mono tracking-wider"
-                        >
-                          <option value="" disabled>-- Chọn biển số xe của bạn --</option>
-                          {user.licensePlates.map((item) => {
-                            const isUsed = activeReservations.some((ar) => ar.plateNumber === item.plateNumber);
-                            return (
-                              <option 
-                                key={item.plateNumber} 
-                                value={item.plateNumber}
-                                disabled={isUsed}
-                                className="bg-slate-900"
-                              >
-                                {item.vehicleType === 'car' ? '🚗' : '🏍️'} {item.plateNumber} {item.vehicleType === 'car' ? '[Ô tô]' : '[Xe máy]'} {isUsed ? '(Đang đỗ)' : ''}
-                              </option>
-                            );
-                          })}
-                        </select>
-                      </div>
-                    </div>
-
-                    {/* Selected vehicle type details banner */}
-                    {selectedPlateDetails && (
-                      <div className={`p-4 rounded-2xl border flex items-center gap-3 transition-colors duration-300 ${
-                        selectedPlateDetails.vehicleType === 'car'
-                          ? 'bg-blue-500/5 border-blue-500/20 text-blue-400'
-                          : 'bg-purple-500/5 border-purple-500/20 text-purple-400'
-                      }`}>
-                        {selectedPlateDetails.vehicleType === 'car' ? <Car size={18} /> : <Bike size={18} />}
-                        <div className="text-[11px] font-semibold">
-                          Loại phương tiện đăng ký: <span className="uppercase font-bold tracking-wider">{selectedPlateDetails.vehicleType === 'car' ? 'Ô tô' : 'Xe máy'}</span>
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="flex gap-3 pt-2">
-                      <button
-                        type="submit"
-                        className="flex-1 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 font-black text-xs uppercase tracking-widest hover:scale-[1.02] hover:shadow-[0_0_20px_rgba(249,115,22,0.35)] transition-all duration-300"
-                      >
-                        Đặt chỗ ngay
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedSlot(null)}
-                        className="px-5 rounded-xl bg-slate-950 border border-white/10 text-white font-bold text-xs uppercase tracking-widest hover:border-white/20 hover:scale-[1.02] transition-all duration-300"
-                      >
-                        Hủy
-                      </button>
-                    </div>
-                  </motion.form>
-                ) : (
-                  <motion.div
-                    key="instructions"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="rounded-2xl border border-white/5 bg-slate-950/70 p-6 text-center space-y-3"
+                <label className="block">
+                  <span className="text-xs font-bold uppercase text-slate-400">Loại xe</span>
+                  <select
+                    value={selectedVehicleType}
+                    onChange={(event) => {
+                      const next = event.target.value as ReservationVehicleType | '';
+                      setSelectedVehicleType(next);
+                      setSelectedSlot(null);
+                      setSelectedPlate('');
+                    }}
+                    className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-semibold text-white outline-none focus:border-orange-400/60"
                   >
-                    <p className="text-xs text-slate-400 font-semibold leading-relaxed">
-                      Chưa chọn ô đỗ. Hãy nhấp chọn một ô đỗ khả dụng màu xanh lục trên sơ đồ 3D để bắt đầu quy trình giữ chỗ trước.
+                    <option value="">-- Chọn loại xe --</option>
+                    <option value="car">Ô tô</option>
+                    <option value="motorcycle">Xe máy</option>
+                  </select>
+                </label>
+
+                <label className="block">
+                  <span className="text-xs font-bold uppercase text-slate-400">Thời gian đặt chỗ</span>
+                  <input
+                    type="datetime-local"
+                    value={scheduledAt}
+                    min={minDateTime}
+                    max={maxDateTime}
+                    onChange={(event) => {
+                      setScheduledAt(event.target.value);
+                      setSelectedSlot(null);
+                    }}
+                    className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-semibold text-white outline-none focus:border-orange-400/60"
+                  />
+                </label>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-xl border border-white/10 bg-slate-950/60 p-3">
+                    <p className="text-[10px] font-bold uppercase text-slate-500">Slot đã chọn</p>
+                    <p className="mt-1 text-lg font-black text-white">{selectedSlot || '--'}</p>
+                  </div>
+                  <div className="rounded-xl border border-white/10 bg-slate-950/60 p-3">
+                    <p className="text-[10px] font-bold uppercase text-slate-500">Chính sách hoàn</p>
+                    <p className="mt-1 text-xs font-bold text-slate-300">
+                      Hoàn {reservationPolicy?.refundPercent ?? 0}% khi hủy
                     </p>
-                  </motion.div>
+                  </div>
+                </div>
+
+                <label className="block">
+                  <span className="text-xs font-bold uppercase text-slate-400">Biển số xe</span>
+                  <select
+                    value={selectedPlate}
+                    onChange={(event) => setSelectedPlate(event.target.value)}
+                    className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-semibold text-white outline-none focus:border-orange-400/60"
+                  >
+                    <option value="">-- Chọn biển số --</option>
+                    {plateOptions.map((plate) => {
+                      const isBusy = activeReservations.some(
+                        (entry) => entry.plateNumber === plate.plateNumber,
+                      );
+                      return (
+                        <option key={plate.plateNumber} value={plate.plateNumber} disabled={isBusy}>
+                          {plate.plateNumber} - {vehicleTypeLabel(plate.vehicleType)}{' '}
+                          {isBusy ? '(đang sử dụng)' : ''}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </label>
+
+                <button
+                  type="submit"
+                  disabled={!canSubmit}
+                  className="h-11 w-full rounded-xl bg-gradient-to-r from-orange-500 to-amber-400 text-sm font-black uppercase tracking-wider text-slate-950 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isSubmitting ? 'Đang xử lý...' : 'Đặt chỗ'}
+                </button>
+              </div>
+            </form>
+
+            <div className="rounded-3xl border border-white/10 bg-slate-900/55 p-6">
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-sm font-black uppercase tracking-wider text-white">
+                  Lịch sử đặt chỗ
+                </h2>
+                <span className="rounded-full bg-slate-950 px-2 py-1 text-[11px] font-bold text-slate-400">
+                  {isLoadingUserData ? '...' : reservations.length}
+                </span>
+              </div>
+
+              <div className="space-y-3">
+                {reservations.length > 0 ? (
+                  reservations.map((entry) => {
+                    const refundPolicyPercent = policyByBuildingId.get(entry.buildingId)?.refundPercent ?? 0;
+                    return (
+                      <div
+                        key={entry.id}
+                        className="rounded-2xl border border-white/10 bg-slate-950/70 p-4"
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-xs font-black text-orange-300">{entry.id}</p>
+                          <p className="text-[10px] font-black uppercase text-slate-400">
+                            {entry.status}
+                          </p>
+                        </div>
+
+                        <div className="mt-2 space-y-1 text-xs font-semibold text-slate-300">
+                          <p className="flex items-center gap-2">
+                            <Building2 size={13} className="text-cyan-300" />
+                            {entry.buildingName}
+                          </p>
+                          <p className="flex items-center gap-2">
+                            {entry.vehicleType === 'car' ? (
+                              <Car size={13} className="text-cyan-300" />
+                            ) : (
+                              <Bike size={13} className="text-purple-300" />
+                            )}
+                            {entry.plateNumber} - Slot {entry.slotCode}
+                          </p>
+                          <p className="flex items-center gap-2">
+                            <Clock3 size={13} className="text-orange-300" />
+                            {formatDateTime(entry.scheduledAt)}
+                          </p>
+                          <p className="text-[11px] text-slate-400">
+                            Tiền đã giữ: <span className="font-black text-orange-300">{formatMoney(entry.amountPaid)}</span>
+                          </p>
+                          {entry.status === 'cancelled' ? (
+                            <p className="text-[11px] text-emerald-300">
+                              Đã hoàn: {formatMoney(entry.refundAmount || 0)} ({entry.refundPercent || refundPolicyPercent}%)
+                            </p>
+                          ) : (
+                            <p className="text-[11px] text-slate-400">
+                              Hủy lúc này được hoàn: {refundPolicyPercent}% ({formatMoney(Math.round((entry.amountPaid * refundPolicyPercent) / 100))})
+                            </p>
+                          )}
+                        </div>
+
+                        {entry.status === 'active' ? (
+                          <button
+                            type="button"
+                            onClick={() => handleCancelReservation(entry.id)}
+                            className="mt-3 inline-flex items-center gap-2 rounded-lg border border-rose-400/35 bg-rose-500/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-wider text-rose-300"
+                          >
+                            <Trash2 size={12} />
+                            Hủy và hoàn tiền
+                          </button>
+                        ) : null}
+                      </div>
+                    );
+                  })
+                ) : (
+                  <p className="rounded-2xl border border-white/10 bg-slate-950/60 p-4 text-center text-xs font-semibold text-slate-500">
+                    {isLoadingUserData ? 'Đang tải lịch sử...' : 'Chưa có lượt đặt chỗ nào.'}
+                  </p>
                 )}
-              </AnimatePresence>
+              </div>
             </div>
 
-            {/* List of User Reservations */}
-            <div className="rounded-3xl border border-white/5 bg-slate-900/30 p-8 backdrop-blur-md shadow-2xl flex flex-col gap-5 justify-between">
-              <h2 className="text-xs font-black uppercase tracking-wider text-slate-400 font-mono flex items-center justify-between">
-                <span>Lịch sử đặt chỗ của bạn</span>
-                <span className="text-[10px] bg-slate-800 text-slate-400 font-bold px-2 py-0.5 rounded-full">
-                  {userReservations.length} lượt
-                </span>
-              </h2>
+            <div className="rounded-3xl border border-white/10 bg-slate-900/55 p-6">
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="flex items-center gap-2 text-sm font-black uppercase tracking-wider text-white">
+                  <WalletCards size={16} className="text-cyan-300" />
+                  Ví và giao dịch hoàn tiền
+                </h2>
+                <p className="text-xs font-black text-emerald-300">{formatMoney(walletBalance)}</p>
+              </div>
 
-              <div className="space-y-3.5 max-h-[300px] overflow-y-auto pr-1">
-                {userReservations.map((res) => (
-                  <div
-                    key={res.id}
-                    className={`rounded-2xl border p-4 flex items-center justify-between gap-4 transition-all duration-300 ${
-                      res.status === 'active'
-                        ? 'bg-slate-950 border-orange-500/20 shadow-[0_0_10px_rgba(249,115,22,0.05)]'
-                        : 'bg-slate-950/50 border-white/5 opacity-70'
-                    }`}
-                  >
-                    <div className="space-y-1.5 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-mono font-black text-orange-400">{res.id}</span>
-                        <span className={`text-[8px] font-sans font-black px-1.5 py-0.2 rounded uppercase ${
-                          res.status === 'active'
-                            ? 'bg-emerald-500/25 text-emerald-400'
-                            : 'bg-slate-800 text-slate-500'
-                        }`}>
-                          {res.status === 'active' ? 'Đang giữ' : res.status === 'cancelled' ? 'Đã hủy' : 'Hoàn tất'}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-4 text-[11px] text-slate-300 font-bold">
-                        <div>Tọa độ: <span className="font-mono text-white font-extrabold">{res.slotCode}</span></div>
-                        <div className="flex items-center gap-1 font-mono">
-                          {res.vehicleType === 'car' ? <Car size={11} className="text-blue-400" /> : <Bike size={11} className="text-purple-400" />}
-                          <span className={res.vehicleType === 'car' ? 'text-blue-400' : 'text-purple-400'}>{res.plateNumber}</span>
-                        </div>
-                      </div>
-                      <div className="text-[9px] text-slate-500 font-bold flex items-center gap-1 font-mono">
-                        <Clock size={10} />
-                        {res.startTime}
-                      </div>
-                    </div>
-
-                    {res.status === 'active' && (
-                      <button
-                        type="button"
-                        onClick={() => handleCancelReservation(res.id)}
-                        className="p-2 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 hover:bg-rose-500 hover:text-white transition-all duration-200 flex-shrink-0"
-                        title="Hủy đặt chỗ"
-                      >
-                        <Trash2 size={13} className="stroke-[2.5]" />
-                      </button>
-                    )}
+              <div className="space-y-3">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Payments</p>
+                {payments.slice(0, 4).map((payment) => (
+                  <div key={payment.id} className="rounded-xl border border-white/10 bg-slate-950/60 p-3">
+                    <p className="text-xs font-bold text-white">{paymentTypeLabel(payment.type)}</p>
+                    <p className="mt-1 text-[11px] text-slate-400">{payment.note}</p>
+                    <p
+                      className={`mt-1 text-xs font-black ${
+                        payment.direction === 'credit' ? 'text-emerald-300' : 'text-orange-300'
+                      }`}
+                    >
+                      {payment.direction === 'credit' ? '+' : '-'}
+                      {formatMoney(payment.amount)}
+                    </p>
                   </div>
                 ))}
 
-                {userReservations.length === 0 && (
-                  <div className="text-center py-6 text-slate-500 font-semibold italic text-xs">
-                    Bạn chưa thực hiện bất kỳ lượt đặt chỗ nào…
+                <p className="pt-2 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  Wallet Transactions
+                </p>
+                {walletTransactions.slice(0, 4).map((tx) => (
+                  <div key={tx.id} className="rounded-xl border border-white/10 bg-slate-950/60 p-3">
+                    <p className="text-xs font-bold text-white">{tx.description}</p>
+                    <p className="mt-1 text-[11px] text-slate-400">{formatDateTime(tx.createdAt)}</p>
+                    <p
+                      className={`mt-1 text-xs font-black ${
+                        tx.type === 'credit' ? 'text-emerald-300' : 'text-orange-300'
+                      }`}
+                    >
+                      {tx.type === 'credit' ? '+' : '-'}
+                      {formatMoney(tx.amount)} • Số dư: {formatMoney(tx.balanceAfter)}
+                    </p>
                   </div>
-                )}
+                ))}
+
+                {payments.length === 0 && walletTransactions.length === 0 ? (
+                  <p className="rounded-xl border border-white/10 bg-slate-950/60 p-3 text-xs font-semibold text-slate-500">
+                    Chưa có giao dịch thanh toán hoặc hoàn tiền.
+                  </p>
+                ) : null}
               </div>
             </div>
 
-          </motion.aside>
+            {isLoadingBuildings || isLoadingSlots ? (
+              <p className="text-xs font-semibold text-slate-500">
+                Đang tải dữ liệu tòa nhà và danh sách slot...
+              </p>
+            ) : null}
+          </aside>
         </div>
       </div>
     </main>
   );
 }
+
