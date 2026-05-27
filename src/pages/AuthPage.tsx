@@ -2,7 +2,9 @@ import { useMemo, useState, useEffect, useRef } from 'react';
 import type { FormEvent } from 'react';
 import { Home, X, AlertCircle } from 'lucide-react';
 import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
+import { useSearchParams } from 'react-router-dom';
 import { CartoonCar3D } from '@/components/shared/CartoonCar3D';
+import { forgotPassword, resetPassword } from '@/services/authService';
 
 const initialForm = {
   fullName: '',
@@ -12,7 +14,7 @@ const initialForm = {
   confirmPassword: '',
 };
 
-type AuthMode = 'login' | 'register';
+type AuthMode = 'login' | 'register' | 'forgot-password' | 'reset-password';
 
 interface AuthPageProps {
   mode: AuthMode;
@@ -39,11 +41,24 @@ const promoPoints = [
 ];
 
 export default function AuthPage({ mode, notice, onModeChange, onBackHome, onSubmit, isLoading }: AuthPageProps) {
+  const [searchParams] = useSearchParams();
   const [localNotice, setLocalNotice] = useState<{ message?: string; type?: string } | null>(null);
   const [form, setForm] = useState(initialForm);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [resetPasswordForm, setResetPasswordForm] = useState({ newPassword: '', confirmPassword: '' });
   const [savedAccounts, setSavedAccounts] = useState<{ email: string; password?: string }[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [lockTimeLeft, setLockTimeLeft] = useState<number>(0);
+  const [resetToken, setResetToken] = useState<string | null>(null);
+
+  // Auto-detect reset-password mode from URL token
+  useEffect(() => {
+    const token = searchParams.get('token');
+    if (token) {
+      setResetToken(token);
+      onModeChange('reset-password');
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const checkLock = () => {
@@ -61,6 +76,7 @@ export default function AuthPage({ mode, notice, onModeChange, onBackHome, onSub
         setLockTimeLeft(0);
       }
     };
+
 
     checkLock();
     const interval = setInterval(checkLock, 1000);
@@ -144,14 +160,20 @@ export default function AuthPage({ mode, notice, onModeChange, onBackHome, onSub
   const rotateY = useTransform(springX, [0, 1], [-8, 8]);
   const rotateX = useTransform(springY, [0, 1], [8, -8]);
 
-  const title = useMemo(() => (mode === 'login' ? 'Đăng nhập vào PBMS' : 'Tạo tài khoản PBMS'), [mode]);
-  const description = useMemo(
-    () =>
-      mode === 'login'
-        ? 'Đăng nhập để tiếp tục sử dụng hệ thống quản lý bãi đỗ xe, theo dõi thông tin và truy cập các chức năng cần thiết.'
-        : 'Tạo tài khoản mới để bắt đầu sử dụng nền tảng quản lý bãi đỗ xe với giao diện đồng nhất cùng trang chủ.',
-    [mode]
-  );
+  const title = useMemo(() => {
+    if (mode === 'reset-password') return 'Đặt lại mật khẩu';
+    if (mode === 'forgot-password') return 'Khôi phục mật khẩu';
+    return mode === 'login' ? 'Đăng nhập vào PBMS' : 'Tạo tài khoản PBMS';
+  }, [mode]);
+  const description = useMemo(() => {
+    if (mode === 'reset-password')
+      return 'Nhập mật khẩu mới của bạn để hoàn tất quá trình đặt lại mật khẩu.';
+    if (mode === 'forgot-password')
+      return 'Nhập địa chỉ email liên kết với tài khoản của bạn để nhận link đặt lại mật khẩu.';
+    return mode === 'login'
+      ? 'Đăng nhập để tiếp tục sử dụng hệ thống quản lý bãi đỗ xe, theo dõi thông tin và truy cập các chức năng cần thiết.'
+      : 'Tạo tài khoản mới để bắt đầu sử dụng nền tảng quản lý bãi đỗ xe với giao diện đồng nhất cùng trang chủ.';
+  }, [mode]);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const { name, value } = e.target;
@@ -252,6 +274,75 @@ export default function AuthPage({ mode, notice, onModeChange, onBackHome, onSub
           });
         }
       }
+    }
+  }
+
+  async function handleForgotPassword(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setLocalNotice(null);
+
+    if (!forgotEmail.trim()) {
+      setLocalNotice({ message: 'Vui lòng nhập email của bạn!', type: 'error' });
+      return;
+    }
+
+    try {
+      await forgotPassword(forgotEmail.trim());
+      setLocalNotice({
+        message: 'Email đặt lại mật khẩu đã được gửi. Vui lòng kiểm tra email của bạn.',
+        type: 'success',
+      });
+
+      setTimeout(() => {
+        setForgotEmail('');
+        setLocalNotice(null);
+        onModeChange('login');
+      }, 2500);
+    } catch (error) {
+      setLocalNotice({
+        message: error instanceof Error ? error.message : 'Gửi email thất bại',
+        type: 'error',
+      });
+    }
+  }
+
+  async function handleResetPassword(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setLocalNotice(null);
+
+    if (!resetToken) {
+      setLocalNotice({ message: 'Token không hợp lệ!', type: 'error' });
+      return;
+    }
+
+    if (resetPasswordForm.newPassword !== resetPasswordForm.confirmPassword) {
+      setLocalNotice({ message: 'Mật khẩu xác nhận không khớp!', type: 'error' });
+      return;
+    }
+
+    if (resetPasswordForm.newPassword.length < 6) {
+      setLocalNotice({ message: 'Mật khẩu phải có ít nhất 6 ký tự!', type: 'error' });
+      return;
+    }
+
+    try {
+      await resetPassword(resetToken, resetPasswordForm.newPassword);
+      setLocalNotice({
+        message: 'Mật khẩu đã được đặt lại thành công. Vui lòng đăng nhập lại.',
+        type: 'success',
+      });
+
+      setTimeout(() => {
+        setResetPasswordForm({ newPassword: '', confirmPassword: '' });
+        setResetToken(null);
+        setLocalNotice(null);
+        onModeChange('login');
+      }, 2500);
+    } catch (error) {
+      setLocalNotice({
+        message: error instanceof Error ? error.message : 'Đặt lại mật khẩu thất bại',
+        type: 'error',
+      });
     }
   }
 
@@ -554,7 +645,115 @@ export default function AuthPage({ mode, notice, onModeChange, onBackHome, onSub
             </motion.div>
           ) : null}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          {mode === 'forgot-password' ? (
+            <form onSubmit={handleForgotPassword} className="space-y-4">
+              <div className="space-y-2 mb-4">
+                <h3 className="text-sm font-bold text-foreground">Nhập email để khôi phục mật khẩu</h3>
+                <p className="text-xs text-slate-400">
+                  Chúng tôi sẽ gửi link đặt lại mật khẩu đến email của bạn.
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono">
+                  Email
+                </label>
+                <input 
+                  type="email"
+                  value={forgotEmail}
+                  onChange={(e) => setForgotEmail(e.target.value)}
+                  required
+                  className="block w-full rounded-xl border border-white/10 bg-slate-950/60 text-white placeholder-slate-600 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 text-sm h-11 px-4 transition-all duration-300 outline-none shadow-[inset_0_1px_2px_rgba(0,0,0,0.4)] focus:shadow-[0_0_15px_rgba(249,115,22,0.15)] input-scan-focus"
+                  placeholder="user@pbms.vn"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    onModeChange('login');
+                    setForgotEmail('');
+                    setLocalNotice(null);
+                  }}
+                  className="flex-1 h-11 rounded-xl border border-white/10 text-white font-black text-xs uppercase tracking-wider hover:bg-slate-900 transition-all"
+                >
+                  Quay lại
+                </button>
+                <motion.button 
+                  type="submit"
+                  disabled={isLoading}
+                  whileHover={{ scale: 1.015 }}
+                  whileTap={{ scale: 0.96 }}
+                  className="flex-1 h-11 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider hover:shadow-[0_0_25px_rgba(249,115,22,0.45)] disabled:opacity-50 transition-all"
+                >
+                  {isLoading ? 'Đang gửi...' : 'Gửi link đặt lại'}
+                </motion.button>
+              </div>
+            </form>
+          ) : mode === 'reset-password' ? (
+            <form onSubmit={handleResetPassword} className="space-y-4">
+              <div className="space-y-2 mb-4">
+                <h3 className="text-sm font-bold text-foreground">Nhập mật khẩu mới</h3>
+                <p className="text-xs text-slate-400">
+                  Mật khẩu phải có ít nhất 6 ký tự.
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono">
+                  Mật khẩu mới
+                </label>
+                <input 
+                  type="password"
+                  value={resetPasswordForm.newPassword}
+                  onChange={(e) => setResetPasswordForm(s => ({ ...s, newPassword: e.target.value }))}
+                  required
+                  className="block w-full rounded-xl border border-white/10 bg-slate-950/60 text-white placeholder-slate-600 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 text-sm h-11 px-4 transition-all duration-300 outline-none shadow-[inset_0_1px_2px_rgba(0,0,0,0.4)] focus:shadow-[0_0_15px_rgba(249,115,22,0.15)] input-scan-focus"
+                  placeholder="Ít nhất 6 ký tự"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono">
+                  Xác nhận mật khẩu
+                </label>
+                <input 
+                  type="password"
+                  value={resetPasswordForm.confirmPassword}
+                  onChange={(e) => setResetPasswordForm(s => ({ ...s, confirmPassword: e.target.value }))}
+                  required
+                  className="block w-full rounded-xl border border-white/10 bg-slate-950/60 text-white placeholder-slate-600 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 text-sm h-11 px-4 transition-all duration-300 outline-none shadow-[inset_0_1px_2px_rgba(0,0,0,0.4)] focus:shadow-[0_0_15px_rgba(249,115,22,0.15)] input-scan-focus"
+                  placeholder="Nhập lại mật khẩu"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    onModeChange('login');
+                    setResetPasswordForm({ newPassword: '', confirmPassword: '' });
+                    setResetToken(null);
+                    setLocalNotice(null);
+                  }}
+                  className="flex-1 h-11 rounded-xl border border-white/10 text-white font-black text-xs uppercase tracking-wider hover:bg-slate-900 transition-all"
+                >
+                  Hủy
+                </button>
+                <motion.button 
+                  type="submit"
+                  disabled={isLoading}
+                  whileHover={{ scale: 1.015 }}
+                  whileTap={{ scale: 0.96 }}
+                  className="flex-1 h-11 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider hover:shadow-[0_0_25px_rgba(249,115,22,0.45)] disabled:opacity-50 transition-all"
+                >
+                  {isLoading ? 'Đang xử lý...' : 'Đặt lại mật khẩu'}
+                </motion.button>
+              </div>
+            </form>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-4">
             {mode === 'register' && (
               <>
                 <div className="space-y-1.5">
@@ -641,6 +840,18 @@ export default function AuthPage({ mode, notice, onModeChange, onBackHome, onSub
               />
             </div>
 
+            {mode === 'login' && (
+              <div className="flex justify-end">
+                <button 
+                  type="button"
+                  onClick={() => onModeChange('forgot-password')}
+                  className="text-xs font-semibold text-slate-400 hover:text-orange-400 transition-colors"
+                >
+                  Quên mật khẩu?
+                </button>
+              </div>
+            )}
+
             {mode === 'register' && (
               <div className="space-y-1.5 animate-fadeIn">
                 <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono">Xác nhận mật khẩu</label>
@@ -688,6 +899,7 @@ export default function AuthPage({ mode, notice, onModeChange, onBackHome, onSub
               </div>
             </div>
           </form>
+          )}
         </div>
       </motion.div>
     </main>

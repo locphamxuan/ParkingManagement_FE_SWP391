@@ -343,19 +343,7 @@ export default function BuildingsPage() {
                   ))}
                 </div>
 
-                <div className="mt-7">
-                  <div className="mb-3 flex items-center gap-2">
-                    <Users size={18} className="text-cyan-300" />
-                    <h3 className="text-sm font-black uppercase tracking-wider text-white">
-                      Nhân sự vận hành
-                    </h3>
-                  </div>
-
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <TeamList title="Quản lý" members={selectedRow.team?.managers || []} />
-                    <TeamList title="Nhân viên" members={selectedRow.team?.staff || []} />
-                  </div>
-                </div>
+                
 
                 <div className="mt-7">
                   <div className="mb-3 flex items-center gap-2">

@@ -10,10 +10,13 @@ import {
   Car,
   CheckCircle2,
   Clock3,
+  History,
+  MapPin,
   ParkingCircle,
   Trash2,
   User,
   WalletCards,
+  X,
 } from 'lucide-react';
 import { AnimatedParkingMap3D } from '@/components/shared/AnimatedParkingMap3D';
 import { useAuth } from '@/hooks/useAuth';
@@ -101,6 +104,8 @@ export default function ReservationsPage() {
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
   const [isLoadingUserData, setIsLoadingUserData] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSlotModal, setShowSlotModal] = useState(false);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
 
   const [selectedBuildingId, setSelectedBuildingId] = useState('');
   const [selectedVehicleType, setSelectedVehicleType] = useState<ReservationVehicleType | ''>('');
@@ -318,6 +323,7 @@ export default function ReservationsPage() {
     }
 
     setSelectedSlot(slotCode);
+    setShowSlotModal(false);
 
     const firstAvailablePlate = plateOptions.find(
       (plate) => !activeReservations.some((entry) => entry.plateNumber === plate.plateNumber),
@@ -473,40 +479,31 @@ export default function ReservationsPage() {
           </div>
         ) : null}
 
-        <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-          <section className="rounded-3xl border border-white/10 bg-slate-900/55 p-6">
-            <div className="mb-4 flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <ParkingCircle size={18} className="text-cyan-300" />
-                <h2 className="text-sm font-black uppercase tracking-wider text-white">Bản đồ slot</h2>
-              </div>
-              <p className="text-xs font-bold text-slate-400">
-                Khả dụng: <span className="text-emerald-300">{availableSlotCount}</span> / {slots.length}
-              </p>
-            </div>
-            <AnimatedParkingMap3D
-              interactive
-              selectedSlot={selectedSlot}
-              activeReservations={activeReservationsForSelectedBuilding.map((item) => ({
-                slotCode: item.slotCode,
-                plateNumber: item.plateNumber,
-                vehicleType: item.vehicleType,
-              }))}
-              interactiveUnavailableSlots={unavailableSlotCodes}
-              onSlotClick={handleSlotClick}
-            />
-          </section>
-
-          <aside className="space-y-6">
-            <form
-              onSubmit={handleConfirmBooking}
-              className="rounded-3xl border border-white/10 bg-slate-900/55 p-6"
-            >
-              <div className="mb-4 flex items-center gap-2">
-                <CalendarClock size={18} className="text-orange-300" />
-                <h2 className="text-sm font-black uppercase tracking-wider text-white">
-                  Form đặt chỗ
-                </h2>
+        <div className="flex justify-center">
+          <div className="w-full max-w-6xl">
+            <div className="grid grid-cols-10 gap-6">
+              <div className="col-span-7">
+                <form
+                  onSubmit={handleConfirmBooking}
+                  className="rounded-3xl border border-white/10 bg-slate-900/55 p-6"
+                >
+              <div className="mb-4 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <CalendarClock size={18} className="text-orange-300" />
+                  <h2 className="text-sm font-black uppercase tracking-wider text-white">
+                    Form đặt chỗ
+                  </h2>
+                </div>
+                <motion.button
+                  type="button"
+                  onClick={() => setShowHistoryModal(true)}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="rounded-lg border border-blue-500/30 bg-blue-500/10 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-blue-400 hover:bg-blue-500/20 hover:border-blue-500/50 transition-all duration-300 flex items-center gap-1 whitespace-nowrap"
+                >
+                  <History size={12} />
+                  <span>Lịch sử ({isLoadingUserData ? '...' : reservations.length})</span>
+                </motion.button>
               </div>
 
               <div className="space-y-4">
@@ -561,16 +558,43 @@ export default function ReservationsPage() {
                 </label>
 
                 <div className="grid grid-cols-2 gap-3">
+                  <motion.button
+                    type="button"
+                    onClick={() => {
+                      if (!selectedBuildingId) {
+                        setBookingError('Vui lòng chọn tòa nhà trước.');
+                        return;
+                      }
+                      if (!selectedVehicleType) {
+                        setBookingError('Vui lòng chọn loại xe trước.');
+                        return;
+                      }
+                      if (!scheduledAt) {
+                        setBookingError('Vui lòng chọn thời gian đặt chỗ trước.');
+                        return;
+                      }
+                      setShowSlotModal(true);
+                    }}
+                    disabled={!selectedBuildingId || !selectedVehicleType || !scheduledAt || isLoadingSlots}
+                    whileHover={selectedBuildingId && selectedVehicleType && scheduledAt ? { scale: 1.02, boxShadow: '0 0 15px rgba(34,197,94,0.45)' } : {}}
+                    whileTap={selectedBuildingId && selectedVehicleType && scheduledAt ? { scale: 0.98 } : {}}
+                    className="rounded-xl border border-white/10 bg-gradient-to-r from-emerald-600 to-teal-500 text-sm font-black uppercase tracking-wider text-white disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-300 py-3 flex items-center justify-center gap-2"
+                  >
+                    <MapPin size={16} />
+                    Chọn slot
+                  </motion.button>
                   <div className="rounded-xl border border-white/10 bg-slate-950/60 p-3 shadow-inner">
                     <p className="text-[10px] font-bold uppercase text-slate-500">Slot đã chọn</p>
                     <p className="mt-1 text-lg font-mono font-black text-orange-400">{selectedSlot || '--'}</p>
                   </div>
-                  <div className="rounded-xl border border-white/10 bg-slate-950/60 p-3 shadow-inner">
-                    <p className="text-[10px] font-bold uppercase text-slate-500">Chính sách hoàn</p>
-                    <p className="mt-1.5 text-xs font-bold text-slate-300">
-                      Hoàn {reservationPolicy?.refundPercent ?? 0}% khi hủy
-                    </p>
-                  </div>
+                </div>
+
+                <div className="rounded-xl border border-white/10 bg-slate-950/60 p-3 shadow-inner">
+                  <p className="text-[10px] font-bold uppercase text-slate-500">Khả dụng</p>
+                  <p className="mt-1 text-sm font-black">
+                    <span className="text-emerald-300">{availableSlotCount}</span>
+                    <span className="text-slate-500"> / {slots.length}</span>
+                  </p>
                 </div>
 
                 <div className="block">
@@ -606,159 +630,264 @@ export default function ReservationsPage() {
                 </motion.button>
               </div>
             </form>
-
-            <div className="rounded-3xl border border-white/10 bg-slate-900/55 p-6">
-              <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-sm font-black uppercase tracking-wider text-white">
-                  Lịch sử đặt chỗ
-                </h2>
-                <span className="rounded-full bg-slate-950 px-2 py-1 text-[11px] font-bold text-slate-400">
-                  {isLoadingUserData ? '...' : reservations.length}
-                </span>
               </div>
 
-              <div className="space-y-3">
-                {reservations.length > 0 ? (
-                  reservations.map((entry, idx) => {
-                    const refundPolicyPercent = policyByBuildingId.get(entry.buildingId)?.refundPercent ?? 0;
-                    return (
-                      <motion.div
-                        key={entry.id}
-                        initial={{ opacity: 0, y: 12 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: idx * 0.05, duration: 0.35 }}
-                        whileHover={{ scale: 1.01, borderColor: entry.status === 'active' ? 'rgba(249,115,22,0.25)' : 'rgba(255,255,255,0.1)' }}
-                        className={`rounded-2xl border p-4 transition-all duration-300 ${
-                          entry.status === 'active' 
-                            ? 'bg-slate-950 border-orange-500/15 shadow-[0_0_10px_rgba(249,115,22,0.03)]' 
-                            : 'bg-slate-950/50 border-white/5 opacity-70'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between gap-3">
-                          <p className="text-xs font-mono font-black text-orange-400">{entry.id}</p>
-                          <span className={`text-[8px] font-sans font-black px-1.5 py-0.5 rounded uppercase tracking-wider ${
-                            entry.status === 'active' 
-                              ? 'bg-emerald-500/20 text-emerald-400' 
-                              : 'bg-slate-800 text-slate-500'
-                          }`}>
-                            {entry.status === 'active' ? 'Đang giữ' : entry.status === 'cancelled' ? 'Đã hủy' : 'Hoàn tất'}
-                          </span>
-                        </div>
-
-                        <div className="mt-2 space-y-1 text-xs font-semibold text-slate-300">
-                          <p className="flex items-center gap-2">
-                            <Building2 size={13} className="text-cyan-300" />
-                            {entry.buildingName}
-                          </p>
-                          <p className="flex items-center gap-2">
-                            {entry.vehicleType === 'car' ? (
-                              <Car size={13} className="text-cyan-300" />
-                            ) : (
-                              <Bike size={13} className="text-purple-300" />
-                            )}
-                            {entry.plateNumber} - Slot {entry.slotCode}
-                          </p>
-                          <p className="flex items-center gap-2">
-                            <Clock3 size={13} className="text-orange-300" />
-                            {formatDateTime(entry.scheduledAt)}
-                          </p>
-                          <p className="text-[11px] text-slate-400">
-                            Tiền đã giữ: <span className="font-black text-orange-300">{formatMoney(entry.amountPaid)}</span>
-                          </p>
-                          {entry.status === 'cancelled' ? (
-                            <p className="text-[11px] text-emerald-300">
-                              Đã hoàn: {formatMoney(entry.refundAmount || 0)} ({entry.refundPercent || refundPolicyPercent}%)
-                            </p>
-                          ) : (
-                            <p className="text-[11px] text-slate-400">
-                              Hủy lúc này được hoàn: {refundPolicyPercent}% ({formatMoney(Math.round((entry.amountPaid * refundPolicyPercent) / 100))})
-                            </p>
-                          )}
-                        </div>
-
-                        {entry.status === 'active' ? (
-                          <motion.button
-                            type="button"
-                            onClick={() => handleCancelReservation(entry.id)}
-                            whileHover={{ scale: 1.03, backgroundColor: 'rgba(239,68,68,0.2)', borderColor: 'rgba(239,68,68,0.45)' }}
-                            whileTap={{ scale: 0.97 }}
-                            className="mt-3 inline-flex items-center gap-2 rounded-lg border border-rose-500/20 bg-rose-500/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-wider text-rose-400 transition-all duration-300"
-                          >
-                            <Trash2 size={12} />
-                            Hủy và hoàn tiền
-                          </motion.button>
-                        ) : null}
-                      </motion.div>
-                    );
-                  })
-                ) : (
-                  <p className="rounded-2xl border border-white/10 bg-slate-950/60 p-4 text-center text-xs font-semibold text-slate-500">
-                    {isLoadingUserData ? 'Đang tải lịch sử...' : 'Chưa có lượt đặt chỗ nào.'}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <div className="rounded-3xl border border-white/10 bg-slate-900/55 p-6">
-              <div className="mb-4 flex items-center justify-between">
-                <h2 className="flex items-center gap-2 text-sm font-black uppercase tracking-wider text-white">
-                  <WalletCards size={16} className="text-cyan-300" />
-                  Ví và giao dịch hoàn tiền
-                </h2>
-                <p className="text-xs font-black text-emerald-300">{formatMoney(walletBalance)}</p>
-              </div>
-
-              <div className="space-y-3">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Payments</p>
-                {payments.slice(0, 4).map((payment) => (
-                  <div key={payment.id} className="rounded-xl border border-white/10 bg-slate-950/60 p-3">
-                    <p className="text-xs font-bold text-white">{paymentTypeLabel(payment.type)}</p>
-                    <p className="mt-1 text-[11px] text-slate-400">{payment.note}</p>
-                    <p
-                      className={`mt-1 text-xs font-black ${
-                        payment.direction === 'credit' ? 'text-emerald-300' : 'text-orange-300'
-                      }`}
-                    >
-                      {payment.direction === 'credit' ? '+' : '-'}
-                      {formatMoney(payment.amount)}
-                    </p>
+              <div className="col-span-3">
+                <div className="rounded-3xl border border-white/10 bg-slate-900/55 p-6 sticky top-6">
+                      <div className="mb-4 flex items-center justify-between">
+                    <h2 className="flex items-center gap-2 text-sm font-black uppercase tracking-wider text-white">
+                      <WalletCards size={16} className="text-cyan-300" />
+                      Ví và giao dịch hoàn tiền
+                    </h2>
+                    <p className="text-xs font-black text-emerald-300">{formatMoney(walletBalance)}</p>
                   </div>
-                ))}
 
-                <p className="pt-2 text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                  Wallet Transactions
-                </p>
-                {walletTransactions.slice(0, 4).map((tx) => (
-                  <div key={tx.id} className="rounded-xl border border-white/10 bg-slate-950/60 p-3">
-                    <p className="text-xs font-bold text-white">{tx.description}</p>
-                    <p className="mt-1 text-[11px] text-slate-400">{formatDateTime(tx.createdAt)}</p>
-                    <p
-                      className={`mt-1 text-xs font-black ${
-                        tx.type === 'credit' ? 'text-emerald-300' : 'text-orange-300'
-                      }`}
-                    >
-                      {tx.type === 'credit' ? '+' : '-'}
-                      {formatMoney(tx.amount)} • Số dư: {formatMoney(tx.balanceAfter)}
+                  <div className="space-y-3">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Payments</p>
+                    {payments.slice(0, 4).map((payment) => (
+                      <div key={payment.id} className="rounded-xl border border-white/10 bg-slate-950/60 p-3">
+                        <p className="text-xs font-bold text-white">{paymentTypeLabel(payment.type)}</p>
+                        <p className="mt-1 text-[11px] text-slate-400">{payment.note}</p>
+                        <p
+                          className={`mt-1 text-xs font-black ${
+                            payment.direction === 'credit' ? 'text-emerald-300' : 'text-orange-300'
+                          }`}
+                        >
+                          {payment.direction === 'credit' ? '+' : '-'}
+                          {formatMoney(payment.amount)}
+                        </p>
+                      </div>
+                    ))}
+
+                    <p className="pt-2 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                      Wallet Transactions
                     </p>
-                  </div>
-                ))}
+                    {walletTransactions.slice(0, 4).map((tx) => (
+                      <div key={tx.id} className="rounded-xl border border-white/10 bg-slate-950/60 p-3">
+                        <p className="text-xs font-bold text-white">{tx.description}</p>
+                        <p className="mt-1 text-[11px] text-slate-400">{formatDateTime(tx.createdAt)}</p>
+                        <p
+                          className={`mt-1 text-xs font-black ${
+                            tx.type === 'credit' ? 'text-emerald-300' : 'text-orange-300'
+                          }`}
+                        >
+                          {tx.type === 'credit' ? '+' : '-'}
+                          {formatMoney(tx.amount)} • Số dư: {formatMoney(tx.balanceAfter)}
+                        </p>
+                      </div>
+                    ))}
 
-                {payments.length === 0 && walletTransactions.length === 0 ? (
-                  <p className="rounded-xl border border-white/10 bg-slate-950/60 p-3 text-xs font-semibold text-slate-500">
-                    Chưa có giao dịch thanh toán hoặc hoàn tiền.
-                  </p>
-                ) : null}
+                    {payments.length === 0 && walletTransactions.length === 0 ? (
+                      <p className="rounded-xl border border-white/10 bg-slate-950/60 p-3 text-xs font-semibold text-slate-500">
+                        Chưa có giao dịch thanh toán hoặc hoàn tiền.
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
               </div>
-            </div>
 
             {isLoadingBuildings || isLoadingSlots ? (
               <p className="text-xs font-semibold text-slate-500">
                 Đang tải dữ liệu tòa nhà và danh sách slot...
               </p>
             ) : null}
-          </aside>
+          </div>
         </div>
       </div>
+
+      {/* Slot Selection Modal */}
+      {showSlotModal && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          onClick={() => setShowSlotModal(false)}
+        >
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            onClick={(e) => e.stopPropagation()}
+            className="relative w-full max-w-3xl max-h-[80vh] rounded-3xl border border-white/10 bg-slate-900 p-6 overflow-auto"
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <MapPin size={20} className="text-cyan-300" />
+                <h2 className="text-lg font-black uppercase tracking-wider text-white">
+                  Chọn ô đỗ
+                </h2>
+                <span className="text-xs font-bold text-slate-400">
+                  Khả dụng: <span className="text-emerald-300">{availableSlotCount}</span> / {slots.length}
+                </span>
+              </div>
+              <motion.button
+                type="button"
+                onClick={() => setShowSlotModal(false)}
+                whileHover={{ scale: 1.1, rotate: 90 }}
+                whileTap={{ scale: 0.95 }}
+                className="rounded-xl border border-white/10 bg-slate-950 p-2 text-slate-300 hover:text-white hover:border-orange-400/50 transition-all duration-300"
+              >
+                <X size={20} />
+              </motion.button>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
+              <AnimatedParkingMap3D
+                interactive
+                selectedSlot={selectedSlot}
+                activeReservations={activeReservationsForSelectedBuilding.map((item) => ({
+                  slotCode: item.slotCode,
+                  plateNumber: item.plateNumber,
+                  vehicleType: item.vehicleType,
+                }))}
+                interactiveUnavailableSlots={unavailableSlotCodes}
+                onSlotClick={handleSlotClick}
+              />
+            </div>
+
+            <div className="mt-4 flex items-center justify-between rounded-2xl border border-white/10 bg-slate-950/50 p-4">
+              <p className="text-sm font-semibold text-slate-300">
+                {selectedSlot ? (
+                  <>
+                    <span className="text-orange-400 font-black">Slot {selectedSlot}</span>
+                    <span className="text-slate-400 ml-2">đã được chọn</span>
+                  </>
+                ) : (
+                  <span className="text-slate-500">Nhấn vào ô đỗ để chọn</span>
+                )}
+              </p>
+              <motion.button
+                type="button"
+                onClick={() => setShowSlotModal(false)}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="rounded-xl border border-orange-500/30 bg-orange-500/10 px-4 py-2 text-sm font-black uppercase tracking-wider text-orange-400 hover:bg-orange-500/20 hover:border-orange-500/50 transition-all duration-300"
+              >
+                Hoàn tất
+              </motion.button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+
+      {/* History Modal */}
+      {showHistoryModal && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          onClick={() => setShowHistoryModal(false)}
+        >
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            onClick={(e) => e.stopPropagation()}
+            className="relative w-full max-w-2xl max-h-[80vh] rounded-3xl border border-white/10 bg-slate-900 p-6 overflow-auto"
+          >
+            <div className="mb-4 flex items-center justify-between sticky top-0 bg-slate-900 pb-4">
+              <div className="flex items-center gap-2">
+                <History size={20} className="text-blue-300" />
+                <h2 className="text-lg font-black uppercase tracking-wider text-white">
+                  Lịch sử đặt chỗ
+                </h2>
+              </div>
+              <motion.button
+                type="button"
+                onClick={() => setShowHistoryModal(false)}
+                whileHover={{ scale: 1.1, rotate: 90 }}
+                whileTap={{ scale: 0.95 }}
+                className="rounded-xl border border-white/10 bg-slate-950 p-2 text-slate-300 hover:text-white hover:border-blue-400/50 transition-all duration-300"
+              >
+                <X size={20} />
+              </motion.button>
+            </div>
+
+            <div className="space-y-3">
+              {reservations.length > 0 ? (
+                reservations.map((entry, idx) => {
+                  const refundPolicyPercent = policyByBuildingId.get(entry.buildingId)?.refundPercent ?? 0;
+                  return (
+                    <motion.div
+                      key={entry.id}
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: idx * 0.05, duration: 0.35 }}
+                      whileHover={{ scale: 1.01, borderColor: entry.status === 'active' ? 'rgba(249,115,22,0.25)' : 'rgba(255,255,255,0.1)' }}
+                      className={`rounded-2xl border p-4 transition-all duration-300 ${
+                        entry.status === 'active' 
+                          ? 'bg-slate-950 border-orange-500/15 shadow-[0_0_10px_rgba(249,115,22,0.03)]' 
+                          : 'bg-slate-950/50 border-white/5 opacity-70'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-xs font-mono font-black text-orange-400">{entry.id}</p>
+                        <span className={`text-[8px] font-sans font-black px-1.5 py-0.5 rounded uppercase tracking-wider ${
+                          entry.status === 'active' 
+                            ? 'bg-emerald-500/20 text-emerald-400' 
+                            : 'bg-slate-800 text-slate-500'
+                        }`}>
+                          {entry.status === 'active' ? 'Đang giữ' : entry.status === 'cancelled' ? 'Đã hủy' : 'Hoàn tất'}
+                        </span>
+                      </div>
+
+                      <div className="mt-2 space-y-1 text-xs font-semibold text-slate-300">
+                        <p className="flex items-center gap-2">
+                          <Building2 size={13} className="text-cyan-300" />
+                          {entry.buildingName}
+                        </p>
+                        <p className="flex items-center gap-2">
+                          {entry.vehicleType === 'car' ? (
+                            <Car size={13} className="text-cyan-300" />
+                          ) : (
+                            <Bike size={13} className="text-purple-300" />
+                          )}
+                          {entry.plateNumber} - Slot {entry.slotCode}
+                        </p>
+                        <p className="flex items-center gap-2">
+                          <Clock3 size={13} className="text-orange-300" />
+                          {formatDateTime(entry.scheduledAt)}
+                        </p>
+                        <p className="text-[11px] text-slate-400">
+                          Tiền đã giữ: <span className="font-black text-orange-300">{formatMoney(entry.amountPaid)}</span>
+                        </p>
+                        {entry.status === 'cancelled' ? (
+                          <p className="text-[11px] text-emerald-300">
+                            Đã hoàn: {formatMoney(entry.refundAmount || 0)} ({entry.refundPercent || refundPolicyPercent}%)
+                          </p>
+                        ) : (
+                          <p className="text-[11px] text-slate-400">
+                            Hủy lúc này được hoàn: {refundPolicyPercent}% ({formatMoney(Math.round((entry.amountPaid * refundPolicyPercent) / 100))})
+                          </p>
+                        )}
+                      </div>
+
+                      {entry.status === 'active' ? (
+                        <motion.button
+                          type="button"
+                          onClick={() => handleCancelReservation(entry.id)}
+                          whileHover={{ scale: 1.03, backgroundColor: 'rgba(239,68,68,0.2)', borderColor: 'rgba(239,68,68,0.45)' }}
+                          whileTap={{ scale: 0.97 }}
+                          className="mt-3 inline-flex items-center gap-2 rounded-lg border border-rose-500/20 bg-rose-500/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-wider text-rose-400 transition-all duration-300"
+                        >
+                          <Trash2 size={12} />
+                          Hủy và hoàn tiền
+                        </motion.button>
+                      ) : null}
+                    </motion.div>
+                  );
+                })
+              ) : (
+                <p className="rounded-2xl border border-white/10 bg-slate-950/60 p-4 text-center text-xs font-semibold text-slate-500">
+                  {isLoadingUserData ? 'Đang tải lịch sử...' : 'Chưa có lượt đặt chỗ nào.'}
+                </p>
+              )}
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
     </main>
   );
 }
