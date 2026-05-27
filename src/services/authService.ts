@@ -83,3 +83,31 @@ export async function loginWithBackend(input: LoginInput): Promise<AuthSession> 
     licensePlates,
   };
 }
+
+export async function forgotPassword(email: string): Promise<{ message: string }> {
+  const payload = await requestJson<{ data?: { message?: string } }>({
+    path: '/forgot-password',
+    method: 'POST',
+    body: { email: email.trim().toLowerCase() },
+  });
+
+  if (!payload?.data?.message) {
+    throw new Error('Không thể gửi email đặt lại mật khẩu. Vui lòng thử lại.');
+  }
+
+  return { message: payload.data.message };
+}
+
+export async function resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
+  const payload = await requestJson<{ data?: { message?: string } }>({
+    path: '/reset-password',
+    method: 'POST',
+    body: { token, newPassword },
+  });
+
+  if (!payload?.data?.message) {
+    throw new Error('Không thể đặt lại mật khẩu. Vui lòng thử lại.');
+  }
+
+  return { message: payload.data.message };
+}
