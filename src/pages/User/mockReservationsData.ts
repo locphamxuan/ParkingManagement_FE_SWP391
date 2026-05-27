@@ -477,6 +477,33 @@ export async function getUserWalletBalance(userId: string): Promise<number> {
   return getUserWalletBalanceFromTx(userId, walletTxRows);
 }
 
+export async function createUserWalletTopUp(
+  userId: string,
+  amount: number,
+): Promise<UserWalletTransactionRecord> {
+  if (!Number.isFinite(amount) || amount <= 0) {
+    throw new Error('Số tiền nạp ví không hợp lệ.');
+  }
+
+  const walletTxRows = loadWalletTxStore();
+  const currentBalance = getUserWalletBalanceFromTx(userId, walletTxRows);
+  const now = new Date().toISOString();
+  const topUpTx: UserWalletTransactionRecord = {
+    id: randomId('WTX'),
+    userId,
+    paymentId: randomId('TOPUP'),
+    reservationId: 'wallet-topup',
+    type: 'credit',
+    amount,
+    balanceAfter: currentBalance + amount,
+    description: 'Nạp tiền vào ví PBMS',
+    createdAt: now,
+  };
+
+  saveWalletTxStore([topUpTx, ...walletTxRows]);
+  return topUpTx;
+}
+
 export async function createUserReservation(
   input: CreateReservationInput,
 ): Promise<UserReservationRecord> {

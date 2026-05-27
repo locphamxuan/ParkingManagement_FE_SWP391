@@ -15,6 +15,7 @@ import BuildingsUserPage from '@/pages/User/BuildingsPage';
 import ProfilePage from '@/pages/public/ProfilePage';
 import ReservationsPage from '@/pages/public/ReservationsPage';
 import LongTermSubscriptionsPage from '@/pages/public/LongTermSubscriptionsPage';
+import WalletPage from '@/pages/public/WalletPage';
 import { PublicLoginRoute, PublicRegisterRoute } from '@/pages/public/AuthRoutes';
 import { ProtectedRoute } from '@/routes/ProtectedRoute';
 import { ManagerLayout } from '@/layouts/ManagerLayout';
@@ -49,6 +50,7 @@ export function AppRouter() {
       <Route path="/auth/register" element={<PublicRegisterRoute />} />
       <Route path="/buildings" element={<BuildingsUserPage />} />
       <Route path="/profile" element={<ProfilePage />} />
+      <Route path="/wallet" element={<WalletPage />} />
       <Route path="/reservations" element={<ReservationsPage />} />
       <Route path="/long-term-subscriptions" element={<LongTermSubscriptionsPage />} />
 

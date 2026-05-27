@@ -25,8 +25,8 @@ export const mainFlowModules: LegacyModule[] = [
     id: 'wallet',
     title: 'Ví tiền',
     description: 'Xem số dư và lịch sử giao dịch.',
-    actionLabel: 'Sắp ra mắt',
-    available: false,
+    actionLabel: 'Mở ví',
+    available: true,
   },
   {
     id: 'buildings',
