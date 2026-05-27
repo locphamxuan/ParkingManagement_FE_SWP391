@@ -15,7 +15,9 @@ export function HomeRoute() {
     return {
       fullName: session.displayName,
       email: session.email,
-      role: session.role
+      role: session.role,
+      phone: session.phone || '',
+      licensePlates: session.licensePlates || [],
     };
   }, [session]);
 
@@ -34,9 +36,12 @@ export function HomeRoute() {
     (module: any) => {
       if (module.id === 'auth') return onOpenAuth('login');
       if (module.id === 'profile') return onViewProfile();
+      if (module.id === 'buildings') return navigate('/buildings');
+      if (module.id === 'reservations') return navigate('/reservations');
+      if (module.id === 'payments') return navigate('/long-term-subscriptions');
       return undefined;
     },
-    [onOpenAuth, onViewProfile]
+    [navigate, onOpenAuth, onViewProfile]
   );
 
   const onLogout = useCallback(() => {

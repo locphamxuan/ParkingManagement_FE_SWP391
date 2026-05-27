@@ -20,6 +20,7 @@ export interface UserRecord {
   status: 'active' | 'blocked' | 'pending';
   walletBalance: number;
   linkedPlates: string[];
+  phone?: string;
 }
 
 export interface RevenuePoint {

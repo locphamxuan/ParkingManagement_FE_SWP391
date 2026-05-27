@@ -30,4 +30,5 @@ openspec
 .vscode/*
 !.vscode/extensions.json
 .idea
-
+# system files
+.DS_Store

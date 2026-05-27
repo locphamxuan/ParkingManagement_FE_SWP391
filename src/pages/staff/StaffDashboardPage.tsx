@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { CalendarClock, CheckCircle2, Clock, XCircle } from 'lucide-react';
+import { CalendarClock, CheckCircle2, Clock, XCircle, DollarSign } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useStaffDashboard } from '@/hooks/staff/useStaffDashboard';
 import { staffApi, extractShifts, type MyShift } from '@/services/staff/staffApi';
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
@@ -19,9 +20,10 @@ const statusLabel: Record<MyShift['status'], string> = {
 };
 
 export function StaffDashboardPage() {
+  const { dashboard, loading: dashLoading, error: dashError } = useStaffDashboard();
   const [shifts, setShifts] = useState<MyShift[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [shiftsLoading, setShiftsLoading] = useState(true);
+  const [shiftsError, setShiftsError] = useState<string | null>(null);
 
   useEffect(() => {
     const d = todayStr();
@@ -29,13 +31,41 @@ export function StaffDashboardPage() {
       .myShifts({ from: d, to: d })
       .then((res) => {
         setShifts(extractShifts(res));
-        setError(null);
+        setShiftsError(null);
       })
-      .catch((err) => setError(err instanceof Error ? err.message : 'Tải thất bại'))
-      .finally(() => setLoading(false));
+      .catch((err) => setShiftsError(err instanceof Error ? err.message : 'Tải thất bại'))
+      .finally(() => setShiftsLoading(false));
   }, []);
 
   const stats = [
+    {
+      label: 'Tổng phiên',
+      value: dashboard?.totalSessions ?? 0,
+      icon: CheckCircle2,
+      color: 'text-blue-600 bg-blue-50',
+    },
+    {
+      label: 'Đang hoạt động',
+      value: dashboard?.activeSessions ?? 0,
+      icon: Clock,
+      color: 'text-emerald-600 bg-emerald-50',
+    },
+    {
+      label: 'Đã hoàn thành',
+      value: dashboard?.completedSessions ?? 0,
+      icon: CheckCircle2,
+      color: 'text-stone-600 bg-stone-50',
+    },
+    {
+      label: 'Doanh thu',
+      value: dashboard?.revenue ?? 0,
+      icon: DollarSign,
+      color: 'text-amber-600 bg-amber-50',
+      format: 'currency',
+    },
+  ];
+
+  const shiftStats = [
     {
       label: 'Ca hôm nay',
       value: shifts.length,
@@ -64,36 +94,74 @@ export function StaffDashboardPage() {
 
   return (
     <div className="grid gap-5">
-      <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-        {stats.map((card) => {
-          const Icon = card.icon;
-          return (
-            <Card key={card.label}>
-              <CardContent className="flex items-center gap-4 p-5">
-                <div className={`rounded-xl p-3 ${card.color}`}>
-                  <Icon size={20} />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">{card.label}</p>
-                  <p className="text-2xl font-semibold text-foreground">
-                    {loading ? '–' : String(card.value)}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
+      {/* Dashboard Stats */}
+      <section>
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          Thống kê hôm nay
+        </h2>
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+          {stats.map((card) => {
+            const Icon = card.icon;
+            const displayValue = card.format === 'currency'
+              ? `${(card.value as number).toLocaleString('vi-VN')} đ`
+              : String(card.value);
+
+            return (
+              <Card key={card.label}>
+                <CardContent className="flex items-center gap-4 p-5">
+                  <div className={`rounded-xl p-3 ${card.color}`}>
+                    <Icon size={20} />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">{card.label}</p>
+                    <p className="text-2xl font-semibold text-foreground">
+                      {dashLoading ? '–' : displayValue}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
       </section>
 
+      {/* Shift Stats */}
+      <section>
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          Ca làm việc
+        </h2>
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+          {shiftStats.map((card) => {
+            const Icon = card.icon;
+            return (
+              <Card key={card.label}>
+                <CardContent className="flex items-center gap-4 p-5">
+                  <div className={`rounded-xl p-3 ${card.color}`}>
+                    <Icon size={20} />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">{card.label}</p>
+                    <p className="text-2xl font-semibold text-foreground">
+                      {shiftsLoading ? '–' : String(card.value)}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* Shifts Today */}
       <Card>
         <CardHeader>
           <CardTitle>Ca làm việc hôm nay</CardTitle>
         </CardHeader>
         <CardContent>
-          {loading ? (
+          {shiftsLoading ? (
             <p className="text-sm text-muted-foreground">Đang tải...</p>
-          ) : error ? (
-            <p className="text-sm text-red-600">{error}</p>
+          ) : shiftsError ? (
+            <p className="text-sm text-red-600">{shiftsError}</p>
           ) : shifts.length === 0 ? (
             <p className="text-sm text-muted-foreground">Không có ca nào được phân công hôm nay.</p>
           ) : (

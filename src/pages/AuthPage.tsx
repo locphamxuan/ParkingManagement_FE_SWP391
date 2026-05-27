@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import type { FormEvent } from 'react';
-import { Home } from 'lucide-react';
+import { Home, X, AlertCircle } from 'lucide-react';
 import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
 import { CartoonCar3D } from '@/components/shared/CartoonCar3D';
 
@@ -9,6 +9,7 @@ const initialForm = {
   phone: '',
   email: '',
   password: '',
+  confirmPassword: '',
 };
 
 type AuthMode = 'login' | 'register';
@@ -38,7 +39,98 @@ const promoPoints = [
 ];
 
 export default function AuthPage({ mode, notice, onModeChange, onBackHome, onSubmit, isLoading }: AuthPageProps) {
+  const [localNotice, setLocalNotice] = useState<{ message?: string; type?: string } | null>(null);
   const [form, setForm] = useState(initialForm);
+  const [savedAccounts, setSavedAccounts] = useState<{ email: string; password?: string }[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [lockTimeLeft, setLockTimeLeft] = useState<number>(0);
+
+  useEffect(() => {
+    const checkLock = () => {
+      const email = form.email.trim().toLowerCase();
+      if (!email) {
+        setLockTimeLeft(0);
+        return;
+      }
+      const lockUntil = Number(localStorage.getItem(`pbms.lockUntil.${email}`) || '0');
+      const timeLeft = Math.ceil((lockUntil - Date.now()) / 1000);
+      
+      if (timeLeft > 0) {
+        setLockTimeLeft(timeLeft);
+      } else {
+        setLockTimeLeft(0);
+      }
+    };
+
+    checkLock();
+    const interval = setInterval(checkLock, 1000);
+    return () => clearInterval(interval);
+  }, [form.email]);
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
+  const emailInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Load saved accounts from localStorage on mount and initialize phones
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('pbms_saved_accounts');
+      if (stored) {
+        setSavedAccounts(JSON.parse(stored));
+      }
+    } catch (e) {
+      console.error('Failed to load saved accounts', e);
+    }
+
+    // Initialize mock database if not already present
+    if (!localStorage.getItem('pbms.allRegisteredPhones')) {
+      localStorage.setItem('pbms.allRegisteredPhones', JSON.stringify(["0911111111", "0922222222"]));
+    }
+  }, []);
+
+  // Save account helper
+  const saveAccount = (email: string, password?: string) => {
+    if (!email) return;
+    try {
+      const stored = localStorage.getItem('pbms_saved_accounts');
+      let current: { email: string; password?: string }[] = stored ? JSON.parse(stored) : [];
+      
+      // Remove duplicates
+      current = current.filter(acc => acc.email !== email);
+      
+      // Add to start of list
+      current.unshift({ email, password });
+      
+      // Keep max 5 saved accounts
+      current = current.slice(0, 5);
+      
+      localStorage.setItem('pbms_saved_accounts', JSON.stringify(current));
+      setSavedAccounts(current);
+    } catch (e) {
+      console.error('Failed to save account', e);
+    }
+  };
+
+  // Delete saved account
+  const deleteSavedAccount = (e: React.MouseEvent, emailToDelete: string) => {
+    e.stopPropagation();
+    e.preventDefault(); // Prevents input from losing focus!
+    try {
+      const updated = savedAccounts.filter(acc => acc.email !== emailToDelete);
+      localStorage.setItem('pbms_saved_accounts', JSON.stringify(updated));
+      setSavedAccounts(updated);
+    } catch (err) {
+      console.error('Failed to delete saved account', err);
+    }
+  };
+
+  const handleSelectAccount = (e: React.MouseEvent, acc: { email: string; password?: string }) => {
+    e.preventDefault(); // Keep focus or let it blur, but keeping focus on input with filled details is great!
+    setForm(s => ({
+      ...s,
+      email: acc.email,
+      password: acc.password || '',
+    }));
+    setShowDropdown(false);
+  };
 
   // 3D Mouse Tracking Tilt Motion Values
   const mouseX = useMotionValue(0.5); // Range: 0 to 1
@@ -68,12 +160,99 @@ export default function AuthPage({ mode, notice, onModeChange, onBackHome, onSub
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const payload: Record<string, string> = {
-      email: form.email.trim(),
-      password: form.password,
-      ...(mode === 'register' ? { fullName: form.fullName.trim(), phone: form.phone.trim() } : {}),
-    };
-    await onSubmit({ mode, payload });
+    setLocalNotice(null);
+
+    if (mode === 'register') {
+      if (form.password !== form.confirmPassword) {
+        setLocalNotice({ message: 'Mật khẩu xác nhận không khớp!', type: 'error' });
+        return;
+      }
+
+      const phoneTrimmed = form.phone.trim();
+      const phoneRegex = /^0[0-9]{9}$/;
+      if (!phoneRegex.test(phoneTrimmed)) {
+        setLocalNotice({
+          message: 'Số điện thoại phải bắt đầu bằng số 0 và có đúng 10 chữ số!',
+          type: 'error',
+        });
+        return;
+      }
+
+      const allRegisteredPhonesRaw = localStorage.getItem('pbms.allRegisteredPhones');
+      const allRegisteredPhones: string[] = allRegisteredPhonesRaw
+        ? JSON.parse(allRegisteredPhonesRaw)
+        : ['0911111111', '0922222222'];
+
+      if (allRegisteredPhones.includes(phoneTrimmed)) {
+        setLocalNotice({
+          message: 'Số điện thoại này đã được đăng ký bởi một tài khoản khác!',
+          type: 'error',
+        });
+        return;
+      }
+
+      const payload: Record<string, string> = {
+        email: form.email.trim(),
+        password: form.password,
+        fullName: form.fullName.trim(),
+        phone: phoneTrimmed,
+      };
+
+      try {
+        await onSubmit({ mode, payload });
+        
+        // Add new phone to simulated registry on registration success
+        const updatedPhones = [...allRegisteredPhones, phoneTrimmed];
+        localStorage.setItem('pbms.allRegisteredPhones', JSON.stringify(updatedPhones));
+      } catch (err) {
+        // Error already mapped in public auth flow hook
+      }
+    } else {
+      const email = form.email.trim().toLowerCase();
+      
+      // Strict frontend-side login lock check
+      const lockUntil = Number(localStorage.getItem(`pbms.lockUntil.${email}`) || '0');
+      const timeLeft = Math.ceil((lockUntil - Date.now()) / 1000);
+      if (timeLeft > 0) {
+        setLocalNotice({
+          message: `Tài khoản đang bị khóa tạm thời. Vui lòng quay lại sau ${Math.floor(timeLeft / 60)} phút ${timeLeft % 60} giây!`,
+          type: 'error',
+        });
+        return;
+      }
+
+      const payload: Record<string, string> = {
+        email: form.email.trim(),
+        password: form.password,
+      };
+
+      try {
+        await onSubmit({ mode, payload });
+        
+        // Login success: clear wrong attempts counters & lock periods
+        localStorage.removeItem(`pbms.failedAttempts.${email}`);
+        localStorage.removeItem(`pbms.lockUntil.${email}`);
+        saveAccount(form.email.trim(), form.password);
+      } catch (err) {
+        // Login failure: increment fail counters & lock for 5 mins if attempts >= 5
+        const attempts = Number(localStorage.getItem(`pbms.failedAttempts.${email}`) || '0') + 1;
+        if (attempts >= 5) {
+          localStorage.setItem(`pbms.lockUntil.${email}`, String(Date.now() + 5 * 60 * 1000));
+          localStorage.removeItem(`pbms.failedAttempts.${email}`);
+          setLockTimeLeft(300);
+          setLocalNotice({
+            message: 'Tài khoản đã bị tạm khóa 5 phút do nhập sai mật khẩu quá 5 lần!',
+            type: 'error',
+          });
+        } else {
+          localStorage.setItem(`pbms.failedAttempts.${email}`, String(attempts));
+          setLocalNotice({
+            message: `Mật khẩu hoặc Email không đúng. Bạn còn ${5 - attempts} lần thử trước khi bị khóa tài khoản!`,
+            type: 'error',
+          });
+        }
+      }
+    }
   }
 
   function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
@@ -346,19 +525,34 @@ export default function AuthPage({ mode, notice, onModeChange, onBackHome, onSub
 
         {/* Right Input Form Column */}
         <div className="p-8 flex flex-col justify-center bg-slate-900/10 backdrop-blur-md">
-          {notice?.message && (
+          {lockTimeLeft > 0 ? (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="mb-5 rounded-xl border border-rose-500/25 bg-rose-950/30 text-rose-400 p-4 text-xs font-black uppercase tracking-wider font-mono shadow-[0_0_20px_rgba(239,68,68,0.15)] flex flex-col gap-2"
+            >
+              <div className="flex items-center gap-2.5">
+                <AlertCircle size={16} className="shrink-0 stroke-[2.5]" />
+                <span>Tài khoản đã bị tạm khóa đăng nhập</span>
+              </div>
+              <p className="text-[10px] text-slate-400 font-sans tracking-normal font-semibold normal-case leading-relaxed">
+                Nhập sai mật khẩu quá 5 lần. Vui lòng quay lại sau: <span className="text-rose-400 font-black font-mono">{Math.floor(lockTimeLeft / 60)} phút {lockTimeLeft % 60} giây</span>.
+              </p>
+            </motion.div>
+          ) : (localNotice || notice)?.message ? (
             <motion.div 
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className={`mb-5 rounded-xl border p-3.5 text-xs font-black uppercase tracking-wider font-mono backdrop-blur-md ${
-                notice.type === 'success' 
+              className={`mb-5 rounded-xl border p-3.5 text-xs font-black uppercase tracking-wider font-mono backdrop-blur-md flex items-center gap-2.5 ${
+                (localNotice || notice).type === 'success' 
                   ? 'border-emerald-500/25 bg-emerald-950/20 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.1)]' 
                   : 'border-rose-500/25 bg-rose-950/20 text-rose-400 shadow-[0_0_15px_rgba(244,63,94,0.1)]'
               }`}
             >
-              {notice.message}
+              <AlertCircle size={14} className="shrink-0" />
+              {(localNotice || notice).message}
             </motion.div>
-          )}
+          ) : null}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {mode === 'register' && (
@@ -388,17 +582,50 @@ export default function AuthPage({ mode, notice, onModeChange, onBackHome, onSub
               </>
             )}
 
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 relative">
               <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono">Email</label>
               <input 
+                ref={emailInputRef}
                 name="email" 
                 value={form.email} 
                 onChange={handleChange} 
                 type="email" 
                 required 
+                autoComplete="new-email"
+                onFocus={() => setShowDropdown(true)}
+                onBlur={() => setShowDropdown(false)}
                 className="block w-full rounded-xl border border-white/10 bg-slate-950/60 text-white placeholder-slate-600 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 text-sm h-11 px-4 transition-all duration-300 outline-none shadow-[inset_0_1px_2px_rgba(0,0,0,0.4)] focus:shadow-[0_0_15px_rgba(249,115,22,0.15)] input-scan-focus"
                 placeholder="user@pbms.vn" 
               />
+
+              {/* Custom Cyberpunk Saved Accounts Dropdown */}
+              {showDropdown && savedAccounts.length > 0 && (
+                <div 
+                  ref={dropdownRef}
+                  className="absolute left-0 right-0 top-[68px] z-50 rounded-xl border border-white/10 bg-slate-950/95 shadow-2xl backdrop-blur-md overflow-hidden py-1.5 animate-fadeIn"
+                >
+                  <div className="px-3.5 py-1.5 border-b border-white/5 text-[9px] font-mono text-slate-500 tracking-wider uppercase font-black">
+                    Tài khoản đã lưu
+                  </div>
+                  {savedAccounts.map((acc) => (
+                    <div
+                      key={acc.email}
+                      onMouseDown={(e) => handleSelectAccount(e, acc)}
+                      className="flex items-center justify-between px-3.5 py-2.5 hover:bg-slate-900 text-xs font-semibold text-slate-300 hover:text-white transition-colors cursor-pointer group"
+                    >
+                      <span className="font-medium tracking-wide truncate max-w-[85%]">{acc.email}</span>
+                      <button
+                        type="button"
+                        onMouseDown={(e) => deleteSavedAccount(e, acc.email)}
+                        className="p-1 rounded text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all duration-200"
+                        title="Xóa tài khoản này"
+                      >
+                        <X size={12} className="stroke-[3]" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="space-y-1.5">
@@ -414,15 +641,40 @@ export default function AuthPage({ mode, notice, onModeChange, onBackHome, onSub
               />
             </div>
 
+            {mode === 'register' && (
+              <div className="space-y-1.5 animate-fadeIn">
+                <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono">Xác nhận mật khẩu</label>
+                <input 
+                  name="confirmPassword" 
+                  value={form.confirmPassword} 
+                  onChange={handleChange} 
+                  type="password" 
+                  required 
+                  className="block w-full rounded-xl border border-white/10 bg-slate-950/60 text-white placeholder-slate-600 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 text-sm h-11 px-4 transition-all duration-300 outline-none shadow-[inset_0_1px_2px_rgba(0,0,0,0.4)] focus:shadow-[0_0_15px_rgba(249,115,22,0.15)] input-scan-focus"
+                  placeholder="Nhập lại mật khẩu" 
+                />
+              </div>
+            )}
+
             <div className="flex flex-col gap-4 pt-3">
               <motion.button 
                 type="submit" 
-                disabled={isLoading} 
-                whileHover={{ scale: 1.015 }}
-                whileTap={{ scale: 0.96 }}
-                className="w-full h-11 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider transition-all duration-300 hover:shadow-[0_0_25px_rgba(249,115,22,0.45)] disabled:opacity-50 flex items-center justify-center gap-2"
+                disabled={isLoading || (mode === 'login' && lockTimeLeft > 0)} 
+                whileHover={mode === 'login' && lockTimeLeft > 0 ? {} : { scale: 1.015 }}
+                whileTap={mode === 'login' && lockTimeLeft > 0 ? {} : { scale: 0.96 }}
+                className={`w-full h-11 rounded-xl text-slate-950 font-black text-xs uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-2 ${
+                  mode === 'login' && lockTimeLeft > 0
+                    ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30 cursor-not-allowed shadow-[0_0_15px_rgba(239,68,68,0.05)]'
+                    : 'bg-gradient-to-r from-orange-500 to-amber-500 hover:shadow-[0_0_25px_rgba(249,115,22,0.45)] disabled:opacity-50'
+                }`}
               >
-                {isLoading ? 'Đang xử lý...' : mode === 'login' ? 'Đăng nhập' : 'Tạo tài khoản'}
+                {isLoading 
+                  ? 'Đang xử lý...' 
+                  : mode === 'login' && lockTimeLeft > 0 
+                  ? `Bị khóa (Thử lại sau ${Math.floor(lockTimeLeft / 60)}m ${lockTimeLeft % 60}s)` 
+                  : mode === 'login' 
+                  ? 'Đăng nhập' 
+                  : 'Tạo tài khoản'}
               </motion.button>
               
               <div className="text-center">

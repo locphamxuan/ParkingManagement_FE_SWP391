@@ -5,29 +5,29 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: light;
-  --app-background: 0 0% 100%;
-  --app-foreground: 221 39% 19%;
-  --app-primary: 28 92% 58%;
+  color-scheme: dark;
+  --app-background: 224 71% 4%;
+  --app-foreground: 210 40% 98%;
+  --app-primary: 24 94% 54%;
   --app-primary-foreground: 20 20% 98%;
-  --app-secondary: 220 23% 96%;
-  --app-secondary-foreground: 221 39% 19%;
-  --app-muted: 218 22% 94%;
-  --app-muted-foreground: 222 13% 44%;
-  --app-card: 0 0% 100%;
-  --app-card-foreground: 221 39% 19%;
-  --app-border: 214 20% 88%;
-  --app-input: 214 20% 88%;
-  --app-ring: 28 92% 58%;
-  --bg: #f3f5f9;
-  --panel: #ffffff;
-  --line: #d8e0eb;
-  --text: #1f2a44;
-  --muted: #5f6b85;
+  --app-secondary: 217 32% 12%;
+  --app-secondary-foreground: 210 40% 98%;
+  --app-muted: 217 32% 12%;
+  --app-muted-foreground: 215 20.2% 65.1%;
+  --app-card: 222 47% 11%;
+  --app-card-foreground: 210 40% 98%;
+  --app-border: 217 32.6% 17.5%;
+  --app-input: 217 32.6% 17.5%;
+  --app-ring: 24 94% 54%;
+  --bg: #030712;
+  --panel: #0b1329;
+  --line: rgba(255, 255, 255, 0.08);
+  --text: #f8fafc;
+  --muted: #94a3b8;
   --accent: #f97316;
-  --accent-soft: rgba(249, 115, 22, 0.12);
-  --danger: #dc2626;
-  --shadow: 0 16px 36px rgba(15, 23, 42, 0.1);
+  --accent-soft: rgba(249, 115, 22, 0.15);
+  --danger: #ef4444;
+  --shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
   --radius-xl: 28px;
   --radius-md: 16px;
   --radius-sm: 12px;
@@ -61,7 +61,7 @@ body {
   margin: 0;
   min-height: 100vh;
   font-family: 'Manrope', sans-serif;
-  background: linear-gradient(180deg, #f8fafc 0%, #eef2f7 45%, #e6ebf3 100%);
+  background: radial-gradient(circle at 50% 0%, #0b1329 0%, #030712 100%);
   color: var(--text);
 }
 
@@ -391,3 +391,56 @@ button[aria-expanded="true"] .chev {
 .animate-fadeIn {
   animation: animate-fadeIn 0.4s ease forwards;
 }
+
+@keyframes modal-fadeIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -48%);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+}
+
+.animate-modalFadeIn {
+  animation: modal-fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Premium Dark Mode Override Styles for Status Badges in Admin/Manager Dashboard */
+.admin-theme .status-badge-success {
+  background-color: rgba(16, 185, 129, 0.15) !important;
+  color: #34d399 !important;
+  border-color: rgba(16, 185, 129, 0.3) !important;
+}
+
+.admin-theme .status-badge-warning {
+  background-color: rgba(245, 158, 11, 0.15) !important;
+  color: #fbbf24 !important;
+  border-color: rgba(245, 158, 11, 0.3) !important;
+}
+
+.admin-theme .status-badge-info {
+  background-color: rgba(14, 165, 233, 0.15) !important;
+  color: #38bdf8 !important;
+  border-color: rgba(14, 165, 233, 0.3) !important;
+}
+
+.admin-theme .status-badge-reserved {
+  background-color: rgba(139, 92, 246, 0.15) !important;
+  color: #a78bfa !important;
+  border-color: rgba(139, 92, 246, 0.3) !important;
+}
+
+.admin-theme .status-badge-danger {
+  background-color: rgba(244, 63, 94, 0.15) !important;
+  color: #fb7185 !important;
+  border-color: rgba(244, 63, 94, 0.3) !important;
+}
+
+.admin-theme .status-badge-default {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  color: #cbd5e1 !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+}
+

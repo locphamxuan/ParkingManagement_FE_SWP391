@@ -11,7 +11,10 @@ import { FraudDetectionPage } from '@/pages/admin/FraudDetectionPage';
 import { SystemHealthPage } from '@/pages/admin/SystemHealthPage';
 import { ModulePlaceholderPage } from '@/pages/admin/ModulePlaceholderPage';
 import { HomeRoute } from '@/pages/public/HomeRoute';
+import BuildingsUserPage from '@/pages/User/BuildingsPage';
 import ProfilePage from '@/pages/public/ProfilePage';
+import ReservationsPage from '@/pages/public/ReservationsPage';
+import LongTermSubscriptionsPage from '@/pages/public/LongTermSubscriptionsPage';
 import { PublicLoginRoute, PublicRegisterRoute } from '@/pages/public/AuthRoutes';
 import { ProtectedRoute } from '@/routes/ProtectedRoute';
 import { ManagerLayout } from '@/layouts/ManagerLayout';
@@ -29,6 +32,11 @@ import { ManagerPricingPage } from '@/pages/manager/ManagerPricingPage';
 import { ManagerReservationPolicyPage } from '@/pages/manager/ManagerReservationPolicyPage';
 import { ManagerPackagesPage } from '@/pages/manager/ManagerPackagesPage';
 import { ManagerShiftsPage } from '@/pages/manager/ManagerShiftsPage';
+import { StaffLayout } from '@/layouts/StaffLayout';
+import { StaffDashboardPage } from '@/pages/staff/StaffDashboardPage';
+import { StaffSessionsPage } from '@/pages/staff/StaffSessionsPage';
+import { StaffShiftsPage } from '@/pages/staff/StaffShiftsPage';
+import { StaffProtectedRoute } from '@/routes/StaffProtectedRoute';
 
 export function AppRouter() {
   return (
@@ -39,7 +47,10 @@ export function AppRouter() {
       <Route path="/dashboard" element={<Navigate to="/" replace />} />
       <Route path="/auth/login" element={<PublicLoginRoute />} />
       <Route path="/auth/register" element={<PublicRegisterRoute />} />
+      <Route path="/buildings" element={<BuildingsUserPage />} />
       <Route path="/profile" element={<ProfilePage />} />
+      <Route path="/reservations" element={<ReservationsPage />} />
+      <Route path="/long-term-subscriptions" element={<LongTermSubscriptionsPage />} />
 
       <Route path="/manager/login" element={<Navigate to="/auth/login" replace />} />
       <Route path="/manager" element={<Navigate to="/manager/dashboard" replace />} />
@@ -67,6 +78,17 @@ export function AppRouter() {
               />
             }
           />
+        </Route>
+      </Route>
+
+      <Route path="/staff/login" element={<Navigate to="/auth/login" replace />} />
+      <Route path="/staff" element={<Navigate to="/staff/dashboard" replace />} />
+      <Route element={<StaffProtectedRoute />}>
+        <Route path="/staff" element={<StaffLayout />}>
+          <Route index element={<StaffDashboardPage />} />
+          <Route path="dashboard" element={<StaffDashboardPage />} />
+          <Route path="my-shifts" element={<StaffShiftsPage />} />
+          <Route path="sessions" element={<StaffSessionsPage />} />
         </Route>
       </Route>
 

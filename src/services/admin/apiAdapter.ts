@@ -57,6 +57,7 @@ interface ApiUser {
   role: 'admin' | 'manager' | 'staff' | 'user';
   isActive?: boolean;
   licensePlates?: Array<{ plateNumber?: string }>;
+  phone?: string;
 }
 
 interface ApiAudit {
@@ -130,15 +131,53 @@ const toBuilding = (
   };
 };
 
-const toUser = (item: ApiUser): UserRecord => ({
-  id: item._id,
-  name: item.fullName,
-  email: item.email,
-  role: item.role,
-  status: item.isActive === false ? 'blocked' : 'active',
-  walletBalance: 0,
-  linkedPlates: (item.licensePlates || []).map((p) => p.plateNumber || '').filter(Boolean),
-});
+const toUser = (item: ApiUser): UserRecord => {
+  // Check if locally updated user exists
+  const locallyUpdatedRaw = localStorage.getItem('pbms.locallyUpdatedUsers');
+  const locallyUpdated = locallyUpdatedRaw ? JSON.parse(locallyUpdatedRaw) : {};
+  
+  // Case-insensitive and trimmed lookup
+  const targetEmail = (item.email || '').trim().toLowerCase();
+  const matchingKey = Object.keys(locallyUpdated).find(
+    (key) => key.trim().toLowerCase() === targetEmail
+  );
+  const localUser = matchingKey ? locallyUpdated[matchingKey] : null;
+
+  const backendPlates = (item.licensePlates || []).map((p) => 
+    typeof p === 'string' ? p : p.plateNumber || ''
+  ).filter(Boolean);
+
+  if (localUser) {
+    const localPlates = (localUser.licensePlates || []).map((p: any) => 
+      typeof p === 'string' ? p : p.plateNumber || ''
+    ).filter(Boolean);
+
+    // Merge both arrays uniquely
+    const mergedPlates = Array.from(new Set([...localPlates, ...backendPlates]));
+
+    return {
+      id: item._id,
+      name: localUser.fullName || item.fullName,
+      email: item.email,
+      role: item.role,
+      status: item.isActive === false ? 'blocked' : 'active',
+      walletBalance: 0,
+      linkedPlates: mergedPlates,
+      phone: localUser.phone || item.phone || '',
+    };
+  }
+
+  return {
+    id: item._id,
+    name: item.fullName,
+    email: item.email,
+    role: item.role,
+    status: item.isActive === false ? 'blocked' : 'active',
+    walletBalance: 0,
+    linkedPlates: backendPlates,
+    phone: item.phone || '',
+  };
+};
 
 const toAudit = (item: ApiAudit): AuditLog => ({
   id: item._id,
