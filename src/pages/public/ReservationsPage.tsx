@@ -18,7 +18,7 @@ import {
   WalletCards,
   X,
 } from 'lucide-react';
-import { AnimatedParkingMap3D } from '@/components/shared/AnimatedParkingMap3D';
+import { ParkingMap2D } from '@/components/shared/ParkingMap2D';
 import { useAuth } from '@/hooks/useAuth';
 import { CustomSelect } from '@/components/ui/select';
 import { listUserBuildingViews, type UserBuildingView } from '@/pages/User/mockBuildingsData';
@@ -487,7 +487,7 @@ export default function ReservationsPage() {
                   onSubmit={handleConfirmBooking}
                   className="rounded-3xl border border-white/10 bg-slate-900/55 p-6"
                 >
-              <div className="mb-4 flex items-center justify-between gap-2">
+                  <div className="mb-4 flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <CalendarClock size={18} className="text-orange-300" />
                   <h2 className="text-sm font-black uppercase tracking-wider text-white">
@@ -504,9 +504,9 @@ export default function ReservationsPage() {
                   <History size={12} />
                   <span>Lịch sử ({isLoadingUserData ? '...' : reservations.length})</span>
                 </motion.button>
-              </div>
+                  </div>
 
-              <div className="space-y-4">
+                  <div className="space-y-4">
                 <div className="block">
                   <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono block mb-1">Tòa nhà</span>
                   <CustomSelect
@@ -628,8 +628,8 @@ export default function ReservationsPage() {
                 >
                   {isSubmitting ? 'Đang xử lý...' : 'Đặt chỗ'}
                 </motion.button>
-              </div>
-            </form>
+                  </div>
+                </form>
               </div>
 
               <div className="col-span-3">
@@ -686,11 +686,12 @@ export default function ReservationsPage() {
                 </div>
               </div>
 
-            {isLoadingBuildings || isLoadingSlots ? (
-              <p className="text-xs font-semibold text-slate-500">
-                Đang tải dữ liệu tòa nhà và danh sách slot...
-              </p>
-            ) : null}
+              {isLoadingBuildings || isLoadingSlots ? (
+                <p className="text-xs font-semibold text-slate-500">
+                  Đang tải dữ liệu tòa nhà và danh sách slot...
+                </p>
+              ) : null}
+            </div>
           </div>
         </div>
       </div>
@@ -733,15 +734,19 @@ export default function ReservationsPage() {
             </div>
 
             <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
-              <AnimatedParkingMap3D
+              <ParkingMap2D
                 interactive
+                slots={slots.map((slot) => ({
+                  code: slot.code,
+                  status: slot.status === 'available' && slot.reservable ? 'available' : 'unavailable',
+                }))}
                 selectedSlot={selectedSlot}
                 activeReservations={activeReservationsForSelectedBuilding.map((item) => ({
                   slotCode: item.slotCode,
                   plateNumber: item.plateNumber,
                   vehicleType: item.vehicleType,
                 }))}
-                interactiveUnavailableSlots={unavailableSlotCodes}
+                unavailableSlots={unavailableSlotCodes}
                 onSlotClick={handleSlotClick}
               />
             </div>
