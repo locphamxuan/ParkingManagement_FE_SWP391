@@ -19,7 +19,7 @@ export function ManagerProfilePage() {
   }
 
   const handleStartEdit = () => {
-    setFullName(session.displayName || session.fullName || '');
+    setFullName(session.displayName || '');
     setPhone(session.phone || '');
     setNameError(null);
     setPhoneError(null);
@@ -228,7 +228,7 @@ export function ManagerProfilePage() {
               <div className="grid gap-4 rounded-3xl bg-slate-50 p-6">
                 <div className="grid gap-2 rounded-2xl bg-white p-6 shadow-sm border border-slate-100">
                   <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Tên</p>
-                  <p className="text-lg font-medium text-slate-900">{session.displayName || session.fullName || 'Chưa cập nhật'}</p>
+                  <p className="text-lg font-medium text-slate-900">{session.displayName || 'Chưa cập nhật'}</p>
                 </div>
 
                 <div className="grid gap-2 rounded-2xl bg-white p-6 shadow-sm border border-slate-100">
@@ -257,7 +257,7 @@ export function ManagerProfilePage() {
                 </div>
                 <div>
                   <p className="text-sm uppercase tracking-[0.28em] text-sky-700">Tài khoản</p>
-                  <p className="text-xl font-semibold text-slate-950">{session.displayName || session.fullName || 'Manager'}</p>
+                  <p className="text-xl font-semibold text-slate-950">{session.displayName || 'Manager'}</p>
                 </div>
               </div>
 

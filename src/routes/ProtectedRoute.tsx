@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import type { UserRole } from '@/store/authStore';
+import type { AuthSession } from '@/services/authService';
+
+type UserRole = AuthSession['role'];
 
 interface ProtectedRouteProps {
   role: Extract<UserRole, 'admin' | 'manager' | 'staff'>;

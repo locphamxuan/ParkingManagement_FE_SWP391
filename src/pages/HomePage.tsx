@@ -231,10 +231,16 @@ export default function HomePage({ modules, onOpenAuth, onViewProfile, onAction,
                 )}
               </div>
             ) : (
-              <a href="/auth/login" className="px-4 py-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold text-xs transition-all duration-300 hover:scale-[1.03] hover:shadow-[0_0_20px_rgba(249,115,22,0.4)]">
+              <motion.button
+                onClick={() => onOpenAuth('login')}
+                whileHover={{ scale: 1.05, boxShadow: '0 0 15px rgba(249,115,22,0.45)' }}
+                whileTap={{ scale: 0.95 }}
+                className="px-4 py-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider transition-all duration-300"
+              >
                 Đăng nhập
-              </a>
+              </motion.button>
             )}
+
           </div>
         </div>
       </header>
@@ -309,11 +315,10 @@ export default function HomePage({ modules, onOpenAuth, onViewProfile, onAction,
               <p className="mt-5 text-sm text-slate-400 leading-relaxed max-w-lg font-semibold">
                 PBMS định nghĩa lại hoạt động vận hành tòa nhà. Giám sát ra vào thời gian thực, tự động hóa thanh toán, theo dõi công suất thông minh và cung cấp giải pháp 3D trực quan vượt trội.
               </p>
-
               <div className="mt-8 flex flex-wrap gap-4 items-center">
                 {user ? (
                   <>
-                    <a
+                    <motion.a
                       href={
                         user.role === 'admin'
                           ? '/admin/dashboard'
@@ -323,31 +328,39 @@ export default function HomePage({ modules, onOpenAuth, onViewProfile, onAction,
                               ? '/staff'
                               : '/'
                       }
-                      className="px-6 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider transition-all duration-300 hover:scale-105 hover:shadow-[0_0_25px_rgba(249,115,22,0.4)] inline-flex items-center gap-2"
+                      whileHover={{ scale: 1.05, boxShadow: '0 0 25px rgba(249,115,22,0.45)' }}
+                      whileTap={{ scale: 0.95 }}
+                      className="px-6 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider transition-all duration-300 inline-flex items-center gap-2"
                     >
                       {heroButtonText} <ArrowRight size={14} />
-                    </a>
-                    <button
+                    </motion.a>
+                    <motion.button
                       onClick={onViewProfile}
-                      className="px-6 py-3 rounded-xl bg-slate-900 border border-white/10 text-white font-bold text-xs uppercase tracking-wider transition-all duration-300 hover:border-orange-500/30 hover:bg-slate-900/60 inline-flex items-center"
+                      whileHover={{ scale: 1.05, borderColor: 'rgba(249,115,22,0.3)' }}
+                      whileTap={{ scale: 0.95 }}
+                      className="px-6 py-3 rounded-xl bg-slate-900 border border-white/10 text-white font-bold text-xs uppercase tracking-wider transition-all duration-300 hover:bg-slate-900/60 inline-flex items-center"
                     >
                       Xem hồ sơ cá nhân
-                    </button>
+                    </motion.button>
                   </>
                 ) : (
                   <>
-                    <a
+                    <motion.a
                       href="/auth/login"
-                      className="px-6 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider transition-all duration-300 hover:scale-105 hover:shadow-[0_0_25px_rgba(249,115,22,0.4)] inline-flex items-center gap-2"
+                      whileHover={{ scale: 1.05, boxShadow: '0 0 25px rgba(249,115,22,0.45)' }}
+                      whileTap={{ scale: 0.95 }}
+                      className="px-6 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider transition-all duration-300 inline-flex items-center gap-2"
                     >
                       Đăng nhập ngay <ArrowRight size={14} />
-                    </a>
-                    <a
+                    </motion.a>
+                    <motion.a
                       href="/auth/register"
-                      className="px-6 py-3 rounded-xl bg-slate-900 border border-white/10 text-white font-bold text-xs uppercase tracking-wider transition-all duration-300 hover:border-orange-500/30 hover:bg-slate-900/60 inline-flex items-center"
+                      whileHover={{ scale: 1.05, borderColor: 'rgba(249,115,22,0.3)' }}
+                      whileTap={{ scale: 0.95 }}
+                      className="px-6 py-3 rounded-xl bg-slate-900 border border-white/10 text-white font-bold text-xs uppercase tracking-wider transition-all duration-300 hover:bg-slate-900/60 inline-flex items-center"
                     >
                       Đăng ký tài khoản
-                    </a>
+                    </motion.a>
                   </>
                 )}
               </div>
@@ -472,14 +485,21 @@ export default function HomePage({ modules, onOpenAuth, onViewProfile, onAction,
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.4, delay: index * 0.08 }}
-                  className={`p-5 rounded-2xl border backdrop-blur-md flex flex-col justify-between h-[230px] transition-all duration-300 ${module.available
-                      ? 'border-white/5 bg-slate-900/40 hover:border-orange-500/20 hover:shadow-[0_0_20px_rgba(249,115,22,0.06)]'
+                  whileHover={module.available ? { 
+                    scale: 1.03, 
+                    y: -4, 
+                    boxShadow: '0 0 25px rgba(249, 115, 22, 0.15)',
+                    borderColor: 'rgba(249, 115, 22, 0.35)' 
+                  } : { scale: 1.01 }}
+                  className={`p-5 rounded-2xl border backdrop-blur-md flex flex-col justify-between h-[230px] transition-all duration-300 ${
+                    module.available
+                      ? 'border-white/5 bg-slate-900/40'
                       : 'border-white/5 bg-slate-900/10 opacity-75'
-                    }`}
+                  }`}
                 >
                   <div>
                     <div className="flex items-center gap-3">
-                      <div className={`p-2.5 rounded-lg ${module.available ? 'bg-orange-500/10 text-orange-400' : 'bg-slate-800 text-slate-500'}`}>
+                      <div className={`p-2.5 rounded-lg ${module.available ? 'bg-orange-500/10 text-orange-400 shadow-[0_0_10px_rgba(249,115,22,0.1)]' : 'bg-slate-800 text-slate-500'}`}>
                         <Icon size={20} />
                       </div>
                       <div>
@@ -494,16 +514,18 @@ export default function HomePage({ modules, onOpenAuth, onViewProfile, onAction,
                   </div>
 
                   <div className="mt-4">
-                    <button
+                    <motion.button
+                      whileHover={module.available ? { scale: 1.02, boxShadow: '0 0 15px rgba(249,115,22,0.3)' } : {}}
+                      whileTap={module.available ? { scale: 0.98 } : {}}
                       className={`w-full py-2.5 px-4 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-1.5 ${module.available
-                          ? 'bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-slate-950 hover:shadow-[0_0_15px_rgba(249,115,22,0.2)]'
-                          : 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                          ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 hover:shadow-[0_0_15px_rgba(249,115,22,0.2)] border-0'
+                          : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-white/5'
                         }`}
                       onClick={() => { if (module.id === 'profile') return onViewProfile(); onAction(module); }}
                       disabled={!module.available}
                     >
                       {module.available ? module.actionLabel : 'Sắp ra mắt'} <ArrowRight size={12} />
-                    </button>
+                    </motion.button>
                   </div>
                 </motion.article>
               );

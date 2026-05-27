@@ -48,11 +48,11 @@ function mapLegacySession(): AuthSession | null {
       : [],
     phone: finalPhone,
     licensePlates: (rawPlates as unknown[])
-      .map((item) => {
+      .map((item): { _id?: string; plateNumber: string; vehicleType: 'car' | 'motorcycle'; isDefault?: boolean } | null => {
         if (!item) return null;
         if (typeof item === 'string') {
           const plate = item.toUpperCase().trim();
-          return plate ? { plateNumber: plate, vehicleType: 'car' as const, isDefault: false } : null;
+          return plate ? { plateNumber: plate, vehicleType: 'car', isDefault: false } : null;
         }
         if (typeof item === 'object') {
           const p = item as Record<string, unknown>;
@@ -61,7 +61,7 @@ function mapLegacySession(): AuthSession | null {
             ? {
                 _id: p._id ? String(p._id) : undefined,
                 plateNumber: plate,
-                vehicleType: p.vehicleType === 'motorcycle' ? ('motorcycle' as const) : ('car' as const),
+                vehicleType: p.vehicleType === 'motorcycle' ? 'motorcycle' : 'car',
                 isDefault: p.isDefault === true || p.isDefault === 'true',
               }
             : null;

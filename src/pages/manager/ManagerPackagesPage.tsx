@@ -177,25 +177,27 @@ export function ManagerPackagesPage() {
         title={editing ? 'Sửa gói dài hạn' : 'Thêm gói dài hạn'}
         onSubmit={onSubmit}
       >
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="grid gap-3 md:grid-cols-2 text-slate-100">
           <div className="grid gap-1.5">
-            <label className="text-xs uppercase text-muted-foreground">Mã</label>
+            <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono">Mã</label>
             <Input
               value={form.code}
               onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))}
+              className="bg-slate-950 border-white/10 text-white rounded-xl focus:border-orange-500/40"
             />
           </div>
           <div className="grid gap-1.5">
-            <label className="text-xs uppercase text-muted-foreground">Tên</label>
+            <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono">Tên</label>
             <Input
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              className="bg-slate-950 border-white/10 text-white rounded-xl focus:border-orange-500/40"
             />
           </div>
           <div className="grid gap-1.5">
-            <label className="text-xs uppercase text-muted-foreground">Loại xe</label>
+            <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono">Loại xe</label>
             <select
-              className="h-10 rounded-md border border-border bg-card px-3 text-sm"
+              className="h-10 rounded-xl border border-white/10 bg-slate-950 text-white px-3 text-sm focus:border-orange-500/40"
               value={form.vehicleType}
               onChange={(e) => setForm((f) => ({ ...f, vehicleType: e.target.value }))}
             >
@@ -208,44 +210,49 @@ export function ManagerPackagesPage() {
             </select>
           </div>
           <div className="grid gap-1.5">
-            <label className="text-xs uppercase text-muted-foreground">Thời hạn (ngày)</label>
+            <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono">Thời hạn (ngày)</label>
             <Input
               type="number"
               min={1}
               value={form.durationDays}
               onChange={(e) => setForm((f) => ({ ...f, durationDays: e.target.value }))}
+              className="bg-slate-950 border-white/10 text-white rounded-xl focus:border-orange-500/40"
             />
           </div>
           <div className="grid gap-1.5">
-            <label className="text-xs uppercase text-muted-foreground">Giá (VND)</label>
+            <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono">Giá (VND)</label>
             <Input
               type="number"
               min={0}
               value={form.price}
               onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))}
+              className="bg-slate-950 border-white/10 text-white rounded-xl focus:border-orange-500/40"
             />
           </div>
           <div className="grid gap-1.5">
-            <label className="text-xs uppercase text-muted-foreground">Số slot dành riêng</label>
+            <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono">Số slot dành riêng</label>
             <Input
               type="number"
               min={0}
               value={form.reservedSlots}
               onChange={(e) => setForm((f) => ({ ...f, reservedSlots: e.target.value }))}
+              className="bg-slate-950 border-white/10 text-white rounded-xl focus:border-orange-500/40"
             />
           </div>
           <div className="grid gap-1.5 md:col-span-2">
-            <label className="text-xs uppercase text-muted-foreground">Mô tả</label>
+            <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono">Mô tả</label>
             <Input
               value={form.description}
               onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+              className="bg-slate-950 border-white/10 text-white rounded-xl focus:border-orange-500/40"
             />
           </div>
-          <label className="flex items-center gap-2 text-sm md:col-span-2">
+          <label className="flex items-center gap-3 text-xs font-bold text-slate-300 md:col-span-2 select-none">
             <input
               type="checkbox"
               checked={form.isActive}
               onChange={(e) => setForm((f) => ({ ...f, isActive: e.target.checked }))}
+              className="w-4 h-4 rounded border-white/10 bg-slate-950 text-orange-500 focus:ring-0 cursor-pointer"
             />
             <span>Đang mở bán</span>
           </label>

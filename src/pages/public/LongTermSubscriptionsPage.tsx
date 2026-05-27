@@ -22,6 +22,7 @@ import {
   type UserLongTermPayment,
   type UserLongTermSubscription,
 } from '@/pages/User/mockLongTermSubscriptionsData';
+import { CustomSelect } from '@/components/ui/select';
 
 const currency = new Intl.NumberFormat('vi-VN', {
   style: 'currency',
@@ -275,53 +276,53 @@ export default function LongTermSubscriptionsPage() {
             </div>
 
             <div className="space-y-4">
-              <label className="block">
-                <span className="text-xs font-bold uppercase text-slate-400">Tòa nhà</span>
-                <select
+              <div className="block">
+                <span className="text-xs font-bold uppercase text-slate-400 block mb-1">Tòa nhà</span>
+                <CustomSelect
                   value={selectedBuildingId}
-                  onChange={(event) => setSelectedBuildingId(event.target.value)}
-                  className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-semibold text-white outline-none focus:border-orange-400/60"
-                >
-                  <option value="">-- Chọn tòa nhà --</option>
-                  {buildings.map((row) => (
-                    <option key={row.building._id} value={row.building._id}>
-                      {row.building.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                  onChange={setSelectedBuildingId}
+                  options={[
+                    { value: '', label: '-- Chọn tòa nhà --' },
+                    ...buildings.map((row) => ({
+                      value: row.building._id,
+                      label: row.building.name,
+                    })),
+                  ]}
+                  placeholder="-- Chọn tòa nhà --"
+                />
+              </div>
 
-              <label className="block">
-                <span className="text-xs font-bold uppercase text-slate-400">Gói dài hạn</span>
-                <select
+              <div className="block">
+                <span className="text-xs font-bold uppercase text-slate-400 block mb-1">Gói dài hạn</span>
+                <CustomSelect
                   value={selectedPackageId}
-                  onChange={(event) => setSelectedPackageId(event.target.value)}
-                  className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-semibold text-white outline-none focus:border-orange-400/60"
-                >
-                  <option value="">-- Chọn gói --</option>
-                  {packages.map((item) => (
-                    <option key={item._id} value={item._id}>
-                      {item.name} ({item.durationDays} ngày) - {formatMoney(item.price)}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                  onChange={setSelectedPackageId}
+                  options={[
+                    { value: '', label: '-- Chọn gói --' },
+                    ...packages.map((item) => ({
+                      value: item._id,
+                      label: `${item.name} (${item.durationDays} ngày) - ${formatMoney(item.price)}`,
+                    })),
+                  ]}
+                  placeholder="-- Chọn gói --"
+                />
+              </div>
 
-              <label className="block">
-                <span className="text-xs font-bold uppercase text-slate-400">Biển số đăng ký</span>
-                <select
+              <div className="block">
+                <span className="text-xs font-bold uppercase text-slate-400 block mb-1">Biển số đăng ký</span>
+                <CustomSelect
                   value={selectedPlate}
-                  onChange={(event) => setSelectedPlate(event.target.value)}
-                  className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-semibold text-white outline-none focus:border-orange-400/60"
-                >
-                  <option value="">-- Chọn biển số --</option>
-                  {compatiblePlates.map((plate) => (
-                    <option key={plate.plateNumber} value={plate.plateNumber}>
-                      {plate.plateNumber} ({plate.vehicleType === 'car' ? 'Ô tô' : 'Xe máy'})
-                    </option>
-                  ))}
-                </select>
-              </label>
+                  onChange={setSelectedPlate}
+                  options={[
+                    { value: '', label: '-- Chọn biển số --' },
+                    ...compatiblePlates.map((plate) => ({
+                      value: plate.plateNumber,
+                      label: `${plate.plateNumber} (${plate.vehicleType === 'car' ? 'Ô tô' : 'Xe máy'})`,
+                    })),
+                  ]}
+                  placeholder="-- Chọn biển số --"
+                />
+              </div>
 
               <label className="block">
                 <span className="text-xs font-bold uppercase text-slate-400">Ngày bắt đầu</span>
@@ -333,17 +334,18 @@ export default function LongTermSubscriptionsPage() {
                 />
               </label>
 
-              <label className="block">
-                <span className="text-xs font-bold uppercase text-slate-400">Phương thức thanh toán</span>
-                <select
+              <div className="block">
+                <span className="text-xs font-bold uppercase text-slate-400 block mb-1">Phương thức thanh toán</span>
+                <CustomSelect
                   value={paymentMethod}
-                  onChange={(event) => setPaymentMethod(event.target.value as LongTermPaymentMethod)}
-                  className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-semibold text-white outline-none focus:border-orange-400/60"
-                >
-                  <option value="wallet">Ví PBMS</option>
-                  <option value="qr">QR Banking</option>
-                </select>
-              </label>
+                  onChange={(val) => setPaymentMethod(val as LongTermPaymentMethod)}
+                  options={[
+                    { value: 'wallet', label: 'Ví PBMS' },
+                    { value: 'qr', label: 'QR Banking' },
+                  ]}
+                  placeholder="Chọn phương thức thanh toán"
+                />
+              </div>
 
               {selectedPackage ? (
                 <div className="rounded-xl border border-white/10 bg-slate-950/60 p-4 text-xs font-semibold text-slate-300">

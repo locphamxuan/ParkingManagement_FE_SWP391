@@ -4,10 +4,10 @@ import { useAuth } from '@/hooks/useAuth';
 
 export function DashboardRoute() {
   const navigate = useNavigate();
-  const { isAuthenticated, user } = useAuth();
+  const { token, user } = useAuth();
 
   useEffect(() => {
-    if (!isAuthenticated || !user) {
+    if (!token || !user) {
       navigate('/auth/login', { replace: true });
       return;
     }
@@ -15,7 +15,7 @@ export function DashboardRoute() {
     else if (user.role === 'manager') navigate('/manager', { replace: true });
     else if (user.role === 'staff') navigate('/staff', { replace: true });
     else navigate('/', { replace: true });
-  }, [isAuthenticated, user, navigate]);
+  }, [token, user, navigate]);
 
   return (
     <div className="flex min-h-screen items-center justify-center text-sm text-muted-foreground">

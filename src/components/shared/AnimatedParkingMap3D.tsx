@@ -494,13 +494,19 @@ export function AnimatedParkingMap3D({
               const isSelected = interactive && selectedSlot === slotCode;
 
               return (
-                <div 
+                <motion.div 
                   key={id}
                   onClick={() => {
                     if (interactive && !isOccupied && onSlotClick) {
                       onSlotClick(slotCode);
                     }
                   }}
+                  whileHover={interactive && !isOccupied ? { 
+                    scale: 1.05, 
+                    boxShadow: '0 0 15px rgba(16,185,129,0.5)',
+                    borderColor: 'rgba(16,185,129,0.5)'
+                  } : {}}
+                  whileTap={interactive && !isOccupied ? { scale: 0.95, y: 1 } : {}}
                   className={`w-[66px] h-[46px] rounded-xl border flex flex-col justify-between p-1.5 relative shadow-2xl transition-all duration-300 ${
                     interactive && !isOccupied ? 'cursor-pointer' : ''
                   } ${
@@ -539,12 +545,12 @@ export function AnimatedParkingMap3D({
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ transform: 'translateZ(4px)' }}>
                       <CartoonCar3D 
                         type={id === 1 ? 'offroad' : id === 5 ? 'crossover' : 'sedan'} 
-                        color={id === 1 ? '#334155' : id === 5 ? '#eab308' : reservation?.vehicleType === 'motorcycle' ? '#be185d' : '#0e7490'} 
+                        color={id === 1 ? '#334155' : id === 5 ? '#eab308' : (reservation && reservation.vehicleType === 'motorcycle') ? '#be185d' : '#0e7490'} 
                         state="parked" 
                       />
                     </div>
                   )}
-                </div>
+                </motion.div>
               );
             })}
           </div>

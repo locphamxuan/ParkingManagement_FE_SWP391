@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { AnimatedParkingMap3D } from '@/components/shared/AnimatedParkingMap3D';
 import { useAuth } from '@/hooks/useAuth';
+import { CustomSelect } from '@/components/ui/select';
 import { listUserBuildingViews, type UserBuildingView } from '@/pages/User/mockBuildingsData';
 import {
   cancelUserReservation,
@@ -412,31 +413,37 @@ export default function ReservationsPage() {
           animate={{ opacity: 1, y: 0 }}
           className="mb-6 flex items-center justify-between rounded-2xl border border-white/10 bg-slate-900/70 p-4"
         >
-          <button
+          <motion.button
             type="button"
             onClick={() => navigate('/')}
-            className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-slate-950 px-4 py-2 text-xs font-black uppercase tracking-wider text-orange-300"
+            whileHover={{ scale: 1.05, boxShadow: '0 0 15px rgba(249,115,22,0.3)', borderColor: 'rgba(249,115,22,0.3)' }}
+            whileTap={{ scale: 0.95 }}
+            className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-slate-950 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-orange-400 transition-all duration-300"
           >
             <ArrowLeft size={14} />
             Trang chủ
-          </button>
+          </motion.button>
           <div className="flex items-center gap-2">
-          <button
+          <motion.button
             type="button"
             onClick={() => navigate('/long-term-subscriptions')}
-            className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-slate-950 px-4 py-2 text-xs font-black uppercase tracking-wider text-emerald-300"
+            whileHover={{ scale: 1.05, boxShadow: '0 0 15px rgba(16,185,129,0.3)', borderColor: 'rgba(16,185,129,0.3)' }}
+            whileTap={{ scale: 0.95 }}
+            className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-slate-950 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-emerald-400 transition-all duration-300"
           >
             <CalendarClock size={14} />
             Gói dài hạn
-          </button>
-          <button
+          </motion.button>
+          <motion.button
             type="button"
             onClick={() => navigate('/profile')}
-            className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-slate-950 px-4 py-2 text-xs font-black uppercase tracking-wider text-orange-300"
+            whileHover={{ scale: 1.05, boxShadow: '0 0 15px rgba(249,115,22,0.3)', borderColor: 'rgba(249,115,22,0.3)' }}
+            whileTap={{ scale: 0.95 }}
+            className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-slate-950 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-orange-400 transition-all duration-300"
           >
             <User size={14} />
             Hồ sơ
-          </button>
+          </motion.button>
         </div>
         </motion.div>
 
@@ -503,42 +510,43 @@ export default function ReservationsPage() {
               </div>
 
               <div className="space-y-4">
-                <label className="block">
-                  <span className="text-xs font-bold uppercase text-slate-400">Tòa nhà</span>
-                  <select
+                <div className="block">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono block mb-1">Tòa nhà</span>
+                  <CustomSelect
                     value={selectedBuildingId}
-                    onChange={(event) => handleBuildingChange(event.target.value)}
-                    className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-semibold text-white outline-none focus:border-orange-400/60"
-                  >
-                    <option value="">-- Chọn tòa nhà --</option>
-                    {rows.map((row) => (
-                      <option key={row.building._id} value={row.building._id}>
-                        {row.building.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                    onChange={(val) => handleBuildingChange(val)}
+                    options={[
+                      { value: '', label: '-- Chọn tòa nhà --' },
+                      ...rows.map((row) => ({
+                        value: row.building._id,
+                        label: row.building.name,
+                      })),
+                    ]}
+                    placeholder="-- Chọn tòa nhà --"
+                  />
+                </div>
 
-                <label className="block">
-                  <span className="text-xs font-bold uppercase text-slate-400">Loại xe</span>
-                  <select
+                <div className="block">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono block mb-1">Loại xe</span>
+                  <CustomSelect
                     value={selectedVehicleType}
-                    onChange={(event) => {
-                      const next = event.target.value as ReservationVehicleType | '';
+                    onChange={(val) => {
+                      const next = val as ReservationVehicleType | '';
                       setSelectedVehicleType(next);
                       setSelectedSlot(null);
                       setSelectedPlate('');
                     }}
-                    className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-semibold text-white outline-none focus:border-orange-400/60"
-                  >
-                    <option value="">-- Chọn loại xe --</option>
-                    <option value="car">Ô tô</option>
-                    <option value="motorcycle">Xe máy</option>
-                  </select>
-                </label>
+                    options={[
+                      { value: '', label: '-- Chọn loại xe --' },
+                      { value: 'car', label: 'Ô tô' },
+                      { value: 'motorcycle', label: 'Xe máy' },
+                    ]}
+                    placeholder="-- Chọn loại xe --"
+                  />
+                </div>
 
                 <label className="block">
-                  <span className="text-xs font-bold uppercase text-slate-400">Thời gian đặt chỗ</span>
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono">Thời gian đặt chỗ</span>
                   <input
                     type="datetime-local"
                     value={scheduledAt}
@@ -548,52 +556,54 @@ export default function ReservationsPage() {
                       setScheduledAt(event.target.value);
                       setSelectedSlot(null);
                     }}
-                    className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-semibold text-white outline-none focus:border-orange-400/60"
+                    className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-semibold text-white outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 focus:shadow-[0_0_15px_rgba(249,115,22,0.15)] transition-all duration-300 font-mono"
                   />
                 </label>
 
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-xl border border-white/10 bg-slate-950/60 p-3">
+                  <div className="rounded-xl border border-white/10 bg-slate-950/60 p-3 shadow-inner">
                     <p className="text-[10px] font-bold uppercase text-slate-500">Slot đã chọn</p>
-                    <p className="mt-1 text-lg font-black text-white">{selectedSlot || '--'}</p>
+                    <p className="mt-1 text-lg font-mono font-black text-orange-400">{selectedSlot || '--'}</p>
                   </div>
-                  <div className="rounded-xl border border-white/10 bg-slate-950/60 p-3">
+                  <div className="rounded-xl border border-white/10 bg-slate-950/60 p-3 shadow-inner">
                     <p className="text-[10px] font-bold uppercase text-slate-500">Chính sách hoàn</p>
-                    <p className="mt-1 text-xs font-bold text-slate-300">
+                    <p className="mt-1.5 text-xs font-bold text-slate-300">
                       Hoàn {reservationPolicy?.refundPercent ?? 0}% khi hủy
                     </p>
                   </div>
                 </div>
 
-                <label className="block">
-                  <span className="text-xs font-bold uppercase text-slate-400">Biển số xe</span>
-                  <select
+                <div className="block">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono block mb-1">Biển số xe</span>
+                  <CustomSelect
                     value={selectedPlate}
-                    onChange={(event) => setSelectedPlate(event.target.value)}
-                    className="mt-1 h-11 w-full rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-semibold text-white outline-none focus:border-orange-400/60"
-                  >
-                    <option value="">-- Chọn biển số --</option>
-                    {plateOptions.map((plate) => {
-                      const isBusy = activeReservations.some(
-                        (entry) => entry.plateNumber === plate.plateNumber,
-                      );
-                      return (
-                        <option key={plate.plateNumber} value={plate.plateNumber} disabled={isBusy}>
-                          {plate.plateNumber} - {vehicleTypeLabel(plate.vehicleType)}{' '}
-                          {isBusy ? '(đang sử dụng)' : ''}
-                        </option>
-                      );
-                    })}
-                  </select>
-                </label>
+                    onChange={setSelectedPlate}
+                    options={[
+                      { value: '', label: '-- Chọn biển số --' },
+                      ...plateOptions.map((plate) => {
+                        const isBusy = activeReservations.some(
+                          (entry) => entry.plateNumber === plate.plateNumber,
+                        );
+                        return {
+                          value: plate.plateNumber,
+                          label: `${plate.plateNumber} - ${vehicleTypeLabel(plate.vehicleType)} ${isBusy ? '(đang sử dụng)' : ''}`,
+                          disabled: isBusy,
+                        };
+                      }),
+                    ]}
+                    placeholder="-- Chọn biển số --"
+                  />
+                </div>
 
-                <button
+                <motion.button
                   type="submit"
                   disabled={!canSubmit}
-                  className="h-11 w-full rounded-xl bg-gradient-to-r from-orange-500 to-amber-400 text-sm font-black uppercase tracking-wider text-slate-950 disabled:cursor-not-allowed disabled:opacity-50"
+                  whileHover={canSubmit ? { scale: 1.02, boxShadow: '0 0 20px rgba(249,115,22,0.45)' } : {}}
+                  whileTap={canSubmit ? { scale: 0.98 } : {}}
+                  className="h-11 w-full rounded-xl bg-gradient-to-r from-orange-500 to-amber-400 text-sm font-black uppercase tracking-wider text-slate-950 disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-300"
                 >
                   {isSubmitting ? 'Đang xử lý...' : 'Đặt chỗ'}
-                </button>
+                </motion.button>
               </div>
             </form>
 
@@ -609,18 +619,30 @@ export default function ReservationsPage() {
 
               <div className="space-y-3">
                 {reservations.length > 0 ? (
-                  reservations.map((entry) => {
+                  reservations.map((entry, idx) => {
                     const refundPolicyPercent = policyByBuildingId.get(entry.buildingId)?.refundPercent ?? 0;
                     return (
-                      <div
+                      <motion.div
                         key={entry.id}
-                        className="rounded-2xl border border-white/10 bg-slate-950/70 p-4"
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: idx * 0.05, duration: 0.35 }}
+                        whileHover={{ scale: 1.01, borderColor: entry.status === 'active' ? 'rgba(249,115,22,0.25)' : 'rgba(255,255,255,0.1)' }}
+                        className={`rounded-2xl border p-4 transition-all duration-300 ${
+                          entry.status === 'active' 
+                            ? 'bg-slate-950 border-orange-500/15 shadow-[0_0_10px_rgba(249,115,22,0.03)]' 
+                            : 'bg-slate-950/50 border-white/5 opacity-70'
+                        }`}
                       >
                         <div className="flex items-center justify-between gap-3">
-                          <p className="text-xs font-black text-orange-300">{entry.id}</p>
-                          <p className="text-[10px] font-black uppercase text-slate-400">
-                            {entry.status}
-                          </p>
+                          <p className="text-xs font-mono font-black text-orange-400">{entry.id}</p>
+                          <span className={`text-[8px] font-sans font-black px-1.5 py-0.5 rounded uppercase tracking-wider ${
+                            entry.status === 'active' 
+                              ? 'bg-emerald-500/20 text-emerald-400' 
+                              : 'bg-slate-800 text-slate-500'
+                          }`}>
+                            {entry.status === 'active' ? 'Đang giữ' : entry.status === 'cancelled' ? 'Đã hủy' : 'Hoàn tất'}
+                          </span>
                         </div>
 
                         <div className="mt-2 space-y-1 text-xs font-semibold text-slate-300">
@@ -655,16 +677,18 @@ export default function ReservationsPage() {
                         </div>
 
                         {entry.status === 'active' ? (
-                          <button
+                          <motion.button
                             type="button"
                             onClick={() => handleCancelReservation(entry.id)}
-                            className="mt-3 inline-flex items-center gap-2 rounded-lg border border-rose-400/35 bg-rose-500/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-wider text-rose-300"
+                            whileHover={{ scale: 1.03, backgroundColor: 'rgba(239,68,68,0.2)', borderColor: 'rgba(239,68,68,0.45)' }}
+                            whileTap={{ scale: 0.97 }}
+                            className="mt-3 inline-flex items-center gap-2 rounded-lg border border-rose-500/20 bg-rose-500/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-wider text-rose-400 transition-all duration-300"
                           >
                             <Trash2 size={12} />
                             Hủy và hoàn tiền
-                          </button>
+                          </motion.button>
                         ) : null}
-                      </div>
+                      </motion.div>
                     );
                   })
                 ) : (

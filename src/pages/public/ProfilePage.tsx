@@ -441,7 +441,7 @@ export default function ProfilePage() {
                     value={form.fullName}
                     onChange={(e) => setForm((s) => ({ ...s, fullName: e.target.value }))}
                     required
-                    className="block w-full rounded-xl border border-white/10 bg-slate-950/80 text-white placeholder-slate-600 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 text-sm h-11 px-4 transition-all duration-300 outline-none"
+                    className="block w-full rounded-xl border border-white/10 bg-slate-950/80 text-white placeholder-slate-600 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 focus:shadow-[0_0_15px_rgba(249,115,22,0.15)] text-sm h-11 px-4 transition-all duration-300 outline-none"
                     placeholder="Nguyễn Văn A"
                   />
                 </div>
@@ -453,7 +453,7 @@ export default function ProfilePage() {
                     type="text"
                     value={form.phone}
                     onChange={(e) => setForm((s) => ({ ...s, phone: e.target.value }))}
-                    className="block w-full rounded-xl border border-white/10 bg-slate-950/80 text-white placeholder-slate-600 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 text-sm h-11 px-4 transition-all duration-300 outline-none"
+                    className="block w-full rounded-xl border border-white/10 bg-slate-950/80 text-white placeholder-slate-600 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 focus:shadow-[0_0_15px_rgba(249,115,22,0.15)] text-sm h-11 px-4 transition-all duration-300 outline-none"
                     placeholder="Ví dụ: 0901234567"
                   />
                 </div>
@@ -484,52 +484,58 @@ export default function ProfilePage() {
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.8, x: -8 }}
                             transition={{ type: 'spring', stiffness: 200, damping: 18 }}
-                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-mono font-black text-xs tracking-wider shadow-[inset_0_1px_2px_rgba(0,0,0,0.4)] transition-all duration-200 ${item.isDefault
-                              ? 'border border-amber-500/40 bg-amber-500/10 text-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.15)]'
-                              : item.vehicleType === 'car'
-                                ? 'bg-blue-500/15 border border-blue-500/30 text-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.1)]'
-                                : 'bg-purple-500/15 border border-purple-500/30 text-purple-400 shadow-[0_0_10px_rgba(168,85,247,0.1)]'
-                              }`}
+                            whileHover={{ scale: 1.05 }}
+                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-mono font-black text-xs tracking-wider shadow-[inset_0_1px_2px_rgba(0,0,0,0.4)] transition-all duration-300 border ${
+                              item.isDefault
+                                ? 'border-amber-500/40 bg-amber-500/10 text-amber-300 shadow-[0_0_15px_rgba(245,158,11,0.2)]'
+                                : item.vehicleType === 'car'
+                                  ? 'bg-blue-500/15 border-blue-500/30 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.15)]'
+                                  : 'bg-purple-500/15 border-purple-500/30 text-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.15)]'
+                            }`}
                           >
                             {item.isDefault ? (
-                              <span className="text-xs">⭐</span>
+                              <span className="text-xs animate-pulse">⭐</span>
                             ) : item.vehicleType === 'car' ? (
-                              <Car size={11} />
+                              <Car size={11} className="text-blue-400" />
                             ) : (
-                              <Bike size={11} />
+                              <Bike size={11} className="text-purple-400" />
                             )}
                             <span>{item.plateNumber}</span>
-                            <span className={`text-[8px] px-1.5 py-0.5 rounded font-sans font-extrabold tracking-normal uppercase ${item.isDefault
-                              ? 'bg-amber-500/25 text-amber-300'
-                              : item.vehicleType === 'car'
-                                ? 'bg-blue-500/25 text-blue-300'
-                                : 'bg-purple-500/25 text-purple-300'
-                              }`}>
+                            <span className={`text-[8px] px-1.5 py-0.5 rounded font-sans font-extrabold tracking-normal uppercase ${
+                              item.isDefault
+                                ? 'bg-amber-500/25 text-amber-300'
+                                : item.vehicleType === 'car'
+                                  ? 'bg-blue-500/25 text-blue-300'
+                                  : 'bg-purple-500/25 text-purple-300'
+                            }`}>
                               {item.isDefault ? 'Mặc định' : item.vehicleType === 'car' ? 'Ô tô' : 'Xe máy'}
                             </span>
                             {!item.isDefault && (
-                              <button
+                              <motion.button
                                 type="button"
+                                whileHover={{ scale: 1.2 }}
                                 onClick={() => handleSetDefaultEditPlate(item)}
                                 className="ml-1.5 rounded p-0.5 transition-all duration-150 hover:bg-amber-500/10 text-slate-400 hover:text-amber-400 animate-fadeIn"
                                 title="Đặt làm mặc định"
                               >
                                 <span className="text-xs font-black">☆</span>
-                              </button>
+                              </motion.button>
                             )}
-                            <button
+                            <motion.button
                               type="button"
+                              whileHover={{ scale: 1.2 }}
                               onClick={() => handleRemovePlate(item.plateNumber)}
-                              className={`ml-1 rounded p-0.5 transition-all duration-150 ${item.isDefault
-                                ? 'text-amber-400/60 hover:text-rose-400 hover:bg-rose-500/10'
-                                : item.vehicleType === 'car'
-                                  ? 'text-blue-400/60 hover:text-rose-400 hover:bg-rose-500/10'
-                                  : 'text-purple-400/60 hover:text-rose-400 hover:bg-rose-500/10'
-                                }`}
+                              className={`ml-1 rounded p-0.5 transition-all duration-150 ${
+                                item.isDefault
+                                  ? 'text-amber-400/60 hover:text-rose-400 hover:bg-rose-500/10'
+                                  : item.vehicleType === 'car'
+                                    ? 'text-blue-400/60 hover:text-rose-400 hover:bg-rose-500/10'
+                                    : 'text-purple-400/60 hover:text-rose-400 hover:bg-rose-500/10'
+                              }`}
                               title={`Xóa biển số ${item.plateNumber}`}
                             >
                               <X size={11} className="stroke-[3]" />
-                            </button>
+                            </motion.button>
                           </motion.span>
                         ))}
                       </AnimatePresence>
@@ -544,28 +550,34 @@ export default function ProfilePage() {
                         <div className="flex items-center gap-3">
                           <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono">Loại xe:</span>
                           <div className="flex gap-1.5 p-1 rounded-xl bg-slate-950 border border-white/10 w-fit">
-                            <button
+                            <motion.button
                               type="button"
+                              whileHover={{ scale: 1.02 }}
+                              whileTap={{ scale: 0.98 }}
                               onClick={() => setVehicleType('car')}
-                              className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all duration-200 flex items-center gap-1.5 ${vehicleType === 'car'
-                                ? 'bg-blue-600 text-white shadow-[0_0_12px_rgba(59,130,246,0.3)]'
-                                : 'text-slate-400 hover:text-slate-200'
-                                }`}
+                              className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all duration-300 flex items-center gap-1.5 ${
+                                vehicleType === 'car'
+                                  ? 'bg-blue-600 text-white shadow-[0_0_12px_rgba(59,130,246,0.3)]'
+                                  : 'text-slate-400 hover:text-slate-200'
+                              }`}
                             >
                               <Car size={12} />
                               Ô tô
-                            </button>
-                            <button
+                            </motion.button>
+                            <motion.button
                               type="button"
+                              whileHover={{ scale: 1.02 }}
+                              whileTap={{ scale: 0.98 }}
                               onClick={() => setVehicleType('motorcycle')}
-                              className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all duration-200 flex items-center gap-1.5 ${vehicleType === 'motorcycle'
-                                ? 'bg-purple-600 text-white shadow-[0_0_12px_rgba(168,85,247,0.3)]'
-                                : 'text-slate-400 hover:text-slate-200'
-                                }`}
+                              className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all duration-300 flex items-center gap-1.5 ${
+                                vehicleType === 'motorcycle'
+                                  ? 'bg-purple-600 text-white shadow-[0_0_12px_rgba(168,85,247,0.3)]'
+                                  : 'text-slate-400 hover:text-slate-200'
+                              }`}
                             >
                               <Bike size={12} />
                               Xe máy
-                            </button>
+                            </motion.button>
                           </div>
                         </div>
 
@@ -579,26 +591,30 @@ export default function ProfilePage() {
                               setPlateError(null);
                             }}
                             onKeyDown={handlePlateKeyDown}
-                            className={`flex-1 rounded-xl border bg-slate-950/80 text-white placeholder-slate-600 text-sm h-10 px-4 transition-all duration-300 outline-none font-mono tracking-wider ${vehicleType === 'car'
-                              ? 'focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20'
-                              : 'focus:border-purple-500 focus:ring-1 focus:ring-purple-500/20'
-                              }`}
+                            className={`flex-1 rounded-xl border bg-slate-950/80 text-white placeholder-slate-600 text-sm h-10 px-4 transition-all duration-300 outline-none font-mono tracking-wider ${
+                              vehicleType === 'car'
+                                ? 'focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 focus:shadow-[0_0_15px_rgba(59,130,246,0.15)]'
+                                : 'focus:border-purple-500 focus:ring-1 focus:ring-purple-500/20 focus:shadow-[0_0_15px_rgba(168,85,247,0.15)]'
+                            }`}
                             placeholder="Ví dụ: 29A-12345"
                             maxLength={12}
                             autoComplete="off"
                             spellCheck={false}
                           />
-                          <button
+                          <motion.button
                             type="button"
+                            whileHover={{ scale: 1.03 }}
+                            whileTap={{ scale: 0.97 }}
                             onClick={handleAddPlate}
-                            className={`px-4 h-10 rounded-xl font-black text-xs uppercase tracking-wider transition-all duration-200 inline-flex items-center gap-1.5 shrink-0 ${vehicleType === 'car'
-                              ? 'bg-blue-500/20 border border-blue-500/30 text-blue-400 hover:bg-blue-500/30 shadow-[0_0_10px_rgba(59,130,246,0.15)]'
-                              : 'bg-purple-500/20 border border-purple-500/30 text-purple-400 hover:bg-purple-500/30 shadow-[0_0_10px_rgba(168,85,247,0.15)]'
-                              }`}
+                            className={`px-4 h-10 rounded-xl font-black text-xs uppercase tracking-wider transition-all duration-300 inline-flex items-center gap-1.5 shrink-0 ${
+                              vehicleType === 'car'
+                                ? 'bg-blue-500/20 border border-blue-500/30 text-blue-400 hover:bg-blue-500/30 shadow-[0_0_10px_rgba(59,130,246,0.15)]'
+                                : 'bg-purple-500/20 border border-purple-500/30 text-purple-400 hover:bg-purple-500/30 shadow-[0_0_10px_rgba(168,85,247,0.15)]'
+                            }`}
                           >
                             <Plus size={14} className="stroke-[3]" />
                             Thêm
-                          </button>
+                          </motion.button>
                         </div>
                       </div>
                     ) : (
