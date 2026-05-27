@@ -106,7 +106,7 @@ function usePublicAuthFlow(initialMode: 'login' | 'register') {
           navigate('/', { replace: true });
         }
       } catch (error) {
-        const message = error instanceof Error ? mapAuthErrorMessage(error.message) : 'Không thể xử lý yêu cầu';
+        const message = error instanceof Error ? mapAuthErrorMessage(error.message) : 'không thể xử lý yêu cầu';
         setNotice({ message, type: 'error' });
         throw error;
       } finally {
