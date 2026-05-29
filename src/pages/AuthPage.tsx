@@ -281,26 +281,36 @@ export default function AuthPage({ mode, notice, onModeChange, onBackHome, onSub
     e.preventDefault();
     setLocalNotice(null);
 
-    if (!forgotEmail.trim()) {
+    const email = forgotEmail.trim();
+    
+    if (!email) {
       setLocalNotice({ message: 'Vui lòng nhập email của bạn!', type: 'error' });
       return;
     }
 
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setLocalNotice({ message: 'Email không hợp lệ!', type: 'error' });
+      return;
+    }
+
     try {
-      await forgotPassword(forgotEmail.trim());
+      await forgotPassword(email);
       setLocalNotice({
-        message: 'Email đặt lại mật khẩu đã được gửi. Vui lòng kiểm tra email của bạn.',
+        message: 'Email đặt lại mật khẩu đã được gửi. Vui lòng kiểm tra email của bạn (có thể nằm trong thư mục spam).',
         type: 'success',
       });
 
+      // Reset form after short delay
       setTimeout(() => {
         setForgotEmail('');
         setLocalNotice(null);
         onModeChange('login');
-      }, 2500);
+      }, 3000);
     } catch (error) {
       setLocalNotice({
-        message: error instanceof Error ? error.message : 'Gửi email thất bại',
+        message: error instanceof Error ? error.message : 'Gửi email thất bại. Vui lòng thử lại.',
         type: 'error',
       });
     }
@@ -311,24 +321,56 @@ export default function AuthPage({ mode, notice, onModeChange, onBackHome, onSub
     setLocalNotice(null);
 
     if (!resetToken) {
-      setLocalNotice({ message: 'Token không hợp lệ!', type: 'error' });
+      setLocalNotice({ message: 'Link đặt lại mật khẩu không hợp lệ hoặc đã hết hạn!', type: 'error' });
       return;
     }
 
-    if (resetPasswordForm.newPassword !== resetPasswordForm.confirmPassword) {
-      setLocalNotice({ message: 'Mật khẩu xác nhận không khớp!', type: 'error' });
+    const newPassword = resetPasswordForm.newPassword.trim();
+    const confirmPassword = resetPasswordForm.confirmPassword.trim();
+
+    // Validation: Mật khẩu không được bỏ trống
+    if (!newPassword || !confirmPassword) {
+      setLocalNotice({ message: 'Vui lòng nhập mật khẩu!', type: 'error' });
       return;
     }
 
-    if (resetPasswordForm.newPassword.length < 6) {
+    // Validation: Độ dài mật khẩu >= 6
+    if (newPassword.length < 6) {
       setLocalNotice({ message: 'Mật khẩu phải có ít nhất 6 ký tự!', type: 'error' });
       return;
     }
 
+    // Validation: Mật khẩu và xác nhận phải trùng khớp
+    if (newPassword !== confirmPassword) {
+      setLocalNotice({ message: 'Mật khẩu xác nhận không khớp!', type: 'error' });
+      return;
+    }
+
     try {
-      await resetPassword(resetToken, resetPasswordForm.newPassword);
+      await resetPassword(resetToken, newPassword);
+      
+      // Retrieve email from localStorage for local fallback storage
+      const emailToUse = localStorage.getItem('pbms.forgotEmail_pending') || '';
+
+      // Store locally for fallback reference
+      if (emailToUse) {
+        const locallyReset = JSON.parse(localStorage.getItem('pbms.locallyResetPasswords') || '{}');
+        locallyReset[emailToUse.toLowerCase()] = newPassword;
+        localStorage.setItem('pbms.locallyResetPasswords', JSON.stringify(locallyReset));
+
+        // Update saved accounts if they exist
+        const savedAccountsData = JSON.parse(localStorage.getItem('pbms.savedAccounts') || '[]');
+        const updated = savedAccountsData.map((acc: { email: string; password?: string }) => {
+          if (acc.email.toLowerCase() === emailToUse.toLowerCase()) {
+            return { ...acc, password: newPassword };
+          }
+          return acc;
+        });
+        localStorage.setItem('pbms.savedAccounts', JSON.stringify(updated));
+      }
+
       setLocalNotice({
-        message: 'Mật khẩu đã được đặt lại thành công. Vui lòng đăng nhập lại.',
+        message: 'Mật khẩu đã được đặt lại thành công. Vui lòng đăng nhập với mật khẩu mới.',
         type: 'success',
       });
 
@@ -337,10 +379,10 @@ export default function AuthPage({ mode, notice, onModeChange, onBackHome, onSub
         setResetToken(null);
         setLocalNotice(null);
         onModeChange('login');
-      }, 2500);
+      }, 3000);
     } catch (error) {
       setLocalNotice({
-        message: error instanceof Error ? error.message : 'Đặt lại mật khẩu thất bại',
+        message: error instanceof Error ? error.message : 'Đặt lại mật khẩu thất bại. Vui lòng thử lại hoặc yêu cầu link mới.',
         type: 'error',
       });
     }
