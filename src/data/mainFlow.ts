@@ -25,22 +25,22 @@ export const mainFlowModules: LegacyModule[] = [
     id: 'wallet',
     title: 'Ví tiền',
     description: 'Xem số dư và lịch sử giao dịch.',
-    actionLabel: 'Sắp ra mắt',
-    available: false,
+    actionLabel: 'Mở ví',
+    available: true,
   },
   {
     id: 'buildings',
     title: 'Bãi đỗ / Tòa nhà',
     description: 'Danh sách bãi đang hoạt động, tầng và chỗ đỗ xe.',
-    actionLabel: 'Sắp ra mắt',
-    available: false,
+    actionLabel: 'Xem tòa nhà',
+    available: true,
   },
   {
     id: 'reservations',
     title: 'Đặt chỗ trước',
     description: 'Đặt trước chỗ đỗ theo nhu cầu của khách hàng.',
-    actionLabel: 'Sắp ra mắt',
-    available: false,
+    actionLabel: 'Đặt chỗ ngay',
+    available: true,
   },
   {
     id: 'sessions',
@@ -53,8 +53,8 @@ export const mainFlowModules: LegacyModule[] = [
     id: 'payments',
     title: 'Thanh toán',
     description: 'Thanh toán phí gửi xe và các gói dịch vụ.',
-    actionLabel: 'Sắp ra mắt',
-    available: false,
+    actionLabel: 'Đăng ký gói',
+    available: true,
   },
   {
     id: 'notifications',
@@ -64,3 +64,4 @@ export const mainFlowModules: LegacyModule[] = [
     available: false,
   },
 ];
+

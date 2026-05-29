@@ -1,5 +1,5 @@
 import { MonitoringWidget } from '@/components/shared/MonitoringWidget';
-import { useAdminDataset } from '@/hooks/useAdminDataset';
+import { useAdminDataset } from '@/hooks/admin/useAdminDataset';
 
 export function SystemHealthPage() {
   const { data, isLoading, error } = useAdminDataset();

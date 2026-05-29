@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { DataTable, type DataColumn } from '@/components/shared/DataTable';
 import { SearchFilterBar } from '@/components/shared/SearchFilterBar';
 import { StatusBadge } from '@/components/shared/StatusBadge';
-import { useAdminDataset } from '@/hooks/useAdminDataset';
+import { useAdminDataset } from '@/hooks/admin/useAdminDataset';
 import type { AuditLog } from '@/types';
 
 export function AuditLogsPage() {

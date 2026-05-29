@@ -1,4 +1,6 @@
-export const DEFAULT_API_BASE = 'http://localhost:5000/api';
+export const DEFAULT_API_BASE =
+  (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() ||
+  'http://localhost:5000/api';
 
 export function normalizeApiBase(value: string = DEFAULT_API_BASE): string {
   return String(value).trim().replace(/\/$/, '');

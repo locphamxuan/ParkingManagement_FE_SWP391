@@ -14,46 +14,46 @@ interface DataTableProps<T> {
   emptyText?: string;
 }
 
-export function DataTable<T extends Record<string, unknown>>({
+export function DataTable<T extends object>({
   title,
   rows,
   columns,
   emptyText = 'Không tìm thấy bản ghi.',
 }: DataTableProps<T>) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
+    <Card className="overflow-hidden border border-border/40 bg-card/40 shadow-lg backdrop-blur-md">
+      <CardHeader className="border-b border-border/40 bg-muted/20 p-5">
+        <CardTitle className="text-base font-bold tracking-tight text-foreground">{title}</CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-0">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[760px] border-separate border-spacing-0">
+          <table className="w-full min-w-[760px] border-collapse">
             <thead>
-              <tr>
+              <tr className="bg-muted/30 border-b border-border/40">
                 {columns.map((column) => (
                   <th
                     key={String(column.key)}
-                    className="border-b border-border px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.08em] text-stone-600"
+                    className="px-6 py-3.5 text-left text-xs font-bold uppercase tracking-[0.1em] text-muted-foreground"
                   >
                     {column.title}
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-border/30">
               {rows.length > 0 ? (
                 rows.map((row, rowIndex) => (
-                  <tr key={rowIndex}>
+                  <tr key={rowIndex} className="premium-row group hover:bg-muted/15 transition-colors">
                     {columns.map((column) => (
-                      <td key={String(column.key)} className="border-b border-border/60 px-3 py-3 text-sm text-foreground">
-                        {column.render ? column.render(row) : String(row[column.key as keyof T] ?? '-')}
+                      <td key={String(column.key)} className="px-6 py-4 text-sm text-foreground">
+                        {column.render ? column.render(row) : String((row as Record<string, unknown>)[column.key as string] ?? '-')}
                       </td>
                     ))}
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td className="px-3 py-6 text-sm text-stone-700" colSpan={columns.length}>
+                  <td className="px-6 py-8 text-center text-sm text-stone-500 italic" colSpan={columns.length}>
                     {emptyText}
                   </td>
                 </tr>

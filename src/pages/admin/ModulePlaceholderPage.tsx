@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+﻿import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface ModulePlaceholderPageProps {
   title: string;
@@ -17,3 +17,4 @@ export function ModulePlaceholderPage({ title, description }: ModulePlaceholderP
     </Card>
   );
 }
+
