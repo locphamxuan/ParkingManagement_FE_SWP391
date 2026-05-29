@@ -145,6 +145,11 @@ export default function HomePage({ modules, onOpenAuth, onViewProfile, onAction,
     return () => document.removeEventListener('click', handleClick);
   }, []);
 
+  const onViewWallet = () => {
+    const walletModule = modules.find((module) => module.id === 'wallet');
+    if (walletModule) onAction(walletModule);
+  };
+
   return (
     <main id="top" className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-orange-500 selection:text-white relative">
 
@@ -223,6 +228,12 @@ export default function HomePage({ modules, onOpenAuth, onViewProfile, onAction,
                       {hasMissingInfo && (
                         <span className="flex h-2 w-2 rounded-full bg-rose-500 animate-pulse shadow-[0_0_6px_#f43f5e]" />
                       )}
+                    </button>
+                    <button
+                      className="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-slate-800 text-slate-300 hover:text-white"
+                      onClick={() => { setMenuOpen(false); onViewWallet(); }}
+                    >
+                      <Wallet size={12} className="inline-block mr-2" /> Ví tiền
                     </button>
                     <button className="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-slate-800 text-rose-400 hover:text-rose-300 border-t border-white/5 mt-1" onClick={onLogout}>
                       <LogOut size={12} className="inline-block mr-2" /> Đăng xuất
