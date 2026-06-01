@@ -12,14 +12,8 @@ import {
   Loader2,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { listUserBuildingViews, type UserBuildingView } from '@/pages/User/mockBuildingsData';
-import {
-  useLongTermPackages,
-  useLongTermSubscriptions,
-  useSubscribeToPackage,
-  type LongTermPackage,
-  type LongTermSubscription,
-} from '@/hooks/user';
+import { useBuildings, useLongTermPackages, useLongTermSubscriptions, useSubscribeToPackage } from '@/hooks/user';
+import type { LongTermPackage, LongTermSubscription } from '@/services/user/userApi';
 import { CustomSelect } from '@/components/ui/select';
 
 const currency = new Intl.NumberFormat('vi-VN', {
@@ -50,8 +44,7 @@ export default function LongTermSubscriptionsPage() {
   const navigate = useNavigate();
   const { session } = useAuth();
 
-  const [buildings, setBuildings] = useState<UserBuildingView[]>([]);
-  const [isLoadingBuildings, setIsLoadingBuildings] = useState(true);
+  const { items: buildings, isLoading: isLoadingBuildings } = useBuildings();
 
   const [selectedBuildingId, setSelectedBuildingId] = useState('');
   const [selectedPackageId, setSelectedPackageId] = useState('');
@@ -86,27 +79,13 @@ export default function LongTermSubscriptionsPage() {
   }, [session]);
 
   useEffect(() => {
-    let ignore = false;
-
-    async function loadBaseData() {
-      setIsLoadingBuildings(true);
-      const buildingRows = await listUserBuildingViews();
-      if (ignore) return;
-      setBuildings(buildingRows);
-
-      const firstBuildingId = buildingRows[0]?.building._id || '';
-      setSelectedBuildingId(firstBuildingId);
-      setIsLoadingBuildings(false);
+    if (buildings.length > 0 && !selectedBuildingId) {
+      setSelectedBuildingId(buildings[0]._id);
     }
-
-    loadBaseData();
-    return () => {
-      ignore = true;
-    };
-  }, []);
+  }, [buildings, selectedBuildingId]);
 
   const selectedBuilding = useMemo(
-    () => buildings.find((item) => item.building._id === selectedBuildingId) || null,
+    () => buildings.find((item) => item._id === selectedBuildingId) || null,
     [buildings, selectedBuildingId],
   );
 
@@ -251,9 +230,9 @@ export default function LongTermSubscriptionsPage() {
                   onChange={setSelectedBuildingId}
                   options={[
                     { value: '', label: '-- Chọn tòa nhà --' },
-                    ...buildings.map((row) => ({
-                      value: row.building._id,
-                      label: row.building.name,
+                    ...buildings.map((building) => ({
+                      value: building._id,
+                      label: building.name,
                     })),
                   ]}
                   placeholder="-- Chọn tòa nhà --"

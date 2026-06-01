@@ -182,4 +182,25 @@ export const userApi = {
         `/users/long-term/subscriptions/${id}`
       ),
   },
+
+  // ========== BUILDINGS ==========
+  buildings: {
+    /** Get list of all active buildings */
+    list: (query?: { limit?: number; page?: number }) =>
+      api.get<Wrap<ListResult<Building>>>('/users/buildings', { query }),
+
+    /** Get vehicle types for a building */
+    vehicleTypes: (buildingId: string) =>
+      api.get<Wrap<ListResult<VehicleType>>>(`/users/buildings/${buildingId}/vehicle-types`),
+
+    /** Get floors for a building */
+    floors: (buildingId: string) =>
+      api.get<Wrap<ListResult<{ code: string; number: number }>>>(`/users/buildings/${buildingId}/floors`),
+
+    /** Get parking slots for a building floor */
+    slots: (buildingId: string, floorId: string, query?: { limit?: number; page?: number }) =>
+      api.get<Wrap<ListResult<ParkingSlot>>>(`/users/buildings/${buildingId}/floors/${floorId}/slots`, {
+        query,
+      }),
+  },
 };
