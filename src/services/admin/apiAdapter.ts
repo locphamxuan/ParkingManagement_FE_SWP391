@@ -47,7 +47,7 @@ interface ApiBuilding {
   };
   totalFloors?: number;
   status?: 'active' | 'inactive' | 'maintenance';
-  manager?: string | null;
+  manager?: string | null | { fullName?: string; _id?: string };
 }
 
 interface ApiUser {
@@ -115,8 +115,18 @@ const toBuilding = (
   managerNameById: Map<string, string>,
   overview?: ManagerOverviewData,
 ): Building => {
-  const managerId = item.manager ? String(item.manager) : '';
-  const managerName = managerNameById.get(managerId) || (managerId ? `ID: ${managerId.slice(0, 8)}` : 'Chưa gán');
+  // Handle manager field that can be a populated object, a string ID, or null
+  let managerName = 'Chưa gán';
+  
+  if (item.manager) {
+    if (typeof item.manager === 'object' && 'fullName' in item.manager) {
+      // Manager is a populated object with fullName
+      managerName = item.manager.fullName || 'Chưa gán';
+    } else if (typeof item.manager === 'string') {
+      // Manager is a string ID, look up in the map or show truncated ID
+      managerName = managerNameById.get(item.manager) || `ID: ${item.manager.slice(0, 8)}`;
+    }
+  }
 
   return {
     id: item.code || item._id,

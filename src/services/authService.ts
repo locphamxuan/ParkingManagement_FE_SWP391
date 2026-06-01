@@ -86,7 +86,7 @@ export async function loginWithBackend(input: LoginInput): Promise<AuthSession> 
 
 export async function forgotPassword(email: string): Promise<{ message: string }> {
   const payload = await requestJson<{ data?: { message?: string } }>({
-    path: '/forgot-password',
+    path: '/users/auth/forgot-password',
     method: 'POST',
     body: { email: email.trim().toLowerCase() },
   });
@@ -95,12 +95,15 @@ export async function forgotPassword(email: string): Promise<{ message: string }
     throw new Error('Không thể gửi email đặt lại mật khẩu. Vui lòng thử lại.');
   }
 
+  // Store email for reset password step
+  localStorage.setItem('pbms.forgotEmail_pending', email.trim().toLowerCase());
+
   return { message: payload.data.message };
 }
 
 export async function resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
   const payload = await requestJson<{ data?: { message?: string } }>({
-    path: '/reset-password',
+    path: '/users/auth/reset-password',
     method: 'POST',
     body: { token, newPassword },
   });
@@ -108,6 +111,9 @@ export async function resetPassword(token: string, newPassword: string): Promise
   if (!payload?.data?.message) {
     throw new Error('Không thể đặt lại mật khẩu. Vui lòng thử lại.');
   }
+
+  // Clear stored email after successful reset
+  localStorage.removeItem('pbms.forgotEmail_pending');
 
   return { message: payload.data.message };
 }

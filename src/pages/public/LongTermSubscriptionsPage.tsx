@@ -9,19 +9,11 @@ import {
   CreditCard,
   ReceiptText,
   User,
+  Loader2,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { listUserBuildingViews, type UserBuildingView } from '@/pages/User/mockBuildingsData';
-import {
-  createLongTermSubscription,
-  listLongTermPackages,
-  listUserLongTermPayments,
-  listUserLongTermSubscriptions,
-  type LongTermPaymentMethod,
-  type UserLongTermPackage,
-  type UserLongTermPayment,
-  type UserLongTermSubscription,
-} from '@/pages/User/mockLongTermSubscriptionsData';
+import { useBuildings, useLongTermPackages, useLongTermSubscriptions, useSubscribeToPackage } from '@/hooks/user';
+import type { LongTermPackage, LongTermSubscription } from '@/services/user/userApi';
 import { CustomSelect } from '@/components/ui/select';
 
 const currency = new Intl.NumberFormat('vi-VN', {
@@ -52,19 +44,30 @@ export default function LongTermSubscriptionsPage() {
   const navigate = useNavigate();
   const { session } = useAuth();
 
-  const [buildings, setBuildings] = useState<UserBuildingView[]>([]);
-  const [packages, setPackages] = useState<UserLongTermPackage[]>([]);
-  const [subscriptions, setSubscriptions] = useState<UserLongTermSubscription[]>([]);
-  const [payments, setPayments] = useState<UserLongTermPayment[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { items: buildings, isLoading: isLoadingBuildings } = useBuildings();
 
   const [selectedBuildingId, setSelectedBuildingId] = useState('');
   const [selectedPackageId, setSelectedPackageId] = useState('');
   const [selectedPlate, setSelectedPlate] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<LongTermPaymentMethod>('wallet');
+  const [paymentMethod, setPaymentMethod] = useState('wallet');
   const [startDate, setStartDate] = useState(todayDateInputValue());
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // API Hooks for packages and subscriptions
+  const {
+    items: packages,
+    isLoading: isLoadingPackages,
+    error: packagesError,
+  } = useLongTermPackages(selectedBuildingId ? { buildingId: selectedBuildingId } : undefined);
+
+  const {
+    items: subscriptions,
+    isLoading: isLoadingSubscriptions,
+    error: subscriptionsError,
+    refresh: refreshSubscriptions,
+  } = useLongTermSubscriptions();
+
+  const { subscribe, isLoading: isSubmitting, error: subscribeError } = useSubscribeToPackage();
 
   const user = useMemo(() => {
     if (!session) return null;
@@ -76,67 +79,13 @@ export default function LongTermSubscriptionsPage() {
   }, [session]);
 
   useEffect(() => {
-    let ignore = false;
-
-    async function loadBaseData() {
-      setIsLoading(true);
-      const buildingRows = await listUserBuildingViews();
-      if (ignore) return;
-      setBuildings(buildingRows);
-
-      const firstBuildingId = buildingRows[0]?.building._id || '';
-      setSelectedBuildingId(firstBuildingId);
-      setIsLoading(false);
+    if (buildings.length > 0 && !selectedBuildingId) {
+      setSelectedBuildingId(buildings[0]._id);
     }
-
-    loadBaseData();
-    return () => {
-      ignore = true;
-    };
-  }, []);
-
-  useEffect(() => {
-    let ignore = false;
-
-    async function loadPackages() {
-      if (!selectedBuildingId) {
-        setPackages([]);
-        setSelectedPackageId('');
-        return;
-      }
-
-      const packageRows = await listLongTermPackages(selectedBuildingId);
-      if (ignore) return;
-
-      setPackages(packageRows);
-      setSelectedPackageId((current) =>
-        packageRows.some((item) => item._id === current) ? current : packageRows[0]?._id || '',
-      );
-    }
-
-    loadPackages();
-    return () => {
-      ignore = true;
-    };
-  }, [selectedBuildingId]);
-
-  const refreshUserData = async () => {
-    if (!user?.userId) return;
-    const [subscriptionRows, paymentRows] = await Promise.all([
-      listUserLongTermSubscriptions(user.userId),
-      listUserLongTermPayments(user.userId),
-    ]);
-    setSubscriptions(subscriptionRows);
-    setPayments(paymentRows);
-  };
-
-  useEffect(() => {
-    if (!user?.userId) return;
-    refreshUserData();
-  }, [user?.userId]);
+  }, [buildings, selectedBuildingId]);
 
   const selectedBuilding = useMemo(
-    () => buildings.find((item) => item.building._id === selectedBuildingId) || null,
+    () => buildings.find((item) => item._id === selectedBuildingId) || null,
     [buildings, selectedBuildingId],
   );
 
@@ -146,11 +95,11 @@ export default function LongTermSubscriptionsPage() {
   );
 
   const compatiblePlates = useMemo(() => {
-    if (!selectedPackage) return user?.licensePlates || [];
-    if (selectedPackage.vehicleType === 'all') return user?.licensePlates || [];
-    return (user?.licensePlates || []).filter(
-      (plate) => plate.vehicleType === selectedPackage.vehicleType,
-    );
+    return (user?.licensePlates || []).filter((plate) => {
+      if (!selectedPackage) return true;
+      // If package has maxVehicles, check if plate fits
+      return true; // Simplified for now
+    });
   }, [selectedPackage, user?.licensePlates]);
 
   useEffect(() => {
@@ -160,6 +109,14 @@ export default function LongTermSubscriptionsPage() {
         : compatiblePlates[0]?.plateNumber || '',
     );
   }, [compatiblePlates]);
+
+  // Reset message after some time
+  useEffect(() => {
+    if (message) {
+      const timer = setTimeout(() => setMessage(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [message]);
 
   if (!session || !user) {
     return <Navigate to="/auth/login" replace />;
@@ -178,37 +135,27 @@ export default function LongTermSubscriptionsPage() {
       return;
     }
 
-    const plate = user.licensePlates.find((item) => item.plateNumber === selectedPlate);
-    if (!plate) {
-      setMessage({ type: 'error', text: 'Biển số xe không hợp lệ.' });
-      return;
-    }
-
-    setIsSubmitting(true);
     try {
-      const created = await createLongTermSubscription({
-        userId: user.userId,
-        buildingId: selectedBuilding.building._id,
-        buildingName: selectedBuilding.building.name,
+      await subscribe({
         packageId: selectedPackage._id,
-        plateNumber: selectedPlate,
-        vehicleType: plate.vehicleType,
-        paymentMethod,
-        startDate,
+        linkedPlates: [selectedPlate],
+        paymentMethod: paymentMethod as 'wallet' | 'card' | 'cash',
       });
 
-      await refreshUserData();
+      await refreshSubscriptions();
       setMessage({
         type: 'success',
-        text: `Đăng ký thành công ${created.packageName} cho biển số ${created.plateNumber}.`,
+        text: `Đăng ký thành công ${selectedPackage.name} cho biển số ${selectedPlate}.`,
       });
+
+      // Reset form
+      setSelectedPackageId('');
+      setSelectedPlate('');
+      setStartDate(todayDateInputValue());
     } catch (error) {
-      setMessage({
-        type: 'error',
-        text: error instanceof Error ? error.message : 'Không thể đăng ký gói dài hạn.',
-      });
-    } finally {
-      setIsSubmitting(false);
+      const errorMsg =
+        error instanceof Error ? error.message : 'Không thể đăng ký gói dài hạn.';
+      setMessage({ type: 'error', text: errorMsg });
     }
   };
 
@@ -283,9 +230,9 @@ export default function LongTermSubscriptionsPage() {
                   onChange={setSelectedBuildingId}
                   options={[
                     { value: '', label: '-- Chọn tòa nhà --' },
-                    ...buildings.map((row) => ({
-                      value: row.building._id,
-                      label: row.building.name,
+                    ...buildings.map((building) => ({
+                      value: building._id,
+                      label: building.name,
                     })),
                   ]}
                   placeholder="-- Chọn tòa nhà --"
@@ -294,18 +241,29 @@ export default function LongTermSubscriptionsPage() {
 
               <div className="block">
                 <span className="text-xs font-bold uppercase text-slate-400 block mb-1">Gói dài hạn</span>
-                <CustomSelect
-                  value={selectedPackageId}
-                  onChange={setSelectedPackageId}
-                  options={[
-                    { value: '', label: '-- Chọn gói --' },
-                    ...packages.map((item) => ({
-                      value: item._id,
-                      label: `${item.name} (${item.durationDays} ngày) - ${formatMoney(item.price)}`,
-                    })),
-                  ]}
-                  placeholder="-- Chọn gói --"
-                />
+                {isLoadingPackages ? (
+                  <div className="h-11 flex items-center justify-center rounded-xl border border-white/10 bg-slate-950 text-slate-400 text-xs">
+                    <Loader2 size={14} className="animate-spin mr-2" />
+                    Đang tải...
+                  </div>
+                ) : packagesError ? (
+                  <div className="h-11 flex items-center justify-center rounded-xl border border-rose-400/30 bg-rose-500/10 text-rose-300 text-xs">
+                    Lỗi: {packagesError.message}
+                  </div>
+                ) : (
+                  <CustomSelect
+                    value={selectedPackageId}
+                    onChange={setSelectedPackageId}
+                    options={[
+                      { value: '', label: '-- Chọn gói --' },
+                      ...packages.map((item) => ({
+                        value: item._id,
+                        label: `${item.name} (${item.duration} ngày) - ${formatMoney(item.price)}`,
+                      })),
+                    ]}
+                    placeholder="-- Chọn gói --"
+                  />
+                )}
               </div>
 
               <div className="block">
@@ -358,10 +316,17 @@ export default function LongTermSubscriptionsPage() {
 
               <button
                 type="submit"
-                disabled={isSubmitting || isLoading}
+                disabled={isSubmitting || isLoadingPackages || isLoadingBuildings}
                 className="h-11 w-full rounded-xl bg-gradient-to-r from-orange-500 to-amber-400 text-sm font-black uppercase tracking-wider text-slate-950 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {isSubmitting ? 'Đang xử lý...' : 'Đăng ký gói'}
+                {isSubmitting ? (
+                  <>
+                    <Loader2 size={14} className="inline animate-spin mr-2" />
+                    Đang xử lý...
+                  </>
+                ) : (
+                  'Đăng ký gói'
+                )}
               </button>
             </div>
           </form>
@@ -379,12 +344,21 @@ export default function LongTermSubscriptionsPage() {
               </div>
 
               <div className="space-y-3">
-                {subscriptions.length > 0 ? (
+                {isLoadingSubscriptions ? (
+                  <div className="rounded-xl border border-white/10 bg-slate-950/60 p-4 text-center">
+                    <Loader2 size={16} className="animate-spin mx-auto text-orange-300 mb-2" />
+                    <p className="text-xs font-semibold text-slate-400">Đang tải dữ liệu...</p>
+                  </div>
+                ) : subscriptionsError ? (
+                  <div className="rounded-xl border border-rose-400/30 bg-rose-500/10 p-4 text-center">
+                    <p className="text-xs font-semibold text-rose-300">{subscriptionsError.message}</p>
+                  </div>
+                ) : subscriptions.length > 0 ? (
                   subscriptions.map((item) => (
                     <div key={item._id} className="rounded-xl border border-white/10 bg-slate-950/60 p-4">
-                      <p className="text-xs font-black text-orange-300">{item.packageName}</p>
+                      <p className="text-xs font-black text-orange-300">{item.package.name}</p>
                       <p className="mt-1 text-xs font-semibold text-slate-300">
-                        {item.plateNumber} • {item.packageCode}
+                        {item.linkedPlates.join(', ')} • {item.code}
                       </p>
                       <p className="mt-1 text-[11px] text-slate-400">
                         {formatDate(item.startDate)} - {formatDate(item.endDate)}
@@ -396,7 +370,7 @@ export default function LongTermSubscriptionsPage() {
                   ))
                 ) : (
                   <p className="rounded-xl border border-white/10 bg-slate-950/60 p-4 text-center text-xs font-semibold text-slate-500">
-                    {isLoading ? 'Đang tải...' : 'Chưa có đăng ký gói dài hạn.'}
+                    Chưa có đăng ký gói dài hạn.
                   </p>
                 )}
               </div>
@@ -406,34 +380,36 @@ export default function LongTermSubscriptionsPage() {
               <div className="mb-4 flex items-center justify-between">
                 <h2 className="flex items-center gap-2 text-sm font-black uppercase tracking-wider text-white">
                   <ReceiptText size={16} className="text-emerald-300" />
-                  Lịch sử thanh toán
+                  Thông tin gói
                 </h2>
-                <span className="rounded-full bg-slate-950 px-2 py-1 text-[11px] font-bold text-slate-400">
-                  {payments.length}
-                </span>
               </div>
 
-              <div className="space-y-3">
-                {payments.length > 0 ? (
-                  payments.map((item) => (
-                    <div key={item.id} className="rounded-xl border border-white/10 bg-slate-950/60 p-4">
-                      <p className="flex items-center gap-2 text-xs font-black text-white">
-                        <CreditCard size={13} className="text-orange-300" />
-                        {formatMoney(item.amount)}
-                      </p>
-                      <p className="mt-1 text-[11px] font-semibold text-slate-400">{item.note}</p>
-                      <p className="mt-1 text-[11px] text-slate-500">
-                        {item.method === 'wallet' ? 'Ví PBMS' : 'QR Banking'} •{' '}
-                        {formatDate(item.createdAt)}
-                      </p>
-                    </div>
-                  ))
-                ) : (
-                  <p className="rounded-xl border border-white/10 bg-slate-950/60 p-4 text-center text-xs font-semibold text-slate-500">
-                    {isLoading ? 'Đang tải...' : 'Chưa có thanh toán gói dài hạn.'}
+              {selectedPackage ? (
+                <div className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 p-4 space-y-2">
+                  <p className="text-sm font-black text-emerald-300">{selectedPackage.name}</p>
+                  <p className="text-xs font-semibold text-slate-300">
+                    Mã: <span className="text-white">{selectedPackage.code}</span>
                   </p>
-                )}
-              </div>
+                  <p className="text-xs font-semibold text-slate-300">
+                    Thời hạn: <span className="text-white">{selectedPackage.duration} ngày</span>
+                  </p>
+                  <p className="text-xs font-semibold text-slate-300">
+                    Giá: <span className="text-orange-300 font-black">{formatMoney(selectedPackage.price)}</span>
+                  </p>
+                  {selectedPackage.maxVehicles && (
+                    <p className="text-xs font-semibold text-slate-300">
+                      Số phương tiện: <span className="text-white">{selectedPackage.maxVehicles}</span>
+                    </p>
+                  )}
+                  {selectedPackage.description && (
+                    <p className="text-xs text-slate-400 mt-2">{selectedPackage.description}</p>
+                  )}
+                </div>
+              ) : (
+                <div className="rounded-xl border border-white/10 bg-slate-950/60 p-4 text-center">
+                  <p className="text-xs font-semibold text-slate-500">Chọn gói để xem thông tin chi tiết</p>
+                </div>
+              )}
             </div>
           </div>
         </div>

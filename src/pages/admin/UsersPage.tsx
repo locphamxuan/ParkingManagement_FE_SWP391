@@ -263,7 +263,7 @@ export function UsersPage() {
         onQueryChange={setQuery}
         filterValue={roleFilter}
         onFilterChange={setRoleFilter}
-        filterOptions={['all', 'admin', 'manager', 'staff', 'user']}
+        filterOptions={['all', 'admin', 'user']}
       />
 
       <DataTable title="Người dùng" rows={filtered} columns={columns} />
@@ -294,8 +294,6 @@ export function UsersPage() {
             onChange={(e) => setForm((prev) => ({ ...prev, role: e.target.value as UserRecord['role'] }))}
           >
             <option value="admin">Admin</option>
-            <option value="manager">Manager</option>
-            <option value="staff">Staff</option>
             <option value="user">User</option>
           </select>
         </div>
@@ -338,8 +336,6 @@ export function UsersPage() {
             onChange={(e) => setForm((prev) => ({ ...prev, role: e.target.value as UserRecord['role'] }))}
           >
             <option value="admin">Admin</option>
-            <option value="manager">Manager</option>
-            <option value="staff">Staff</option>
             <option value="user">User</option>
           </select>
         </div>
