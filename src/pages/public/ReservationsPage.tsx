@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   AlertTriangle,
   ArrowLeft,
@@ -17,8 +17,10 @@ import {
   X,
 } from 'lucide-react';
 import { ParkingMap2D } from '@/components/shared/ParkingMap2D';
+import { ParkingMap3D } from '@/components/shared/ParkingMap3D';
 import { useAuth } from '@/hooks/useAuth';
 import { CustomSelect } from '@/components/ui/select';
+import { requestJson } from '@/services/pbmsApi';
 import {
   useBuildings,
   useReservations,
@@ -87,11 +89,17 @@ export default function ReservationsPage() {
   const [selectedVehicleType, setSelectedVehicleType] = useState<string>('');
   const [scheduledAt, setScheduledAt] = useState(defaultScheduleValue());
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
+  const [selectedSlotCode, setSelectedSlotCode] = useState<string | null>(null);
   const [selectedPlate, setSelectedPlate] = useState('');
   const [bookingError, setBookingError] = useState<string | null>(null);
   const [bookingSuccess, setBookingSuccess] = useState<string | null>(null);
   const [showSlotModal, setShowSlotModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [viewMode, setViewMode] = useState<'2d' | '3d'>('3d');
+
+  const [floors, setFloors] = useState<any[]>([]);
+  const [slots, setSlots] = useState<any[]>([]);
+  const [isLoadingSlots, setIsLoadingSlots] = useState(false);
 
   const user = useMemo(() => {
     if (!session) return null;
@@ -126,6 +134,103 @@ export default function ReservationsPage() {
     [buildings, selectedBuildingId]
   );
 
+  // Fetch real floors and slots from Backend API in parallel
+  useEffect(() => {
+    if (!selectedBuildingId) {
+      setFloors([]);
+      setSlots([]);
+      return;
+    }
+
+    let active = true;
+    async function loadData() {
+      setIsLoadingSlots(true);
+      setBookingError(null);
+      try {
+        // Fetch floors with authorization token
+        const floorsRes = await requestJson<any>({
+          path: `/users/buildings/${selectedBuildingId}/floors`,
+          token: session?.token,
+        });
+        // Real Backend returns .floors inside .data
+        const floorItems = floorsRes.data?.floors || floorsRes.floors || [];
+        if (!active) return;
+        setFloors(floorItems);
+
+        // Fetch slots for each floor in parallel with authorization token
+        const allSlotsPromises = floorItems.map(async (floor: any) => {
+          const floorId = floor._id || floor.code || String(floor.number);
+          const slotsRes = await requestJson<any>({
+            path: `/users/buildings/${selectedBuildingId}/floors/${floorId}/slots`,
+            token: session?.token,
+          });
+          // Real Backend returns .slots inside .data
+          const slotItems = slotsRes.data?.slots || slotsRes.slots || [];
+          // Tag each slot with its floorCode
+          return slotItems.map((s: any) => ({
+            ...s,
+            floorCode: floor.code || String(floor.number),
+          }));
+        });
+
+        const resolvedSlotsArrays = await Promise.all(allSlotsPromises);
+        if (!active) return;
+        const flatSlots = resolvedSlotsArrays.flat();
+        setSlots(flatSlots);
+      } catch (error) {
+        if (active) {
+          setBookingError(error instanceof Error ? error.message : 'Không thể tải sơ đồ bãi đỗ.');
+        }
+      } finally {
+        if (active) {
+          setIsLoadingSlots(false);
+        }
+      }
+    }
+
+    loadData();
+    return () => {
+      active = false;
+    };
+  }, [selectedBuildingId]);
+
+  // Compute availability and status for ParkingMap2D and ParkingMap3D
+  const mappedSlots = useMemo(() => {
+    return slots.map((slot) => {
+      // Check if this slot matches current user's active reservations
+      const userRes = activeReservations.find(
+        (r) => r.slot?._id === slot._id || r.slot?.code === slot.code
+      );
+
+      // Support both populated Mongoose object and raw string format
+      const rawVehicleCode = slot.vehicleType && typeof slot.vehicleType === 'object'
+        ? (slot.vehicleType as any).code
+        : slot.vehicleType;
+
+      const slotVehicleCode = rawVehicleCode ? String(rawVehicleCode).toLowerCase() : '';
+      const targetVehicleType = selectedVehicleType ? String(selectedVehicleType).toLowerCase() : '';
+
+      let status: 'available' | 'unavailable' | 'reserved' = 'unavailable';
+      
+      if (userRes) {
+        status = 'reserved';
+      } else if (
+        slot.status === 'available' &&
+        slot.reservable !== false
+      ) {
+        status = 'available';
+      }
+
+      return {
+        code: slot.code,
+        status,
+        vehicleType: (userRes?.vehicleType?.code || rawVehicleCode || '').toLowerCase() as 'car' | 'motorcycle' | undefined,
+        plateNumber: userRes?.plateNumber,
+        floorCode: slot.floorCode,
+      };
+    });
+  }, [slots, activeReservations, selectedVehicleType]);
+
   const minDateTime = useMemo(() => {
     const leadMinutes = 15;
     return toDateTimeLocalValue(new Date(Date.now() + leadMinutes * 60_000));
@@ -146,6 +251,7 @@ export default function ReservationsPage() {
   const handleBuildingChange = (buildingId: string) => {
     setSelectedBuildingId(buildingId);
     setSelectedSlot(null);
+    setSelectedSlotCode(null);
     setSelectedPlate('');
     setBookingError(null);
     setBookingSuccess(null);
@@ -154,7 +260,12 @@ export default function ReservationsPage() {
   const handleSlotClick = (slotCode: string) => {
     setBookingError(null);
     setBookingSuccess(null);
-    setSelectedSlot(slotCode);
+    
+    const foundSlot = slots.find((s) => s.code === slotCode);
+    if (!foundSlot) return;
+
+    setSelectedSlot(foundSlot._id);
+    setSelectedSlotCode(foundSlot.code);
     setShowSlotModal(false);
 
     const firstAvailablePlate = plateOptions.find(
@@ -192,17 +303,28 @@ export default function ReservationsPage() {
       return;
     }
 
+    const selectedSlotObj = slots.find((s) => s._id === selectedSlot || s.code === selectedSlotCode);
+    const resolvedVehicleTypeId = selectedSlotObj?.vehicleType
+      ? (typeof selectedSlotObj.vehicleType === 'object'
+        ? selectedSlotObj.vehicleType._id
+        : selectedSlotObj.vehicleType)
+      : undefined;
+
     try {
       await createReservation({
         plateNumber: selectedPlate,
         buildingId: selectedBuilding._id,
-        slotId: selectedSlot,
+        slotId: selectedSlot || undefined,
         reservationDate: scheduledAt,
+        startTime: scheduledAt,
+        vehicleTypeId: resolvedVehicleTypeId,
+        vehicleType: selectedVehicleType ? selectedVehicleType.toUpperCase() : undefined,
       });
 
       await refreshReservations();
-      setBookingSuccess(`Đặt chỗ thành công: ${selectedBuilding.name} - ${selectedSlot} - ${selectedPlate}.`);
+      setBookingSuccess(`Đặt chỗ thành công: ${selectedBuilding.name} - ${selectedSlotCode} - ${selectedPlate}.`);
       setSelectedSlot(null);
+      setSelectedSlotCode(null);
       setSelectedPlate('');
       setScheduledAt(defaultScheduleValue());
     } catch (error) {
@@ -340,6 +462,7 @@ export default function ReservationsPage() {
                     onChange={(val) => {
                       setSelectedVehicleType(val);
                       setSelectedSlot(null);
+                      setSelectedSlotCode(null);
                       setSelectedPlate('');
                     }}
                     options={[
@@ -397,7 +520,7 @@ export default function ReservationsPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="rounded-xl border border-white/10 bg-slate-950/60 p-3 shadow-inner">
                     <p className="text-[10px] font-bold uppercase text-slate-500">Ô đỗ đã chọn</p>
-                    <p className="mt-1 text-lg font-mono font-black text-orange-400">{selectedSlot || '--'}</p>
+                    <p className="mt-1 text-lg font-mono font-black text-orange-400">{selectedSlotCode || '--'}</p>
                   </div>
                   <div className="rounded-xl border border-white/10 bg-slate-950/60 p-3 shadow-inner">
                     <p className="text-[10px] font-bold uppercase text-slate-500">Biển số xe</p>
@@ -451,27 +574,93 @@ export default function ReservationsPage() {
                 </motion.button>
               </div>
 
-              <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
-                <p className="text-sm text-slate-400 mb-4">Chọn ô đỗ trên bản đồ dưới đây</p>
-                <ParkingMap2D
-                  interactive
-                  slots={[
-                    { code: 'A-01', status: 'available' },
-                    { code: 'A-02', status: 'available' },
-                    { code: 'A-03', status: 'available' },
-                    { code: 'B-01', status: 'available' },
-                    { code: 'B-02', status: 'available' },
-                  ]}
-                  selectedSlot={selectedSlot}
-                  onSlotClick={handleSlotClick}
-                />
+              {/* View Mode Toggle Control */}
+              <div className="mb-6 flex justify-center">
+                <div className="bg-slate-950/80 border border-white/5 rounded-2xl p-1.5 flex gap-1.5 backdrop-blur-md shadow-inner">
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('2d')}
+                    className={`
+                      px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 flex items-center gap-1.5
+                      ${
+                        viewMode === '2d'
+                          ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 shadow-[0_0_15px_rgba(249,115,22,0.45)] border border-orange-400/30'
+                          : 'text-slate-400 hover:text-white hover:bg-white/5 border border-transparent'
+                      }
+                    `}
+                  >
+                    🗺️ Sơ đồ 2D
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('3d')}
+                    className={`
+                      px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 flex items-center gap-1.5
+                      ${
+                        viewMode === '3d'
+                          ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 shadow-[0_0_15px_rgba(249,115,22,0.45)] border border-orange-400/30'
+                          : 'text-slate-400 hover:text-white hover:bg-white/5 border border-transparent'
+                      }
+                    `}
+                  >
+                    💎 Sơ đồ 3D Hologram
+                  </button>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4 overflow-hidden min-h-[420px] flex flex-col">
+                {isLoadingSlots ? (
+                  <div className="flex-grow flex items-center justify-center py-12">
+                    <p className="text-sm text-slate-400 animate-pulse font-semibold">Đang tải sa bàn đỗ xe 3D Hologram...</p>
+                  </div>
+                ) : slots.length === 0 ? (
+                  <div className="flex-grow flex items-center justify-center py-12">
+                    <p className="text-sm text-slate-500">Không tìm thấy ô đỗ nào cho tòa nhà này.</p>
+                  </div>
+                ) : (
+                  <AnimatePresence mode="wait">
+                    {viewMode === '2d' ? (
+                      <motion.div
+                        key="2d-view"
+                        initial={{ opacity: 0, scale: 0.98 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.98 }}
+                        transition={{ duration: 0.25, ease: 'easeInOut' }}
+                        className="w-full h-full flex-grow"
+                      >
+                        <ParkingMap2D
+                          interactive
+                          slots={mappedSlots}
+                          selectedSlot={selectedSlotCode}
+                          onSlotClick={handleSlotClick}
+                        />
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key="3d-view"
+                        initial={{ opacity: 0, scale: 0.98 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.98 }}
+                        transition={{ duration: 0.25, ease: 'easeInOut' }}
+                        className="w-full h-full flex-grow"
+                      >
+                        <ParkingMap3D
+                          interactive
+                          slots={mappedSlots}
+                          selectedSlot={selectedSlotCode}
+                          onSlotClick={handleSlotClick}
+                        />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                )}
               </div>
 
               <div className="mt-4 flex items-center justify-between rounded-2xl border border-white/10 bg-slate-950/50 p-4">
                 <p className="text-sm font-semibold text-slate-300">
-                  {selectedSlot ? (
+                  {selectedSlotCode ? (
                     <>
-                      <span className="text-orange-400 font-black">Slot {selectedSlot}</span>
+                      <span className="text-orange-400 font-black">Slot {selectedSlotCode}</span>
                       <span className="text-slate-400 ml-2">đã được chọn</span>
                     </>
                   ) : (

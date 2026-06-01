@@ -121,6 +121,9 @@ export const userApi = {
       plateNumber: string;
       buildingId: string;
       vehicleTypeId?: string;
+      vehicleType?: string;
+      startTime?: string;
+      endTime?: string;
       slotId?: string;
       reservationDate: string;
     }) =>
