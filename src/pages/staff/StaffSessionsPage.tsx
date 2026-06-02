@@ -1,16 +1,16 @@
 import { useCallback, useState } from 'react';
-import { Plus, LogOut, AlertCircle, Search } from 'lucide-react';
+import { Plus, LogOut, AlertCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { DataTable, type DataColumn } from '@/components/shared/DataTable';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { useBuildingContext } from '@/hooks/useBuildingContext';
 import { useStaffSessions } from '@/hooks/staff/useStaffSessions';
 import { SessionCheckInModal } from '@/components/staff/SessionCheckInModal';
 import { SessionCheckOutModal } from '@/components/staff/SessionCheckOutModal';
+import { PaymentQRModal } from '@/components/staff/PaymentQRModal';
 import { IncidentReportForm } from '@/components/staff/IncidentReportForm';
-import { staffApi, type ParkingSession } from '@/services/staff/staffApi';
+import { staffApi, type ParkingSession, type PaymentData } from '@/services/staff/staffApi';
 
 const fmt = (n: number | null | undefined) =>
   n != null ? `${n.toLocaleString('vi-VN')} đ` : '—';
@@ -28,23 +28,33 @@ export function StaffSessionsPage() {
     setStatusFilter,
     checkIn,
     checkOut,
+    lookupPlate,
+    lookupUser,
+    initiatePayment,
+    getPaymentStatus,
     refresh,
   } = useStaffSessions({ buildingId });
 
   // Modal states
   const [showCheckInModal, setShowCheckInModal] = useState(false);
   const [showCheckOutModal, setShowCheckOutModal] = useState(false);
+  const [showPaymentQRModal, setShowPaymentQRModal] = useState(false);
   const [showIncidentModal, setShowIncidentModal] = useState(false);
   const [selectedSession, setSelectedSession] = useState<ParkingSession | null>(null);
-  const [searchPlate, setSearchPlate] = useState('');
+  const [paymentData, setPaymentData] = useState<PaymentData | null>(null);
   const [isCheckInLoading, setIsCheckInLoading] = useState(false);
   const [isCheckOutLoading, setIsCheckOutLoading] = useState(false);
   const [isIncidentLoading, setIsIncidentLoading] = useState(false);
 
-  const handleCheckIn = async (plateNumber: string, vehicleType?: string, gate?: string) => {
+  const handleCheckIn = async (
+    plateNumber: string,
+    vehicleType?: string,
+    gate?: string,
+    forceCheckIn?: boolean
+  ) => {
     setIsCheckInLoading(true);
     try {
-      await checkIn(plateNumber, vehicleType, gate);
+      await checkIn(plateNumber, vehicleType, gate, forceCheckIn);
     } finally {
       setIsCheckInLoading(false);
     }
@@ -54,9 +64,42 @@ export function StaffSessionsPage() {
     if (!selectedSession) return;
     setIsCheckOutLoading(true);
     try {
-      await checkOut(selectedSession._id, paymentMethod);
+      if (paymentMethod === 'cash' || paymentMethod === 'wallet') {
+        // Thực hiện check-out ngay
+        await checkOut(selectedSession._id, paymentMethod);
+        setShowCheckOutModal(false);
+        setSelectedSession(null);
+      }
+      // QR sẽ xử lý ở handleInitiatePayment
     } finally {
       setIsCheckOutLoading(false);
+    }
+  };
+
+  const handleInitiatePayment = async (sessionId: string) => {
+    setIsCheckOutLoading(true);
+    try {
+      const data = await initiatePayment(sessionId);
+      setPaymentData(data);
+      setShowCheckOutModal(false);
+      setShowPaymentQRModal(true);
+    } catch (err) {
+      // Error handled in hook
+    } finally {
+      setIsCheckOutLoading(false);
+    }
+  };
+
+  const handlePaymentSuccess = async () => {
+    if (!selectedSession) return;
+    // Complete checkout with QR payment method
+    try {
+      await checkOut(selectedSession._id, 'qr');
+      setShowPaymentQRModal(false);
+      setSelectedSession(null);
+      setPaymentData(null);
+    } catch (err) {
+      // Error handled
     }
   };
 
@@ -70,7 +113,7 @@ export function StaffSessionsPage() {
     setIsIncidentLoading(true);
     try {
       await staffApi.incidents(data);
-      await refresh(); // Refresh list
+      await refresh();
     } finally {
       setIsIncidentLoading(false);
     }
@@ -206,6 +249,8 @@ export function StaffSessionsPage() {
         isOpen={showCheckInModal}
         onClose={() => setShowCheckInModal(false)}
         onSubmit={handleCheckIn}
+        onLookup={lookupPlate}
+        onLookupUser={lookupUser}
         loading={isCheckInLoading}
       />
 
@@ -217,7 +262,24 @@ export function StaffSessionsPage() {
           setSelectedSession(null);
         }}
         onSubmit={handleCheckOut}
+        onInitiatePayment={handleInitiatePayment}
         loading={isCheckOutLoading}
+      />
+
+      <PaymentQRModal
+        isOpen={showPaymentQRModal}
+        onClose={() => {
+          setShowPaymentQRModal(false);
+          setPaymentData(null);
+          setSelectedSession(null);
+        }}
+        qrCode={paymentData?.qrCode}
+        checkoutUrl={paymentData?.checkoutUrl}
+        orderCode={paymentData?.orderCode}
+        amount={paymentData?.amount}
+        plateNumber={paymentData?.plateNumber}
+        onPaymentSuccess={handlePaymentSuccess}
+        onCheckStatus={getPaymentStatus}
       />
 
       <IncidentReportForm

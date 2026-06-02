@@ -79,6 +79,37 @@ export interface Dashboard {
   activeShifts: number;
 }
 
+export interface PlateInfo {
+  plateNumber: string;
+  hasAccount: boolean;
+  user?: {
+    id: string;
+    fullName: string;
+    email: string;
+    phone: string;
+    walletBalance: number;
+  };
+  activeSession?: {
+    id: string;
+    building: string;
+    entryTime: string;
+  };
+}
+
+export interface PaymentData {
+  checkoutUrl: string;
+  qrCode: string;
+  orderCode: number;
+  amount: number;
+  plateNumber: string;
+  entryTime: string;
+}
+
+export interface PaymentStatus {
+  status: 'success' | 'pending' | 'cancelled' | string;
+  settled: boolean;
+}
+
 interface Wrap<T> {
   data: T;
 }
@@ -122,10 +153,10 @@ export const staffApi = {
 
     checkIn: (
       buildingId: string,
-      body: { plateNumber: string; vehicleType?: string; gate?: string }
+      body: { plateNumber: string; vehicleType?: string; gate?: string; forceCheckIn?: boolean }
     ) =>
       api.post<Wrap<{ item: ParkingSession }>>(
-        `/staff/buildings/${buildingId}/sessions/check-in`,
+        `/staff/parking-sessions/check-in`,
         body
       ),
 
@@ -133,6 +164,27 @@ export const staffApi = {
       api.patch<Wrap<{ item: ParkingSession }>>(
         `/staff/buildings/${buildingId}/sessions/${sessionId}/check-out`,
         body
+      ),
+
+    initiatePayment: (sessionId: string) =>
+      api.post<Wrap<PaymentData>>(
+        `/staff/parking-sessions/${sessionId}/initiate-payment`,
+        {}
+      ),
+
+    getPaymentStatus: (orderCode: number) =>
+      api.get<Wrap<PaymentStatus>>(
+        `/staff/parking-sessions/payment/${orderCode}/status`
+      ),
+
+    lookupPlate: (plateNumber: string) =>
+      api.get<Wrap<PlateInfo>>(
+        `/staff/parking-sessions/lookup-plate/${plateNumber}`
+      ),
+
+    lookupUser: (qrCode: string) =>
+      api.get<Wrap<PlateInfo>>(
+        `/staff/users/lookup-qr/${qrCode}`
       ),
   },
 

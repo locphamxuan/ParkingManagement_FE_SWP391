@@ -33,6 +33,7 @@ import { ManagerPricingPage } from '@/pages/manager/ManagerPricingPage';
 import { ManagerReservationPolicyPage } from '@/pages/manager/ManagerReservationPolicyPage';
 import { ManagerPackagesPage } from '@/pages/manager/ManagerPackagesPage';
 import { ManagerShiftsPage } from '@/pages/manager/ManagerShiftsPage';
+import { ManagerStaffShiftsPage } from '@/pages/manager/ManagerStaffShiftsPage';
 import { StaffLayout } from '@/layouts/StaffLayout';
 import { StaffDashboardPage } from '@/pages/staff/StaffDashboardPage';
 import { StaffSessionsPage } from '@/pages/staff/StaffSessionsPage';
@@ -71,6 +72,7 @@ export function AppRouter() {
           <Route path="reservation-policy" element={<ManagerReservationPolicyPage />} />
           <Route path="packages" element={<ManagerPackagesPage />} />
           <Route path="shifts" element={<ManagerShiftsPage />} />
+          <Route path="staff-shifts" element={<ManagerStaffShiftsPage />} />
           <Route
             path="settings"
             element={
