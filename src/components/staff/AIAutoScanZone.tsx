@@ -15,8 +15,9 @@ const OCR_API_URL = 'https://api.ocr.space/parse';
 function normalizePlate(text: string): string | null {
   // Pattern: 2 digits + 1-2 letters + 3-5 digits
   // Examples: 29A-12345, 30AB-1234, 51F-99999
+  const upperText = text.toUpperCase();
   const pattern = /(\d{2})[^\w]*([A-Z]{1,2})[^\w]*(\d{3,5})/;
-  const matches = pattern.exec(text);
+  const matches = pattern.exec(upperText);
   
   if (matches) {
     // Format: 29A-12345
@@ -46,7 +47,7 @@ async function recognizePlateFromImage(imageBase64: string): Promise<string | nu
       throw new Error(data.ErrorMessage || 'OCR processing failed');
     }
 
-    const text = data.ParsedText || '';
+    const text = data.ParsedResults?.[0]?.ParsedText || data.ParsedText || '';
     const plate = normalizePlate(text);
 
     return plate;

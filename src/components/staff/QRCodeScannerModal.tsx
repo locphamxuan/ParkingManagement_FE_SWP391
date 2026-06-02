@@ -258,7 +258,6 @@ export function QRCodeScannerModal({
             muted
             crossOrigin="anonymous"
           />
-          <canvas ref={canvasRef} className="hidden" />
 
           {/* Scanning overlay */}
           {isScanning && !scannedCode && (
@@ -386,6 +385,9 @@ export function QRCodeScannerModal({
         <p className="text-xs text-muted-foreground text-center mt-4">
           💡 Cho phép truy cập camera để sử dụng tính năng này
         </p>
+        
+        {/* Hidden canvas for QR parsing */}
+        <canvas ref={canvasRef} className="hidden" />
       </div>
     </Modal>
   );

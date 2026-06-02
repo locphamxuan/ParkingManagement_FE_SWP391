@@ -12,8 +12,9 @@ const OCR_API_KEY = 'K87161803788957';
 const OCR_API_URL = 'https://api.ocr.space/parse';
 
 function normalizePlate(text: string): string | null {
+  const upperText = text.toUpperCase();
   const pattern = /(\d{2})[^\w]*([A-Z]{1,2})[^\w]*(\d{3,5})/;
-  const matches = pattern.exec(text);
+  const matches = pattern.exec(upperText);
   
   if (matches) {
     return `${matches[1]}${matches[2]}-${matches[3]}`;
@@ -42,7 +43,7 @@ async function recognizePlateFromImage(imageBase64: string): Promise<string | nu
       throw new Error(data.ErrorMessage || 'OCR processing failed');
     }
 
-    const text = data.ParsedText || '';
+    const text = data.ParsedResults?.[0]?.ParsedText || data.ParsedText || '';
     const plate = normalizePlate(text);
 
     return plate;
