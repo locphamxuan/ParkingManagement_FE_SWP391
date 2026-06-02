@@ -19,6 +19,7 @@ interface UseStaffSessionsReturn {
   checkOut: (sessionId: string, paymentMethod: string, options?: any) => Promise<ParkingSession>;
   searchByPlate: (plate: string) => Promise<ParkingSession[]>;
   lookupPlate: (plate: string) => Promise<PlateInfo>;
+  lookupUser: (qrCode: string) => Promise<PlateInfo>;
   initiatePayment: (sessionId: string) => Promise<PaymentData>;
   getPaymentStatus: (orderCode: number) => Promise<PaymentStatus>;
   refresh: () => Promise<void>;
@@ -147,6 +148,37 @@ export function useStaffSessions({
     }
   }, []);
 
+  const lookupUser = useCallback(async (qrCode: string) => {
+    try {
+      const response = await staffApi.sessions.lookupUser(qrCode);
+      const data = response.data;
+      
+      // Extract plateNumber from licensePlates array
+      const plateNumber = data.user?.licensePlates?.[0]?.plateNumber || '';
+      
+      // If no plate found, return error state
+      if (!plateNumber) {
+        return { plateNumber: '', hasAccount: data.hasAccount, user: data.user };
+      }
+      
+      return {
+        plateNumber,
+        hasAccount: data.hasAccount,
+        user: {
+          id: data.user?.id,
+          fullName: data.user?.fullName,
+          email: data.user?.email,
+          phone: data.user?.phone,
+          walletBalance: data.user?.walletBalance || 0,
+        },
+        activeSession: data.activeSessions?.[0],
+      };
+    } catch (err) {
+      // Silent fail for lookup - not critical
+      return { plateNumber: '', hasAccount: false };
+    }
+  }, []);
+
   const initiatePayment = useCallback(async (sessionId: string) => {
     setLoading(true);
     setError(null);
@@ -193,6 +225,7 @@ export function useStaffSessions({
     checkOut,
     searchByPlate,
     lookupPlate,
+    lookupUser,
     initiatePayment,
     getPaymentStatus,
     refresh,

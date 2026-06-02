@@ -13,6 +13,7 @@ interface SessionCheckInModalProps {
   onClose: () => void;
   onSubmit: (plateNumber: string, vehicleType?: string, gate?: string, forceCheckIn?: boolean) => Promise<void>;
   onLookup?: (plate: string) => Promise<PlateInfo>;
+  onLookupUser?: (qrCode: string) => Promise<PlateInfo>;
   loading?: boolean;
 }
 
@@ -21,6 +22,7 @@ export function SessionCheckInModal({
   onClose,
   onSubmit,
   onLookup,
+  onLookupUser,
   loading = false,
 }: SessionCheckInModalProps) {
   const [scanMode, setScanMode] = useState<'plate' | 'qr'>('plate');
@@ -108,17 +110,21 @@ export function SessionCheckInModal({
     setLookingUp(true);
 
     try {
-      // QR code contains plate number, lookup using existing endpoint
-      if (onLookup) {
-        const data = await onLookup(qrCode);
+      // QR code lookup using dedicated endpoint
+      if (onLookupUser) {
+        const data = await onLookupUser(qrCode);
 
         // Show confirmation popup with user info
         if (data?.plateNumber) {
           setTempQRData(data);
           setShowQRModal(false);
           setShowQRConfirmation(true);
+        } else if (data?.user && !data.plateNumber) {
+          // User found but no license plate registered
+          setError(`❌ Tài khoản "${data.user?.fullName}" không có biển số xe nào đăng ký`);
+          setShowQRConfirmation(false);
         } else {
-          setError('QR code không hợp lệ hoặc không liên kết với xe nào');
+          setError('QR code không hợp lệ hoặc không liên kết với tài khoản nào');
           setShowQRConfirmation(false);
         }
       } else {

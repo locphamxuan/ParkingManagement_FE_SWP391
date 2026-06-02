@@ -29,6 +29,7 @@ export function StaffSessionsPage() {
     checkIn,
     checkOut,
     lookupPlate,
+    lookupUser,
     initiatePayment,
     getPaymentStatus,
     refresh,
@@ -249,6 +250,7 @@ export function StaffSessionsPage() {
         onClose={() => setShowCheckInModal(false)}
         onSubmit={handleCheckIn}
         onLookup={lookupPlate}
+        onLookupUser={lookupUser}
         loading={isCheckInLoading}
       />
 
