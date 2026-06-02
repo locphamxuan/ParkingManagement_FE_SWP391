@@ -13,6 +13,7 @@ import {
   Truck,
   User,
   Users,
+  Clock,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/utils/cn';
@@ -33,6 +34,7 @@ const modules = [
   { to: 'reservation-policy', label: 'Đặt chỗ', icon: MapPin },
   { to: 'packages', label: 'Gói', icon: Package },
   { to: 'shifts', label: 'Ca trực', icon: Users },
+  { to: 'staff-shifts', label: 'Gán Staff', icon: Clock },
   { to: 'feedbacks', label: 'Phản hồi', icon: MessageSquare },
   { to: 'settings', label: 'Cài đặt', icon: ShieldAlert },
 ] as const;

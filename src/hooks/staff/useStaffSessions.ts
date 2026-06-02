@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { staffApi, type ParkingSession } from '@/services/staff/staffApi';
+import { staffApi, type ParkingSession, type PlateInfo, type PaymentData, type PaymentStatus } from '@/services/staff/staffApi';
 import { ApiError } from '@/services/apiClient';
 
 interface UseStaffSessionsOptions {
@@ -15,9 +15,12 @@ interface UseStaffSessionsReturn {
   setStatusFilter: (status: string) => void;
   
   // Actions
-  checkIn: (plateNumber: string, vehicleType?: string, gate?: string) => Promise<ParkingSession>;
-  checkOut: (sessionId: string, paymentMethod: string) => Promise<ParkingSession>;
+  checkIn: (plateNumber: string, vehicleType?: string, gate?: string, forceCheckIn?: boolean) => Promise<ParkingSession>;
+  checkOut: (sessionId: string, paymentMethod: string, options?: any) => Promise<ParkingSession>;
   searchByPlate: (plate: string) => Promise<ParkingSession[]>;
+  lookupPlate: (plate: string) => Promise<PlateInfo>;
+  initiatePayment: (sessionId: string) => Promise<PaymentData>;
+  getPaymentStatus: (orderCode: number) => Promise<PaymentStatus>;
   refresh: () => Promise<void>;
 }
 
@@ -54,7 +57,7 @@ export function useStaffSessions({
   }, [buildingId, statusFilter]);
 
   const checkIn = useCallback(
-    async (plateNumber: string, vehicleType?: string, gate?: string) => {
+    async (plateNumber: string, vehicleType?: string, gate?: string, forceCheckIn?: boolean) => {
       setLoading(true);
       setError(null);
       
@@ -63,6 +66,7 @@ export function useStaffSessions({
           plateNumber,
           vehicleType,
           gate,
+          forceCheckIn,
         });
         
         // Cập nhật list
@@ -133,6 +137,45 @@ export function useStaffSessions({
     }
   }, []);
 
+  const lookupPlate = useCallback(async (plate: string) => {
+    try {
+      const response = await staffApi.sessions.lookupPlate(plate);
+      return response.data;
+    } catch (err) {
+      // Silent fail for lookup - not critical
+      return { plateNumber: plate, hasAccount: false };
+    }
+  }, []);
+
+  const initiatePayment = useCallback(async (sessionId: string) => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const response = await staffApi.sessions.initiatePayment(sessionId);
+      return response.data;
+    } catch (err) {
+      const message = err instanceof ApiError 
+        ? `Lỗi tạo QR ${err.status}`
+        : err instanceof Error 
+        ? err.message 
+        : 'Lỗi tạo QR';
+      setError(message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const getPaymentStatus = useCallback(async (orderCode: number) => {
+    try {
+      const response = await staffApi.sessions.getPaymentStatus(orderCode);
+      return response.data;
+    } catch (err) {
+      throw err;
+    }
+  }, []);
+
   // Auto-fetch on mount and when dependencies change
   useEffect(() => {
     if (autoFetch && buildingId) {
@@ -149,6 +192,9 @@ export function useStaffSessions({
     checkIn,
     checkOut,
     searchByPlate,
+    lookupPlate,
+    initiatePayment,
+    getPaymentStatus,
     refresh,
   };
 }

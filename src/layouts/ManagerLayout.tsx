@@ -18,6 +18,7 @@ const titles: Record<string, string> = {
   '/manager/reservation-policy': 'Chính sách đặt chỗ',
   '/manager/packages': 'Gói đăng ký',
   '/manager/shifts': 'Ca trực',
+  '/manager/staff-shifts': 'Gán Staff Vào Ca',
   '/manager/feedbacks': 'Phản hồi',
   '/manager/profile': 'Xem hồ sơ',
   '/manager/settings': 'Cài đặt',

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Loader } from 'lucide-react';
+import { X, Loader, AlertCircle, QrCode } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import type { ParkingSession } from '@/services/staff/staffApi';
@@ -8,7 +8,8 @@ interface SessionCheckOutModalProps {
   isOpen: boolean;
   session: ParkingSession | null;
   onClose: () => void;
-  onSubmit: (paymentMethod: string) => Promise<void>;
+  onSubmit: (paymentMethod: string, options?: any) => Promise<void>;
+  onInitiatePayment?: (sessionId: string) => Promise<any>;
   loading?: boolean;
 }
 
@@ -23,6 +24,7 @@ export function SessionCheckOutModal({
   session,
   onClose,
   onSubmit,
+  onInitiatePayment,
   loading = false,
 }: SessionCheckOutModalProps) {
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'wallet' | 'qr'>('cash');
@@ -32,10 +34,17 @@ export function SessionCheckOutModal({
     e.preventDefault();
     setError(null);
 
+    if (!session) return;
+
     try {
-      await onSubmit(paymentMethod);
-      setPaymentMethod('cash');
-      onClose();
+      if (paymentMethod === 'qr' && onInitiatePayment) {
+        // For QR, just initiate and let parent handle modal display
+        await onInitiatePayment(session._id);
+      } else {
+        await onSubmit(paymentMethod);
+        setPaymentMethod('cash');
+        onClose();
+      }
     } catch (err) {
       setError(
         err instanceof Error ? err.message : 'Lỗi check-out xe'
@@ -46,6 +55,7 @@ export function SessionCheckOutModal({
   if (!session) return null;
 
   const duration = session.duration ? Math.round(session.duration / 60) : null;
+  const walletBalance = session.vehicleType ? 0 : undefined; // TODO: get from lookupPlate
 
   return (
     <Modal isOpen={isOpen} onClose={onClose}>
@@ -119,17 +129,37 @@ export function SessionCheckOutModal({
                       : 'border border-border bg-card text-foreground hover:border-primary'
                   }`}
                 >
-                  {method === 'cash' && 'Tiền mặt'}
-                  {method === 'wallet' && 'Ví'}
-                  {method === 'qr' && 'QR Code'}
+                  {method === 'cash' && '💵 Tiền mặt'}
+                  {method === 'wallet' && '💳 Ví'}
+                  {method === 'qr' && '📱 QR Code'}
                 </button>
               ))}
             </div>
           </div>
 
+          {/* Info per payment method */}
+          {paymentMethod === 'cash' && (
+            <div className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">
+              ✓ Khách thanh toán bằng tiền mặt tại cửa hàng
+            </div>
+          )}
+
+          {paymentMethod === 'wallet' && (
+            <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-700">
+              ✓ Trừ tiền từ ví của khách hàng
+            </div>
+          )}
+
+          {paymentMethod === 'qr' && (
+            <div className="rounded-lg border border-purple-200 bg-purple-50 p-3 text-sm text-purple-700">
+              📱 Tạo mã QR PayOS để khách quét thanh toán
+            </div>
+          )}
+
           {/* Error */}
           {error && (
-            <div className="rounded-md bg-red-50 p-3 text-sm text-red-600 border border-red-200">
+            <div className="rounded-md bg-red-50 p-3 text-sm text-red-600 border border-red-200 flex gap-2">
+              <AlertCircle size={16} className="flex-shrink-0 mt-0.5" />
               {error}
             </div>
           )}
@@ -151,7 +181,16 @@ export function SessionCheckOutModal({
               className="flex-1 gap-2"
             >
               {loading && <Loader size={16} className="animate-spin" />}
-              {loading ? 'Đang xử lý...' : 'Xác nhận Check-out'}
+              {paymentMethod === 'qr' && !loading ? (
+                <>
+                  <QrCode size={16} />
+                  Tạo QR
+                </>
+              ) : loading ? (
+                'Đang xử lý...'
+              ) : (
+                'Xác nhận Check-out'
+              )}
             </Button>
           </div>
         </form>

@@ -2,8 +2,9 @@ import { useMemo, useState, useRef, useEffect } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
-import { ArrowLeft, LogOut, User, Edit, Save, X, ShieldAlert, Plus, AlertCircle, CheckCircle2, Car, Bike, Loader2, Star } from 'lucide-react';
+import { ArrowLeft, LogOut, User, Edit, Save, X, ShieldAlert, Plus, AlertCircle, CheckCircle2, Car, Bike, Loader2, Star, QrCode } from 'lucide-react';
 import { syncPlates } from '@/services/licensePlateService';
+import { UserQRModal } from '@/components/shared/UserQRModal';
 
 // ─── Vietnamese license plate 4-step strict validation ───────────────────────
 // Step 1: Not empty
@@ -76,6 +77,7 @@ export default function ProfilePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isSettingDefaultId, setIsSettingDefaultId] = useState<string | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [showQRModal, setShowQRModal] = useState(false);
 
   const user = useMemo(() => {
     if (!session) return null;
@@ -387,14 +389,24 @@ export default function ProfilePage() {
               </div>
 
               {!isEditing && (
-                <button
-                  type="button"
-                  onClick={handleStartEdit}
-                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider transition-all duration-300 hover:scale-105 hover:shadow-[0_0_20px_rgba(249,115,22,0.35)] inline-flex items-center gap-1.5 self-start animate-fadeIn"
-                >
-                  <Edit size={13} className="stroke-[2.5]" />
-                  Chỉnh sửa hồ sơ
-                </button>
+                <div className="flex gap-3 items-center self-start flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => setShowQRModal(true)}
+                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 text-slate-950 font-black text-xs uppercase tracking-wider transition-all duration-300 hover:scale-105 hover:shadow-[0_0_20px_rgba(34,211,238,0.35)] inline-flex items-center gap-1.5 animate-fadeIn"
+                  >
+                    <QrCode size={13} className="stroke-[2.5]" />
+                    My QR
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleStartEdit}
+                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider transition-all duration-300 hover:scale-105 hover:shadow-[0_0_20px_rgba(249,115,22,0.35)] inline-flex items-center gap-1.5 animate-fadeIn"
+                  >
+                    <Edit size={13} className="stroke-[2.5]" />
+                    Chỉnh sửa hồ sơ
+                  </button>
+                </div>
               )}
             </div>
 
@@ -840,6 +852,14 @@ export default function ProfilePage() {
           </motion.aside>
         </div>
       </div>
+
+      {/* QR Modal */}
+      <UserQRModal
+        isOpen={showQRModal}
+        onClose={() => setShowQRModal(false)}
+        userId={session?.userId || ''}
+        fullName={user?.fullName}
+      />
     </main>
   );
 }
