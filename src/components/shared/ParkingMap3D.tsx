@@ -78,6 +78,14 @@ export function ParkingMap3D({
   // Debug log to ensure real data is flowing correctly
   console.log("=== ParkingMap3D slots received ===", slots);
 
+  const sortSlotsNumerically = (list: ParkingSlot[]) => {
+    return [...list].sort((a, b) => {
+      const numA = parseInt(a.code.replace(/^\D+/g, '')) || 0;
+      const numB = parseInt(b.code.replace(/^\D+/g, '')) || 0;
+      return numA - numB;
+    });
+  };
+
   // 1. Group slots by floorCode (default to 'F1' if missing)
   const slotsByFloor = slots.reduce((acc, slot) => {
     const floor = slot.floorCode || 'F1';
@@ -219,66 +227,7 @@ export function ParkingMap3D({
           {floors.map((floor) => {
             const slotsInFloor = slotsByFloor[floor] || [];
             const isFloorActive = floor === activeFloor;
-            const slotCount = slotsInFloor.length;
-
-            // Compute dynamic slot sizing parameters based on slotCount on this floor
-            let slotW = 60;
-            let slotH = 64;
-            let fontSizeClass = "text-[10px] mb-1";
-            let carIconClass = "w-[36px] h-[36px]";
-            let motoIconClass = "w-[28px] h-[28px]";
-            let lockIconSize = 11;
-            let gapClass = "gap-3";
-            let rowGapClass = "gap-2";
-            let borderClass = "border-2 rounded-xl";
-            
-            if (slotCount <= 4) {
-              // Large display for few slots
-              slotW = 84;
-              slotH = 92;
-              fontSizeClass = "text-[12px] mb-1.5";
-              carIconClass = "w-[52px] h-[52px]";
-              motoIconClass = "w-[44px] h-[44px]";
-              lockIconSize = 16;
-              gapClass = "gap-5";
-              rowGapClass = "gap-4";
-              borderClass = "border-2.5 rounded-2xl";
-            } else if (slotCount > 4 && slotCount <= 8) {
-              // Standard premium size
-              slotW = 64;
-              slotH = 72;
-              fontSizeClass = "text-[10.5px] mb-1";
-              carIconClass = "w-[40px] h-[40px]";
-              motoIconClass = "w-[32px] h-[32px]";
-              lockIconSize = 12;
-              gapClass = "gap-3";
-              rowGapClass = "gap-2";
-              borderClass = "border-2 rounded-xl";
-            } else if (slotCount > 8 && slotCount <= 15) {
-              // Compact size for moderate slot density
-              slotW = 48;
-              slotH = 56;
-              fontSizeClass = "text-[9px] mb-0.5";
-              carIconClass = "w-[30px] h-[30px]";
-              motoIconClass = "w-[24px] h-[24px]";
-              lockIconSize = 9;
-              gapClass = "gap-2";
-              rowGapClass = "gap-1.5";
-              borderClass = "border-[1.5px] rounded-lg";
-            } else {
-              // Micro size for very dense slot floors (e.g. 15+)
-              slotW = 36;
-              slotH = 44;
-              fontSizeClass = "text-[8px] mb-0";
-              carIconClass = "w-[22px] h-[22px]";
-              motoIconClass = "w-[18px] h-[18px]";
-              lockIconSize = 8;
-              gapClass = "gap-1";
-              rowGapClass = "gap-1";
-              borderClass = "border rounded-md";
-            }
-
-            const prefixes = Array.from(new Set(slotsInFloor.map(s => s.code.charAt(0).toUpperCase())));
+                        const prefixes = Array.from(new Set(slotsInFloor.map(s => s.code.charAt(0).toUpperCase())));
             const hasMultipleRows = prefixes.length > 1;
 
             let laneA: ParkingSlot[] = [];
@@ -310,6 +259,60 @@ export function ParkingMap3D({
                   laneB.push(slot);
                 }
               });
+            }
+
+            const sortedLaneA = sortSlotsNumerically(laneA);
+            const sortedLaneB = sortSlotsNumerically(laneB);
+
+            const maxLaneCount = Math.max(sortedLaneA.length, sortedLaneB.length);
+
+            // Compute dynamic slot sizing parameters based on maxLaneCount after partitioning
+            let slotW = 48;
+            let slotH = 56;
+            let fontSizeClass = "text-[10px] mb-1";
+            let carIconClass = "w-[36px] h-[36px]";
+            let motoIconClass = "w-[28px] h-[28px]";
+            let lockIconSize = 11;
+            let gapClass = "gap-2";
+            let rowGapClass = "gap-1.5";
+            let borderClass = "border-2 rounded-xl";
+
+            if (maxLaneCount <= 3) {
+              slotW = 84;
+              slotH = 92;
+              fontSizeClass = "text-[12px] mb-1.5";
+              carIconClass = "w-[52px] h-[52px]";
+              motoIconClass = "w-[44px] h-[44px]";
+              lockIconSize = 16;
+              gapClass = "gap-4";
+              borderClass = "border-2.5 rounded-2xl";
+            } else if (maxLaneCount > 3 && maxLaneCount <= 5) {
+              slotW = 56;
+              slotH = 64;
+              fontSizeClass = "text-[10.5px] mb-1";
+              carIconClass = "w-[36px] h-[36px]";
+              motoIconClass = "w-[30px] h-[30px]";
+              lockIconSize = 12;
+              gapClass = "gap-2.5";
+              borderClass = "border-2 rounded-xl";
+            } else if (maxLaneCount > 5 && maxLaneCount <= 8) {
+              slotW = 34;
+              slotH = 42;
+              fontSizeClass = "text-[9px] mb-0.5";
+              carIconClass = "w-[24px] h-[24px]";
+              motoIconClass = "w-[20px] h-[20px]";
+              lockIconSize = 9;
+              gapClass = "gap-1.5";
+              borderClass = "border-[1.5px] rounded-lg";
+            } else {
+              slotW = 26;
+              slotH = 34;
+              fontSizeClass = "text-[8px] mb-0";
+              carIconClass = "w-[18px] h-[18px]";
+              motoIconClass = "w-[14px] h-[14px]";
+              lockIconSize = 8;
+              gapClass = "gap-1";
+              borderClass = "border rounded-md";
             }
 
             const renderSlot = (slot: ParkingSlot) => {
@@ -420,21 +423,6 @@ export function ParkingMap3D({
                     </div>
                   )}
 
-                  {status === 'reserved' && slot.plateNumber && (
-                    <div 
-                      style={{ transform: 'translateZ(10px)' }} 
-                      className="absolute -bottom-3.5 left-1/2 transform -translate-x-1/2 bg-slate-950 border border-slate-800 rounded px-1 py-0.5 flex items-center gap-0.5 z-20 shadow-md whitespace-nowrap"
-                    >
-                      {slot.vehicleType === 'car' ? (
-                        <Car size={7} className="text-cyan-400" />
-                      ) : (
-                        <Bike size={7} className="text-purple-400" />
-                      )}
-                      <span className="text-[7px] font-mono font-bold text-slate-300 leading-none">
-                        {slot.plateNumber}
-                      </span>
-                    </div>
-                  )}
                 </motion.div>
               );
             };
@@ -468,9 +456,9 @@ export function ParkingMap3D({
                 <div className="flex flex-col justify-between items-center h-full w-full py-1.5" style={{ transformStyle: 'preserve-3d' }}>
                   
                   {/* LANE A (Top Row) */}
-                  <div className={`flex justify-center items-center flex-wrap ${gapClass}`} style={{ transformStyle: 'preserve-3d' }}>
-                    {laneA.length > 0 ? (
-                      laneA.map((slot) => renderSlot(slot))
+                  <div className={`flex justify-center items-center flex-nowrap ${gapClass}`} style={{ transformStyle: 'preserve-3d' }}>
+                    {sortedLaneA.length > 0 ? (
+                      sortedLaneA.map((slot) => renderSlot(slot))
                     ) : (
                       <div className="h-[40px] flex items-center justify-center text-[8px] text-slate-600 font-mono tracking-widest uppercase select-none">
                         Lane Empty
@@ -492,9 +480,9 @@ export function ParkingMap3D({
                   )}
 
                   {/* LANE B (Bottom Row) */}
-                  <div className={`flex justify-center items-center flex-wrap ${gapClass}`} style={{ transformStyle: 'preserve-3d' }}>
-                    {laneB.length > 0 ? (
-                      laneB.map((slot) => renderSlot(slot))
+                  <div className={`flex justify-center items-center flex-nowrap ${gapClass}`} style={{ transformStyle: 'preserve-3d' }}>
+                    {sortedLaneB.length > 0 ? (
+                      sortedLaneB.map((slot) => renderSlot(slot))
                     ) : (
                       <div className="h-[40px] flex items-center justify-center text-[8px] text-slate-600 font-mono tracking-widest uppercase select-none">
                         Lane Empty
