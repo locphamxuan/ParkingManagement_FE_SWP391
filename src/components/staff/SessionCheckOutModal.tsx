@@ -54,7 +54,13 @@ export function SessionCheckOutModal({
 
   if (!session) return null;
 
-  const duration = session.duration ? Math.round(session.duration / 60) : null;
+  const entryTimeMs = session.entryTime ? new Date(session.entryTime).getTime() : null;
+  const exitTimeMs = session.exitTime ? new Date(session.exitTime).getTime() : Date.now();
+  const durationMs = entryTimeMs ? exitTimeMs - entryTimeMs : 0;
+  const durationMinutes = Math.floor(durationMs / (1000 * 60));
+  const durationHours = Math.floor(durationMinutes / 60);
+  const remainingMinutes = durationMinutes % 60;
+  
   const walletBalance = session.vehicleType ? 0 : undefined; // TODO: get from lookupPlate
 
   return (
@@ -87,14 +93,14 @@ export function SessionCheckOutModal({
 
           <div className="flex justify-between">
             <span className="text-sm text-muted-foreground">Vào:</span>
-            <span className="text-sm text-foreground">{fmtTime(session.checkIn)}</span>
+            <span className="text-sm text-foreground">{fmtTime(session.entryTime)}</span>
           </div>
 
-          {duration && (
+          {durationMinutes > 0 && (
             <div className="flex justify-between">
               <span className="text-sm text-muted-foreground">Thời gian:</span>
               <span className="text-sm text-foreground">
-                {duration} giờ {session.duration && (session.duration % 60)} phút
+                {durationHours} giờ {remainingMinutes} phút
               </span>
             </div>
           )}

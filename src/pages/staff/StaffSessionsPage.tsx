@@ -137,9 +137,9 @@ export function StaffSessionsPage() {
       render: (row) =>
         row.vehicleType ? `${row.vehicleType.name} (${row.vehicleType.code})` : '—',
     },
-    { key: 'gate', title: 'Cổng', render: (row) => row.gate?.name ?? '—' },
-    { key: 'checkIn', title: 'Vào', render: (row) => fmtTime(row.checkIn) },
-    { key: 'checkOut', title: 'Ra', render: (row) => fmtTime(row.checkOut) },
+    { key: 'gate', title: 'Cổng', render: (row) => row.entryGate?.name ?? '—' },
+    { key: 'checkIn', title: 'Vào', render: (row) => fmtTime(row.entryTime) },
+    { key: 'checkOut', title: 'Ra', render: (row) => fmtTime(row.exitTime) },
     { key: 'fee', title: 'Phí', render: (row) => fmt(row.fee) },
     {
       key: 'paymentMethod',
@@ -149,7 +149,15 @@ export function StaffSessionsPage() {
     {
       key: 'paymentStatus',
       title: 'Thanh toán',
-      render: (row) => <StatusBadge status={row.paymentStatus} />,
+      render: (row) => {
+        const pStatus =
+          row.status === 'completed'
+            ? 'success'
+            : row.status === 'cancelled'
+            ? 'inactive'
+            : 'pending';
+        return <StatusBadge status={pStatus} />;
+      },
     },
     {
       key: 'status',
@@ -161,7 +169,7 @@ export function StaffSessionsPage() {
       title: 'Hành động',
       render: (row) => (
         <div className="flex gap-2">
-          {row.status === 'active' && !row.checkOut && (
+          {row.status === 'active' && !row.exitTime && (
             <>
               <Button
                 size="sm"

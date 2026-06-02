@@ -26,13 +26,13 @@ export interface ParkingSession {
   plateNumber: string;
   vehicleType?: { _id: string; name: string; code: string } | null;
   slot?: { _id: string; code: string } | null;
-  gate?: { _id: string; code: string; name: string } | null;
-  checkIn: string;
-  checkOut?: string | null;
+  entryGate?: { _id: string; code: string; name: string } | null;
+  exitGate?: { _id: string; code: string; name: string } | null;
+  entryTime: string;
+  exitTime?: string | null;
   duration?: number | null;
   fee?: number | null;
-  paymentMethod?: 'cash' | 'wallet' | 'qr' | null;
-  paymentStatus: 'pending' | 'paid' | 'waived';
+  paymentMethod?: 'cash' | 'wallet' | 'qr' | 'card' | 'payos' | 'long_term' | null;
   status: 'active' | 'completed' | 'cancelled';
 }
 
@@ -136,8 +136,8 @@ export const staffApi = {
   sessions: {
     list: (buildingId: string, q?: Record<string, string | undefined>) =>
       api.get<Wrap<{ items: ParkingSession[] }>>(
-        `/staff/buildings/${buildingId}/sessions`,
-        { query: q }
+        '/staff/parking-sessions/active',
+        { query: { ...q, buildingId } }
       ),
 
     active: (q?: Record<string, string | undefined>) =>
