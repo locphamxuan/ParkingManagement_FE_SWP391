@@ -107,13 +107,6 @@ export interface CancelReservationResult {
   refundPercent: number;
 }
 
-export interface UserBuildingView {
-  building: {
-    _id: string;
-    name: string;
-  };
-}
-
 const RESERVATION_STORAGE_KEY = 'pbms.reservations';
 const PAYMENT_STORAGE_KEY = 'pbms.payments';
 const WALLET_TX_STORAGE_KEY = 'pbms.walletTransactions';
@@ -144,21 +137,6 @@ const RESERVATION_POLICY_MOCK_DATA: UserReservationPolicyRecord[] = [
     reservableRatio: 0.4,
     refundPercent: 60,
     isActive: true,
-  },
-];
-
-const BUILDINGS_MOCK_DATA: UserBuildingView[] = [
-  {
-    building: {
-      _id: 'demo-building-1',
-      name: 'Tòa nhà A - Phố Huế',
-    },
-  },
-  {
-    building: {
-      _id: 'demo-building-2',
-      name: 'Tòa nhà B - Trần Hưng Đạo',
-    },
   },
 ];
 
@@ -551,10 +529,6 @@ export function slotSupportsVehicle(
   vehicleType: ReservationVehicleType,
 ): boolean {
   return slot.vehicleType === 'all' || slot.vehicleType === vehicleType;
-}
-
-export async function listUserBuildingViews(): Promise<UserBuildingView[]> {
-  return BUILDINGS_MOCK_DATA;
 }
 
 export async function listReservationPolicies(): Promise<UserReservationPolicyRecord[]> {
