@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ChevronDown, User, LogOut } from 'lucide-react';
+import { ChevronDown, User, LogOut, History } from 'lucide-react';
 
 interface Props {
   email: string;
@@ -22,6 +22,11 @@ export function AdminUserDropdown({ email, onLogout }: Props) {
     } else {
       navigate('/profile');
     }
+  };
+
+  const handleViewReservationHistory = () => {
+    setOpen(false);
+    navigate('/reservations', { state: { openHistory: true } });
   };
 
   useEffect(() => {
@@ -69,6 +74,14 @@ export function AdminUserDropdown({ email, onLogout }: Props) {
             onClick={handleViewProfile}
           >
             Hồ sơ
+          </button>
+          <button
+            type="button"
+            className="user-dropdown-item w-full px-4 py-3 text-left text-sm text-slate-300 transition hover:bg-slate-800 hover:text-white border-t border-white/5"
+            onClick={handleViewReservationHistory}
+          >
+            <History size={14} className="inline-block align-middle" />
+            <span className="ml-2 align-middle">Lịch sử đặt chỗ</span>
           </button>
           <button
             type="button"

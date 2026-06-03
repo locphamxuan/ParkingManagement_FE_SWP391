@@ -8,12 +8,15 @@ import {
   CalendarClock,
   CheckCircle2,
   CreditCard,
+  Copy,
   Plus,
+  QrCode,
   ReceiptText,
   RefreshCw,
   ShieldCheck,
   User,
   WalletCards,
+  X,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import {
@@ -32,6 +35,15 @@ const currency = new Intl.NumberFormat('vi-VN', {
 });
 
 type TxFilter = 'all' | 'credit' | 'debit';
+type PaymentMethod = 'internal' | 'vnpay' | 'momo' | 'zalopay' | 'banking';
+
+const paymentMethodLabels: Record<PaymentMethod, string> = {
+  internal: 'Ví nội bộ',
+  vnpay: 'VNPay',
+  momo: 'MoMo',
+  zalopay: 'ZaloPay',
+  banking: 'Thẻ ngân hàng',
+};
 
 function formatMoney(value: number): string {
   return currency.format(value);
@@ -55,6 +67,28 @@ function paymentTypeLabel(type: UserPaymentRecord['type']): string {
 
 const topUpOptions = [50_000, 100_000, 200_000, 500_000];
 
+interface PendingTopUp {
+  amount: number;
+  code: string;
+  qrData: string;
+  qrImageUrl: string;
+  paymentMethod: PaymentMethod;
+  balanceBefore: number;
+}
+
+function createTopUpCode(): string {
+  return `PAYOS${Date.now().toString().slice(-10)}`;
+}
+
+function createQrPayload(userId: string, amount: number, code: string): string {
+  return `PBMS_TOPUP|PAYOS|USER:${userId}|AMOUNT:${amount}|CODE:${code}`;
+}
+
+function createQrImageUrl(payload: string): string {
+  const encodedPayload = encodeURIComponent(payload);
+  return `https://api.qrserver.com/v1/create-qr-code/?size=260x260&margin=12&data=${encodedPayload}`;
+}
+
 export default function WalletPage() {
   const navigate = useNavigate();
   const { session } = useAuth();
@@ -64,8 +98,12 @@ export default function WalletPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedTopUp, setSelectedTopUp] = useState(topUpOptions[1]);
+  const [customAmount, setCustomAmount] = useState('');
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod>('internal');
   const [filter, setFilter] = useState<TxFilter>('all');
   const [message, setMessage] = useState<string | null>(null);
+  const [pendingTopUp, setPendingTopUp] = useState<PendingTopUp | null>(null);
+  const [customAmountError, setCustomAmountError] = useState<string | null>(null);
 
   const user = useMemo(() => {
     if (!session) return null;
@@ -113,17 +151,83 @@ export default function WalletPage() {
     return <Navigate to="/auth/login" replace />;
   }
 
-  const handleTopUp = async () => {
+  const handleTopUp = () => {
+    setMessage(null);
+    setCustomAmountError(null);
+    const code = createTopUpCode();
+    const qrData = createQrPayload(user.userId, selectedTopUp, code);
+    setPendingTopUp({
+      amount: selectedTopUp,
+      code,
+      qrData,
+      qrImageUrl: createQrImageUrl(qrData),
+      paymentMethod: selectedPaymentMethod,
+      balanceBefore: balance,
+    });
+  };
+
+  const handleCustomAmountChange = (value: string) => {
+    setCustomAmount(value);
+    setCustomAmountError(null);
+  };
+
+  const validateAndTopUpCustomAmount = () => {
+    setCustomAmountError(null);
+    
+    if (!customAmount.trim()) {
+      setCustomAmountError('Vui lòng nhập số tiền nạp.');
+      return;
+    }
+
+    const amount = parseInt(customAmount, 10);
+    
+    if (Number.isNaN(amount) || amount <= 0) {
+      setCustomAmountError('Số tiền phải là một số dương.');
+      return;
+    }
+
+    if (amount < 10_000) {
+      setCustomAmountError('Số tiền tối thiểu là 10,000 VND.');
+      return;
+    }
+
+    setMessage(null);
+    const code = createTopUpCode();
+    const qrData = createQrPayload(user.userId, amount, code);
+    setPendingTopUp({
+      amount,
+      code,
+      qrData,
+      qrImageUrl: createQrImageUrl(qrData),
+      paymentMethod: selectedPaymentMethod,
+      balanceBefore: balance,
+    });
+    setCustomAmount('');
+  };
+
+  const handleConfirmTopUp = async () => {
+    if (!pendingTopUp) return;
     setMessage(null);
     setIsSubmitting(true);
     try {
-      await createUserWalletTopUp(user.userId, selectedTopUp);
+      await createUserWalletTopUp(user.userId, pendingTopUp.amount);
       await refreshWallet();
-      setMessage(`Đã nạp ${formatMoney(selectedTopUp)} vào ví PBMS.`);
+      setMessage(`Đã nạp ${formatMoney(pendingTopUp.amount)} vào ví PBMS.`);
+      setPendingTopUp(null);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Không thể nạp ví.');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleCopyQrContent = async () => {
+    if (!pendingTopUp) return;
+    try {
+      await navigator.clipboard.writeText(pendingTopUp.qrData);
+      setMessage('Đã sao chép nội dung QR.');
+    } catch {
+      setMessage('Không thể sao chép nội dung QR.');
     }
   };
 
@@ -217,7 +321,7 @@ export default function WalletPage() {
                 Nạp ví nhanh
               </h2>
               <span className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-2 py-1 text-[10px] font-black text-emerald-300">
-                Demo
+                Ví nội bộ
               </span>
             </div>
 
@@ -238,14 +342,65 @@ export default function WalletPage() {
               ))}
             </div>
 
+            <div className="mt-4 space-y-3 rounded-2xl border border-white/10 bg-slate-950/70 p-4">
+              <div>
+                <label className="mb-2 block text-xs font-black uppercase tracking-wider text-slate-400">
+                  Nhập số tiền tùy chỉnh
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    min="10000"
+                    step="1000"
+                    value={customAmount}
+                    onChange={(e) => handleCustomAmountChange(e.target.value)}
+                    placeholder="Tối thiểu 10,000 VND"
+                    className="flex-1 rounded-xl border border-slate-700/80 bg-[#070b12] px-3 py-2.5 text-sm font-semibold text-white placeholder-slate-500 outline-none transition-all focus:border-orange-300/60 focus:ring-4 focus:ring-orange-300/10"
+                  />
+                  <button
+                    type="button"
+                    onClick={validateAndTopUpCustomAmount}
+                    className="rounded-xl border border-orange-300/20 bg-gradient-to-r from-orange-500 to-amber-400 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-slate-950 shadow-[0_0_15px_rgba(249,115,22,0.2)] transition hover:brightness-110"
+                  >
+                    OK
+                  </button>
+                </div>
+                {customAmountError && (
+                  <p className="mt-2 text-xs font-semibold text-rose-300">{customAmountError}</p>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-4 space-y-2">
+              <label className="block text-xs font-black uppercase tracking-wider text-slate-400">
+                Phương thức thanh toán
+              </label>
+              <select
+                value={selectedPaymentMethod}
+                onChange={(e) => setSelectedPaymentMethod(e.target.value as PaymentMethod)}
+                className="w-full rounded-xl border border-slate-700/80 bg-[#070b12] px-3 py-2.5 text-sm font-semibold text-white outline-none transition-all focus:border-orange-300/60 focus:ring-4 focus:ring-orange-300/10"
+              >
+                {(Object.entries(paymentMethodLabels) as Array<[PaymentMethod, string]>).map(
+                  ([method, label]) => (
+                    <option key={method} value={method}>
+                      {label}
+                    </option>
+                  ),
+                )}
+              </select>
+              <p className="text-[11px] font-semibold text-slate-500">
+                Chọn phương thức thanh toán cho nạp ví.
+              </p>
+            </div>
+
             <button
               type="button"
               onClick={handleTopUp}
               disabled={isSubmitting}
               className="mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-300 text-sm font-black uppercase tracking-wider text-slate-950 shadow-[0_14px_30px_rgba(249,115,22,0.22)] transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              <CreditCard size={16} />
-              {isSubmitting ? 'Đang nạp...' : 'Nạp vào ví'}
+              <QrCode size={16} />
+              Tạo mã QR nạp ví
             </button>
 
             {message ? (
@@ -370,6 +525,109 @@ export default function WalletPage() {
           </div>
         </section>
       </div>
+
+      {pendingTopUp ? (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-md"
+          onClick={() => {
+            if (!isSubmitting) setPendingTopUp(null);
+          }}
+        >
+          <motion.div
+            initial={{ opacity: 0, y: 16, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 16, scale: 0.96 }}
+            onClick={(event) => event.stopPropagation()}
+            className="w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-slate-950 shadow-[0_30px_120px_rgba(0,0,0,0.55)]"
+          >
+            <div className="flex items-center justify-between border-b border-white/10 bg-slate-900/80 px-5 py-4">
+              <div className="flex items-center gap-3">
+                <span className="grid h-10 w-10 place-items-center rounded-2xl border border-cyan-300/20 bg-cyan-300/10 text-cyan-200">
+                  <QrCode size={20} />
+                </span>
+                <div>
+                  <p className="font-mono text-[10px] font-black uppercase tracking-[0.22em] text-cyan-200">PAYOS QR</p>
+                  <h2 className="text-base font-black text-white">Quét mã để nạp ví</h2>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPendingTopUp(null)}
+                disabled={isSubmitting}
+                className="rounded-full border border-white/10 bg-white/[0.04] p-2 text-slate-300 transition hover:border-orange-300/40 hover:bg-orange-300/10 hover:text-orange-200 disabled:opacity-50"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="p-5">
+              <div className="rounded-3xl border border-white/10 bg-white p-4 shadow-[0_18px_50px_rgba(34,211,238,0.12)]">
+                <img
+                  src={pendingTopUp.qrImageUrl}
+                  alt={`QR nạp ví ${formatMoney(pendingTopUp.amount)}`}
+                  className="mx-auto aspect-square w-full max-w-[260px] rounded-2xl"
+                />
+              </div>
+
+              <div className="mt-4 grid gap-3 rounded-2xl border border-white/10 bg-slate-900/70 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-xs font-bold text-slate-400">Số tiền</span>
+                  <span className="font-mono text-sm font-black text-emerald-300">{formatMoney(pendingTopUp.amount)}</span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-xs font-bold text-slate-400">Phương thức</span>
+                  <span className="font-mono text-xs font-black text-orange-300">{paymentMethodLabels[pendingTopUp.paymentMethod]}</span>
+                </div>
+                <div className="border-t border-white/5 pt-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-xs font-bold text-slate-400">Số dư hiện tại</span>
+                    <span className="font-mono text-xs font-black text-cyan-300">{formatMoney(pendingTopUp.balanceBefore)}</span>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between gap-3">
+                    <span className="text-xs font-bold text-slate-400">Sau khi nạp</span>
+                    <span className="font-mono text-xs font-black text-emerald-300">{formatMoney(pendingTopUp.balanceBefore + pendingTopUp.amount)}</span>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-400">Mã giao dịch</p>
+                  <p className="mt-1 break-all rounded-xl border border-white/5 bg-slate-950 p-3 font-mono text-[11px] font-semibold text-slate-300">
+                    {pendingTopUp.code}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-400">Nội dung QR</p>
+                  <p className="mt-1 break-all rounded-xl border border-white/5 bg-slate-950 p-3 font-mono text-[11px] font-semibold text-slate-300">
+                    {pendingTopUp.qrData}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={handleCopyQrContent}
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] text-xs font-black uppercase tracking-wider text-slate-200 transition hover:bg-white/[0.08]"
+                >
+                  <Copy size={14} />
+                  Sao chép
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmTopUp}
+                  disabled={isSubmitting}
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-300 text-xs font-black uppercase tracking-wider text-slate-950 shadow-[0_14px_30px_rgba(249,115,22,0.24)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <CreditCard size={14} />
+                  {isSubmitting ? 'Đang xác nhận...' : 'Xác nhận nạp ví'}
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+      ) : null}
     </main>
   );
 }
