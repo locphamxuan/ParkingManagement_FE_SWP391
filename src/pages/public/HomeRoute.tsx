@@ -32,6 +32,13 @@ export function HomeRoute() {
     navigate('/profile', { replace: false });
   }, [navigate, onOpenAuth, session]);
 
+  const onViewReservationHistory = useCallback(() => {
+    if (!session) {
+      return onOpenAuth('login');
+    }
+    navigate('/reservations', { replace: false, state: { openHistory: true } });
+  }, [navigate, onOpenAuth, session]);
+
   const onAction = useCallback(
     (module: any) => {
       if (module.id === 'auth') return onOpenAuth('login');
@@ -42,7 +49,7 @@ export function HomeRoute() {
       if (module.id === 'payments') return navigate('/long-term-subscriptions');
       return undefined;
     },
-    [navigate, onOpenAuth, onViewProfile]
+    [navigate, onOpenAuth, onViewProfile, session]
   );
 
   const onLogout = useCallback(() => {
@@ -56,6 +63,7 @@ export function HomeRoute() {
       modules={mainFlowModules}
       onOpenAuth={onOpenAuth}
       onViewProfile={onViewProfile}
+      onViewReservationHistory={onViewReservationHistory}
       onAction={onAction}
       user={userMapped}
       onLogout={onLogout}

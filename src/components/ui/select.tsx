@@ -48,8 +48,8 @@ export function CustomSelect({
         disabled={disabled}
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          "flex h-11 w-full items-center justify-between rounded-xl border border-white/10 bg-slate-950 px-4 text-sm font-semibold text-white shadow-lg outline-none transition-all duration-300 hover:border-orange-500/30",
-          isOpen && "border-orange-500/60 ring-2 ring-orange-500/10 shadow-[0_0_15px_rgba(249,115,22,0.15)]",
+          "flex h-12 w-full items-center justify-between rounded-2xl border border-slate-700/80 bg-[#070b12] px-4 text-sm font-semibold text-white outline-none transition-all duration-300 hover:border-slate-500",
+          isOpen && "border-orange-300/60 ring-4 ring-orange-300/10",
           disabled && "cursor-not-allowed opacity-50"
         )}
       >
@@ -72,7 +72,7 @@ export function CustomSelect({
             animate={{ opacity: 1, y: 4, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.98 }}
             transition={{ duration: 0.15, ease: 'easeOut' }}
-            className="absolute left-0 z-50 max-h-60 w-full overflow-y-auto rounded-xl border border-white/10 bg-slate-950/95 p-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.6)] backdrop-blur-xl pointer-events-auto custom-scrollbar"
+            className="pointer-events-auto absolute left-0 z-50 max-h-60 w-full overflow-y-auto rounded-2xl border border-slate-700/80 bg-[#070b12]/95 p-1.5 shadow-[0_18px_60px_rgba(0,0,0,0.45)] backdrop-blur-xl custom-scrollbar"
             style={{ top: '100%' }}
           >
             {options.length === 0 ? (
@@ -92,8 +92,8 @@ export function CustomSelect({
                       setIsOpen(false);
                     }}
                     className={cn(
-                      "relative flex cursor-pointer select-none items-center rounded-lg px-3.5 py-2.5 text-xs font-semibold text-slate-300 transition-all duration-150 hover:bg-orange-500/10 hover:text-white",
-                      isSelected && "bg-orange-500 text-slate-950 hover:bg-orange-600 hover:text-slate-950 font-black shadow-[0_0_10px_rgba(249,115,22,0.25)]",
+                      "relative flex cursor-pointer select-none items-center rounded-xl px-3.5 py-2.5 text-xs font-semibold text-slate-300 transition-all duration-150 hover:bg-white/[0.06] hover:text-white",
+                      isSelected && "bg-orange-300 text-slate-950 hover:bg-orange-200 hover:text-slate-950 font-black",
                       isDisabled && "cursor-not-allowed opacity-40 hover:bg-transparent hover:text-slate-300"
                     )}
                   >
