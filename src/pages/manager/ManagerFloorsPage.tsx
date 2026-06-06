@@ -10,8 +10,6 @@ import { managerApi, type Floor, type VehicleType } from '@/services/manager/man
 
 interface FormState {
   code: string;
-  name: string;
-  levelNumber: string;
   capacity: string;
   status: Floor['status'];
   allowedVehicleTypes: string[];
@@ -19,8 +17,6 @@ interface FormState {
 
 const empty: FormState = {
   code: '',
-  name: '',
-  levelNumber: '1',
   capacity: '0',
   status: 'active',
   allowedVehicleTypes: [],
@@ -67,8 +63,6 @@ export function ManagerFloorsPage() {
     setEditing(row);
     setForm({
       code: row.code,
-      name: row.name,
-      levelNumber: String(row.levelNumber),
       capacity: String(row.capacity),
       status: row.status,
       allowedVehicleTypes: row.allowedVehicleTypes.map((v) => (typeof v === 'string' ? v : v._id)),
@@ -79,8 +73,6 @@ export function ManagerFloorsPage() {
   const onSubmit = async () => {
     const payload = {
       code: form.code.trim().toUpperCase(),
-      name: form.name.trim(),
-      levelNumber: Number(form.levelNumber),
       capacity: Number(form.capacity),
       status: form.status,
       allowedVehicleTypes: form.allowedVehicleTypes,
@@ -120,8 +112,6 @@ export function ManagerFloorsPage() {
   const columns: DataColumn<Floor>[] = useMemo(
     () => [
       { key: 'code', title: 'Mã tầng' },
-      { key: 'name', title: 'Tên tầng' },
-      { key: 'levelNumber', title: 'Số thứ tự' },
       { key: 'capacity', title: 'Sức chứa' },
       {
         key: 'allowedVehicleTypes',
@@ -180,21 +170,6 @@ export function ManagerFloorsPage() {
             <Input
               value={form.code}
               onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))}
-            />
-          </div>
-          <div className="grid gap-1.5">
-            <label className="text-xs uppercase text-muted-foreground">Tên tầng</label>
-            <Input
-              value={form.name}
-              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-            />
-          </div>
-          <div className="grid gap-1.5">
-            <label className="text-xs uppercase text-muted-foreground">Số thứ tự (-1=hầm, 1=trệt...)</label>
-            <Input
-              type="number"
-              value={form.levelNumber}
-              onChange={(e) => setForm((f) => ({ ...f, levelNumber: e.target.value }))}
             />
           </div>
           <div className="grid gap-1.5">

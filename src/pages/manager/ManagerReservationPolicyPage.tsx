@@ -7,20 +7,14 @@ import { useBuildingContext } from '@/hooks/useBuildingContext';
 import { managerApi, type ReservationPolicy } from '@/services/manager/managerApi';
 
 interface FormState {
-  reservableRatio: string;
   maxHoldMinutes: string;
   refundPercent: string;
-  minAdvanceMinutes: string;
-  maxAdvanceHours: string;
   isActive: boolean;
 }
 
 const toForm = (p: ReservationPolicy | null): FormState => ({
-  reservableRatio: String(p?.reservableRatio ?? 0.3),
   maxHoldMinutes: String(p?.maxHoldMinutes ?? 30),
   refundPercent: String(p?.refundPercent ?? 80),
-  minAdvanceMinutes: String(p?.minAdvanceMinutes ?? 15),
-  maxAdvanceHours: String(p?.maxAdvanceHours ?? 72),
   isActive: p?.isActive ?? true,
 });
 
@@ -50,11 +44,8 @@ export function ManagerReservationPolicyPage() {
     setMessage(null);
     try {
       const res = await managerApi.reservationPolicy.update(buildingId, {
-        reservableRatio: Number(form.reservableRatio),
         maxHoldMinutes: Number(form.maxHoldMinutes),
         refundPercent: Number(form.refundPercent),
-        minAdvanceMinutes: Number(form.minAdvanceMinutes),
-        maxAdvanceHours: Number(form.maxAdvanceHours),
         isActive: form.isActive,
       });
       setPolicy(res.data.item);
@@ -81,21 +72,6 @@ export function ManagerReservationPolicyPage() {
           <div className="grid gap-3 md:grid-cols-2">
             <div className="grid gap-1.5">
               <label className="text-xs uppercase text-muted-foreground">
-                Tỉ lệ slot cho đặt (0–1)
-              </label>
-              <Input
-                type="number"
-                step="0.05"
-                min={0}
-                max={1}
-                value={form.reservableRatio}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, reservableRatio: e.target.value }))
-                }
-              />
-            </div>
-            <div className="grid gap-1.5">
-              <label className="text-xs uppercase text-muted-foreground">
                 Thời gian giữ tối đa (phút)
               </label>
               <Input
@@ -106,6 +82,9 @@ export function ManagerReservationPolicyPage() {
                   setForm((f) => ({ ...f, maxHoldMinutes: e.target.value }))
                 }
               />
+              <p className="text-[11px] text-muted-foreground">
+                Đặt chỗ tự hủy nếu khách không check-in trong khoảng này.
+              </p>
             </div>
             <div className="grid gap-1.5">
               <label className="text-xs uppercase text-muted-foreground">
@@ -118,32 +97,6 @@ export function ManagerReservationPolicyPage() {
                 value={form.refundPercent}
                 onChange={(e) =>
                   setForm((f) => ({ ...f, refundPercent: e.target.value }))
-                }
-              />
-            </div>
-            <div className="grid gap-1.5">
-              <label className="text-xs uppercase text-muted-foreground">
-                Đặt trước tối thiểu (phút)
-              </label>
-              <Input
-                type="number"
-                min={0}
-                value={form.minAdvanceMinutes}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, minAdvanceMinutes: e.target.value }))
-                }
-              />
-            </div>
-            <div className="grid gap-1.5">
-              <label className="text-xs uppercase text-muted-foreground">
-                Đặt trước tối đa (giờ)
-              </label>
-              <Input
-                type="number"
-                min={0}
-                value={form.maxAdvanceHours}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, maxAdvanceHours: e.target.value }))
                 }
               />
             </div>

@@ -47,7 +47,9 @@ function usePublicAuthFlow(initialMode: 'login' | 'register') {
   const [notice, setNotice] = useState<{ message?: string; type?: string }>({});
   const [isLoading, setLoading] = useState(false);
 
-  const onModeChange = useCallback((m: 'login' | 'register') => setMode(m), []);
+  const onModeChange = useCallback((m: string) => {
+    if (m === 'login' || m === 'register') setMode(m);
+  }, []);
 
   const onBackHome = useCallback(
     () => navigate("/", { replace: true }),
@@ -61,7 +63,7 @@ function usePublicAuthFlow(initialMode: 'login' | 'register') {
       mode: m,
       payload,
     }: {
-      mode: 'login' | 'register';
+      mode: string;
       payload: Record<string, string>;
     }) => {
       try {

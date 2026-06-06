@@ -24,6 +24,22 @@ export interface ParkingSlot {
   _id: string;
   code: string;
   floor?: number;
+  status?: 'available' | 'occupied' | 'reserved' | 'maintenance';
+  vehicleType?: { _id: string; name: string; code: string } | null;
+  reservable?: boolean;
+}
+
+export interface FloorAvailability {
+  _id: string;
+  code: string;
+  name: string;
+  levelNumber: number;
+  capacity: number;
+  status: 'active' | 'inactive' | 'maintenance';
+  availableSlots: number;
+  occupiedSlots: number;
+  reservedSlots: number;
+  totalSlots: number;
 }
 
 export interface Gate {
@@ -40,8 +56,9 @@ export interface Reservation {
   slot?: ParkingSlot | null;
   building: Building;
   status: 'pending' | 'confirmed' | 'checked_in' | 'expired' | 'cancelled';
-  reservationDate: string;
-  expiresAt: string;
+  startTime: string;
+  endTime?: string | null;
+  fee?: number;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -68,30 +85,107 @@ export interface LongTermPackage {
   code: string;
   name: string;
   description?: string;
-  building: Building;
-  duration: number; // in days
+  building: Building | { _id: string; name: string; code?: string };
+  vehicleType?: VehicleType | string | null;
+  durationDays: number;
   price: number;
+  reservedSlots?: number;
+  allowDedicatedSlot?: boolean;
+  benefits?: string[];
+  isActive?: boolean;
+  // ── Legacy/optional FE-only fields (not returned by the backend) ──
   discountPercentage?: number;
   maxVehicles?: number;
   features?: string[];
-  status: 'active' | 'inactive';
+  status?: 'active' | 'inactive';
   createdAt?: string;
   updatedAt?: string;
 }
 
 export interface LongTermSubscription {
   _id: string;
-  code: string;
   package: LongTermPackage;
-  user: { _id: string; fullName: string; email: string };
-  linkedPlates: string[];
+  user?: { _id: string; fullName: string; email: string } | string;
+  building?: Building | { _id: string; name: string } | string;
+  /** Backend stores a single plate per subscription. */
+  plateNumber?: string;
   startDate: string;
   endDate: string;
-  status: 'active' | 'expired' | 'cancelled';
+  status: 'pending' | 'active' | 'expired' | 'cancelled';
+  // ── Legacy/optional FE-only fields ──
+  code?: string;
+  linkedPlates?: string[];
   paymentMethod?: 'wallet' | 'card' | 'cash';
-  price: number;
+  price?: number;
   createdAt?: string;
   updatedAt?: string;
+}
+
+export type UserVehicleType = 'motorcycle' | 'car' | 'suv' | 'truck' | 'other';
+
+export interface LicensePlate {
+  _id: string;
+  plateNumber: string;
+  vehicleType: UserVehicleType;
+  isDefault: boolean;
+  qrCode?: string;
+}
+
+export interface UserProfile {
+  _id: string;
+  email: string;
+  fullName: string;
+  phone?: string;
+  avatar?: string;
+  role: 'admin' | 'manager' | 'staff' | 'user';
+  walletBalance?: number;
+  licensePlates?: LicensePlate[];
+}
+
+export interface ReservationEstimate {
+  estimatedFee: number;
+  depositAmount: number;
+  remainingFee: number;
+  hourlyRate: number;
+  hours: number;
+  regularHours: number;
+  peakHours: number;
+  peakRate: number;
+  /** Thời lượng thực của khung đặt chỗ (phút). */
+  durationMinutes?: number;
+  /** True nếu phí bị nâng lên mức tối thiểu (lượt rất ngắn). */
+  minimumApplied?: boolean;
+}
+
+export interface ReservationCreateResult {
+  reservation: Reservation;
+  depositAmount: number;
+  estimatedFee: number;
+}
+
+export interface UserWallet {
+  _id: string;
+  user: string;
+  balance: number;
+  updatedAt: string;
+}
+
+export interface UserWalletTransaction {
+  _id: string;
+  type: 'credit' | 'debit';
+  reason: string;
+  amount: number;
+  balanceAfter: number;
+  note?: string;
+  createdAt: string;
+}
+
+export type LongTermPaymentMethod = 'wallet' | 'qr';
+
+export interface WalletTopUpResult {
+  checkoutUrl: string;
+  orderCode: number;
+  amount: number;
 }
 
 interface Wrap<T> {
@@ -108,6 +202,14 @@ interface ListResult<T> {
 export const userApi = {
   // ========== RESERVATIONS ==========
   reservations: {
+    /** Estimate fee + 15% deposit before booking (GET /users/reservations/estimate). */
+    estimate: (query: {
+      buildingId: string;
+      vehicleTypeId: string;
+      startTime: string;
+      endTime: string;
+    }) => api.get<Wrap<ReservationEstimate>>('/users/reservations/estimate', { query }),
+
     /** Get list of user's reservations */
     list: (query?: { status?: string; limit?: number; page?: number }) =>
       api.get<Wrap<ListResult<Reservation>>>('/users/reservations', { query }),
@@ -122,10 +224,9 @@ export const userApi = {
       buildingId: string;
       vehicleTypeId?: string;
       vehicleType?: string;
-      startTime?: string;
+      startTime: string;
       endTime?: string;
       slotId?: string;
-      reservationDate: string;
     }) =>
       api.post<Wrap<{ reservation: Reservation }>>('/users/reservations', body),
 
@@ -147,11 +248,14 @@ export const userApi = {
 
   // ========== LONG-TERM PACKAGES ==========
   longTermPackages: {
-    /** Get list of available long-term packages */
+    /** Get list of available long-term packages (BE returns { packages }). */
     list: (query?: { buildingId?: string; limit?: number; page?: number }) =>
-      api.get<Wrap<ListResult<LongTermPackage>>>('/users/long-term/packages', { query }),
+      api.get<Wrap<{ packages: LongTermPackage[] }>>('/users/long-term/packages', { query }),
 
-    /** Get package detail */
+    /**
+     * Get package detail. NOTE: the backend has no GET /packages/:id endpoint;
+     * kept for the demo hook only — prefer filtering the list result.
+     */
     get: (id: string) =>
       api.get<Wrap<{ package: LongTermPackage }>>(`/users/long-term/packages/${id}`),
   },
@@ -168,12 +272,8 @@ export const userApi = {
     get: (id: string) =>
       api.get<Wrap<{ subscription: LongTermSubscription }>>(`/users/long-term/subscriptions/${id}`),
 
-    /** Subscribe to a long-term package */
-    create: (body: {
-      packageId: string;
-      linkedPlates: string[];
-      paymentMethod?: 'wallet' | 'card' | 'cash';
-    }) =>
+    /** Subscribe to a long-term package (BE expects { packageId, plateNumber }). */
+    create: (body: { packageId: string; plateNumber: string }) =>
       api.post<Wrap<{ subscription: LongTermSubscription }>>(
         '/users/long-term/subscriptions',
         body
@@ -196,14 +296,65 @@ export const userApi = {
     vehicleTypes: (buildingId: string) =>
       api.get<Wrap<ListResult<VehicleType>>>(`/users/buildings/${buildingId}/vehicle-types`),
 
-    /** Get floors for a building */
-    floors: (buildingId: string) =>
-      api.get<Wrap<ListResult<{ code: string; number: number }>>>(`/users/buildings/${buildingId}/floors`),
+    /** Get floors for a building with live availability counts (BE returns { building, floors }). */
+    floors: (buildingId: string, query?: { vehicleTypeId?: string }) =>
+      api.get<Wrap<{ building: { _id: string; code: string; name: string }; floors: FloorAvailability[] }>>(
+        `/users/buildings/${buildingId}/floors`,
+        { query }
+      ),
 
-    /** Get parking slots for a building floor */
-    slots: (buildingId: string, floorId: string, query?: { limit?: number; page?: number }) =>
-      api.get<Wrap<ListResult<ParkingSlot>>>(`/users/buildings/${buildingId}/floors/${floorId}/slots`, {
-        query,
-      }),
+    /** Get parking slots for a building floor (BE returns { floor, slots }). */
+    slots: (buildingId: string, floorId: string) =>
+      api.get<Wrap<{ floor: { _id: string; name: string; code: string }; slots: ParkingSlot[] }>>(
+        `/users/buildings/${buildingId}/floors/${floorId}/slots`
+      ),
+  },
+
+  // ========== PROFILE ==========
+  profile: {
+    /** Update own profile (PUT /users/profile). */
+    update: (body: { fullName?: string; phone?: string; avatar?: string }) =>
+      api.put<Wrap<{ user: UserProfile }>>('/users/profile', body),
+
+    changePassword: (body: { currentPassword: string; newPassword: string }) =>
+      api.put<{ data: { message: string } }>('/users/profile/password', body),
+  },
+
+  // ========== LICENSE PLATES ==========
+  licensePlates: {
+    /** GET /users/license-plates → { licensePlates }. */
+    list: () =>
+      api.get<Wrap<{ licensePlates: LicensePlate[] }>>('/users/license-plates'),
+
+    /** POST /users/license-plates → returns the full updated list. */
+    add: (body: { plateNumber: string; vehicleType?: UserVehicleType }) =>
+      api.post<Wrap<{ licensePlates: LicensePlate[] }>>('/users/license-plates', body),
+
+    /** PUT /users/license-plates/:plateId (vehicleType only). */
+    update: (plateId: string, body: { vehicleType: UserVehicleType }) =>
+      api.put<Wrap<{ licensePlates: LicensePlate[] }>>(`/users/license-plates/${plateId}`, body),
+
+    /** DELETE /users/license-plates/:plateId. */
+    remove: (plateId: string) =>
+      api.delete<Wrap<{ licensePlates: LicensePlate[] }>>(`/users/license-plates/${plateId}`),
+
+    /** PATCH /users/license-plates/:plateId/default. */
+    setDefault: (plateId: string) =>
+      api.patch<Wrap<{ licensePlates: LicensePlate[] }>>(`/users/license-plates/${plateId}/default`),
+  },
+
+  // ========== WALLET ==========
+  wallet: {
+    get: () =>
+      api.get<Wrap<{ wallet: UserWallet }>>('/users/wallet'),
+
+    transactions: (query?: { limit?: number; page?: number }) =>
+      api.get<Wrap<ListResult<UserWalletTransaction>>>('/users/wallet/transactions', { query }),
+
+    topup: (body: { amount: number }) =>
+      api.post<Wrap<WalletTopUpResult>>('/users/wallet/topup', body),
+
+    verifyTopup: (orderCode: number) =>
+      api.get<Wrap<{ status: string; settled: boolean }>>(`/users/wallet/topup/${orderCode}/status`),
   },
 };

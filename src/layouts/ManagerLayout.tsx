@@ -1,10 +1,14 @@
 import { useMemo, useState } from 'react';
-import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Navigate, Outlet, useLocation, useNavigate, useMatch } from 'react-router-dom';
 import { Navbar } from '@/components/shared/Navbar';
 import { ManagerSidebar } from '@/components/shared/ManagerSidebar';
 import { useAuth } from '@/hooks/useAuth';
 import { ADMIN_EMAIL_FALLBACK } from '@/utils/constants';
 import { useManagerBuildings } from '@/hooks/useManagerBuildings';
+import { useSubscriptionStatus } from '@/hooks/useSubscriptionStatus';
+
+// Pages a manager can reach WITHOUT an active subscription (so they can pay).
+const UNGATED_PATHS = ['/manager/wallet', '/manager/profile'];
 
 const titles: Record<string, string> = {
   '/manager': 'Bảng điều khiển Manager',
@@ -20,6 +24,7 @@ const titles: Record<string, string> = {
   '/manager/shifts': 'Ca trực',
   '/manager/staff-shifts': 'Gán Staff Vào Ca',
   '/manager/feedbacks': 'Phản hồi',
+  '/manager/wallet': 'Ví tòa nhà',
   '/manager/profile': 'Xem hồ sơ',
   '/manager/settings': 'Cài đặt',
 };
@@ -28,10 +33,18 @@ export function ManagerLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const { session, logout } = useAuth();
   const { buildings, selectedBuildingId, setSelectedBuildingId, isLoading } = useManagerBuildings();
+  const { status: subscription, loading: subLoading, refresh: refreshSubscription } =
+    useSubscriptionStatus(selectedBuildingId);
   const navigate = useNavigate();
   const location = useLocation();
 
   const title = useMemo(() => titles[location.pathname] ?? 'Manager Dashboard', [location.pathname]);
+  const isProfileRoute = Boolean(useMatch('/manager/profile'));
+
+  // Gate: an inactive subscription locks every page except wallet + profile.
+  const isUngatedPath = UNGATED_PATHS.includes(location.pathname);
+  const subscriptionBlocked =
+    !!selectedBuildingId && !subLoading && subscription !== null && !subscription.active && !isUngatedPath;
 
   return (
     <div className="admin-theme relative min-h-screen bg-slate-950 text-foreground">
@@ -46,20 +59,31 @@ export function ManagerLayout() {
           <Navbar
             title={title}
             email={session?.email ?? ADMIN_EMAIL_FALLBACK}
+            fullName={session?.displayName}
+            role={session?.role}
             onLogout={() => {
               logout();
-              navigate('/manager/login', { replace: true });
+              navigate('/auth/login', { replace: true });
             }}
           />
           <main className="flex-1 p-4 md:p-6">
-            {isLoading ? (
+            {isLoading && !isProfileRoute ? (
               <div className="text-sm text-muted-foreground">Đang tải...</div>
-            ) : !selectedBuildingId ? (
+            ) : !selectedBuildingId && !isProfileRoute ? (
               <div className="rounded-md border border-border bg-card p-6 text-sm text-muted-foreground">
                 Tài khoản này chưa được gán tòa nhà nào. Vui lòng liên hệ quản lý.
               </div>
+            ) : subscriptionBlocked ? (
+              // No active subscription → force the manager to the wallet to buy a package.
+              <Navigate to="/manager/wallet" replace />
             ) : (
-              <Outlet context={{ buildingId: selectedBuildingId }} />
+              <Outlet
+                context={{
+                  buildingId: selectedBuildingId ?? '',
+                  subscription,
+                  refreshSubscription,
+                }}
+              />
             )}
           </main>
         </div>

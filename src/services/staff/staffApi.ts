@@ -25,7 +25,7 @@ export interface ParkingSession {
   _id: string;
   plateNumber: string;
   vehicleType?: { _id: string; name: string; code: string } | null;
-  slot?: { _id: string; code: string } | null;
+  slot?: { _id: string; code: string; floor?: { _id: string; name: string; code: string } | null } | null;
   entryGate?: { _id: string; code: string; name: string } | null;
   exitGate?: { _id: string; code: string; name: string } | null;
   entryTime: string;
@@ -36,16 +36,32 @@ export interface ParkingSession {
   status: 'active' | 'completed' | 'cancelled';
 }
 
-export interface Reservation {
+export interface StaffReservation {
   _id: string;
-  code: string;
-  plateNumber: string;
-  vehicleType?: { _id: string; name: string; code: string } | null;
-  slot?: { _id: string; code: string } | null;
-  building: { _id: string; name: string; code: string };
-  status: 'pending' | 'confirmed' | 'checked_in' | 'expired' | 'cancelled';
-  reservationDate: string;
-  expiresAt: string;
+  code?: string;
+  user?: { _id: string; fullName?: string; email?: string } | null;
+  building?: { _id: string; name?: string; code?: string } | null;
+  vehicleType?: { _id: string; name?: string; code?: string } | null;
+  slot?: { _id: string; code?: string; floor?: { _id: string; name?: string; code?: string } | null } | null;
+  plateNumber?: string;
+  startTime?: string;
+  endTime?: string;
+  status: 'pending' | 'confirmed' | 'checked_in' | 'completed' | 'cancelled' | 'expired';
+  fee?: number | null;
+  amountPaid?: number | null;
+  createdAt?: string;
+}
+
+export interface StaffIncident {
+  _id: string;
+  code?: string;
+  type?: string;
+  building?: { _id?: string; code?: string; name?: string } | null;
+  severity?: 'medium' | 'high' | 'critical';
+  status?: 'open' | 'investigating' | 'escalated' | 'resolved' | 'closed';
+  createdAt?: string;
+  note?: string;
+  target?: string;
 }
 
 export interface WalletTransaction {
@@ -114,6 +130,15 @@ interface Wrap<T> {
   data: T;
 }
 
+type ApiList<T> = T[] | { items: T[] };
+
+function unwrapList<T>(payload: ApiList<T> | Wrap<ApiList<T>> | null | undefined): T[] {
+  if (!payload) return [];
+  const raw = typeof payload === 'object' && 'data' in payload ? (payload as Wrap<ApiList<T>>).data : payload as ApiList<T>;
+  if (Array.isArray(raw)) return raw;
+  return (raw as { items?: T[] }).items ?? [];
+}
+
 // ========== API METHODS ==========
 
 export const staffApi = {
@@ -132,7 +157,52 @@ export const staffApi = {
   myShifts: (q?: Record<string, string | undefined>) =>
     api.get<Wrap<{ items: MyShift[] } | MyShift[]>>('/staff/my-shifts', { query: q }),
 
-  // Parking Sessions
+  // Parking Sessions — top-level methods (correct backend paths)
+  getActiveSessions: () =>
+    api.get<Wrap<ApiList<ParkingSession>>>('/staff/parking-sessions/active'),
+
+  checkIn: (payload: { plateNumber: string; vehicleType?: string; gate?: string; building?: string }) =>
+    api.post<Wrap<{ item: ParkingSession }>>('/staff/parking-sessions/check-in', payload),
+
+  checkOut: (sessionId: string, body?: { paymentMethod?: string }) =>
+    api.patch<Wrap<{ item: ParkingSession }>>(`/staff/parking-sessions/${sessionId}/check-out`, body ?? {}),
+
+  initiateSessionPayment: (sessionId: string) =>
+    api.post<Wrap<PaymentData>>(`/staff/parking-sessions/${sessionId}/initiate-payment`, {}),
+
+  verifySessionPayment: (orderCode: number) =>
+    api.get<Wrap<PaymentStatus>>(`/staff/parking-sessions/payment/${orderCode}/status`),
+
+  lookupPlate: (plateNumber: string) =>
+    api.get<Wrap<PlateInfo>>(`/staff/parking-sessions/lookup-plate/${plateNumber}`),
+
+  lookupUserQr: (qrCode: string) =>
+    api.get<Wrap<{ hasAccount: boolean; user: { id: string; fullName: string; email: string } | null }>>(
+      `/staff/users/lookup-qr/${qrCode}`
+    ),
+
+  // Lookup a license plate by its unique QR token (PLT-...)
+  lookupPlateQr: (qrCode: string) =>
+    api.get<
+      Wrap<{
+        qrCode: string;
+        found: boolean;
+        plate: { plateNumber: string; vehicleType: string } | null;
+        user: { id: string; fullName: string; email: string; phone: string | null; walletBalance: number; isActive: boolean } | null;
+        activeSessions: { id: string; building: string; plateNumber: string; entryTime: string; fee: number }[];
+      }>
+    >(`/staff/users/lookup-plate-qr/${qrCode}`),
+
+  addCustomerPlate: (customerId: string, payload: { plateNumber: string; vehicleType?: string }) =>
+    api.post<Wrap<{ success: boolean }>>(`/staff/users/${customerId}/license-plates`, payload),
+
+  checkInReservation: (code: string) =>
+    api.post(`/staff/reservations/${code}/check-in`),
+
+  listReservations: (query?: Record<string, string | undefined>) =>
+    api.get<Wrap<{ items: StaffReservation[]; total: number }>>('/staff/reservations', { query }),
+
+  // Sessions (namespaced, for backward compat)
   sessions: {
     list: (buildingId: string, q?: Record<string, string | undefined>) =>
       api.get<Wrap<{ items: ParkingSession[] }>>(
@@ -152,55 +222,59 @@ export const staffApi = {
       api.get<Wrap<ParkingSession>>(`/staff/parking-sessions/${sessionId}`),
 
     checkIn: (
-      buildingId: string,
+      _buildingId: string,
       body: { plateNumber: string; vehicleType?: string; gate?: string; forceCheckIn?: boolean }
     ) =>
-      api.post<Wrap<{ item: ParkingSession }>>(
-        `/staff/parking-sessions/check-in`,
-        body
-      ),
+      api.post<Wrap<{ item: ParkingSession }>>('/staff/parking-sessions/check-in', body),
 
-    checkOut: (buildingId: string, sessionId: string, body: { paymentMethod: string }) =>
+    checkOut: (_buildingId: string, sessionId: string, body: { paymentMethod: string }) =>
       api.patch<Wrap<{ item: ParkingSession }>>(
-        `/staff/buildings/${buildingId}/sessions/${sessionId}/check-out`,
+        `/staff/parking-sessions/${sessionId}/check-out`,
         body
       ),
 
     initiatePayment: (sessionId: string) =>
-      api.post<Wrap<PaymentData>>(
-        `/staff/parking-sessions/${sessionId}/initiate-payment`,
-        {}
-      ),
+      api.post<Wrap<PaymentData>>(`/staff/parking-sessions/${sessionId}/initiate-payment`, {}),
 
     getPaymentStatus: (orderCode: number) =>
-      api.get<Wrap<PaymentStatus>>(
-        `/staff/parking-sessions/payment/${orderCode}/status`
-      ),
+      api.get<Wrap<PaymentStatus>>(`/staff/parking-sessions/payment/${orderCode}/status`),
 
     lookupPlate: (plateNumber: string) =>
-      api.get<Wrap<PlateInfo>>(
-        `/staff/parking-sessions/lookup-plate/${plateNumber}`
-      ),
+      api.get<Wrap<PlateInfo>>(`/staff/parking-sessions/lookup-plate/${plateNumber}`),
 
     lookupUser: (qrCode: string) =>
-      api.get<Wrap<PlateInfo>>(
+      api.get<Wrap<{ hasAccount: boolean; user: { id: string; fullName: string; email: string } | null }>>(
         `/staff/users/lookup-qr/${qrCode}`
       ),
   },
 
   // Reservations
   reservations: {
-    checkIn: (code: string, body: { gate?: string }) =>
-      api.post<Wrap<{ item: Reservation }>>(
+    list: (query?: Record<string, string | undefined>) =>
+      api.get<Wrap<{ items: StaffReservation[]; total: number }>>('/staff/reservations', { query }),
+
+    checkIn: (code: string, body?: { gate?: string }) =>
+      api.post<Wrap<{ item: StaffReservation }>>(
         `/staff/reservations/${code}/check-in`,
-        body
+        body ?? {}
       ),
 
     expire: (reservationId: string) =>
-      api.patch<Wrap<{ item: Reservation }>>(
+      api.patch<Wrap<{ item: StaffReservation }>>(
         `/staff/reservations/${reservationId}/expire`,
         {}
       ),
+  },
+
+  // Incidents
+  incidents: {
+    list: (buildingId?: string) =>
+      api.get<Wrap<ApiList<StaffIncident>>>('/staff/incidents', {
+        query: buildingId ? { buildingId } : undefined,
+      }),
+
+    create: (payload: { type: string; target?: string; note?: string; buildingId?: string }) =>
+      api.post('/staff/incidents', payload),
   },
 
   // Wallet Transactions
@@ -209,32 +283,13 @@ export const staffApi = {
     userId: string;
     amount: number;
   }) =>
-    api.post<Wrap<{ item: WalletTransaction }>>(
-      '/staff/wallet-transactions',
-      body
-    ),
-
-  // Incidents
-  incidents: (body: {
-    incidentType: string;
-    parkingSessionId: string;
-    penaltyFee: number;
-    paymentMethod: 'cash' | 'wallet' | 'qr';
-    description?: string;
-  }) =>
-    api.post<Wrap<{ item: Incident }>>(
-      '/staff/incidents',
-      body
-    ),
+    api.post<Wrap<{ item: WalletTransaction }>>('/staff/wallet-transactions', body),
 };
 
 // ========== HELPER FUNCTIONS ==========
 
 export const extractShifts = (payload: Wrap<{ items: MyShift[] } | MyShift[]>): MyShift[] => {
-  if (!payload?.data) return [];
-  const d = payload.data;
-  if (Array.isArray(d)) return d;
-  return (d as { items?: MyShift[] }).items ?? [];
+  return unwrapList(payload);
 };
 
 export const extractBuildings = (
@@ -244,8 +299,13 @@ export const extractBuildings = (
   return (payload as { items?: StaffBuilding[] }).items ?? [];
 };
 
-export const extractSessions = (payload: any): ParkingSession[] => {
-  if (!payload?.data) return [];
-  if (Array.isArray(payload.data)) return payload.data;
-  return (payload.data as { items?: ParkingSession[] }).items ?? [];
+export const extractSessions = (payload: unknown): ParkingSession[] => {
+  return unwrapList(payload as ApiList<ParkingSession> | Wrap<ApiList<ParkingSession>>);
+};
+
+export const extractIncidents = (
+  payload: StaffIncident[] | { items: StaffIncident[] }
+): StaffIncident[] => {
+  if (Array.isArray(payload)) return payload;
+  return (payload as { items?: StaffIncident[] }).items ?? [];
 };

@@ -7,8 +7,8 @@ import { UsersPage } from '@/pages/admin/UsersPage';
 import { RevenueAnalyticsPage } from '@/pages/admin/RevenueAnalyticsPage';
 import { AuditLogsPage } from '@/pages/admin/AuditLogsPage';
 import { AdminProfilePage } from '@/pages/admin/AdminProfilePage';
-import { FraudDetectionPage } from '@/pages/admin/FraudDetectionPage';
-import { SystemHealthPage } from '@/pages/admin/SystemHealthPage';
+import { SystemWalletPage } from '@/pages/admin/SystemWalletPage';
+import { SubscriptionPackagesPage } from '@/pages/admin/SubscriptionPackagesPage';
 import { ModulePlaceholderPage } from '@/pages/admin/ModulePlaceholderPage';
 import { HomeRoute } from '@/pages/public/HomeRoute';
 import BuildingsUserPage from '@/pages/User/BuildingsPage';
@@ -16,6 +16,8 @@ import ProfilePage from '@/pages/public/ProfilePage';
 import ReservationsPage from '@/pages/public/ReservationsPage';
 import LongTermSubscriptionsPage from '@/pages/public/LongTermSubscriptionsPage';
 import WalletPage from '@/pages/public/WalletPage';
+import ParkingHistoryPage from '@/pages/public/ParkingHistoryPage';
+import UserDashboardPage from '@/pages/public/UserDashboardPage';
 import { PublicLoginRoute, PublicRegisterRoute } from '@/pages/public/AuthRoutes';
 import { ProtectedRoute } from '@/routes/ProtectedRoute';
 import { ManagerLayout } from '@/layouts/ManagerLayout';
@@ -34,10 +36,16 @@ import { ManagerReservationPolicyPage } from '@/pages/manager/ManagerReservation
 import { ManagerPackagesPage } from '@/pages/manager/ManagerPackagesPage';
 import { ManagerShiftsPage } from '@/pages/manager/ManagerShiftsPage';
 import { ManagerStaffShiftsPage } from '@/pages/manager/ManagerStaffShiftsPage';
+import { ManagerStaffPage } from '@/pages/manager/ManagerStaffPage';
+import { ManagerWalletPage } from '@/pages/manager/ManagerWalletPage';
 import { StaffLayout } from '@/layouts/StaffLayout';
 import { StaffDashboardPage } from '@/pages/staff/StaffDashboardPage';
+import { StaffOperationsPage } from '@/pages/staff/StaffOperationsPage';
+import { StaffReservationsPage } from '@/pages/staff/StaffReservationsPage';
 import { StaffSessionsPage } from '@/pages/staff/StaffSessionsPage';
 import { StaffShiftsPage } from '@/pages/staff/StaffShiftsPage';
+import { StaffIncidentsPage } from '@/pages/staff/StaffIncidentsPage';
+import { StaffProfilePage } from '@/pages/staff/StaffProfilePage';
 import { StaffProtectedRoute } from '@/routes/StaffProtectedRoute';
 
 export function AppRouter() {
@@ -54,6 +62,8 @@ export function AppRouter() {
       <Route path="/wallet" element={<WalletPage />} />
       <Route path="/reservations" element={<ReservationsPage />} />
       <Route path="/long-term-subscriptions" element={<LongTermSubscriptionsPage />} />
+      <Route path="/parking-history" element={<ParkingHistoryPage />} />
+      <Route path="/user-dashboard" element={<UserDashboardPage />} />
 
       <Route path="/manager/login" element={<Navigate to="/auth/login" replace />} />
       <Route path="/manager" element={<Navigate to="/manager/dashboard" replace />} />
@@ -72,7 +82,9 @@ export function AppRouter() {
           <Route path="reservation-policy" element={<ManagerReservationPolicyPage />} />
           <Route path="packages" element={<ManagerPackagesPage />} />
           <Route path="shifts" element={<ManagerShiftsPage />} />
+          <Route path="staff" element={<ManagerStaffPage />} />
           <Route path="staff-shifts" element={<ManagerStaffShiftsPage />} />
+          <Route path="wallet" element={<ManagerWalletPage />} />
           <Route
             path="settings"
             element={
@@ -91,8 +103,12 @@ export function AppRouter() {
         <Route path="/staff" element={<StaffLayout />}>
           <Route index element={<StaffDashboardPage />} />
           <Route path="dashboard" element={<StaffDashboardPage />} />
+          <Route path="operations" element={<StaffOperationsPage />} />
+          <Route path="reservations" element={<StaffReservationsPage />} />
           <Route path="my-shifts" element={<StaffShiftsPage />} />
           <Route path="sessions" element={<StaffSessionsPage />} />
+          <Route path="incidents" element={<StaffIncidentsPage />} />
+          <Route path="profile" element={<StaffProfilePage />} />
         </Route>
       </Route>
 
@@ -106,26 +122,14 @@ export function AppRouter() {
           <Route path="buildings" element={<BuildingsPage />} />
           <Route path="users" element={<UsersPage />} />
           <Route path="revenue-analytics" element={<RevenueAnalyticsPage />} />
-          <Route
-            path="wallet-governance"
-            element={<ModulePlaceholderPage title="Quản lý ví" description="Điều khiển ví hệ thống, khung phân phối và phê duyệt." />}
-          />
-          <Route
-            path="pricing-policies"
-            element={<ModulePlaceholderPage title="Chính sách giá" description="Phạm vi chính sách, mẫu chính sách và ràng buộc theo vai trò." />}
-          />
-          <Route
-            path="policy-push-logs"
-            element={<ModulePlaceholderPage title="Lịch sử đẩy chính sách" description="Lịch sử đẩy chính sách giữa tòa nhà và thao tác hoàn tác." />}
-          />
+          <Route path="subscription-packages" element={<SubscriptionPackagesPage />} />
+          <Route path="wallet-governance" element={<SystemWalletPage />} />
           <Route path="audit-logs" element={<AuditLogsPage />} />
-          <Route path="fraud-detection" element={<FraudDetectionPage />} />
-          <Route path="system-health" element={<SystemHealthPage />} />
+          <Route path="profile" element={<AdminProfilePage />} />
           <Route
             path="notifications"
             element={<ModulePlaceholderPage title="Thông báo" description="Mẫu thông báo, giám sát hàng đợi và kênh gửi." />}
           />
-          <Route path="profile" element={<AdminProfilePage />} />
           <Route
             path="settings"
             element={<ModulePlaceholderPage title="Cài đặt" description="Cấu hình nền tảng, chính sách truy cập và tùy chọn vận hành." />}

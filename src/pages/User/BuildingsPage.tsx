@@ -5,7 +5,7 @@ import {
   ArrowLeft,
   Building2,
   CarFront,
-  Clock3,
+  CheckCircle2,
   Loader2,
   MapPin,
   PhoneCall,
@@ -13,17 +13,39 @@ import {
   SquareParking,
 } from 'lucide-react';
 import { useBuildings } from '@/hooks/user';
-import { userApi, type Building } from '@/services/user/userApi';
+import {
+  userApi,
+  type Building,
+  type FloorAvailability,
+  type VehicleType,
+} from '@/services/user/userApi';
 
-function formatHours(open?: string, close?: string): string {
-  if (!open && !close) return 'Chưa cập nhật';
-  if (open === '00:00' && (close === '23:59' || close === '24:00')) return '24/7';
-  return `${open || '--:--'} - ${close || '--:--'}`;
+/**
+ * The `/users/buildings` list endpoint only returns buildings that are already
+ * active (the backend filters by status: 'active') and does NOT include the
+ * `status` field. So treat a building as open unless it is explicitly closed.
+ */
+function isBuildingOpen(building: Building): boolean {
+  return building.status ? building.status === 'active' : true;
 }
 
 function addressText(building: Building): string {
   if (building.address?.fullAddress) return building.address.fullAddress;
   return building.address ? JSON.stringify(building.address) : 'Chưa cập nhật địa chỉ';
+}
+
+function StatusBadge({ open }: { open: boolean }) {
+  return (
+    <span
+      className={`rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-wider ${
+        open
+          ? 'border-emerald-400/25 bg-emerald-400/10 text-emerald-300'
+          : 'border-rose-400/25 bg-rose-400/10 text-rose-300'
+      }`}
+    >
+      {open ? 'Đang mở' : 'Tạm đóng'}
+    </span>
+  );
 }
 
 function BuildingCard({
@@ -35,7 +57,7 @@ function BuildingCard({
   selected: boolean;
   onSelect: () => void;
 }) {
-  const hours = formatHours(building.operatingHours?.open, building.operatingHours?.close);
+  const open = isBuildingOpen(building);
 
   return (
     <button
@@ -58,33 +80,12 @@ function BuildingCard({
             <span>{addressText(building)}</span>
           </p>
         </div>
-        <span className="rounded-full border border-emerald-400/25 bg-emerald-400/10 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-emerald-300">
-          {building.status === 'active' ? 'Đang mở' : 'Tạm đóng'}
-        </span>
+        <StatusBadge open={open} />
       </div>
 
-      <div className="mt-5 grid grid-cols-3 gap-3">
-        <div className="rounded-xl border border-white/10 bg-slate-950/55 p-3">
-          <Clock3 size={15} className="text-orange-300" />
-          <p className="mt-2 text-[10px] font-bold uppercase text-slate-500">Giờ mở cửa</p>
-          <p className="mt-1 text-sm font-black text-white">{hours}</p>
-        </div>
-        <div className="rounded-xl border border-white/10 bg-slate-950/55 p-3">
-          <SquareParking size={15} className="text-emerald-300" />
-          <p className="mt-2 text-[10px] font-bold uppercase text-slate-500">Bảng giá</p>
-          <p className="mt-1 text-sm font-black text-emerald-300">
-            {new Intl.NumberFormat('vi-VN', {
-              style: 'currency',
-              currency: 'VND',
-              maximumFractionDigits: 0,
-            }).format(building.pricing?.hourlyRate || 0)}
-          </p>
-        </div>
-        <div className="rounded-xl border border-white/10 bg-slate-950/55 p-3">
-          <Building2 size={15} className="text-cyan-300" />
-          <p className="mt-2 text-[10px] font-bold uppercase text-slate-500">Số tầng</p>
-          <p className="mt-1 text-sm font-black text-white">{building.totalFloors || 0}</p>
-        </div>
+      <div className="mt-4 flex items-center gap-2 text-[11px] font-bold text-slate-400">
+        <CheckCircle2 size={13} className="text-emerald-300" />
+        Bấm để xem số tầng, chỗ trống & đặt chỗ
       </div>
     </button>
   );
@@ -95,6 +96,9 @@ export default function BuildingsPage() {
   const { items: buildings, isLoading } = useBuildings();
   const [selectedId, setSelectedId] = useState('');
   const [query, setQuery] = useState('');
+
+  const [detail, setDetail] = useState<{ floors: FloorAvailability[]; vehicleTypes: VehicleType[] } | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
 
   useEffect(() => {
     if (buildings.length > 0 && !selectedId) {
@@ -119,11 +123,43 @@ export default function BuildingsPage() {
     [filteredRows, selectedId],
   );
 
-  const currency = new Intl.NumberFormat('vi-VN', {
-    style: 'currency',
-    currency: 'VND',
-    maximumFractionDigits: 0,
-  });
+  // Fetch real floor + vehicle-type data for the selected building (the list
+  // endpoint doesn't include floors/pricing, but these detail endpoints do).
+  useEffect(() => {
+    const id = selectedBuilding?._id;
+    if (!id) {
+      setDetail(null);
+      return;
+    }
+    let cancelled = false;
+    setDetailLoading(true);
+    Promise.all([userApi.buildings.floors(id), userApi.buildings.vehicleTypes(id)])
+      .then(([fRes, vRes]) => {
+        if (cancelled) return;
+        const floors = (fRes as { data?: { floors?: FloorAvailability[] } })?.data?.floors ?? [];
+        const vehicleTypes = (vRes as { data?: { items?: VehicleType[] } })?.data?.items ?? [];
+        setDetail({ floors, vehicleTypes });
+      })
+      .catch(() => {
+        if (!cancelled) setDetail(null);
+      })
+      .finally(() => {
+        if (!cancelled) setDetailLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedBuilding?._id]);
+
+  const floorCount = detail?.floors.length ?? 0;
+  const availableSlots = useMemo(
+    () => (detail?.floors ?? []).reduce((sum, f) => sum + (f.availableSlots ?? 0), 0),
+    [detail],
+  );
+  const totalSlots = useMemo(
+    () => (detail?.floors ?? []).reduce((sum, f) => sum + (f.totalSlots ?? 0), 0),
+    [detail],
+  );
 
   return (
     <main className="min-h-screen bg-slate-950 text-slate-100">
@@ -158,7 +194,7 @@ export default function BuildingsPage() {
               Thông tin tòa nhà gửi xe
             </h1>
             <p className="mt-3 max-w-2xl text-sm font-semibold leading-relaxed text-slate-400">
-              Xem giờ mở cửa, bảng giá và số tầng trước khi di chuyển hoặc đặt chỗ.
+              Xem số tầng, chỗ trống và loại xe được hỗ trợ trước khi di chuyển hoặc đặt chỗ.
             </p>
           </div>
 
@@ -219,47 +255,55 @@ export default function BuildingsPage() {
                       <span>{addressText(selectedBuilding)}</span>
                     </p>
                   </div>
-                  <div className="rounded-2xl border border-emerald-400/25 bg-emerald-400/10 px-4 py-3 text-right">
-                    <p className="text-[10px] font-black uppercase tracking-wider text-emerald-300">
-                      {selectedBuilding.status === 'active' ? 'Đang mở' : 'Tạm đóng'}
-                    </p>
-                    <p className="mt-1 text-3xl font-black text-white">
-                      {selectedBuilding.status === 'active' ? '✓' : '✗'}
-                    </p>
-                  </div>
+                  <StatusBadge open={isBuildingOpen(selectedBuilding)} />
                 </div>
 
-                <div className="mt-6 grid grid-cols-2 gap-4">
+                <div className="mt-6 grid grid-cols-3 gap-4">
                   <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
-                    <Clock3 size={18} className="text-orange-300" />
-                    <p className="mt-3 text-xs font-bold uppercase text-slate-500">Giờ mở cửa</p>
-                    <p className="mt-1 text-lg font-black text-white">
-                      {formatHours(
-                        selectedBuilding.operatingHours?.open,
-                        selectedBuilding.operatingHours?.close,
-                      )}
-                    </p>
-                  </div>
-                  <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
-                    <CarFront size={18} className="text-cyan-300" />
+                    <Building2 size={18} className="text-cyan-300" />
                     <p className="mt-3 text-xs font-bold uppercase text-slate-500">Số tầng</p>
-                    <p className="mt-1 text-lg font-black text-white">{selectedBuilding.totalFloors || 0}</p>
+                    <p className="mt-1 text-lg font-black text-white">
+                      {detailLoading ? '…' : floorCount}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
+                    <SquareParking size={18} className="text-emerald-300" />
+                    <p className="mt-3 text-xs font-bold uppercase text-slate-500">Chỗ trống</p>
+                    <p className="mt-1 text-lg font-black text-emerald-300">
+                      {detailLoading ? '…' : availableSlots}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
+                    <CarFront size={18} className="text-orange-300" />
+                    <p className="mt-3 text-xs font-bold uppercase text-slate-500">Tổng ô</p>
+                    <p className="mt-1 text-lg font-black text-white">
+                      {detailLoading ? '…' : totalSlots}
+                    </p>
                   </div>
                 </div>
 
+                {/* Loại xe được hỗ trợ */}
                 <div className="mt-6 rounded-2xl border border-white/10 bg-slate-950/60 p-4">
-                  <p className="text-xs font-bold uppercase text-slate-500">Bảng giá mỗi giờ</p>
-                  <p className="mt-2 text-2xl font-black text-orange-300">
-                    {currency.format(selectedBuilding.pricing?.hourlyRate || 0)}
+                  <p className="text-xs font-bold uppercase text-slate-500">Loại xe được hỗ trợ</p>
+                  {detailLoading ? (
+                    <p className="mt-2 text-sm font-semibold text-slate-500">Đang tải...</p>
+                  ) : (detail?.vehicleTypes.length ?? 0) > 0 ? (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {detail!.vehicleTypes.map((vt) => (
+                        <span
+                          key={vt._id}
+                          className="rounded-lg border border-white/10 bg-slate-900/80 px-3 py-1 text-xs font-bold text-slate-200"
+                        >
+                          {vt.name}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="mt-2 text-sm font-semibold text-slate-500">Đang cập nhật</p>
+                  )}
+                  <p className="mt-3 text-xs font-semibold text-slate-400">
+                    Phí gửi xe được tính theo giờ và hiển thị chi tiết khi bạn đặt chỗ.
                   </p>
-                  {selectedBuilding.pricing?.dailyCap ? (
-                    <p className="mt-2 text-xs font-semibold text-slate-400">
-                      Trần giá hôm:{' '}
-                      <span className="text-emerald-300">
-                        {currency.format(selectedBuilding.pricing.dailyCap)}
-                      </span>
-                    </p>
-                  ) : null}
                 </div>
 
                 <button

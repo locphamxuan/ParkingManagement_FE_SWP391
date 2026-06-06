@@ -1,19 +1,21 @@
 import { NavLink } from 'react-router-dom';
 import {
   Building2,
+  ChevronLeft,
   ClipboardList,
   Flag,
   LayoutDashboard,
   MapPin,
   MessageSquare,
   Package,
-  ShieldAlert,
   SlidersHorizontal,
   Square,
   Truck,
   User,
   Users,
   Clock,
+  Wallet,
+  Fingerprint,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/utils/cn';
@@ -34,9 +36,10 @@ const modules = [
   { to: 'reservation-policy', label: 'Đặt chỗ', icon: MapPin },
   { to: 'packages', label: 'Gói', icon: Package },
   { to: 'shifts', label: 'Ca trực', icon: Users },
-  { to: 'staff-shifts', label: 'Gán Staff', icon: Clock },
+  { to: 'staff', label: 'Nhân viên', icon: User },
+  { to: 'staff-shifts', label: 'Gán ca', icon: Clock },
   { to: 'feedbacks', label: 'Phản hồi', icon: MessageSquare },
-  { to: 'settings', label: 'Cài đặt', icon: ShieldAlert },
+  { to: 'wallet', label: 'Ví tòa nhà', icon: Wallet },
 ] as const;
 
 export function ManagerSidebar({ collapsed, onToggle }: ManagerSidebarProps) {
@@ -54,10 +57,10 @@ export function ManagerSidebar({ collapsed, onToggle }: ManagerSidebarProps) {
             <p className="text-xs font-extrabold text-slate-100">MANAGER PORTAL</p>
           </div>
         ) : (
-          <User className="text-primary drop-shadow-[0_0_8px_rgba(249,115,22,0.25)] h-5 w-5 mx-auto" />
+          <Fingerprint className="text-primary drop-shadow-[0_0_8px_rgba(249,115,22,0.25)] h-5 w-5 mx-auto" />
         )}
         <Button size="sm" variant="ghost" onClick={onToggle} className="h-7 w-7 rounded-lg p-0 hover:bg-white/8 text-slate-400 hover:text-white">
-          <MapPin className={cn('h-3.5 w-3.5 transition-all duration-300', collapsed && 'rotate-180')} />
+          <ChevronLeft className={cn('h-3.5 w-3.5 transition-all duration-300', collapsed && 'rotate-180')} />
         </Button>
       </div>
 

@@ -9,44 +9,90 @@ interface CameraModalProps {
 }
 
 const OCR_API_KEY = 'K87161803788957';
-const OCR_API_URL = 'https://api.ocr.space/parse';
+const OCR_API_URL = 'https://api.ocr.space/parse/image';
 
-function normalizePlate(text: string): string | null {
-  const upperText = text.toUpperCase();
-  const pattern = /(\d{2})[^\w]*([A-Z]{1,2})[^\w]*(\d{3,5})/;
-  const matches = pattern.exec(upperText);
-  
-  if (matches) {
-    return `${matches[1]}${matches[2]}-${matches[3]}`;
+function cleanOcrText(rawText: string): string {
+  const upperText = rawText.toUpperCase().trim();
+
+  const correctOcrDigits = (suffix: string): string => {
+    let corrected = '';
+    for (let i = 0; i < suffix.length; i++) {
+      const char = suffix[i];
+      if (/[0-9]/.test(char)) {
+        corrected += char;
+      } else {
+        const prev = i > 0 ? suffix[i - 1] : '';
+        const next = i < suffix.length - 1 ? suffix[i + 1] : '';
+        if (char === 'S') corrected += prev === '8' ? '9' : prev === '5' ? '6' : next === '7' ? '6' : '5';
+        else if (char === 'B') corrected += '8';
+        else if (char === 'O' || char === 'D' || char === 'Q') corrected += '0';
+        else if (char === 'I' || char === 'T' || char === 'J' || char === 'L') corrected += '1';
+        else if (char === 'Z') corrected += '2';
+        else if (char === 'A') corrected += '4';
+        else if (char === 'G') corrected += '6';
+        else corrected += '0';
+      }
+    }
+    return corrected;
+  };
+
+  const normalizedSpaces = upperText.replace(/[^A-Z0-9]+/g, ' ');
+  const parts = normalizedSpaces.split(' ').filter((p) => p.length > 0);
+
+  if (parts.length >= 2) {
+    const part1 = parts[0];
+    const suffixParts = parts.slice(1);
+    const cleanSuffixParts = suffixParts.map((p) => correctOcrDigits(p));
+
+    if (cleanSuffixParts.length === 2) {
+      const s1 = cleanSuffixParts[0];
+      const s2 = cleanSuffixParts[1];
+      if (s1.length === 3 && s2.length === 2) return `${part1}-${s1}.${s2}`;
+    }
+
+    const combinedSuffix = cleanSuffixParts.join('');
+    if (combinedSuffix.length === 5) return `${part1}-${combinedSuffix.substring(0, 3)}.${combinedSuffix.substring(3)}`;
+    if (combinedSuffix.length === 4) return `${part1}-${combinedSuffix}`;
   }
-  
-  return null;
+
+  const pattern = /(\d{2}[^A-Z0-9]*[A-Z]{1,2}\d{0,2})[\s\-_.]*(\d{3}[\s\-_.]*\d{2}|\d{3,5})/g;
+  const match = pattern.exec(upperText);
+  if (match) {
+    const p1 = match[1].replace(/[^A-Z0-9]/g, '');
+    const p2 = correctOcrDigits(match[2].replace(/[^A-Z0-9]/g, ''));
+    const fmt = p2.length === 5 ? `${p2.substring(0, 3)}.${p2.substring(3)}` : p2;
+    return `${p1}-${fmt}`;
+  }
+
+  return upperText.replace(/[^A-Z0-9]/g, '').substring(0, 12);
 }
 
 async function recognizePlateFromImage(imageBase64: string): Promise<string | null> {
   try {
+    const formData = new FormData();
+    formData.append('apikey', OCR_API_KEY);
+    formData.append('base64Image', imageBase64);
+    formData.append('language', 'eng');
+    formData.append('isOverlayRequired', 'false');
+
     const response = await fetch(OCR_API_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        apikey: OCR_API_KEY,
-        base64Image: imageBase64,
-        language: 'eng',
-      }),
+      body: formData,
     });
+
+    if (!response.ok) throw new Error(`OCR API lỗi: ${response.status}`);
 
     const data = await response.json();
 
     if (data.IsErroredOnProcessing) {
-      throw new Error(data.ErrorMessage || 'OCR processing failed');
+      throw new Error(data.ErrorMessage?.[0] || 'Lỗi nhận diện OCR');
     }
 
-    const text = data.ParsedResults?.[0]?.ParsedText || data.ParsedText || '';
-    const plate = normalizePlate(text);
+    const text = data.ParsedResults?.[0]?.ParsedText || '';
+    if (!text.trim()) return null;
 
-    return plate;
+    const cleaned = cleanOcrText(text);
+    return cleaned || null;
   } catch (error) {
     console.error('OCR recognition error:', error);
     return null;

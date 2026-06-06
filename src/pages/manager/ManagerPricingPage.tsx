@@ -8,28 +8,40 @@ import { ModalForm } from '@/components/shared/ModalForm';
 import { useBuildingContext } from '@/hooks/useBuildingContext';
 import { managerApi, type PricePolicy, type VehicleType } from '@/services/manager/managerApi';
 
+type PricingType = 'regular' | 'peak' | 'holiday';
+
 interface FormState {
   name: string;
   vehicleType: string;
+  type: PricingType;
   hourlyRate: string;
   dailyCap: string;
   minRate: string;
   maxRate: string;
   fromTime: string;
   toTime: string;
+  holidayDates: string;
   isActive: boolean;
 }
 
 const empty: FormState = {
   name: '',
   vehicleType: '',
+  type: 'regular',
   hourlyRate: '',
   dailyCap: '',
   minRate: '',
   maxRate: '',
   fromTime: '00:00',
   toTime: '23:59',
+  holidayDates: '',
   isActive: true,
+};
+
+const TYPE_LABEL: Record<PricingType, string> = {
+  regular: 'Giờ thường',
+  peak: 'Cao điểm',
+  holiday: 'Ngày lễ',
 };
 
 export function ManagerPricingPage() {
@@ -74,12 +86,17 @@ export function ManagerPricingPage() {
     setForm({
       name: row.name,
       vehicleType: typeof row.vehicleType === 'string' ? row.vehicleType : row.vehicleType._id,
+      type: row.type ?? 'regular',
       hourlyRate: String(row.hourlyRate),
       dailyCap: row.dailyCap != null ? String(row.dailyCap) : '',
       minRate: String(row.minRate ?? 0),
       maxRate: row.maxRate != null ? String(row.maxRate) : '',
       fromTime: row.timeWindow?.from ?? '00:00',
       toTime: row.timeWindow?.to ?? '23:59',
+      holidayDates: (row.holidayDates ?? [])
+        .map((d) => (d ? new Date(d).toISOString().slice(0, 10) : ''))
+        .filter(Boolean)
+        .join(', '),
       isActive: row.isActive,
     });
     setModalOpen(true);
@@ -93,11 +110,16 @@ export function ManagerPricingPage() {
     const payload = {
       name: form.name.trim(),
       vehicleType: form.vehicleType,
+      type: form.type,
       hourlyRate: Number(form.hourlyRate),
       dailyCap: form.dailyCap ? Number(form.dailyCap) : null,
       minRate: form.minRate ? Number(form.minRate) : 0,
       maxRate: form.maxRate ? Number(form.maxRate) : null,
       timeWindow: { from: form.fromTime, to: form.toTime },
+      holidayDates:
+        form.type === 'holiday'
+          ? form.holidayDates.split(',').map((s) => s.trim()).filter(Boolean)
+          : [],
       isActive: form.isActive,
     };
     try {
@@ -129,6 +151,11 @@ export function ManagerPricingPage() {
       key: 'vehicleType',
       title: 'Loại xe',
       render: (row) => (typeof row.vehicleType === 'string' ? row.vehicleType : row.vehicleType.code),
+    },
+    {
+      key: 'type',
+      title: 'Loại giá',
+      render: (row) => TYPE_LABEL[row.type] ?? row.type,
     },
     {
       key: 'hourlyRate',
@@ -213,6 +240,18 @@ export function ManagerPricingPage() {
             </select>
           </div>
           <div className="grid gap-1.5">
+            <label className="text-xs uppercase text-muted-foreground">Loại giá</label>
+            <select
+              className="h-10 rounded-md border border-border bg-card px-3 text-sm"
+              value={form.type}
+              onChange={(e) => setForm((f) => ({ ...f, type: e.target.value as PricingType }))}
+            >
+              <option value="regular">Giờ thường</option>
+              <option value="peak">Cao điểm</option>
+              <option value="holiday">Ngày lễ</option>
+            </select>
+          </div>
+          <div className="grid gap-1.5">
             <label className="text-xs uppercase text-muted-foreground">Giá/giờ (VND)</label>
             <Input
               type="number"
@@ -264,6 +303,18 @@ export function ManagerPricingPage() {
               onChange={(e) => setForm((f) => ({ ...f, toTime: e.target.value }))}
             />
           </div>
+          {form.type === 'holiday' && (
+            <div className="grid gap-1.5 md:col-span-2">
+              <label className="text-xs uppercase text-muted-foreground">
+                Ngày lễ áp dụng (YYYY-MM-DD, cách nhau bằng dấu phẩy)
+              </label>
+              <Input
+                value={form.holidayDates}
+                onChange={(e) => setForm((f) => ({ ...f, holidayDates: e.target.value }))}
+                placeholder="VD: 2026-01-01, 2026-04-30"
+              />
+            </div>
+          )}
           <label className="flex items-center gap-2 text-sm md:col-span-2">
             <input
               type="checkbox"

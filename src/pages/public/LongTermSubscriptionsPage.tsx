@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useBuildings, useLongTermPackages, useLongTermSubscriptions, useSubscribeToPackage } from '@/hooks/user';
-import type { LongTermPackage, LongTermSubscription } from '@/services/user/userApi';
+import type { LongTermPackage, LongTermPaymentMethod, LongTermSubscription } from '@/services/user/userApi';
 import { CustomSelect } from '@/components/ui/select';
 
 const currency = new Intl.NumberFormat('vi-VN', {
@@ -258,7 +258,7 @@ export default function LongTermSubscriptionsPage() {
                       { value: '', label: '-- Chọn gói --' },
                       ...packages.map((item) => ({
                         value: item._id,
-                        label: `${item.name} (${item.duration} ngày) - ${formatMoney(item.price)}`,
+                        label: `${item.name} (${item.durationDays} ngày) - ${formatMoney(item.price)}`,
                       })),
                     ]}
                     placeholder="-- Chọn gói --"
@@ -358,13 +358,13 @@ export default function LongTermSubscriptionsPage() {
                     <div key={item._id} className="rounded-xl border border-white/10 bg-slate-950/60 p-4">
                       <p className="text-xs font-black text-orange-300">{item.package.name}</p>
                       <p className="mt-1 text-xs font-semibold text-slate-300">
-                        {item.linkedPlates.join(', ')} • {item.code}
+                        {item.plateNumber ?? item.linkedPlates?.join(', ') ?? '—'} • {item.package.code}
                       </p>
                       <p className="mt-1 text-[11px] text-slate-400">
                         {formatDate(item.startDate)} - {formatDate(item.endDate)}
                       </p>
                       <p className="mt-1 text-[11px] font-black text-cyan-300">
-                        {formatMoney(item.price)}
+                        {formatMoney(item.price ?? item.package.price)}
                       </p>
                     </div>
                   ))
@@ -391,7 +391,7 @@ export default function LongTermSubscriptionsPage() {
                     Mã: <span className="text-white">{selectedPackage.code}</span>
                   </p>
                   <p className="text-xs font-semibold text-slate-300">
-                    Thời hạn: <span className="text-white">{selectedPackage.duration} ngày</span>
+                    Thời hạn: <span className="text-white">{selectedPackage.durationDays} ngày</span>
                   </p>
                   <p className="text-xs font-semibold text-slate-300">
                     Giá: <span className="text-orange-300 font-black">{formatMoney(selectedPackage.price)}</span>
@@ -403,6 +403,24 @@ export default function LongTermSubscriptionsPage() {
                   )}
                   {selectedPackage.description && (
                     <p className="text-xs text-slate-400 mt-2">{selectedPackage.description}</p>
+                  )}
+                  {selectedPackage.allowDedicatedSlot && (
+                    <p className="mt-2 inline-flex items-center gap-1 rounded-full border border-cyan-400/30 bg-cyan-500/10 px-2 py-0.5 text-[11px] font-bold text-cyan-300">
+                      <CheckCircle2 size={11} /> Có chỗ đỗ dành riêng
+                    </p>
+                  )}
+                  {(selectedPackage.benefits?.length ?? 0) > 0 && (
+                    <div className="mt-2 border-t border-white/10 pt-2">
+                      <p className="mb-1 text-[10px] font-black uppercase tracking-wider text-emerald-300">Ưu đãi</p>
+                      <ul className="space-y-1">
+                        {selectedPackage.benefits!.map((b, i) => (
+                          <li key={i} className="flex items-start gap-1.5 text-xs text-slate-300">
+                            <CheckCircle2 size={12} className="mt-0.5 shrink-0 text-emerald-400" />
+                            <span>{b}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   )}
                 </div>
               ) : (

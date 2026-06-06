@@ -23,8 +23,6 @@ export function UserQRModal({ isOpen, onClose, userId, fullName }: UserQRModalPr
         userId,
         {
           errorCorrectionLevel: 'H',
-          type: 'image/png',
-          quality: 0.95,
           margin: 1,
           width: 280,
           color: {
@@ -32,7 +30,7 @@ export function UserQRModal({ isOpen, onClose, userId, fullName }: UserQRModalPr
             light: '#1e293b',
           },
         },
-        (error) => {
+        (error: Error | null | undefined) => {
           if (error) console.error('QR Code generation error:', error);
         }
       );

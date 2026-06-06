@@ -12,10 +12,14 @@ export type {
   ParkingHistory,
   LongTermPackage,
   LongTermSubscription,
+  UserWallet,
+  UserWalletTransaction,
+  WalletTopUpResult,
+  LicensePlate,
+  UserVehicleType,
+  UserProfile,
+  ReservationEstimate,
+  ReservationCreateResult,
 } from '@/services/user/userApi';
 
 export { userApi } from '@/services/user/userApi';
-
-export type {
-  // Add any additional types you want to export here
-} from '@/services/user/userApi';

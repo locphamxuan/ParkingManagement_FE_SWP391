@@ -243,6 +243,13 @@ export default function HomePage({ modules, onOpenAuth, onViewProfile, onViewRes
                     >
                       <History size={12} className="inline-block mr-2" /> Lịch sử đặt chỗ
                     </button>
+                    <a
+                      href="/parking-history"
+                      className="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-slate-800 text-slate-300 hover:text-white flex items-center"
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      <MapPinned size={12} className="inline-block mr-2" /> Lịch sử gửi xe
+                    </a>
                     <button className="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-slate-800 text-rose-400 hover:text-rose-300 border-t border-white/5 mt-1" onClick={onLogout}>
                       <LogOut size={12} className="inline-block mr-2" /> Đăng xuất
                     </button>
