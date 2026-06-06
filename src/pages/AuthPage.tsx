@@ -307,7 +307,7 @@ export default function AuthPage({ mode, notice, onModeChange, onBackHome, onSub
         setForgotEmail('');
         setLocalNotice(null);
         onModeChange('login');
-      }, 3000);
+      }, 1500);
     } catch (error) {
       setLocalNotice({
         message: error instanceof Error ? error.message : 'Gửi email thất bại. Vui lòng thử lại.',
@@ -379,7 +379,7 @@ export default function AuthPage({ mode, notice, onModeChange, onBackHome, onSub
         setResetToken(null);
         setLocalNotice(null);
         onModeChange('login');
-      }, 3000);
+      }, 1500);
     } catch (error) {
       setLocalNotice({
         message: error instanceof Error ? error.message : 'Đặt lại mật khẩu thất bại. Vui lòng thử lại hoặc yêu cầu link mới.',
