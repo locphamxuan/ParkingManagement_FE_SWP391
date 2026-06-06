@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -14,9 +14,14 @@ import {
   RefreshCw,
   User,
   WalletCards,
+  Copy,
+  Check,
+  Clock,
+  AlertCircle,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { userApi, type UserWallet, type UserWalletTransaction } from '@/services/user/userApi';
+import QRCode from 'qrcode';
 
 const currency = new Intl.NumberFormat('vi-VN', {
   style: 'currency',
@@ -50,6 +55,61 @@ interface PendingTopUp {
   amount: number;
   checkoutUrl: string;
   orderCode: number;
+  qrCode?: string;
+}
+
+const BANK_BIN_MAP: Record<string, string> = {
+  '970422': 'MB Bank (TMCP Quân Đội)',
+  '970436': 'Vietcombank',
+  '970415': 'VietinBank',
+  '970418': 'BIDV',
+  '970405': 'Agribank',
+  '970407': 'Techcombank',
+  '970416': 'ACB',
+  '970423': 'TPBank',
+  '970432': 'VPBank',
+  '970403': 'Sacombank',
+};
+
+function parseVietQR(qrString?: string) {
+  if (!qrString) return null;
+  try {
+    const parseTags = (str: string) => {
+      const result: Record<string, string> = {};
+      let idx = 0;
+      while (idx < str.length) {
+        const id = str.substring(idx, idx + 2);
+        const len = parseInt(str.substring(idx + 2, idx + 4), 10);
+        if (Number.isNaN(len)) break;
+        const val = str.substring(idx + 4, idx + 4 + len);
+        result[id] = val;
+        idx += 4 + len;
+      }
+      return result;
+    };
+
+    const rootTags = parseTags(qrString);
+    const tag38 = rootTags['38'];
+    if (!tag38) return null;
+
+    const sub38 = parseTags(tag38);
+    const tag01 = sub38['01'];
+    if (!tag01) return null;
+
+    const sub01 = parseTags(tag01);
+    const bankBin = sub01['00'];
+    const accountNumber = sub01['01'];
+    const accountName = rootTags['59'] || 'PHAM XUAN LOC';
+
+    return {
+      bankBin,
+      accountNumber,
+      accountName,
+    };
+  } catch (e) {
+    console.error('Error parsing VietQR', e);
+    return null;
+  }
 }
 
 export default function WalletPage() {
@@ -67,6 +127,77 @@ export default function WalletPage() {
   const [message, setMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
   const [pendingTopUp, setPendingTopUp] = useState<PendingTopUp | null>(null);
   const [verifying, setVerifying] = useState(false);
+  const qrCanvasRef = useRef<HTMLCanvasElement>(null);
+  const [copiedField, setCopiedField] = useState<'account' | 'amount' | 'desc' | 'order' | null>(null);
+  const [pollCount, setPollCount] = useState(0);
+
+  // Render QR Code onto canvas
+  useEffect(() => {
+    if (pendingTopUp?.qrCode && qrCanvasRef.current) {
+      QRCode.toCanvas(
+        qrCanvasRef.current,
+        pendingTopUp.qrCode,
+        {
+          errorCorrectionLevel: 'M',
+          margin: 1,
+          width: 200,
+          color: {
+            dark: '#0f172a',
+            light: '#ffffff',
+          },
+        },
+        (error: Error | null | undefined) => {
+          if (error) console.error('QR Code generation error:', error);
+        }
+      );
+    }
+  }, [pendingTopUp]);
+
+  // Auto-poll wallet top-up verification status
+  useEffect(() => {
+    if (!pendingTopUp) {
+      setPollCount(0);
+      return;
+    }
+
+    let pollInterval: NodeJS.Timeout;
+    let timeoutId: NodeJS.Timeout;
+
+    const checkStatus = async () => {
+      setPollCount((prev) => prev + 1);
+      try {
+        const res = await userApi.wallet.verifyTopup(pendingTopUp.orderCode);
+        const status = (res as { data?: { status: string } })?.data?.status;
+        if (status === 'success' || status === 'PAID') {
+          setMessage({ type: 'ok', text: `Đã nạp ${fmtMoney(pendingTopUp.amount)} vào ví thành công.` });
+          setPendingTopUp(null);
+          refreshWallet();
+          clearInterval(pollInterval);
+        }
+      } catch (err) {
+        // silent fail - keep polling
+      }
+    };
+
+    // Poll every 3 seconds
+    pollInterval = setInterval(checkStatus, 3000);
+
+    // Stop polling after 15 minutes
+    timeoutId = setTimeout(() => {
+      clearInterval(pollInterval);
+    }, 15 * 60 * 1000);
+
+    return () => {
+      clearInterval(pollInterval);
+      clearTimeout(timeoutId);
+    };
+  }, [pendingTopUp]);
+
+  const handleCopy = (text: string, field: 'account' | 'amount' | 'desc' | 'order') => {
+    navigator.clipboard.writeText(text);
+    setCopiedField(field);
+    setTimeout(() => setCopiedField(null), 2000);
+  };
 
   const refreshWallet = async () => {
     setIsLoading(true);
@@ -99,7 +230,7 @@ export default function WalletPage() {
     try {
       const res = await userApi.wallet.topup({ amount });
       const data = (res as { data?: PendingTopUp })?.data;
-      if (data) setPendingTopUp(data);
+      if (data) setPendingTopUp({ ...data, amount });
     } catch (err) {
       setMessage({ type: 'err', text: err instanceof Error ? err.message : 'Không thể khởi tạo nạp ví.' });
     } finally {
@@ -345,53 +476,169 @@ export default function WalletPage() {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-md"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md"
           onClick={() => { if (!verifying && !isSubmitting) setPendingTopUp(null); }}
         >
           <motion.div
-            initial={{ opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
+            initial={{ opacity: 0, scale: 0.96, y: 15 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-sm overflow-hidden rounded-3xl border border-white/10 bg-slate-950 shadow-2xl"
+            className="w-full max-w-lg overflow-hidden rounded-3xl border border-white/10 bg-slate-950 shadow-[0_0_50px_rgba(249,115,22,0.18)]"
           >
-            <div className="flex items-center justify-between border-b border-white/10 bg-slate-900/80 px-5 py-4">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-white/5 bg-gradient-to-r from-orange-500/10 to-amber-500/10 px-6 py-4">
               <div>
-                <p className="font-mono text-[10px] font-black uppercase tracking-wider text-cyan-200">PAYOS QR</p>
-                <h2 className="text-base font-black text-white">Nạp {fmtMoney(pendingTopUp.amount)}</h2>
+                <p className="font-mono text-[9px] font-black uppercase tracking-[0.2em] text-orange-400">Thanh toán PayOS</p>
+                <h2 className="text-base font-black text-white">Nạp tiền vào ví</h2>
               </div>
-              <button type="button" onClick={() => setPendingTopUp(null)} disabled={verifying} className="rounded-full border border-white/10 p-2 text-slate-300 transition hover:bg-white/5">
+              <button
+                type="button"
+                onClick={() => setPendingTopUp(null)}
+                disabled={verifying}
+                className="rounded-full border border-white/10 p-2 text-slate-400 hover:text-white transition hover:bg-white/5"
+              >
                 ✕
               </button>
             </div>
-            <div className="p-5 space-y-4">
-              <p className="text-sm text-slate-300 text-center">
-                Mở trang thanh toán PayOS, quét QR chuyển khoản, rồi nhấn <strong className="text-white">Xác nhận</strong>.
+
+            {/* Content */}
+            <div className="p-6 space-y-6">
+              <p className="text-xs text-slate-400 text-center leading-relaxed">
+                Mở ứng dụng Ngân hàng (Mobile Banking) quét mã QR bên dưới, hoặc copy thông tin chuyển khoản để hoàn tất giao dịch.
               </p>
-              <button
-                type="button"
-                onClick={() => window.open(pendingTopUp.checkoutUrl, '_blank', 'noopener')}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 py-3 text-sm text-white transition hover:bg-white/10"
-              >
-                <QrCode size={14} /> Mở trang thanh toán
-              </button>
-              <div className="grid grid-cols-2 gap-3">
+
+              {/* QR and Transfer Info Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-center">
+                {/* QR Code Container */}
+                <div className="flex flex-col items-center justify-center gap-3">
+                  <div className="relative p-4 bg-white rounded-2xl flex items-center justify-center shadow-[0_0_20px_rgba(255,255,255,0.05)] border border-orange-500/20">
+                    <canvas ref={qrCanvasRef} />
+                    <div className="absolute -inset-1 rounded-2xl bg-gradient-to-tr from-orange-500/10 to-amber-500/10 opacity-30 blur pointer-events-none" />
+                  </div>
+                  <div className="flex items-center gap-2 text-[10px] text-orange-400 font-mono font-bold uppercase tracking-wider animate-pulse">
+                    <span className="relative flex h-1.5 w-1.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-orange-500"></span>
+                    </span>
+                    Đang chờ thanh toán...
+                  </div>
+                </div>
+
+                {/* Account Details */}
+                {(() => {
+                  const qrInfo = parseVietQR(pendingTopUp.qrCode);
+                  const bankName = qrInfo ? (BANK_BIN_MAP[qrInfo.bankBin] || `Ngân hàng (BIN: ${qrInfo.bankBin})`) : 'MB Bank (TMCP Quân Đội)';
+                  const accNo = qrInfo?.accountNumber || 'VQRQAJNOG7846';
+                  const accName = qrInfo?.accountName || 'PHAM XUAN LOC';
+
+                  return (
+                    <div className="space-y-3.5 rounded-2xl bg-slate-900/60 border border-white/5 p-4">
+                      <div>
+                        <p className="text-[9px] font-black uppercase tracking-wider text-slate-500 font-mono mb-0.5">Ngân hàng thụ hưởng</p>
+                        <p className="text-xs font-semibold text-white">{bankName}</p>
+                      </div>
+
+                      <div>
+                        <p className="text-[9px] font-black uppercase tracking-wider text-slate-500 font-mono mb-0.5">Số tài khoản</p>
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-xs font-mono text-cyan-400 font-black tracking-wide">{accNo}</p>
+                          <button
+                            type="button"
+                            onClick={() => handleCopy(accNo, 'account')}
+                            className="p-1.5 hover:bg-white/5 rounded-lg transition-colors duration-200 flex-shrink-0"
+                            title="Sao chép số tài khoản"
+                          >
+                            {copiedField === 'account' ? (
+                              <CheckCircle2 size={13} className="text-emerald-400" />
+                            ) : (
+                              <Copy size={13} className="text-slate-400 hover:text-white" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div>
+                        <p className="text-[9px] font-black uppercase tracking-wider text-slate-500 font-mono mb-0.5">Chủ tài khoản</p>
+                        <p className="text-xs font-semibold text-white font-mono uppercase">{accName}</p>
+                      </div>
+
+                      <div>
+                        <p className="text-[9px] font-black uppercase tracking-wider text-slate-500 font-mono mb-0.5">Số tiền</p>
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-xs font-mono text-orange-400 font-black tracking-wide">{fmtMoney(pendingTopUp.amount)}</p>
+                          <button
+                            type="button"
+                            onClick={() => handleCopy(pendingTopUp.amount.toString(), 'amount')}
+                            className="p-1.5 hover:bg-white/5 rounded-lg transition-colors duration-200 flex-shrink-0"
+                            title="Sao chép số tiền"
+                          >
+                            {copiedField === 'amount' ? (
+                              <CheckCircle2 size={13} className="text-emerald-400" />
+                            ) : (
+                              <Copy size={13} className="text-slate-400 hover:text-white" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div>
+                        <p className="text-[9px] font-black uppercase tracking-wider text-slate-500 font-mono mb-0.5">Nội dung chuyển khoản</p>
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-xs font-mono text-slate-200 font-bold break-all">Nap vi PBMS</p>
+                          <button
+                            type="button"
+                            onClick={() => handleCopy('Nap vi PBMS', 'desc')}
+                            className="p-1.5 hover:bg-white/5 rounded-lg transition-colors duration-200 flex-shrink-0"
+                            title="Sao chép nội dung chuyển khoản"
+                          >
+                            {copiedField === 'desc' ? (
+                              <CheckCircle2 size={13} className="text-emerald-400" />
+                            ) : (
+                              <Copy size={13} className="text-slate-400 hover:text-white" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Warning box */}
+              <div className="rounded-xl border border-amber-500/10 bg-amber-500/5 p-3.5 text-slate-400 flex items-start gap-2.5">
+                <AlertCircle size={15} className="text-amber-400 shrink-0 mt-0.5" />
+                <p className="text-[10px] leading-relaxed font-semibold">
+                  <strong>Chú ý:</strong> Vui lòng quét mã QR hoặc nhập chính xác thông tin chuyển khoản (đặc biệt là <strong>Số tiền</strong> và <strong>Nội dung</strong>) để hệ thống tự động cộng tiền ngay lập tức.
+                </p>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row gap-3">
                 <button
                   type="button"
-                  onClick={handleVerifyTopUp}
-                  disabled={verifying}
-                  className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-300 text-xs font-black text-slate-950 transition hover:brightness-110 disabled:opacity-60"
+                  onClick={() => window.open(pendingTopUp.checkoutUrl, '_blank', 'noopener')}
+                  className="flex-1 h-11 rounded-xl border border-white/10 hover:border-white/20 bg-slate-900 hover:bg-slate-800 text-white font-black text-xs uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-2"
                 >
-                  <CreditCard size={14} />
-                  {verifying ? 'Đang xác nhận...' : 'Xác nhận đã nạp'}
+                  🌐 Mở trang thanh toán
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setPendingTopUp(null)}
-                  disabled={verifying}
-                  className="inline-flex h-11 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-xs text-slate-300 transition hover:bg-white/10 disabled:opacity-60"
-                >
-                  Hủy
-                </button>
+                <div className="flex gap-3 flex-1">
+                  <button
+                    type="button"
+                    onClick={handleVerifyTopUp}
+                    disabled={verifying}
+                    className="flex-1 h-11 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider transition-all duration-200 hover:scale-102 hover:shadow-[0_0_20px_rgba(249,115,22,0.3)] disabled:opacity-50"
+                  >
+                    {verifying ? 'Đang kiểm tra...' : 'Kiểm tra lại'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPendingTopUp(null)}
+                    disabled={verifying}
+                    className="h-11 px-4 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 text-slate-300 font-bold text-xs transition-all duration-200"
+                  >
+                    Hủy
+                  </button>
+                </div>
               </div>
             </div>
           </motion.div>
