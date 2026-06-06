@@ -14,7 +14,7 @@ const initialForm = {
   confirmPassword: '',
 };
 
-type AuthMode = 'login' | 'register' | 'forgot-password' | 'reset-password';
+export type AuthMode = 'login' | 'register' | 'forgot-password' | 'reset-password';
 
 interface AuthPageProps {
   mode: AuthMode;
@@ -492,7 +492,7 @@ export default function AuthPage({ mode, notice, onModeChange, onBackHome, onSub
         initial={{ opacity: 0, scale: 0.96, z: -100 }}
         animate={{ opacity: 1, scale: 1, z: 0 }}
         transition={{ type: "spring", stiffness: 100, damping: 18 }}
-        className="w-full max-w-4xl glass-panel-dark border border-white/5 shadow-2xl rounded-3xl overflow-hidden grid grid-cols-1 md:grid-cols-2 relative z-10"
+        className="w-full max-w-4xl glass-panel-dark border border-white/5 shadow-2xl rounded-3xl overflow-y-auto md:overflow-hidden max-h-[90vh] md:max-h-none grid grid-cols-1 md:grid-cols-2 relative z-10"
       >
         {/* Left Interactive Promo Info Column */}
         <div 

@@ -18,7 +18,7 @@ import LongTermSubscriptionsPage from '@/pages/public/LongTermSubscriptionsPage'
 import WalletPage from '@/pages/public/WalletPage';
 import ParkingHistoryPage from '@/pages/public/ParkingHistoryPage';
 import UserDashboardPage from '@/pages/public/UserDashboardPage';
-import { PublicLoginRoute, PublicRegisterRoute } from '@/pages/public/AuthRoutes';
+import { PublicLoginRoute, PublicRegisterRoute, PublicResetPasswordRoute } from '@/pages/public/AuthRoutes';
 import { ProtectedRoute } from '@/routes/ProtectedRoute';
 import { ManagerLayout } from '@/layouts/ManagerLayout';
 import { ManagerBuildingsPage } from '@/pages/manager/ManagerBuildingsPage';
@@ -57,6 +57,8 @@ export function AppRouter() {
       <Route path="/dashboard" element={<Navigate to="/" replace />} />
       <Route path="/auth/login" element={<PublicLoginRoute />} />
       <Route path="/auth/register" element={<PublicRegisterRoute />} />
+      <Route path="/auth/reset-password" element={<PublicResetPasswordRoute />} />
+      <Route path="/auth/reset_password" element={<PublicResetPasswordRoute />} />
       <Route path="/buildings" element={<BuildingsUserPage />} />
       <Route path="/profile" element={<ProfilePage />} />
       <Route path="/wallet" element={<WalletPage />} />

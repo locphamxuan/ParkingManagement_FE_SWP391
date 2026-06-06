@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
-import AuthPage from '@/pages/AuthPage';
+import AuthPage, { AuthMode } from '@/pages/AuthPage';
 import { requestJson } from '@/services/pbmsApi';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -43,12 +43,12 @@ function mapAuthErrorMessage(message: string): string {
 
 function usePublicAuthFlow(initialMode: 'login' | 'register') {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<'login' | 'register'>(initialMode);
+  const [mode, setMode] = useState<AuthMode>(initialMode);
   const [notice, setNotice] = useState<{ message?: string; type?: string }>({});
   const [isLoading, setLoading] = useState(false);
 
-  const onModeChange = useCallback((m: string) => {
-    if (m === 'login' || m === 'register') setMode(m);
+  const onModeChange = useCallback((m: AuthMode) => {
+    setMode(m);
   }, []);
 
   const onBackHome = useCallback(
@@ -135,6 +135,11 @@ export function PublicLoginRoute() {
 
 export function PublicRegisterRoute() {
   const flow = usePublicAuthFlow('register');
+  return <AuthPage {...flow} />;
+}
+
+export function PublicResetPasswordRoute() {
+  const flow = usePublicAuthFlow('login'); // AuthPage sẽ tự động đọc token từ URL và chuyển sang chế độ đặt lại mật khẩu
   return <AuthPage {...flow} />;
 }
 
