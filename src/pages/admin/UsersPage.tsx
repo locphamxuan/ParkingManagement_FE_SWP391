@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { ConfirmModal } from '@/components/shared/ConfirmModal';
 import { DataTable, type DataColumn } from '@/components/shared/DataTable';
 import { ModalForm } from '@/components/shared/ModalForm';
 import { SearchFilterBar } from '@/components/shared/SearchFilterBar';
@@ -19,52 +20,48 @@ export function UsersPage() {
   const { data, isLoading, error, refresh } = useAdminDataset();
   const { session } = useAuth();
   const [query, setQuery] = useState('');
-  const [roleFilter, setRoleFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [selectedUser, setSelectedUser] = useState<UserRecord | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [pendingDeleteUser, setPendingDeleteUser] = useState<UserRecord | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const [form, setForm] = useState({
     fullName: '',
     email: '',
     password: '',
     phone: '',
-    role: 'user' as UserRecord['role'],
   });
 
   const filtered = useMemo(() => {
-    const source = data?.users ?? [];
-
+    // Tab Người dùng chỉ quản lý tài khoản khách (role === 'user').
+    const source = (data?.users ?? []).filter((user) => user.role === 'user');
     return source.filter((user) => {
       const q = query.trim().toLowerCase();
       const matchQuery =
         user.name.toLowerCase().includes(q) ||
         user.email.toLowerCase().includes(q) ||
         user.linkedPlates.some((plate) => plate.toLowerCase().includes(q));
-      const matchRole = roleFilter === 'all' || user.role === roleFilter;
-      return matchQuery && matchRole;
+      const matchStatus = statusFilter === 'all' || user.status === statusFilter;
+      return matchQuery && matchStatus;
     });
-  }, [data?.users, query, roleFilter]);
+  }, [data?.users, query, statusFilter]);
 
-    if (isLoading) {
-      return <div className="text-sm text-muted-foreground">Đang tải danh sách người dùng...</div>;
-    }
+  if (isLoading) {
+    return <div className="text-sm text-muted-foreground">Đang tải danh sách người dùng...</div>;
+  }
 
-    if (error || !data) {
-      return <div className="text-sm text-red-600">{error || 'Tải người dùng thất bại.'}</div>;
-    }
+  if (error || !data) {
+    return <div className="text-sm text-red-600">{error || 'Tải người dùng thất bại.'}</div>;
+  }
 
   const token = session?.token || '';
 
   const openCreateModal = () => {
     setActionError(null);
-    setForm({
-      fullName: '',
-      email: '',
-      password: '',
-      phone: '',
-      role: 'user',
-    });
+    setForm({ fullName: '', email: '', password: '', phone: '' });
     setIsCreating(true);
   };
 
@@ -75,7 +72,6 @@ export function UsersPage() {
       email: user.email,
       password: '',
       phone: user.phone || '',
-      role: user.role,
     });
     setSelectedUser(user);
   };
@@ -97,7 +93,7 @@ export function UsersPage() {
         email: form.email,
         password: form.password,
         phone: form.phone,
-        role: form.role,
+        role: 'user',
       });
       await refresh();
       closeModals();
@@ -115,7 +111,6 @@ export function UsersPage() {
       await updateAdminUser(token, selectedUser.id, {
         fullName: form.fullName,
         phone: form.phone,
-        role: form.role,
       });
       await refresh();
       closeModals();
@@ -136,28 +131,30 @@ export function UsersPage() {
     }
   };
 
-  const removeUser = async (user: UserRecord) => {
-    if (!token) return;
-    if (!window.confirm(`Xóa người dùng ${user.email}?`)) return;
+  const confirmDeleteUser = async () => {
+    if (!token || !pendingDeleteUser) return;
     try {
+      setIsDeleting(true);
       setActionError(null);
-      await deleteAdminUser(token, user.id);
+      await deleteAdminUser(token, pendingDeleteUser.id);
       await refresh();
+      setPendingDeleteUser(null);
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'Không thể xóa người dùng');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
   const columns: DataColumn<UserRecord>[] = [
-    { key: 'name', title: 'Người dùng' },
+    { key: 'name', title: 'Họ tên' },
     { key: 'email', title: 'Email' },
     { key: 'phone', title: 'Số điện thoại', render: (row) => row.phone || 'Chưa cập nhật' },
-    { key: 'role', title: 'Vai trò', render: (row) => <StatusBadge status={row.role} /> },
     { key: 'status', title: 'Trạng thái', render: (row) => <StatusBadge status={row.status} /> },
     {
       key: 'walletBalance',
       title: 'Số dư ví',
-      render: (row) => `${row.walletBalance.toLocaleString()} VND`,
+      render: (row) => `${row.walletBalance.toLocaleString('vi-VN')} ₫`,
     },
     {
       key: 'linkedPlates',
@@ -165,28 +162,20 @@ export function UsersPage() {
       render: (row) => {
         const locallyUpdatedRaw = localStorage.getItem('pbms.locallyUpdatedUsers');
         const locallyUpdated = locallyUpdatedRaw ? JSON.parse(locallyUpdatedRaw) : {};
-        
-        // Case-insensitive and trimmed lookup
         const targetEmail = (row.email || '').trim().toLowerCase();
         const matchingKey = Object.keys(locallyUpdated).find(
-          (key) => key.trim().toLowerCase() === targetEmail
+          (key) => key.trim().toLowerCase() === targetEmail,
         );
         const localUser = matchingKey ? locallyUpdated[matchingKey] : null;
+        const localPlates: Array<{ plateNumber: string; vehicleType: 'car' | 'motorcycle'; isDefault?: boolean }> =
+          localUser?.licensePlates || [];
 
-        // Retrieve plates from simulated localStorage user registry if available
-        const localPlates: Array<{ plateNumber: string; vehicleType: 'car' | 'motorcycle'; isDefault?: boolean }> = localUser?.licensePlates || [];
-        
-        // Build a unique plate map to merge both sets preserving type and default status
         const plateMap = new Map<string, { vehicleType: 'car' | 'motorcycle'; isDefault?: boolean }>();
-        
-        // Load local updates
         localPlates.forEach((p) => {
           if (p.plateNumber) {
             plateMap.set(p.plateNumber.toUpperCase(), { vehicleType: p.vehicleType, isDefault: p.isDefault });
           }
         });
-        
-        // Merge with row.linkedPlates (defaulting to car if type is unspecified)
         (row.linkedPlates || []).forEach((p) => {
           const upper = p.toUpperCase();
           if (!plateMap.has(upper)) {
@@ -209,9 +198,9 @@ export function UsersPage() {
             {mergedPlates.map((p) => (
               <span
                 key={p.plateNumber}
-                className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[10px] font-mono font-black border tracking-wider transition-all duration-200 ${
+                className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[10px] font-mono font-black border tracking-wider ${
                   p.isDefault
-                    ? 'bg-amber-500/20 border-amber-500/30 text-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.1)]'
+                    ? 'bg-amber-500/20 border-amber-500/30 text-amber-500'
                     : p.vehicleType === 'car'
                     ? 'bg-blue-500/20 border-blue-500/30 text-blue-400'
                     : 'bg-purple-500/20 border-purple-500/30 text-purple-400'
@@ -242,7 +231,7 @@ export function UsersPage() {
           <Button variant="secondary" size="sm" onClick={() => toggleStatus(row)}>
             {row.status === 'active' ? 'Khóa' : 'Mở'}
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => removeUser(row)}>
+          <Button variant="ghost" size="sm" onClick={() => setPendingDeleteUser(row)}>
             Xóa
           </Button>
         </div>
@@ -254,20 +243,20 @@ export function UsersPage() {
     <div className="grid gap-4">
       {actionError ? <div className="text-sm text-red-600">{actionError}</div> : null}
 
-      <div className="flex items-center justify-end">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <SearchFilterBar
+          query={query}
+          onQueryChange={setQuery}
+          filterValue={statusFilter}
+          onFilterChange={setStatusFilter}
+          filterOptions={['all', 'active', 'blocked', 'pending']}
+        />
         <Button onClick={openCreateModal}>Tạo người dùng</Button>
       </div>
 
-      <SearchFilterBar
-        query={query}
-        onQueryChange={setQuery}
-        filterValue={roleFilter}
-        onFilterChange={setRoleFilter}
-        filterOptions={['all', 'admin', 'user']}
-      />
-
       <DataTable title="Người dùng" rows={filtered} columns={columns} />
 
+      {/* Edit User Modal */}
       <ModalForm
         open={Boolean(selectedUser)}
         onOpenChange={(open) => {
@@ -288,18 +277,11 @@ export function UsersPage() {
             value={form.phone}
             onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))}
           />
-          <select
-            className="h-10 rounded-md border border-border bg-secondary px-3 text-sm text-foreground outline-none"
-            value={form.role}
-            onChange={(e) => setForm((prev) => ({ ...prev, role: e.target.value as UserRecord['role'] }))}
-          >
-            <option value="admin">Admin</option>
-            <option value="user">User</option>
-          </select>
         </div>
         {isSaving ? <p className="text-xs text-muted-foreground">Đang lưu...</p> : null}
       </ModalForm>
 
+      {/* Create User Modal */}
       <ModalForm
         open={isCreating}
         onOpenChange={(open) => {
@@ -330,17 +312,21 @@ export function UsersPage() {
             value={form.phone}
             onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))}
           />
-          <select
-            className="h-10 rounded-md border border-border bg-secondary px-3 text-sm text-foreground outline-none md:col-span-2"
-            value={form.role}
-            onChange={(e) => setForm((prev) => ({ ...prev, role: e.target.value as UserRecord['role'] }))}
-          >
-            <option value="admin">Admin</option>
-            <option value="user">User</option>
-          </select>
         </div>
         {isSaving ? <p className="text-xs text-muted-foreground">Đang tạo...</p> : null}
       </ModalForm>
+
+      <ConfirmModal
+        open={Boolean(pendingDeleteUser)}
+        title="Xác nhận xóa người dùng"
+        description={`Xóa vĩnh viễn tài khoản "${pendingDeleteUser?.name || pendingDeleteUser?.email || ''}"? Hành động này không thể hoàn tác.`}
+        confirmLabel="Xóa"
+        isConfirming={isDeleting}
+        onOpenChange={(open) => {
+          if (!open) setPendingDeleteUser(null);
+        }}
+        onConfirm={confirmDeleteUser}
+      />
     </div>
   );
 }

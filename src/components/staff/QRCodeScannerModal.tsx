@@ -224,13 +224,13 @@ export function QRCodeScannerModal({
         </div>
 
         {/* Tabs */}
-        <div className="mb-4 flex gap-2 border-b border-gray-200">
+        <div className="mb-4 flex gap-2 border-b border-border">
           <button
             onClick={() => setUseCamera(true)}
             className={`pb-2 px-4 font-medium transition-colors ${
               useCamera
-                ? 'text-blue-600 border-b-2 border-blue-600'
-                : 'text-gray-500 hover:text-gray-700'
+                ? 'text-primary border-b-2 border-primary'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             📷 Quét Camera
@@ -239,8 +239,8 @@ export function QRCodeScannerModal({
             onClick={() => setUseCamera(false)}
             className={`pb-2 px-4 font-medium transition-colors ${
               !useCamera
-                ? 'text-blue-600 border-b-2 border-blue-600'
-                : 'text-gray-500 hover:text-gray-700'
+                ? 'text-primary border-b-2 border-primary'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             📁 Upload Ảnh
@@ -301,7 +301,7 @@ export function QRCodeScannerModal({
 
         {/* Upload section - only show when upload tab is active */}
         {!useCamera && (
-          <div className="mb-4 p-4 bg-blue-50 border-2 border-dashed border-blue-300 rounded-lg text-center">
+          <div className="mb-4 p-4 border-2 border-dashed border-primary/30 bg-primary/5 rounded-lg text-center">
             <input
               ref={fileInputRef}
               type="file"
@@ -311,36 +311,36 @@ export function QRCodeScannerModal({
             />
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="w-full py-3 flex flex-col items-center gap-2 text-blue-600 hover:text-blue-700 hover:bg-blue-100/50 rounded transition-colors"
+              className="w-full py-3 flex flex-col items-center gap-2 text-primary hover:text-primary/80 hover:bg-primary/5 rounded transition-colors"
             >
               <Upload size={24} />
               <span className="font-medium">Nhấp để chọn ảnh QR Code</span>
-              <span className="text-xs text-gray-500">hoặc kéo thả ảnh vào đây</span>
+              <span className="text-xs text-muted-foreground">hoặc kéo thả ảnh vào đây</span>
             </button>
           </div>
         )}
 
         {/* Scanned data display */}
         {scannedCode && (
-          <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-            <p className="text-xs text-green-600 font-medium">✓ Quét thành công</p>
-            <p className="text-sm font-mono text-green-900 mt-1 break-all">{scannedCode}</p>
+          <div className="mb-4 p-3 border border-emerald-500/30 bg-emerald-500/10 rounded-lg">
+            <p className="text-xs text-emerald-400 font-medium">✓ Quét thành công</p>
+            <p className="text-sm font-mono text-emerald-300 mt-1 break-all">{scannedCode}</p>
           </div>
         )}
 
         {/* Error message */}
         {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex gap-2">
-            <AlertCircle size={16} className="text-red-600 flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-red-600">{error}</p>
+          <div className="mb-4 p-3 border border-rose-500/30 bg-rose-500/10 rounded-lg flex gap-2">
+            <AlertCircle size={16} className="text-rose-400 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-rose-400">{error}</p>
           </div>
         )}
 
         {/* Scanning status */}
         {isScanning && !scannedCode && (
-          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-xs text-blue-600 font-medium">🎥 Đang quét QR code...</p>
-            <p className="text-xs text-blue-600 mt-1">
+          <div className="mb-4 p-3 border border-primary/20 bg-primary/5 rounded-lg">
+            <p className="text-xs text-primary font-medium">🎥 Đang quét QR code...</p>
+            <p className="text-xs text-muted-foreground mt-1">
               Hướng camera vào mã QR để bắt đầu quét
             </p>
           </div>

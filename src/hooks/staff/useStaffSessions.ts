@@ -148,33 +148,18 @@ export function useStaffSessions({
     }
   }, []);
 
-  const lookupUser = useCallback(async (qrCode: string) => {
+  const lookupUser = useCallback(async (qrCode: string): Promise<PlateInfo> => {
     try {
       const response = await staffApi.sessions.lookupUser(qrCode);
       const data = response.data;
-      
-      // Extract plateNumber from licensePlates array
-      const plateNumber = data.user?.licensePlates?.[0]?.plateNumber || '';
-      
-      // If no plate found, return error state
-      if (!plateNumber) {
-        return { plateNumber: '', hasAccount: data.hasAccount, user: data.user };
-      }
-      
       return {
-        plateNumber,
+        plateNumber: '',
         hasAccount: data.hasAccount,
-        user: {
-          id: data.user?.id,
-          fullName: data.user?.fullName,
-          email: data.user?.email,
-          phone: data.user?.phone,
-          walletBalance: data.user?.walletBalance || 0,
-        },
-        activeSession: data.activeSessions?.[0],
+        user: data.user
+          ? { id: data.user.id, fullName: data.user.fullName, email: data.user.email, phone: '', walletBalance: 0 }
+          : undefined,
       };
-    } catch (err) {
-      // Silent fail for lookup - not critical
+    } catch {
       return { plateNumber: '', hasAccount: false };
     }
   }, []);

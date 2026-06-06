@@ -23,7 +23,10 @@ interface AdminOverviewData {
     activeSessions: number;
   };
   revenue: {
-    today: number;
+    /** Revenue over the selected period (backend field). */
+    total?: number;
+    /** @deprecated legacy alias — backend now returns `total`. */
+    today?: number;
     byMethod: Record<string, { amount: number; count: number }>;
   };
 }
@@ -137,7 +140,7 @@ const toBuilding = (
     occupancyRate: Number(overview?.slots?.occupancyRate || 0),
     status: item.status || 'inactive',
     manager: managerName,
-    revenueToday: Number(overview?.revenue?.today || 0),
+    revenueToday: Number(overview?.revenue?.today ?? 0),
   };
 };
 
@@ -297,7 +300,7 @@ export async function getApiAdminDataset(token: string): Promise<AdminDataset> {
     {
       key: 'revenue',
       label: 'Doanh thu hôm nay',
-      value: formatCompactCurrency(overviewRes.data.revenue.today),
+      value: formatCompactCurrency(overviewRes.data.revenue.total ?? overviewRes.data.revenue.today ?? 0),
       delta: `${paymentMethodDistribution.length} phương thức thanh toán`,
     },
     {

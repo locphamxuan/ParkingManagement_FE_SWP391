@@ -79,7 +79,7 @@ export function CreateReservationExample() {
         plateNumber: '29A-12345',
         buildingId: 'building-123',
         vehicleTypeId: 'car-type-id',
-        reservationDate: new Date().toISOString(),
+        startTime: new Date().toISOString(),
       });
       console.log('Created:', reservation);
     } catch (err) {
@@ -170,7 +170,7 @@ export function PackagesListExample() {
         <div key={pkg._id} className="p-4 border rounded">
           <h3>{pkg.name}</h3>
           <p>Price: {pkg.price} VND</p>
-          <p>Duration: {pkg.duration} days</p>
+          <p>Duration: {pkg.durationDays} days</p>
           <button>Subscribe</button>
         </div>
       ))}
@@ -225,7 +225,7 @@ export function SubscriptionsListExample() {
         <div key={sub._id}>
           <h3>{sub.package.name}</h3>
           <p>Active from {sub.startDate} to {sub.endDate}</p>
-          <p>Plates: {sub.linkedPlates.join(', ')}</p>
+          <p>Plate: {sub.plateNumber ?? sub.linkedPlates?.join(', ') ?? '—'}</p>
         </div>
       ))}
     </div>
@@ -273,13 +273,12 @@ export async function directApiExample() {
 
     // Get packages
     const packages = await userApi.longTermPackages.list();
-    console.log(packages.data.items);
+    console.log(packages.data.packages);
 
     // Subscribe to package
     const subscription = await userApi.longTermSubscriptions.create({
       packageId: 'pkg-123',
-      linkedPlates: ['29A-12345'],
-      paymentMethod: 'wallet',
+      plateNumber: '29A-12345',
     });
     console.log(subscription.data.subscription);
   } catch (error) {

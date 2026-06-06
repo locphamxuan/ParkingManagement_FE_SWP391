@@ -248,7 +248,7 @@ export function AnimatedParkingMap3D({
             />
             {/* Floating Glassmorphic Callout Tag */}
             <foreignObject x="55" y="38" width="135" height="48">
-              <div className="glass-panel border border-cyan-500/40 text-[7px] font-black text-cyan-300 rounded px-2.5 py-1.5 tracking-wider uppercase font-mono shadow-xl animate-bounce flex flex-col gap-0.5">
+              <div style={{ background: 'rgba(15, 23, 42, 0.92)', backdropFilter: 'blur(12px)', border: '1px solid rgba(6,182,212,0.35)' }} className="text-[7px] font-black text-cyan-300 rounded px-2.5 py-1.5 tracking-wider uppercase font-mono shadow-xl animate-bounce flex flex-col gap-0.5">
                 <div className="flex justify-between items-center text-[8px] text-cyan-200 border-b border-cyan-500/20 pb-0.5 mb-0.5">
                   <span>TEAL_SEDAN_EV</span>
                   <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />

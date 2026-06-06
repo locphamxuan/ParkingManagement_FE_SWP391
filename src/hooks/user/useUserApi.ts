@@ -8,6 +8,7 @@ import {
   type Building,
   type VehicleType,
   type ParkingSlot,
+  type FloorAvailability,
 } from '@/services/user/userApi';
 
 interface FetchState<T> {
@@ -131,10 +132,9 @@ export function useCreateReservation() {
       buildingId: string;
       vehicleTypeId?: string;
       vehicleType?: string;
-      startTime?: string;
+      startTime: string;
       endTime?: string;
       slotId?: string;
-      reservationDate: string;
     }) => {
       setIsLoading(true);
       setError(null);
@@ -299,8 +299,7 @@ export function useLongTermPackages(query?: {
       try {
         const result = await userApi.longTermPackages.list(query);
         setState({
-          items: result.data.items,
-          pagination: result.data.pagination,
+          items: result.data.packages,
           isLoading: false,
           error: null,
         });
@@ -321,8 +320,7 @@ export function useLongTermPackages(query?: {
     try {
       const result = await userApi.longTermPackages.list(query);
       setState({
-        items: result.data.items,
-        pagination: result.data.pagination,
+        items: result.data.packages,
         isLoading: false,
         error: null,
       });
@@ -493,7 +491,11 @@ export function useSubscribeToPackage() {
       setIsLoading(true);
       setError(null);
       try {
-        const result = await userApi.longTermSubscriptions.create(body as any);
+        // Backend takes a single plateNumber — use the first linked plate.
+        const result = await userApi.longTermSubscriptions.create({
+          packageId: body.packageId,
+          plateNumber: body.linkedPlates[0],
+        });
         return result.data.subscription;
       } catch (err) {
         const error = err instanceof Error ? err : new Error('Unknown error');
@@ -644,7 +646,7 @@ export function useBuildingVehicleTypes(buildingId: string) {
 }
 
 export function useBuildingFloors(buildingId: string) {
-  const [state, setState] = useState<ListFetchState<{ code: string; number: number }>>({
+  const [state, setState] = useState<ListFetchState<FloorAvailability>>({
     items: [],
     isLoading: true,
     error: null,
@@ -661,8 +663,7 @@ export function useBuildingFloors(buildingId: string) {
       try {
         const result = await userApi.buildings.floors(buildingId);
         setState({
-          items: result.data.items,
-          pagination: result.data.pagination,
+          items: result.data.floors,
           isLoading: false,
           error: null,
         });
@@ -684,8 +685,7 @@ export function useBuildingFloors(buildingId: string) {
     try {
       const result = await userApi.buildings.floors(buildingId);
       setState({
-        items: result.data.items,
-        pagination: result.data.pagination,
+        items: result.data.floors,
         isLoading: false,
         error: null,
       });
@@ -717,10 +717,9 @@ export function useBuildingSlots(buildingId: string, floorId: string, query?: { 
     const fetchSlots = async () => {
       setState((prev) => ({ ...prev, isLoading: true, error: null }));
       try {
-        const result = await userApi.buildings.slots(buildingId, floorId, query);
+        const result = await userApi.buildings.slots(buildingId, floorId);
         setState({
-          items: result.data.items,
-          pagination: result.data.pagination,
+          items: result.data.slots,
           isLoading: false,
           error: null,
         });
@@ -740,10 +739,9 @@ export function useBuildingSlots(buildingId: string, floorId: string, query?: { 
     if (!buildingId || !floorId) return;
     setState((prev) => ({ ...prev, isLoading: true }));
     try {
-      const result = await userApi.buildings.slots(buildingId, floorId, query);
+      const result = await userApi.buildings.slots(buildingId, floorId);
       setState({
-        items: result.data.items,
-        pagination: result.data.pagination,
+        items: result.data.slots,
         isLoading: false,
         error: null,
       });

@@ -1,13 +1,13 @@
 import { useState } from 'react';
-import { AlertCircle, Building2, CheckCircle2, Edit, LogOut, Save, User, X } from 'lucide-react';
+import { AlertCircle, Building2, CheckCircle2, Clock, Edit, LogOut, Save, User, X } from 'lucide-react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { useManagerBuildings } from '@/hooks/useManagerBuildings';
+import { useBuildingContext } from '@/hooks/useBuildingContext';
 import { Button } from '@/components/ui/button';
 
-export function ManagerProfilePage() {
-  const { session, logout, updateProfile } = useAuth();
-  const { buildings, selectedBuildingId } = useManagerBuildings();
+export function StaffProfilePage() {
+  const { session, user, logout, updateProfile } = useAuth();
+  const { building } = useBuildingContext();
   const navigate = useNavigate();
 
   const [isEditing, setIsEditing] = useState(false);
@@ -17,14 +17,15 @@ export function ManagerProfilePage() {
   const [phoneError, setPhoneError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  if (!session?.token || session?.role !== 'manager') {
+  if (!session?.token || session?.role !== 'staff') {
     return <Navigate to="/auth/login" replace />;
   }
 
-  const selectedBuilding = buildings.find((b) => b._id === selectedBuildingId);
+  const displayName = session.displayName || user?.fullName || '';
+  const initials = (displayName || session.email || 'S')[0]?.toUpperCase();
 
   const handleStartEdit = () => {
-    setFullName(session.displayName || '');
+    setFullName(displayName);
     setPhone(session.phone || '');
     setNameError(null);
     setPhoneError(null);
@@ -58,8 +59,6 @@ export function ManagerProfilePage() {
     setTimeout(() => setSuccess(null), 4000);
   };
 
-  const initials = (session.displayName || session.email || 'M')[0]?.toUpperCase();
-
   return (
     <div className="space-y-5">
       {/* Success */}
@@ -72,11 +71,11 @@ export function ManagerProfilePage() {
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/8 bg-slate-900/60 px-5 py-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-amber-500/25 bg-amber-500/10">
-            <User size={18} className="text-amber-400" />
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-emerald-500/25 bg-emerald-500/10">
+            <User size={18} className="text-emerald-400" />
           </div>
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-amber-500">Manager</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-500">Nhân viên vận hành</p>
             <h1 className="text-base font-bold text-white">Hồ sơ cá nhân</h1>
           </div>
         </div>
@@ -97,7 +96,7 @@ export function ManagerProfilePage() {
         </div>
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
+      <div className="grid gap-5 lg:grid-cols-[1fr_300px]">
         {/* Left: profile fields */}
         <div className="rounded-2xl border border-white/8 bg-slate-900/60 p-6">
           <p className="mb-4 text-xs font-bold uppercase tracking-widest text-slate-500">Thông tin tài khoản</p>
@@ -111,7 +110,7 @@ export function ManagerProfilePage() {
                   value={fullName}
                   onChange={(e) => { setFullName(e.target.value); setNameError(null); }}
                   required
-                  className="h-10 w-full rounded-xl border border-white/10 bg-slate-800 px-3 text-sm text-white placeholder:text-slate-500 outline-none focus:ring-1 focus:ring-amber-500"
+                  className="h-10 w-full rounded-xl border border-white/10 bg-slate-800 px-3 text-sm text-white placeholder:text-slate-500 outline-none focus:ring-1 focus:ring-emerald-500"
                   placeholder="Nguyễn Văn A"
                 />
                 {nameError && <p className="flex items-center gap-1 text-xs text-rose-400"><AlertCircle size={12} />{nameError}</p>}
@@ -135,14 +134,14 @@ export function ManagerProfilePage() {
                   onChange={(e) => { setPhone(e.target.value.replace(/[^0-9]/g, '')); setPhoneError(null); }}
                   maxLength={10}
                   required
-                  className="h-10 w-full rounded-xl border border-white/10 bg-slate-800 px-3 text-sm text-white placeholder:text-slate-500 outline-none focus:ring-1 focus:ring-amber-500"
+                  className="h-10 w-full rounded-xl border border-white/10 bg-slate-800 px-3 text-sm text-white placeholder:text-slate-500 outline-none focus:ring-1 focus:ring-emerald-500"
                   placeholder="0901234567"
                 />
                 {phoneError && <p className="flex items-center gap-1 text-xs text-rose-400"><AlertCircle size={12} />{phoneError}</p>}
               </div>
 
               <div className="flex items-end gap-2 md:col-span-2">
-                <Button type="submit" size="sm" className="gap-1.5 bg-amber-500 hover:bg-amber-600 text-slate-900">
+                <Button type="submit" size="sm" className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white">
                   <Save size={13} /> Lưu thay đổi
                 </Button>
                 <Button type="button" variant="secondary" size="sm" onClick={handleCancel} className="gap-1.5">
@@ -153,10 +152,10 @@ export function ManagerProfilePage() {
           ) : (
             <div className="grid gap-3 sm:grid-cols-2">
               {[
-                { label: 'Họ tên', value: session.displayName || 'Chưa cập nhật' },
+                { label: 'Họ tên', value: displayName || 'Chưa cập nhật' },
                 { label: 'Email', value: session.email },
                 { label: 'Số điện thoại', value: session.phone || 'Chưa cập nhật' },
-                { label: 'Vai trò', value: 'MANAGER' },
+                { label: 'Vai trò', value: 'STAFF' },
               ].map((f) => (
                 <div key={f.label} className="rounded-xl border border-white/8 bg-slate-800/50 px-4 py-3">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">{f.label}</p>
@@ -169,42 +168,47 @@ export function ManagerProfilePage() {
 
         {/* Right: identity card */}
         <div className="space-y-4">
-          {/* Avatar card */}
+          {/* Avatar */}
           <div className="rounded-2xl border border-white/8 bg-slate-900/60 p-5">
             <div className="flex items-center gap-4">
-              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-amber-500/25 bg-amber-500/10">
-                <span className="text-2xl font-black text-amber-400">{initials}</span>
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-emerald-500/25 bg-emerald-500/10">
+                <span className="text-2xl font-black text-emerald-400">{initials}</span>
               </div>
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-amber-500">Manager Portal</p>
-                <p className="text-base font-bold text-white">{session.displayName || 'Manager'}</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-500">Staff Portal</p>
+                <p className="text-base font-bold text-white">{displayName || 'Nhân viên'}</p>
                 <p className="text-xs text-slate-400">{session.email}</p>
               </div>
             </div>
           </div>
 
           {/* Building info */}
-          {selectedBuilding ? (
+          {building && (
             <div className="rounded-2xl border border-white/8 bg-slate-900/60 p-5">
               <div className="flex items-center gap-2 mb-3">
-                <Building2 size={14} className="text-amber-400" />
+                <Building2 size={14} className="text-emerald-400" />
                 <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Tòa nhà phụ trách</p>
               </div>
               <div className="space-y-2">
                 <div className="rounded-xl border border-white/8 bg-slate-800/50 px-3 py-2.5">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Tên tòa nhà</p>
-                  <p className="mt-0.5 text-sm font-semibold text-white">{selectedBuilding.name}</p>
+                  <p className="mt-0.5 text-sm font-semibold text-white">{building.name}</p>
                 </div>
                 <div className="rounded-xl border border-white/8 bg-slate-800/50 px-3 py-2.5">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Mã tòa nhà</p>
-                  <p className="mt-0.5 font-mono text-sm text-amber-400">{selectedBuilding.code}</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Mã</p>
+                  <p className="mt-0.5 font-mono text-sm text-emerald-400">{building.code}</p>
                 </div>
-                {buildings.length > 1 && (
-                  <p className="text-xs text-slate-500">+{buildings.length - 1} tòa nhà khác</p>
+                {building.operatingHours && (
+                  <div className="flex items-center gap-2 rounded-xl border border-white/8 bg-slate-800/50 px-3 py-2.5">
+                    <Clock size={12} className="text-slate-500" />
+                    <p className="text-xs text-slate-400">
+                      {building.operatingHours.open} – {building.operatingHours.close}
+                    </p>
+                  </div>
                 )}
               </div>
             </div>
-          ) : null}
+          )}
         </div>
       </div>
     </div>

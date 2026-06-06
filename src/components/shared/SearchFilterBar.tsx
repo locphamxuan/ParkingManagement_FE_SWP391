@@ -44,6 +44,8 @@ export function SearchFilterBar({
               manager: 'Quản lý',
               staff: 'Nhân viên',
               user: 'Người dùng',
+              blocked: 'Đã khóa',
+              pending: 'Chờ duyệt',
               low: 'Thấp',
               medium: 'Trung bình',
               high: 'Cao',

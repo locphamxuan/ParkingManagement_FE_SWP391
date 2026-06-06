@@ -1,15 +1,14 @@
 import { useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import HomePage from '@/pages/HomePage';
 import { mainFlowModules } from '@/data/mainFlow';
 import { useAuth } from '@/hooks/useAuth';
 
 export function HomeRoute() {
   const navigate = useNavigate();
-  
-  // Use reactive Zustand store instead of direct localStorage to prevent sync lag
   const { session, logout } = useAuth();
 
+  // ALL hooks must be declared before any conditional returns (Rules of Hooks)
   const userMapped = useMemo(() => {
     if (!session) return null;
     return {
@@ -22,21 +21,17 @@ export function HomeRoute() {
   }, [session]);
 
   const onOpenAuth = useCallback((mode: 'login' | 'register' = 'login') => {
-    navigate(`/auth/${mode}`, { replace: false });
+    navigate(`/auth/${mode}`);
   }, [navigate]);
 
   const onViewProfile = useCallback(() => {
-    if (!session) {
-      return onOpenAuth('login');
-    }
-    navigate('/profile', { replace: false });
+    if (!session) { onOpenAuth('login'); return; }
+    navigate('/profile');
   }, [navigate, onOpenAuth, session]);
 
   const onViewReservationHistory = useCallback(() => {
-    if (!session) {
-      return onOpenAuth('login');
-    }
-    navigate('/reservations', { replace: false, state: { openHistory: true } });
+    if (!session) { onOpenAuth('login'); return; }
+    navigate('/reservations', { state: { openHistory: true } });
   }, [navigate, onOpenAuth, session]);
 
   const onAction = useCallback(
@@ -47,16 +42,19 @@ export function HomeRoute() {
       if (module.id === 'buildings') return navigate('/buildings');
       if (module.id === 'reservations') return navigate('/reservations');
       if (module.id === 'payments') return navigate('/long-term-subscriptions');
-      return undefined;
     },
-    [navigate, onOpenAuth, onViewProfile, session]
+    [navigate, onOpenAuth, onViewProfile, session],
   );
 
   const onLogout = useCallback(() => {
-    // Correctly clear Zustand store session alongside legacy localStorage session
     logout();
     navigate('/', { replace: true });
   }, [logout, navigate]);
+
+  // Use <Navigate> component (NOT navigate() function) for render-time redirects
+  if (session?.role === 'admin') return <Navigate to="/admin/dashboard" replace />;
+  if (session?.role === 'manager') return <Navigate to="/manager" replace />;
+  if (session?.role === 'staff') return <Navigate to="/staff" replace />;
 
   return (
     <HomePage

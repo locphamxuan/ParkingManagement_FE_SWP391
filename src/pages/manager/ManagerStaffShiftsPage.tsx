@@ -160,12 +160,12 @@ export function ManagerStaffShiftsPage() {
           <span className="text-muted-foreground">Đang tải...</span>
         </div>
       ) : error ? (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-600">
+        <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-400">
           {error}
         </div>
       ) : items.length === 0 ? (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-8 text-center">
-          <p className="text-blue-900 mb-4">Chưa có staff được gán vào ca trực</p>
+        <div className="rounded-lg border border-border bg-card p-8 text-center">
+          <p className="text-muted-foreground mb-4">Chưa có staff được gán vào ca trực</p>
           <Button onClick={openCreate} className="gap-2">
             <Plus size={16} /> Gán Staff Đầu Tiên
           </Button>

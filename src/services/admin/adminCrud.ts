@@ -12,6 +12,8 @@ export interface CreateAdminUserInput {
   password: string;
   role: 'admin' | 'manager' | 'staff' | 'user';
   phone?: string;
+  /** buildingId to assign immediately after creation (staff / manager only) */
+  buildingId?: string;
 }
 
 export interface UpdateAdminUserInput {
@@ -36,12 +38,60 @@ export interface UpdateBuildingInput {
   fullAddress?: string;
 }
 
-export async function createAdminUser(token: string, payload: CreateAdminUserInput): Promise<void> {
-  await requestJson<ApiEnvelope<{ user: unknown }>>({
+export async function createAdminUser(token: string, payload: CreateAdminUserInput): Promise<string> {
+  const { buildingId, role, ...rest } = payload;
+  const res = await requestJson<ApiEnvelope<{ user: { _id: string } }>>({
     path: '/admin/users',
     method: 'POST',
     token,
-    body: payload,
+    body: { ...rest, role: 'user' },
+  });
+  const userId = res.data?.user?._id;
+  if (userId && buildingId && (role === 'staff' || role === 'manager')) {
+    const endpoint = role === 'staff' ? 'assign-staff' : 'assign-manager';
+    await requestJson({
+      path: `/admin/buildings/${buildingId}/${endpoint}`,
+      method: 'POST',
+      token,
+      body: { userId },
+    });
+  }
+  return userId ?? '';
+}
+
+export async function assignStaffToBuilding(token: string, buildingId: string, userId: string): Promise<void> {
+  await requestJson({
+    path: `/admin/buildings/${buildingId}/assign-staff`,
+    method: 'POST',
+    token,
+    body: { userId },
+  });
+}
+
+export async function revokeStaffFromBuilding(token: string, buildingId: string, userId: string): Promise<void> {
+  await requestJson({
+    path: `/admin/buildings/${buildingId}/revoke-staff`,
+    method: 'POST',
+    token,
+    body: { userId },
+  });
+}
+
+export async function revokeManagerFromBuilding(token: string, buildingId: string, userId: string): Promise<void> {
+  await requestJson({
+    path: `/admin/buildings/${buildingId}/revoke-manager`,
+    method: 'POST',
+    token,
+    body: { userId },
+  });
+}
+
+export async function assignManagerToBuilding(token: string, buildingId: string, userId: string): Promise<void> {
+  await requestJson({
+    path: `/admin/buildings/${buildingId}/assign-manager`,
+    method: 'POST',
+    token,
+    body: { userId },
   });
 }
 
