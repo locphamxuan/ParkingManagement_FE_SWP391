@@ -21,7 +21,7 @@ import {
 import { ParkingMap2D } from '@/components/shared/ParkingMap2D';
 import { useAuth } from '@/hooks/useAuth';
 import { CustomSelect } from '@/components/ui/select';
-import { listUserBuildingViews, type UserBuildingView } from '@/pages/User/mockBuildingsData';
+import { userApi, type Building } from '@/services/user';
 import {
   cancelUserReservation,
   createUserReservation,
@@ -105,7 +105,7 @@ export default function ReservationsPage() {
   const { session } = useAuth();
   const state = (location.state as ReservationLocationState | null) ?? null;
 
-  const [rows, setRows] = useState<UserBuildingView[]>([]);
+  const [rows, setRows] = useState<Array<{ building: Building }>>([]);
   const [slots, setSlots] = useState<UserParkingSlotRecord[]>([]);
   const [policies, setPolicies] = useState<UserReservationPolicyRecord[]>([]);
   const [reservations, setReservations] = useState<UserReservationRecord[]>([]);
@@ -143,17 +143,23 @@ export default function ReservationsPage() {
 
     async function loadStaticData() {
       setIsLoadingBuildings(true);
-      const [buildingRows, policyRows] = await Promise.all([
-        listUserBuildingViews(),
-        listReservationPolicies(),
-      ]);
-      if (ignore) return;
+      try {
+        const response = await userApi.buildings.list();
+        if (ignore) return;
 
-      setRows(buildingRows);
-      setPolicies(policyRows);
-      const preferredBuildingId = state?.buildingId || buildingRows[0]?.building._id || '';
-      setSelectedBuildingId((current) => current || preferredBuildingId);
-      setIsLoadingBuildings(false);
+        // Transform API response to match component structure
+        const buildingRows = response.data.items.map((building) => ({
+          building,
+        }));
+
+        setRows(buildingRows);
+        const preferredBuildingId = state?.buildingId || buildingRows[0]?.building._id || '';
+        setSelectedBuildingId((current) => current || preferredBuildingId);
+      } catch (err) {
+        console.error('Failed to load buildings:', err);
+      } finally {
+        if (!ignore) setIsLoadingBuildings(false);
+      }
     }
 
     loadStaticData();
