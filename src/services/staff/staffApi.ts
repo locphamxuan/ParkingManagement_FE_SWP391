@@ -158,8 +158,8 @@ export const staffApi = {
     api.get<Wrap<{ items: MyShift[] } | MyShift[]>>('/staff/my-shifts', { query: q }),
 
   // Parking Sessions — top-level methods (correct backend paths)
-  getActiveSessions: () =>
-    api.get<Wrap<ApiList<ParkingSession>>>('/staff/parking-sessions/active'),
+  getActiveSessions: (query?: Record<string, string | number | boolean | undefined>) =>
+    api.get<Wrap<ApiList<ParkingSession>>>('/staff/parking-sessions/active', { query }),
 
   checkIn: (payload: { plateNumber: string; vehicleType?: string; gate?: string; building?: string }) =>
     api.post<Wrap<{ item: ParkingSession }>>('/staff/parking-sessions/check-in', payload),
@@ -207,15 +207,15 @@ export const staffApi = {
     list: (buildingId: string, q?: Record<string, string | undefined>) =>
       api.get<Wrap<{ items: ParkingSession[] }>>(
         '/staff/parking-sessions/active',
-        { query: { ...q, buildingId } }
+        { query: { ...q, buildingId, populate: 'slot.floor,vehicleType,entryGate,exitGate' } }
       ),
 
     active: (q?: Record<string, string | undefined>) =>
-      api.get<Wrap<{ items: ParkingSession[] }>>('/staff/parking-sessions/active', { query: q }),
+      api.get<Wrap<{ items: ParkingSession[] }>>('/staff/parking-sessions/active', { query: { ...q, populate: 'slot.floor,vehicleType,entryGate,exitGate' } }),
 
     search: (plateNumber: string) =>
       api.get<Wrap<{ items: ParkingSession[] }>>('/staff/parking-sessions/search', {
-        query: { plate: plateNumber },
+        query: { plate: plateNumber, populate: 'slot.floor,vehicleType,entryGate,exitGate' },
       }),
 
     detail: (sessionId: string) =>

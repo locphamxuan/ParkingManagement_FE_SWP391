@@ -94,6 +94,16 @@ export function StaffOperationsPage() {
     return 'car';
   };
 
+  const formatSlotLocation = (session: ParkingSession): string => {
+    const floor = session.slot?.floor?.name || session.slot?.floor?.code || null;
+    const slotCode = session.slot?.code || null;
+    
+    if (!floor && !slotCode) return 'Vị trí —';
+    if (!floor) return `Ô ${slotCode}`;
+    if (!slotCode) return `Tầng ${floor}`;
+    return `Tầng ${floor} • Ô ${slotCode}`;
+  };
+
   useEffect(() => {
     const clean = plateNumber.trim().toUpperCase();
     if (clean.length >= 3) {
@@ -176,7 +186,7 @@ export function StaffOperationsPage() {
   const refreshSessions = useCallback(() => {
     setLoading(true);
     staffApi
-      .getActiveSessions()
+      .getActiveSessions({ populate: 'slot.floor,vehicleType,entryGate,exitGate' })
       .then((res) => {
         const rows = (res as { data?: { items?: ParkingSession[] } | ParkingSession[] })?.data;
         const list = Array.isArray(rows) ? rows : ((rows as { items?: ParkingSession[] })?.items ?? []);
@@ -570,7 +580,9 @@ export function StaffOperationsPage() {
                     <p className="font-semibold text-foreground">{s.plateNumber}</p>
                     <p className="mt-0.5 truncate text-xs text-muted-foreground">
                       {s.entryGate?.code ?? '—'} · {s.vehicleType?.name ?? '—'}
-                      {(s.slot as { floor?: { name?: string } } | null)?.floor?.name ? ` · ${(s.slot as { floor?: { name?: string } }).floor?.name}` : ''}
+                    </p>
+                    <p className="mt-1 text-xs font-semibold text-primary">
+                      {formatSlotLocation(s)}
                     </p>
                     <p className="mt-0.5 text-[11px] text-muted-foreground">{fmtTime(s.entryTime)}</p>
                   </div>
@@ -582,22 +594,7 @@ export function StaffOperationsPage() {
       </section>
 
       {/* Bảng tất cả phiên */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Tất cả phiên ({sessions.length})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <p className="text-sm text-muted-foreground">Đang tải...</p>
-          ) : error ? (
-            <p className="text-sm text-rose-400">{error}</p>
-          ) : sessions.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Chưa có phiên nào.</p>
-          ) : (
-            <DataTable title={`Phiên gửi xe (${sessions.length})`} rows={sessions} columns={columns} />
-          )}
-        </CardContent>
-      </Card>
+      
 
       {/* QR Scanner Modal */}
       <QRCodeScannerModal
