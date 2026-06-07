@@ -16,6 +16,8 @@ interface FormState {
   price: string;
   reservedSlots: string;
   description: string;
+  benefits: string;
+  allowDedicatedSlot: boolean;
   isActive: boolean;
 }
 
@@ -27,6 +29,8 @@ const empty: FormState = {
   price: '0',
   reservedSlots: '0',
   description: '',
+  benefits: '',
+  allowDedicatedSlot: false,
   isActive: true,
 };
 
@@ -77,6 +81,8 @@ export function ManagerPackagesPage() {
       price: String(row.price),
       reservedSlots: String(row.reservedSlots),
       description: row.description ?? '',
+      benefits: (row.benefits ?? []).join('\n'),
+      allowDedicatedSlot: row.allowDedicatedSlot ?? false,
       isActive: row.isActive,
     });
     setModalOpen(true);
@@ -95,6 +101,11 @@ export function ManagerPackagesPage() {
       price: Number(form.price),
       reservedSlots: Number(form.reservedSlots),
       description: form.description.trim(),
+      benefits: form.benefits
+        .split('\n')
+        .map((b) => b.trim())
+        .filter(Boolean),
+      allowDedicatedSlot: form.allowDedicatedSlot,
       isActive: form.isActive,
     };
     try {
@@ -135,6 +146,16 @@ export function ManagerPackagesPage() {
       render: (row) => `${row.price.toLocaleString('vi-VN')} đ`,
     },
     { key: 'reservedSlots', title: 'Slot dành riêng' },
+    {
+      key: 'benefits',
+      title: 'Ưu đãi',
+      render: (row) => (
+        <span className="text-xs text-slate-400">
+          {(row.benefits?.length ?? 0) > 0 ? `${row.benefits!.length} ưu đãi` : '—'}
+          {row.allowDedicatedSlot ? ' · chỗ riêng' : ''}
+        </span>
+      ),
+    },
     {
       key: 'isActive',
       title: 'Trạng thái',
@@ -247,6 +268,30 @@ export function ManagerPackagesPage() {
               className="bg-slate-950 border-white/10 text-white rounded-xl focus:border-orange-500/40"
             />
           </div>
+          <div className="grid gap-1.5 md:col-span-2">
+            <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono">
+              Ưu đãi của gói (mỗi dòng 1 ưu đãi)
+            </label>
+            <textarea
+              value={form.benefits}
+              onChange={(e) => setForm((f) => ({ ...f, benefits: e.target.value }))}
+              rows={4}
+              placeholder={'Miễn phí giữ xe không giới hạn lượt\nƯu tiên chỗ gần thang máy\nMiễn phí rửa xe 1 lần/tháng'}
+              className="rounded-xl border border-white/10 bg-slate-950 px-3 py-2 text-sm text-white outline-none focus:border-orange-500/40 placeholder-slate-600"
+            />
+            <p className="text-[11px] text-slate-500">
+              Những ưu đãi này sẽ hiển thị cho khách hàng khi chọn mua gói.
+            </p>
+          </div>
+          <label className="flex items-center gap-3 text-xs font-bold text-slate-300 md:col-span-2 select-none">
+            <input
+              type="checkbox"
+              checked={form.allowDedicatedSlot}
+              onChange={(e) => setForm((f) => ({ ...f, allowDedicatedSlot: e.target.checked }))}
+              className="w-4 h-4 rounded border-white/10 bg-slate-950 text-orange-500 focus:ring-0 cursor-pointer"
+            />
+            <span>Cho phép giữ chỗ đỗ dành riêng (dedicated slot)</span>
+          </label>
           <label className="flex items-center gap-3 text-xs font-bold text-slate-300 md:col-span-2 select-none">
             <input
               type="checkbox"

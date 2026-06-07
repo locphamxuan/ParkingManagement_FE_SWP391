@@ -10,12 +10,9 @@ const titles: Record<string, string> = {
   '/admin/dashboard/buildings': 'Quản lý tòa nhà',
   '/admin/dashboard/users': 'Quản lý người dùng',
   '/admin/dashboard/revenue-analytics': 'Phân tích doanh thu',
-  '/admin/dashboard/wallet-governance': 'Quản lý ví',
-  '/admin/dashboard/pricing-policies': 'Chính sách giá',
-  '/admin/dashboard/policy-push-logs': 'Lịch sử đẩy chính sách',
+  '/admin/dashboard/subscription-packages': 'Gói dịch vụ hệ thống',
+  '/admin/dashboard/wallet-governance': 'Ví hệ thống',
   '/admin/dashboard/audit-logs': 'Nhật ký kiểm toán',
-  '/admin/dashboard/fraud-detection': 'Phát hiện gian lận',
-  '/admin/dashboard/system-health': 'Tình trạng hệ thống',
   '/admin/dashboard/notifications': 'Thông báo',
   '/admin/dashboard/profile': 'Hồ sơ cá nhân',
   '/admin/dashboard/settings': 'Cài đặt',
@@ -42,9 +39,11 @@ export function AdminLayout() {
           <Navbar
             title={title}
             email={session?.email ?? ADMIN_EMAIL_FALLBACK}
+            fullName={session?.displayName}
+            role={session?.role}
             onLogout={() => {
               logout();
-              navigate('/admin/login', { replace: true });
+              navigate('/auth/login', { replace: true });
             }}
           />
           <main className="flex-1 p-4 md:p-6">

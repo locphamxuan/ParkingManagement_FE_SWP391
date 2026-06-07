@@ -3,80 +3,61 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   ArrowLeft,
-  Bike,
   Building2,
   CarFront,
-  Clock3,
+  CheckCircle2,
   Loader2,
   MapPin,
   PhoneCall,
   Search,
   SquareParking,
-  Users,
-  WalletCards,
 } from 'lucide-react';
+import { useBuildings } from '@/hooks/user';
 import {
-  listUserBuildingViews,
-  type UserBuildingContact,
-  type UserBuildingView,
-  type UserPricePolicy,
-} from '@/pages/User/mockBuildingsData';
+  userApi,
+  type Building,
+  type FloorAvailability,
+  type VehicleType,
+} from '@/services/user/userApi';
 
-const currency = new Intl.NumberFormat('vi-VN', {
-  style: 'currency',
-  currency: 'VND',
-  maximumFractionDigits: 0,
-});
-
-function formatMoney(value?: number | null): string {
-  if (value === undefined || value === null || Number.isNaN(value)) return 'Chưa cập nhật';
-  return currency.format(value);
+/**
+ * The `/users/buildings` list endpoint only returns buildings that are already
+ * active (the backend filters by status: 'active') and does NOT include the
+ * `status` field. So treat a building as open unless it is explicitly closed.
+ */
+function isBuildingOpen(building: Building): boolean {
+  return building.status ? building.status === 'active' : true;
 }
 
-function formatHours(open?: string, close?: string): string {
-  if (!open && !close) return 'Chưa cập nhật';
-  if (open === '00:00' && (close === '23:59' || close === '24:00')) return '24/7';
-  return `${open || '--:--'} - ${close || '--:--'}`;
+function addressText(building: Building): string {
+  if (building.address?.fullAddress) return building.address.fullAddress;
+  return building.address ? JSON.stringify(building.address) : 'Chưa cập nhật địa chỉ';
 }
 
-function vehicleLabel(policy: UserPricePolicy): string {
-  if (!policy.vehicleType) return 'Tất cả phương tiện';
-  if (typeof policy.vehicleType === 'string') return policy.vehicleType;
-  return policy.vehicleType.name || policy.vehicleType.code || 'Phương tiện';
-}
-
-function addressText(row: UserBuildingView): string {
-  const address = row.building.address;
+function StatusBadge({ open }: { open: boolean }) {
   return (
-    address?.fullAddress ||
-    [address?.street, address?.district, address?.city].filter(Boolean).join(', ') ||
-    'Chưa cập nhật địa chỉ'
+    <span
+      className={`rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-wider ${
+        open
+          ? 'border-emerald-400/25 bg-emerald-400/10 text-emerald-300'
+          : 'border-rose-400/25 bg-rose-400/10 text-rose-300'
+      }`}
+    >
+      {open ? 'Đang mở' : 'Tạm đóng'}
+    </span>
   );
 }
 
-function occupancyPercent(row: UserBuildingView): number {
-  if (!row.slots.total) return 0;
-  return Math.round(((row.slots.occupied + row.slots.reserved) / row.slots.total) * 100);
-}
-
-function contactText(member: UserBuildingContact): string {
-  const parts: string[] = [];
-  if (member.phone) parts.push(member.phone);
-  if (member.email) parts.push(member.email);
-  return parts.length ? parts.join(' - ') : 'Chưa cập nhật liên hệ';
-}
-
 function BuildingCard({
-  row,
+  building,
   selected,
   onSelect,
 }: {
-  row: UserBuildingView;
+  building: Building;
   selected: boolean;
   onSelect: () => void;
 }) {
-  const hours = formatHours(row.building.operatingHours?.open, row.building.operatingHours?.close);
-  const percent = occupancyPercent(row);
+  const open = isBuildingOpen(building);
 
   return (
     <button
@@ -91,124 +72,93 @@ function BuildingCard({
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <p className="text-xs font-black uppercase tracking-[0.18em] text-orange-300">
-            {row.building.code || 'PBMS'}
+            {building.code || 'BUILDING'}
           </p>
-          <h2 className="mt-2 text-lg font-black text-white">{row.building.name}</h2>
+          <h2 className="mt-2 text-lg font-black text-white">{building.name}</h2>
           <p className="mt-2 flex items-start gap-2 text-xs font-semibold leading-relaxed text-slate-400">
             <MapPin size={14} className="mt-0.5 shrink-0 text-cyan-300" />
-            <span>{addressText(row)}</span>
+            <span>{addressText(building)}</span>
           </p>
         </div>
-        <span className="rounded-full border border-emerald-400/25 bg-emerald-400/10 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-emerald-300">
-          Đang mở
-        </span>
+        <StatusBadge open={open} />
       </div>
 
-      <div className="mt-5 grid grid-cols-3 gap-3">
-        <div className="rounded-xl border border-white/10 bg-slate-950/55 p-3">
-          <Clock3 size={15} className="text-orange-300" />
-          <p className="mt-2 text-[10px] font-bold uppercase text-slate-500">Giờ mở cửa</p>
-          <p className="mt-1 text-sm font-black text-white">{hours}</p>
-        </div>
-        <div className="rounded-xl border border-white/10 bg-slate-950/55 p-3">
-          <SquareParking size={15} className="text-emerald-300" />
-          <p className="mt-2 text-[10px] font-bold uppercase text-slate-500">Slot trống</p>
-          <p className="mt-1 text-sm font-black text-emerald-300">
-            {row.slots.available}/{row.slots.total || 0}
-          </p>
-        </div>
-        <div className="rounded-xl border border-white/10 bg-slate-950/55 p-3">
-          <Building2 size={15} className="text-cyan-300" />
-          <p className="mt-2 text-[10px] font-bold uppercase text-slate-500">Số tầng</p>
-          <p className="mt-1 text-sm font-black text-white">{row.building.totalFloors || 0}</p>
-        </div>
-      </div>
-
-      <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-950">
-        <div
-          className="h-full rounded-full bg-gradient-to-r from-emerald-400 via-amber-300 to-orange-400"
-          style={{ width: `${Math.min(percent, 100)}%` }}
-        />
+      <div className="mt-4 flex items-center gap-2 text-[11px] font-bold text-slate-400">
+        <CheckCircle2 size={13} className="text-emerald-300" />
+        Bấm để xem số tầng, chỗ trống & đặt chỗ
       </div>
     </button>
   );
 }
 
-function TeamList({
-  title,
-  members,
-}: {
-  title: string;
-  members: UserBuildingContact[];
-}) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
-      <p className="text-xs font-black uppercase tracking-wider text-slate-300">{title}</p>
-
-      {members.length > 0 ? (
-        <div className="mt-3 space-y-3">
-          {members.map((member) => (
-            <div key={member._id} className="rounded-xl bg-white/5 px-3 py-2">
-              <p className="text-sm font-black text-white">{member.fullName}</p>
-              <p className="mt-1 text-xs font-semibold text-slate-400">{contactText(member)}</p>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p className="mt-3 text-xs font-semibold text-slate-500">Chưa cập nhật danh sách.</p>
-      )}
-    </div>
-  );
-}
-
 export default function BuildingsPage() {
   const navigate = useNavigate();
-  const [rows, setRows] = useState<UserBuildingView[]>([]);
+  const { items: buildings, isLoading } = useBuildings();
   const [selectedId, setSelectedId] = useState('');
   const [query, setQuery] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+
+  const [detail, setDetail] = useState<{ floors: FloorAvailability[]; vehicleTypes: VehicleType[] } | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
 
   useEffect(() => {
-    let ignore = false;
-
-    async function loadBuildings() {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const data = await listUserBuildingViews();
-        if (ignore) return;
-        setRows(data);
-        setSelectedId(data[0]?.building._id || '');
-      } catch (err) {
-        if (ignore) return;
-        setError(err instanceof Error ? err.message : 'Không thể tải thông tin tòa nhà.');
-      } finally {
-        if (!ignore) setIsLoading(false);
-      }
+    if (buildings.length > 0 && !selectedId) {
+      setSelectedId(buildings[0]._id);
     }
-
-    loadBuildings();
-    return () => {
-      ignore = true;
-    };
-  }, []);
+  }, [buildings, selectedId]);
 
   const filteredRows = useMemo(() => {
     const keyword = query.trim().toLowerCase();
-    if (!keyword) return rows;
-    return rows.filter((row) => {
-      const haystack = [row.building.name, row.building.code, addressText(row)]
+    if (!keyword) return buildings;
+    return buildings.filter((building) => {
+      const haystack = [building.name, building.code, addressText(building)]
         .filter(Boolean)
         .join(' ')
         .toLowerCase();
       return haystack.includes(keyword);
     });
-  }, [query, rows]);
+  }, [query, buildings]);
 
-  const selectedRow = useMemo(
-    () => filteredRows.find((row) => row.building._id === selectedId) || filteredRows[0] || null,
+  const selectedBuilding = useMemo(
+    () => filteredRows.find((b) => b._id === selectedId) || filteredRows[0] || null,
     [filteredRows, selectedId],
+  );
+
+  // Fetch real floor + vehicle-type data for the selected building (the list
+  // endpoint doesn't include floors/pricing, but these detail endpoints do).
+  useEffect(() => {
+    const id = selectedBuilding?._id;
+    if (!id) {
+      setDetail(null);
+      return;
+    }
+    let cancelled = false;
+    setDetailLoading(true);
+    Promise.all([userApi.buildings.floors(id), userApi.buildings.vehicleTypes(id)])
+      .then(([fRes, vRes]) => {
+        if (cancelled) return;
+        const floors = (fRes as { data?: { floors?: FloorAvailability[] } })?.data?.floors ?? [];
+        const vehicleTypes = (vRes as { data?: { items?: VehicleType[] } })?.data?.items ?? [];
+        setDetail({ floors, vehicleTypes });
+      })
+      .catch(() => {
+        if (!cancelled) setDetail(null);
+      })
+      .finally(() => {
+        if (!cancelled) setDetailLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedBuilding?._id]);
+
+  const floorCount = detail?.floors.length ?? 0;
+  const availableSlots = useMemo(
+    () => (detail?.floors ?? []).reduce((sum, f) => sum + (f.availableSlots ?? 0), 0),
+    [detail],
+  );
+  const totalSlots = useMemo(
+    () => (detail?.floors ?? []).reduce((sum, f) => sum + (f.totalSlots ?? 0), 0),
+    [detail],
   );
 
   return (
@@ -244,7 +194,7 @@ export default function BuildingsPage() {
               Thông tin tòa nhà gửi xe
             </h1>
             <p className="mt-3 max-w-2xl text-sm font-semibold leading-relaxed text-slate-400">
-              Xem giờ mở cửa, bảng giá và số slot còn trống trước khi di chuyển hoặc đặt chỗ.
+              Xem số tầng, chỗ trống và loại xe được hỗ trợ trước khi di chuyển hoặc đặt chỗ.
             </p>
           </div>
 
@@ -269,19 +219,19 @@ export default function BuildingsPage() {
               Đang tải thông tin tòa nhà...
             </div>
           </div>
-        ) : error ? (
+        ) : buildings.length === 0 ? (
           <div className="rounded-3xl border border-rose-400/25 bg-rose-500/10 p-6 text-sm font-semibold text-rose-200">
-            {error}
+            Không có tòa nhà nào. Vui lòng thử lại sau.
           </div>
         ) : (
           <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
             <div className="space-y-4">
-              {filteredRows.map((row) => (
+              {filteredRows.map((building) => (
                 <BuildingCard
-                  key={row.building._id}
-                  row={row}
-                  selected={selectedRow?.building._id === row.building._id}
-                  onSelect={() => setSelectedId(row.building._id)}
+                  key={building._id}
+                  building={building}
+                  selected={selectedBuilding?._id === building._id}
+                  onSelect={() => setSelectedId(building._id)}
                 />
               ))}
 
@@ -292,115 +242,75 @@ export default function BuildingsPage() {
               ) : null}
             </div>
 
-            {selectedRow ? (
+            {selectedBuilding ? (
               <aside className="rounded-3xl border border-white/10 bg-slate-900/60 p-6 shadow-2xl lg:sticky lg:top-6 lg:self-start">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>
                     <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-300">
-                      {selectedRow.building.code || 'BUILDING'}
+                      {selectedBuilding.code || 'BUILDING'}
                     </p>
-                    <h2 className="mt-2 text-2xl font-black text-white">{selectedRow.building.name}</h2>
+                    <h2 className="mt-2 text-2xl font-black text-white">{selectedBuilding.name}</h2>
                     <p className="mt-2 flex items-start gap-2 text-sm font-semibold leading-relaxed text-slate-400">
                       <MapPin size={16} className="mt-0.5 shrink-0 text-orange-300" />
-                      <span>{addressText(selectedRow)}</span>
+                      <span>{addressText(selectedBuilding)}</span>
                     </p>
                   </div>
-                  <div className="rounded-2xl border border-emerald-400/25 bg-emerald-400/10 px-4 py-3 text-right">
-                    <p className="text-[10px] font-black uppercase tracking-wider text-emerald-300">Slot trống</p>
-                    <p className="mt-1 text-3xl font-black text-white">{selectedRow.slots.available}</p>
-                  </div>
+                  <StatusBadge open={isBuildingOpen(selectedBuilding)} />
                 </div>
 
-                <div className="mt-6 grid grid-cols-2 gap-4">
+                <div className="mt-6 grid grid-cols-3 gap-4">
                   <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
-                    <Clock3 size={18} className="text-orange-300" />
-                    <p className="mt-3 text-xs font-bold uppercase text-slate-500">Giờ mở cửa</p>
+                    <Building2 size={18} className="text-cyan-300" />
+                    <p className="mt-3 text-xs font-bold uppercase text-slate-500">Số tầng</p>
                     <p className="mt-1 text-lg font-black text-white">
-                      {formatHours(
-                        selectedRow.building.operatingHours?.open,
-                        selectedRow.building.operatingHours?.close,
-                      )}
+                      {detailLoading ? '…' : floorCount}
                     </p>
                   </div>
                   <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
-                    <CarFront size={18} className="text-cyan-300" />
-                    <p className="mt-3 text-xs font-bold uppercase text-slate-500">Tổng slot</p>
-                    <p className="mt-1 text-lg font-black text-white">{selectedRow.slots.total || 0}</p>
+                    <SquareParking size={18} className="text-emerald-300" />
+                    <p className="mt-3 text-xs font-bold uppercase text-slate-500">Chỗ trống</p>
+                    <p className="mt-1 text-lg font-black text-emerald-300">
+                      {detailLoading ? '…' : availableSlots}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
+                    <CarFront size={18} className="text-orange-300" />
+                    <p className="mt-3 text-xs font-bold uppercase text-slate-500">Tổng ô</p>
+                    <p className="mt-1 text-lg font-black text-white">
+                      {detailLoading ? '…' : totalSlots}
+                    </p>
                   </div>
                 </div>
 
-                <div className="mt-6 grid grid-cols-4 gap-3">
-                  {[
-                    ['Trống', selectedRow.slots.available, 'text-emerald-300'],
-                    ['Đang đỗ', selectedRow.slots.occupied, 'text-orange-300'],
-                    ['Đã giữ', selectedRow.slots.reserved, 'text-purple-300'],
-                    ['Bảo trì', selectedRow.slots.maintenance, 'text-rose-300'],
-                  ].map(([label, value, color]) => (
-                    <div key={String(label)} className="rounded-xl border border-white/10 bg-slate-950/60 p-3">
-                      <p className="text-[10px] font-bold uppercase text-slate-500">{label}</p>
-                      <p className={`mt-1 text-lg font-black ${color}`}>{value}</p>
-                    </div>
-                  ))}
-                </div>
-
-                
-
-                <div className="mt-7">
-                  <div className="mb-3 flex items-center gap-2">
-                    <WalletCards size={18} className="text-orange-300" />
-                    <h3 className="text-sm font-black uppercase tracking-wider text-white">Bảng giá</h3>
-                  </div>
-
-                  <div className="space-y-3">
-                    {selectedRow.pricePolicies.length > 0 ? (
-                      selectedRow.pricePolicies.map((policy) => (
-                        <div
-                          key={policy._id}
-                          className="rounded-2xl border border-white/10 bg-slate-950/60 p-4"
+                {/* Loại xe được hỗ trợ */}
+                <div className="mt-6 rounded-2xl border border-white/10 bg-slate-950/60 p-4">
+                  <p className="text-xs font-bold uppercase text-slate-500">Loại xe được hỗ trợ</p>
+                  {detailLoading ? (
+                    <p className="mt-2 text-sm font-semibold text-slate-500">Đang tải...</p>
+                  ) : (detail?.vehicleTypes.length ?? 0) > 0 ? (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {detail!.vehicleTypes.map((vt) => (
+                        <span
+                          key={vt._id}
+                          className="rounded-lg border border-white/10 bg-slate-900/80 px-3 py-1 text-xs font-bold text-slate-200"
                         >
-                          <div className="flex items-start justify-between gap-4">
-                            <div>
-                              <p className="flex items-center gap-2 text-sm font-black text-white">
-                                {vehicleLabel(policy).toLowerCase().includes('xe may') ? (
-                                  <Bike size={16} className="text-purple-300" />
-                                ) : (
-                                  <CarFront size={16} className="text-cyan-300" />
-                                )}
-                                {policy.name}
-                              </p>
-                              <p className="mt-1 text-xs font-semibold text-slate-400">{vehicleLabel(policy)}</p>
-                            </div>
-                            <p className="text-right text-sm font-black text-orange-300">
-                              {formatMoney(policy.hourlyRate)}
-                              <span className="block text-[10px] font-bold uppercase text-slate-500">/ giờ</span>
-                            </p>
-                          </div>
-                          <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-bold text-slate-300">
-                            <span className="rounded-full bg-white/5 px-3 py-1">
-                              Trần ngày: {formatMoney(policy.dailyCap)}
-                            </span>
-                            <span className="rounded-full bg-white/5 px-3 py-1">
-                              Khung giờ: {formatHours(policy.timeWindow?.from, policy.timeWindow?.to)}
-                            </span>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-4 text-sm font-semibold text-slate-400">
-                        Chưa có chính sách giá riêng. Giá mặc định:{' '}
-                        <span className="font-black text-orange-300">
-                          {formatMoney(selectedRow.building.pricing?.hourlyRate)}/giờ
+                          {vt.name}
                         </span>
-                      </div>
-                    )}
-                  </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="mt-2 text-sm font-semibold text-slate-500">Đang cập nhật</p>
+                  )}
+                  <p className="mt-3 text-xs font-semibold text-slate-400">
+                    Phí gửi xe được tính theo giờ và hiển thị chi tiết khi bạn đặt chỗ.
+                  </p>
                 </div>
 
                 <button
                   type="button"
                   onClick={() =>
                     navigate('/reservations', {
-                      state: { buildingId: selectedRow.building._id },
+                      state: { buildingId: selectedBuilding._id },
                     })
                   }
                   className="mt-7 w-full rounded-2xl bg-gradient-to-r from-orange-500 to-amber-400 px-5 py-3 text-sm font-black uppercase tracking-wider text-slate-950 transition hover:scale-[1.01]"

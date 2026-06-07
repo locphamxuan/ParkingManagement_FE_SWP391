@@ -23,7 +23,10 @@ interface AdminOverviewData {
     activeSessions: number;
   };
   revenue: {
-    today: number;
+    /** Revenue over the selected period (backend field). */
+    total?: number;
+    /** @deprecated legacy alias — backend now returns `total`. */
+    today?: number;
     byMethod: Record<string, { amount: number; count: number }>;
   };
 }
@@ -47,7 +50,7 @@ interface ApiBuilding {
   };
   totalFloors?: number;
   status?: 'active' | 'inactive' | 'maintenance';
-  manager?: string | null;
+  manager?: string | null | { fullName?: string; _id?: string };
 }
 
 interface ApiUser {
@@ -115,8 +118,18 @@ const toBuilding = (
   managerNameById: Map<string, string>,
   overview?: ManagerOverviewData,
 ): Building => {
-  const managerId = item.manager ? String(item.manager) : '';
-  const managerName = managerNameById.get(managerId) || (managerId ? `ID: ${managerId.slice(0, 8)}` : 'Chưa gán');
+  // Handle manager field that can be a populated object, a string ID, or null
+  let managerName = 'Chưa gán';
+  
+  if (item.manager) {
+    if (typeof item.manager === 'object' && 'fullName' in item.manager) {
+      // Manager is a populated object with fullName
+      managerName = item.manager.fullName || 'Chưa gán';
+    } else if (typeof item.manager === 'string') {
+      // Manager is a string ID, look up in the map or show truncated ID
+      managerName = managerNameById.get(item.manager) || `ID: ${item.manager.slice(0, 8)}`;
+    }
+  }
 
   return {
     id: item.code || item._id,
@@ -127,7 +140,7 @@ const toBuilding = (
     occupancyRate: Number(overview?.slots?.occupancyRate || 0),
     status: item.status || 'inactive',
     manager: managerName,
-    revenueToday: Number(overview?.revenue?.today || 0),
+    revenueToday: Number(overview?.revenue?.today ?? 0),
   };
 };
 
@@ -287,7 +300,7 @@ export async function getApiAdminDataset(token: string): Promise<AdminDataset> {
     {
       key: 'revenue',
       label: 'Doanh thu hôm nay',
-      value: formatCompactCurrency(overviewRes.data.revenue.today),
+      value: formatCompactCurrency(overviewRes.data.revenue.total ?? overviewRes.data.revenue.today ?? 0),
       delta: `${paymentMethodDistribution.length} phương thức thanh toán`,
     },
     {

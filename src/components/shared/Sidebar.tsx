@@ -1,17 +1,12 @@
 import { NavLink } from 'react-router-dom';
 import {
-  Activity,
-  Bell,
   Building2,
   ChevronLeft,
   CircleDollarSign,
+  Crown,
   FileSearch,
   Fingerprint,
-  Gauge,
   LayoutDashboard,
-  NotebookPen,
-  Settings,
-  ShieldAlert,
   Users,
   Wallet,
 } from 'lucide-react';
@@ -28,13 +23,9 @@ const modules = [
   { to: 'buildings', label: 'Tòa nhà', icon: Building2 },
   { to: 'users', label: 'Người dùng', icon: Users },
   { to: 'revenue-analytics', label: 'Phân tích doanh thu', icon: CircleDollarSign },
-  { to: 'wallet-governance', label: 'Quản lý ví', icon: Wallet },
-  { to: 'pricing-policies', label: 'Chính sách giá', icon: NotebookPen },
-  { to: 'policy-push-logs', label: 'Lịch sử đẩy chính sách', icon: FileSearch },
-  
- 
- 
- 
+  { to: 'subscription-packages', label: 'Gói dịch vụ', icon: Crown },
+  { to: 'wallet-governance', label: 'Ví hệ thống', icon: Wallet },
+  { to: 'audit-logs', label: 'Nhật ký kiểm tra', icon: FileSearch },
 ] as const;
 
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {

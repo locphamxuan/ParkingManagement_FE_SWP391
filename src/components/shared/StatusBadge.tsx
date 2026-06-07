@@ -1,11 +1,11 @@
 import { Badge } from '@/components/ui/badge';
 
 interface StatusBadgeProps {
-  status: string;
+  status?: string | null;
 }
 
 export function StatusBadge({ status }: StatusBadgeProps) {
-  const normalized = status.toLowerCase();
+  const normalized = (status || '').toLowerCase();
 
   const labelMap: Record<string, string> = {
     active: 'Hoạt động',
@@ -33,7 +33,7 @@ export function StatusBadge({ status }: StatusBadgeProps) {
     reserved: 'Đã đặt trước',
   };
 
-  const display = labelMap[normalized] ?? status;
+  const display = labelMap[normalized] ?? status ?? 'N/A';
 
   // Custom premium color classes
   if (['active', 'ok', 'success', 'online', 'low', 'available'].includes(normalized)) {

@@ -12,6 +12,7 @@ import {
   CheckCircle2,
   Clock3,
   CreditCard,
+  History,
   Mail,
   MapPinned,
   PhoneCall,
@@ -31,6 +32,7 @@ interface HomePageProps {
   modules: LegacyModule[];
   onOpenAuth: (mode?: 'login' | 'register') => void;
   onViewProfile: () => void;
+  onViewReservationHistory: () => void;
   onAction: (module: LegacyModule) => void;
   user?: { fullName?: string; email?: string; phone?: string; role?: string; licensePlates?: Array<{ plateNumber: string; vehicleType: 'car' | 'motorcycle' }> } | null;
   onLogout?: () => void;
@@ -82,7 +84,7 @@ const benefits = [
 // Interactive 3D Parking Building Component with Parallax Tilt Effect
 
 
-export default function HomePage({ modules, onOpenAuth, onViewProfile, onAction, user, onLogout }: HomePageProps) {
+export default function HomePage({ modules, onOpenAuth, onViewProfile, onViewReservationHistory, onAction, user, onLogout }: HomePageProps) {
   const hasMissingInfo = Boolean(
     user &&
     user.role === 'user' &&
@@ -235,6 +237,19 @@ export default function HomePage({ modules, onOpenAuth, onViewProfile, onAction,
                     >
                       <Wallet size={12} className="inline-block mr-2" /> Ví tiền
                     </button>
+                    <button
+                      className="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-slate-800 text-slate-300 hover:text-white"
+                      onClick={() => { setMenuOpen(false); onViewReservationHistory(); }}
+                    >
+                      <History size={12} className="inline-block mr-2" /> Lịch sử đặt chỗ
+                    </button>
+                    <a
+                      href="/parking-history"
+                      className="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-slate-800 text-slate-300 hover:text-white flex items-center"
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      <MapPinned size={12} className="inline-block mr-2" /> Lịch sử gửi xe
+                    </a>
                     <button className="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-slate-800 text-rose-400 hover:text-rose-300 border-t border-white/5 mt-1" onClick={onLogout}>
                       <LogOut size={12} className="inline-block mr-2" /> Đăng xuất
                     </button>

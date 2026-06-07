@@ -72,6 +72,25 @@ export interface UserWalletTransactionRecord {
   createdAt: string;
 }
 
+export type WalletTopUpGateway = 'payos' | 'sepay';
+export type WalletTopUpStatus = 'pending' | 'success' | 'failed' | 'expired';
+
+export interface UserWalletTopUpOrder {
+  id: string;
+  userId: string;
+  orderCode: string;
+  amount: number;
+  gateway: WalletTopUpGateway;
+  status: WalletTopUpStatus;
+  transferContent: string;
+  qrImageUrl: string;
+  checkoutUrl?: string;
+  createdAt: string;
+  updatedAt: string;
+  paidAt?: string;
+  walletTxId?: string;
+}
+
 export interface CreateReservationInput {
   userId: string;
   buildingId: string;
@@ -91,7 +110,12 @@ export interface CancelReservationResult {
 const RESERVATION_STORAGE_KEY = 'pbms.reservations';
 const PAYMENT_STORAGE_KEY = 'pbms.payments';
 const WALLET_TX_STORAGE_KEY = 'pbms.walletTransactions';
+const WALLET_TOPUP_ORDER_STORAGE_KEY = 'pbms.walletTopupOrders';
 const BASE_WALLET_BALANCE = 500_000;
+const DEMO_QR_EXPIRE_MINUTES = 15;
+const DEMO_WEBHOOK_DELAY_MS = 12_000;
+const DEMO_BANK_BIN = '970422';
+const DEMO_BANK_ACCOUNT = '190364889999';
 
 const RESERVATION_POLICY_MOCK_DATA: UserReservationPolicyRecord[] = [
   {
@@ -418,6 +442,77 @@ function saveWalletTxStore(rows: UserWalletTransactionRecord[]): void {
   localStorage.setItem(WALLET_TX_STORAGE_KEY, JSON.stringify(rows));
 }
 
+function parseStoredTopUpOrders(raw: string | null): UserWalletTopUpOrder[] {
+  return parseJsonArray(raw)
+    .map((item): UserWalletTopUpOrder | null => {
+      if (!item || typeof item !== 'object') return null;
+      if (typeof (item as { id?: unknown }).id !== 'string') return null;
+      if (typeof (item as { userId?: unknown }).userId !== 'string') return null;
+      if (typeof (item as { orderCode?: unknown }).orderCode !== 'string') return null;
+      if (typeof (item as { amount?: unknown }).amount !== 'number') return null;
+      if (typeof (item as { transferContent?: unknown }).transferContent !== 'string') return null;
+      if (typeof (item as { qrImageUrl?: unknown }).qrImageUrl !== 'string') return null;
+
+      const statusRaw = (item as { status?: unknown }).status;
+      const status: WalletTopUpStatus =
+        statusRaw === 'success' || statusRaw === 'failed' || statusRaw === 'expired'
+          ? statusRaw
+          : 'pending';
+
+      const gatewayRaw = (item as { gateway?: unknown }).gateway;
+      const gateway: WalletTopUpGateway = gatewayRaw === 'sepay' ? 'sepay' : 'payos';
+
+      return {
+        id: (item as { id: string }).id,
+        userId: (item as { userId: string }).userId,
+        orderCode: (item as { orderCode: string }).orderCode,
+        amount: (item as { amount: number }).amount,
+        gateway,
+        status,
+        transferContent: (item as { transferContent: string }).transferContent,
+        qrImageUrl: (item as { qrImageUrl: string }).qrImageUrl,
+        checkoutUrl:
+          typeof (item as { checkoutUrl?: unknown }).checkoutUrl === 'string'
+            ? (item as { checkoutUrl: string }).checkoutUrl
+            : undefined,
+        createdAt:
+          typeof (item as { createdAt?: unknown }).createdAt === 'string'
+            ? (item as { createdAt: string }).createdAt
+            : new Date().toISOString(),
+        updatedAt:
+          typeof (item as { updatedAt?: unknown }).updatedAt === 'string'
+            ? (item as { updatedAt: string }).updatedAt
+            : new Date().toISOString(),
+        paidAt:
+          typeof (item as { paidAt?: unknown }).paidAt === 'string'
+            ? (item as { paidAt: string }).paidAt
+            : undefined,
+        walletTxId:
+          typeof (item as { walletTxId?: unknown }).walletTxId === 'string'
+            ? (item as { walletTxId: string }).walletTxId
+            : undefined,
+      };
+    })
+    .filter((item): item is UserWalletTopUpOrder => Boolean(item));
+}
+
+function loadTopUpOrdersStore(): UserWalletTopUpOrder[] {
+  return parseStoredTopUpOrders(localStorage.getItem(WALLET_TOPUP_ORDER_STORAGE_KEY));
+}
+
+function saveTopUpOrdersStore(rows: UserWalletTopUpOrder[]): void {
+  localStorage.setItem(WALLET_TOPUP_ORDER_STORAGE_KEY, JSON.stringify(rows));
+}
+
+function buildTransferContent(orderCode: string): string {
+  return `NAP PBMS ${orderCode}`;
+}
+
+function buildVietQrImageUrl(amount: number, transferContent: string): string {
+  const encodedContent = encodeURIComponent(transferContent);
+  return `https://img.vietqr.io/image/${DEMO_BANK_BIN}-${DEMO_BANK_ACCOUNT}-compact2.png?amount=${amount}&addInfo=${encodedContent}&accountName=PBMS`;
+}
+
 function getUserWalletBalanceFromTx(
   userId: string,
   walletTxRows: UserWalletTransactionRecord[],
@@ -502,6 +597,104 @@ export async function createUserWalletTopUp(
 
   saveWalletTxStore([topUpTx, ...walletTxRows]);
   return topUpTx;
+}
+
+export async function createWalletTopUpOrder(
+  userId: string,
+  amount: number,
+  gateway: WalletTopUpGateway = 'payos',
+): Promise<UserWalletTopUpOrder> {
+  if (!Number.isFinite(amount) || amount <= 0) {
+    throw new Error('Số tiền nạp ví không hợp lệ.');
+  }
+
+  const orderCode = `${Date.now()}${Math.floor(100 + Math.random() * 900)}`;
+  const transferContent = buildTransferContent(orderCode);
+  const now = new Date().toISOString();
+
+  const createdOrder: UserWalletTopUpOrder = {
+    id: randomId('TOPUP-ORDER'),
+    userId,
+    orderCode,
+    amount: Math.round(amount),
+    gateway,
+    status: 'pending',
+    transferContent,
+    qrImageUrl: buildVietQrImageUrl(amount, transferContent),
+    checkoutUrl: `https://pay.payos.vn/web/${orderCode}`,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  const orders = loadTopUpOrdersStore();
+  saveTopUpOrdersStore([createdOrder, ...orders]);
+  return createdOrder;
+}
+
+export async function getLatestPendingTopUpOrder(
+  userId: string,
+): Promise<UserWalletTopUpOrder | null> {
+  const orders = loadTopUpOrdersStore()
+    .filter((row) => row.userId === userId && row.status === 'pending')
+    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+  if (orders.length === 0) return null;
+  return orders[0];
+}
+
+export async function getTopUpOrderStatus(orderCode: string): Promise<UserWalletTopUpOrder | null> {
+  const orders = loadTopUpOrdersStore();
+  const target = orders.find((row) => row.orderCode === orderCode);
+  if (!target) return null;
+
+  if (target.status !== 'pending') return target;
+
+  const createdAtMs = new Date(target.createdAt).getTime();
+  const nowMs = Date.now();
+  const elapsed = nowMs - createdAtMs;
+  const expiredMs = DEMO_QR_EXPIRE_MINUTES * 60_000;
+
+  if (elapsed >= expiredMs) {
+    const expiredOrder: UserWalletTopUpOrder = {
+      ...target,
+      status: 'expired',
+      updatedAt: new Date().toISOString(),
+    };
+    saveTopUpOrdersStore(orders.map((row) => (row.orderCode === orderCode ? expiredOrder : row)));
+    return expiredOrder;
+  }
+
+  if (elapsed < DEMO_WEBHOOK_DELAY_MS) {
+    return target;
+  }
+
+  const walletTxRows = loadWalletTxStore();
+  const currentBalance = getUserWalletBalanceFromTx(target.userId, walletTxRows);
+  const paidAt = new Date().toISOString();
+  const walletTxId = randomId('WTX');
+  const paymentId = randomId('TOPUP');
+  const topUpTx: UserWalletTransactionRecord = {
+    id: walletTxId,
+    userId: target.userId,
+    paymentId,
+    reservationId: 'wallet-topup',
+    type: 'credit',
+    amount: target.amount,
+    balanceAfter: currentBalance + target.amount,
+    description: `Nạp ví qua ${target.gateway.toUpperCase()} (${target.orderCode})`,
+    createdAt: paidAt,
+  };
+
+  saveWalletTxStore([topUpTx, ...walletTxRows]);
+
+  const successOrder: UserWalletTopUpOrder = {
+    ...target,
+    status: 'success',
+    updatedAt: paidAt,
+    paidAt,
+    walletTxId,
+  };
+  saveTopUpOrdersStore(orders.map((row) => (row.orderCode === orderCode ? successOrder : row)));
+  return successOrder;
 }
 
 export async function createUserReservation(

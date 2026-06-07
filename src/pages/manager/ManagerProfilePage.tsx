@@ -1,10 +1,13 @@
 import { useState } from 'react';
-import { ArrowLeft, LogOut, User, Edit, Save, X, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { AlertCircle, Building2, CheckCircle2, Edit, LogOut, Save, User, X } from 'lucide-react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useManagerBuildings } from '@/hooks/useManagerBuildings';
+import { Button } from '@/components/ui/button';
 
 export function ManagerProfilePage() {
   const { session, logout, updateProfile } = useAuth();
+  const { buildings, selectedBuildingId } = useManagerBuildings();
   const navigate = useNavigate();
 
   const [isEditing, setIsEditing] = useState(false);
@@ -15,8 +18,10 @@ export function ManagerProfilePage() {
   const [success, setSuccess] = useState<string | null>(null);
 
   if (!session?.token || session?.role !== 'manager') {
-    return <Navigate to="/manager/login" replace />;
+    return <Navigate to="/auth/login" replace />;
   }
+
+  const selectedBuilding = buildings.find((b) => b._id === selectedBuildingId);
 
   const handleStartEdit = () => {
     setFullName(session.displayName || '');
@@ -39,246 +44,169 @@ export function ManagerProfilePage() {
     setNameError(null);
     setPhoneError(null);
     setSuccess(null);
-
     const trimmedName = fullName.trim();
     const newPhone = phone.trim();
-    const oldPhone = (session.phone || '').trim();
-
-    // Step 1: Validate Name
-    if (!trimmedName) {
-      setNameError('Vui lòng nhập họ tên!');
-      return;
-    }
-
-    // Step 2: Validate phone number
+    if (!trimmedName) { setNameError('Vui lòng nhập họ tên!'); return; }
     const phoneRegex = /^0[0-9]{9}$/;
     if (!phoneRegex.test(newPhone)) {
-      setPhoneError('Số điện thoại phải bắt đầu bằng số 0 và có đúng 10 chữ số!');
+      setPhoneError('Số điện thoại phải bắt đầu bằng 0 và có đúng 10 chữ số!');
       return;
     }
-
-    // Step 3: Check duplicate phone
-    const allRegisteredPhonesRaw = localStorage.getItem('pbms.allRegisteredPhones');
-    let allRegisteredPhones: string[] = allRegisteredPhonesRaw
-      ? JSON.parse(allRegisteredPhonesRaw)
-      : ['0911111111', '0922222222'];
-
-    if (newPhone !== oldPhone && allRegisteredPhones.includes(newPhone)) {
-      setPhoneError('Số điện thoại này đã được đăng ký bởi một tài khoản khác!');
-      return;
-    }
-
-    // Step 4: Update register phone storage
-    if (oldPhone) {
-      allRegisteredPhones = allRegisteredPhones.filter((p) => p !== oldPhone);
-    }
-    allRegisteredPhones.push(newPhone);
-    localStorage.setItem('pbms.allRegisteredPhones', JSON.stringify(allRegisteredPhones));
-
-    // Step 5: Update profile
-    updateProfile({
-      fullName: trimmedName,
-      phone: newPhone,
-      licensePlates: session.licensePlates || []
-    });
-
+    updateProfile({ fullName: trimmedName, phone: newPhone, licensePlates: session.licensePlates || [] });
     setIsEditing(false);
     setSuccess('Cập nhật thông tin thành công!');
     setTimeout(() => setSuccess(null), 4000);
   };
 
+  const initials = (session.displayName || session.email || 'M')[0]?.toUpperCase();
+
   return (
-    <main className="min-h-[calc(100vh-4rem)] bg-slate-50 text-slate-900">
-      <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-        {/* Success Toast Alert */}
-        {success && (
-          <div className="mb-6 flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-semibold text-emerald-800 shadow-sm">
-            <CheckCircle2 size={18} className="text-emerald-600" />
-            <span>{success}</span>
-          </div>
-        )}
+    <div className="space-y-5">
+      {/* Success */}
+      {success && (
+        <div className="flex items-center gap-2.5 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm font-semibold text-emerald-400">
+          <CheckCircle2 size={15} /> {success}
+        </div>
+      )}
 
-        <div className="mb-8 flex flex-col gap-4 rounded-3xl border border-slate-200 bg-white/90 p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6">
+      {/* Header */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/8 bg-slate-900/60 px-5 py-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-amber-500/25 bg-amber-500/10">
+            <User size={18} className="text-amber-400" />
+          </div>
           <div>
-            <p className="text-sm uppercase tracking-[0.18em] text-sky-600">Hồ sơ Manager</p>
-            <h1 className="mt-2 text-3xl font-semibold text-slate-900">Thông tin cá nhân</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-              Đây là trang hồ sơ của tài khoản manager. Bạn có thể kiểm tra, chỉnh sửa thông tin tài khoản và đăng xuất tại đây.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap gap-3">
-            {!isEditing && (
-              <button
-                type="button"
-                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-700 hover:to-indigo-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition duration-200 hover:scale-105"
-                onClick={handleStartEdit}
-              >
-                <Edit size={15} /> Chỉnh sửa hồ sơ
-              </button>
-            )}
-            <button
-              type="button"
-              className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50"
-              onClick={() => navigate('/manager/dashboard')}
-            >
-              <ArrowLeft size={16} /> Quay lại dashboard
-            </button>
-            <button
-              type="button"
-              className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
-              onClick={() => {
-                logout();
-                navigate('/manager/login', { replace: true });
-              }}
-            >
-              <LogOut size={16} /> Đăng xuất
-            </button>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-amber-500">Manager</p>
+            <h1 className="text-base font-bold text-white">Hồ sơ cá nhân</h1>
           </div>
         </div>
-
-        <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">
-          <section className="space-y-6 rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
-            <div className="space-y-2">
-              <p className="text-sm uppercase tracking-[0.28em] text-sky-600">Thông tin tài khoản</p>
-              <h2 className="text-2xl font-semibold text-slate-900">Hồ sơ của bạn</h2>
-            </div>
-
-            {isEditing ? (
-              <form onSubmit={handleSave} className="grid gap-5 rounded-3xl bg-slate-50 p-6">
-                <div className="grid gap-2 rounded-2xl bg-white p-6 shadow-sm border border-slate-100">
-                  <label className="text-xs uppercase tracking-[0.24em] text-slate-500 font-semibold">Tên</label>
-                  <input
-                    type="text"
-                    value={fullName}
-                    onChange={(e) => {
-                      setFullName(e.target.value);
-                      setNameError(null);
-                    }}
-                    required
-                    className="mt-1 block w-full rounded-xl border border-slate-300 bg-white text-slate-900 placeholder-slate-400 focus:border-sky-500 focus:ring-1 focus:ring-sky-500/20 text-sm h-11 px-4 transition-all duration-300 outline-none"
-                    placeholder="Nguyễn Văn A"
-                  />
-                  {nameError && (
-                    <p className="mt-1 text-xs text-rose-600 flex items-center gap-1.5 font-medium">
-                      <AlertCircle size={13} /> {nameError}
-                    </p>
-                  )}
-                </div>
-
-                <div className="grid gap-2 rounded-2xl bg-white p-6 shadow-sm border border-slate-100 opacity-70">
-                  <span className="text-xs uppercase tracking-[0.24em] text-slate-500 font-semibold">Email</span>
-                  <input
-                    type="email"
-                    value={session.email}
-                    disabled
-                    className="mt-1 block w-full rounded-xl border border-slate-200 bg-slate-50 text-slate-500 text-sm h-11 px-4 outline-none cursor-not-allowed"
-                  />
-                </div>
-
-                <div className="grid gap-2 rounded-2xl bg-white p-6 shadow-sm border border-slate-100 opacity-70">
-                  <span className="text-xs uppercase tracking-[0.24em] text-slate-500 font-semibold">Vai trò</span>
-                  <input
-                    type="text"
-                    value={session.role}
-                    disabled
-                    className="mt-1 block w-full rounded-xl border border-slate-200 bg-slate-50 text-slate-500 uppercase text-sm h-11 px-4 outline-none cursor-not-allowed font-mono"
-                  />
-                </div>
-
-                <div className="grid gap-2 rounded-2xl bg-white p-6 shadow-sm border border-slate-100">
-                  <label className="text-xs uppercase tracking-[0.24em] text-slate-500 font-semibold">Số điện thoại</label>
-                  <input
-                    type="text"
-                    value={phone}
-                    onChange={(e) => {
-                      const val = e.target.value.replace(/[^0-9]/g, '');
-                      setPhone(val);
-                      setPhoneError(null);
-                    }}
-                    required
-                    maxLength={10}
-                    className="mt-1 block w-full rounded-xl border border-slate-300 bg-white text-slate-900 placeholder-slate-400 focus:border-sky-500 focus:ring-1 focus:ring-sky-500/20 text-sm h-11 px-4 transition-all duration-300 outline-none"
-                    placeholder="Ví dụ: 0901234567"
-                  />
-                  {phoneError && (
-                    <p className="mt-1 text-xs text-rose-600 flex items-center gap-1.5 font-medium">
-                      <AlertCircle size={13} /> {phoneError}
-                    </p>
-                  )}
-                </div>
-
-                <div className="flex gap-3 pt-3">
-                  <button
-                    type="submit"
-                    className="inline-flex items-center gap-2 rounded-xl bg-sky-600 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-700 hover:scale-[1.02] shadow-sm"
-                  >
-                    <Save size={15} /> Lưu thay đổi
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleCancel}
-                    className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-6 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 hover:scale-[1.02]"
-                  >
-                    <X size={15} /> Hủy
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <div className="grid gap-4 rounded-3xl bg-slate-50 p-6">
-                <div className="grid gap-2 rounded-2xl bg-white p-6 shadow-sm border border-slate-100">
-                  <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Tên</p>
-                  <p className="text-lg font-medium text-slate-900">{session.displayName || 'Chưa cập nhật'}</p>
-                </div>
-
-                <div className="grid gap-2 rounded-2xl bg-white p-6 shadow-sm border border-slate-100">
-                  <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Email</p>
-                  <p className="text-lg font-medium text-slate-900">{session.email}</p>
-                </div>
-
-                <div className="grid gap-2 rounded-2xl bg-white p-6 shadow-sm border border-slate-100">
-                  <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Vai trò</p>
-                  <p className="text-lg font-medium text-slate-900 uppercase font-mono text-sky-600">{session.role}</p>
-                </div>
-
-                <div className="grid gap-2 rounded-2xl bg-white p-6 shadow-sm border border-slate-100">
-                  <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Số điện thoại</p>
-                  <p className="text-lg font-medium text-slate-900">{session.phone || 'Chưa cập nhật'}</p>
-                </div>
-              </div>
-            )}
-          </section>
-
-          <aside className="rounded-3xl border border-slate-200 bg-sky-600/5 p-8 shadow-sm">
-            <div className="flex h-full flex-col justify-between gap-6">
-              <div className="flex items-center gap-4 rounded-3xl bg-white/90 p-4 shadow-sm border border-slate-100">
-                <div className="flex h-14 w-14 items-center justify-center rounded-3xl bg-sky-600 text-white">
-                  <User size={24} />
-                </div>
-                <div>
-                  <p className="text-sm uppercase tracking-[0.28em] text-sky-700">Tài khoản</p>
-                  <p className="text-xl font-semibold text-slate-950">{session.displayName || 'Manager'}</p>
-                </div>
-              </div>
-
-              <div className="space-y-4 rounded-3xl bg-white/90 p-6 shadow-sm border border-slate-100">
-                <h3 className="text-lg font-semibold text-slate-900">Chi tiết nhanh</h3>
-                <div className="grid gap-3 text-sm text-slate-600">
-                  <div className="rounded-2xl bg-slate-50 p-4">
-                    <p className="font-medium text-slate-800">Email</p>
-                    <p>{session.email}</p>
-                  </div>
-                  <div className="rounded-2xl bg-slate-50 p-4">
-                    <p className="font-medium text-slate-800">Vai trò</p>
-                    <p className="uppercase font-mono">{session.role}</p>
-                  </div>
-                </div>
-              </div>
-              {/* Removed note and highlight panels */}
-            </div>
-          </aside>
+        <div className="flex gap-2">
+          {!isEditing && (
+            <Button variant="secondary" size="sm" onClick={handleStartEdit} className="gap-1.5">
+              <Edit size={13} /> Chỉnh sửa
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => { logout(); navigate('/auth/login', { replace: true }); }}
+            className="gap-1.5 text-rose-400 hover:bg-rose-500/10 hover:text-rose-300"
+          >
+            <LogOut size={13} /> Đăng xuất
+          </Button>
         </div>
       </div>
-    </main>
+
+      <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
+        {/* Left: profile fields */}
+        <div className="rounded-2xl border border-white/8 bg-slate-900/60 p-6">
+          <p className="mb-4 text-xs font-bold uppercase tracking-widest text-slate-500">Thông tin tài khoản</p>
+
+          {isEditing ? (
+            <form onSubmit={handleSave} className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold uppercase tracking-widest text-slate-400">Họ tên</label>
+                <input
+                  type="text"
+                  value={fullName}
+                  onChange={(e) => { setFullName(e.target.value); setNameError(null); }}
+                  required
+                  className="h-10 w-full rounded-xl border border-white/10 bg-slate-800 px-3 text-sm text-white placeholder:text-slate-500 outline-none focus:ring-1 focus:ring-amber-500"
+                  placeholder="Nguyễn Văn A"
+                />
+                {nameError && <p className="flex items-center gap-1 text-xs text-rose-400"><AlertCircle size={12} />{nameError}</p>}
+              </div>
+
+              <div className="space-y-1.5 opacity-60">
+                <label className="text-xs font-semibold uppercase tracking-widest text-slate-400">Email</label>
+                <input
+                  type="email"
+                  value={session.email}
+                  disabled
+                  className="h-10 w-full rounded-xl border border-white/10 bg-slate-800/50 px-3 text-sm text-slate-400 outline-none cursor-not-allowed"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold uppercase tracking-widest text-slate-400">Số điện thoại</label>
+                <input
+                  type="text"
+                  value={phone}
+                  onChange={(e) => { setPhone(e.target.value.replace(/[^0-9]/g, '')); setPhoneError(null); }}
+                  maxLength={10}
+                  required
+                  className="h-10 w-full rounded-xl border border-white/10 bg-slate-800 px-3 text-sm text-white placeholder:text-slate-500 outline-none focus:ring-1 focus:ring-amber-500"
+                  placeholder="0901234567"
+                />
+                {phoneError && <p className="flex items-center gap-1 text-xs text-rose-400"><AlertCircle size={12} />{phoneError}</p>}
+              </div>
+
+              <div className="flex items-end gap-2 md:col-span-2">
+                <Button type="submit" size="sm" className="gap-1.5 bg-amber-500 hover:bg-amber-600 text-slate-900">
+                  <Save size={13} /> Lưu thay đổi
+                </Button>
+                <Button type="button" variant="secondary" size="sm" onClick={handleCancel} className="gap-1.5">
+                  <X size={13} /> Hủy
+                </Button>
+              </div>
+            </form>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2">
+              {[
+                { label: 'Họ tên', value: session.displayName || 'Chưa cập nhật' },
+                { label: 'Email', value: session.email },
+                { label: 'Số điện thoại', value: session.phone || 'Chưa cập nhật' },
+                { label: 'Vai trò', value: 'MANAGER' },
+              ].map((f) => (
+                <div key={f.label} className="rounded-xl border border-white/8 bg-slate-800/50 px-4 py-3">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">{f.label}</p>
+                  <p className="mt-1 text-sm font-semibold text-white">{f.value}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Right: identity card */}
+        <div className="space-y-4">
+          {/* Avatar card */}
+          <div className="rounded-2xl border border-white/8 bg-slate-900/60 p-5">
+            <div className="flex items-center gap-4">
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-amber-500/25 bg-amber-500/10">
+                <span className="text-2xl font-black text-amber-400">{initials}</span>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-amber-500">Manager Portal</p>
+                <p className="text-base font-bold text-white">{session.displayName || 'Manager'}</p>
+                <p className="text-xs text-slate-400">{session.email}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Building info */}
+          {selectedBuilding ? (
+            <div className="rounded-2xl border border-white/8 bg-slate-900/60 p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <Building2 size={14} className="text-amber-400" />
+                <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Tòa nhà phụ trách</p>
+              </div>
+              <div className="space-y-2">
+                <div className="rounded-xl border border-white/8 bg-slate-800/50 px-3 py-2.5">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Tên tòa nhà</p>
+                  <p className="mt-0.5 text-sm font-semibold text-white">{selectedBuilding.name}</p>
+                </div>
+                <div className="rounded-xl border border-white/8 bg-slate-800/50 px-3 py-2.5">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Mã tòa nhà</p>
+                  <p className="mt-0.5 font-mono text-sm text-amber-400">{selectedBuilding.code}</p>
+                </div>
+                {buildings.length > 1 && (
+                  <p className="text-xs text-slate-500">+{buildings.length - 1} tòa nhà khác</p>
+                )}
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </div>
   );
 }

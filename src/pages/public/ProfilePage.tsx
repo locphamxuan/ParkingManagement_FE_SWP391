@@ -2,8 +2,10 @@ import { useMemo, useState, useRef, useEffect } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
-import { ArrowLeft, LogOut, User, Edit, Save, X, ShieldAlert, Plus, AlertCircle, CheckCircle2, Car, Bike, Loader2, Star } from 'lucide-react';
+import { ArrowLeft, LogOut, User, Edit, Save, X, ShieldAlert, Plus, AlertCircle, CheckCircle2, Car, Bike, Loader2, Star, QrCode, KeyRound } from 'lucide-react';
 import { syncPlates } from '@/services/licensePlateService';
+import { UserQRModal } from '@/components/shared/UserQRModal';
+import { userApi } from '@/services/user/userApi';
 
 // ─── Vietnamese license plate 4-step strict validation ───────────────────────
 // Step 1: Not empty
@@ -76,6 +78,11 @@ export default function ProfilePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isSettingDefaultId, setIsSettingDefaultId] = useState<string | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [showQRModal, setShowQRModal] = useState(false);
+  const [pwForm, setPwForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+  const [pwError, setPwError] = useState<string | null>(null);
+  const [pwSuccess, setPwSuccess] = useState<string | null>(null);
+  const [pwSaving, setPwSaving] = useState(false);
 
   const user = useMemo(() => {
     if (!session) return null;
@@ -233,6 +240,9 @@ export default function ProfilePage() {
         vehicleType: p.vehicleType,
       }));
 
+      // Persist fullName / phone to the backend (PUT /users/profile).
+      await userApi.profile.update({ fullName: form.fullName.trim(), phone: newPhone });
+
       // syncPlates handles add/remove API calls and returns the fresh plate list from server
       const freshPlates = await syncPlates(currentServerPlates, editPlates);
 
@@ -282,6 +292,37 @@ export default function ProfilePage() {
       setApiError(message);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPwError(null);
+    setPwSuccess(null);
+    if (!pwForm.currentPassword || !pwForm.newPassword) {
+      setPwError('Vui lòng điền đầy đủ thông tin.');
+      return;
+    }
+    if (pwForm.newPassword.length < 6) {
+      setPwError('Mật khẩu mới phải có ít nhất 6 ký tự.');
+      return;
+    }
+    if (pwForm.newPassword !== pwForm.confirmPassword) {
+      setPwError('Mật khẩu xác nhận không khớp.');
+      return;
+    }
+    try {
+      setPwSaving(true);
+      await userApi.profile.changePassword({
+        currentPassword: pwForm.currentPassword,
+        newPassword: pwForm.newPassword,
+      });
+      setPwSuccess('Đổi mật khẩu thành công!');
+      setPwForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    } catch (err) {
+      setPwError(err instanceof Error ? err.message : 'Đổi mật khẩu thất bại. Kiểm tra lại mật khẩu hiện tại.');
+    } finally {
+      setPwSaving(false);
     }
   };
 
@@ -387,14 +428,24 @@ export default function ProfilePage() {
               </div>
 
               {!isEditing && (
-                <button
-                  type="button"
-                  onClick={handleStartEdit}
-                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider transition-all duration-300 hover:scale-105 hover:shadow-[0_0_20px_rgba(249,115,22,0.35)] inline-flex items-center gap-1.5 self-start animate-fadeIn"
-                >
-                  <Edit size={13} className="stroke-[2.5]" />
-                  Chỉnh sửa hồ sơ
-                </button>
+                <div className="flex gap-3 items-center self-start flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => setShowQRModal(true)}
+                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 text-slate-950 font-black text-xs uppercase tracking-wider transition-all duration-300 hover:scale-105 hover:shadow-[0_0_20px_rgba(34,211,238,0.35)] inline-flex items-center gap-1.5 animate-fadeIn"
+                  >
+                    <QrCode size={13} className="stroke-[2.5]" />
+                    My QR
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleStartEdit}
+                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider transition-all duration-300 hover:scale-105 hover:shadow-[0_0_20px_rgba(249,115,22,0.35)] inline-flex items-center gap-1.5 animate-fadeIn"
+                  >
+                    <Edit size={13} className="stroke-[2.5]" />
+                    Chỉnh sửa hồ sơ
+                  </button>
+                </div>
               )}
             </div>
 
@@ -840,6 +891,82 @@ export default function ProfilePage() {
           </motion.aside>
         </div>
       </div>
+
+      {/* Password Change Section */}
+      <div className="mx-auto max-w-7xl px-4 pb-10 sm:px-6 lg:px-8 relative z-10">
+        <div className="rounded-3xl border border-white/5 bg-slate-900/40 p-6 backdrop-blur-md">
+          <div className="mb-4 flex items-center gap-2">
+            <KeyRound size={16} className="text-orange-400" />
+            <h3 className="text-sm font-bold text-white">Đổi mật khẩu</h3>
+          </div>
+          <form onSubmit={handleChangePassword} className="grid gap-3 sm:grid-cols-3">
+            <div>
+              <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                Mật khẩu hiện tại
+              </label>
+              <input
+                type="password"
+                value={pwForm.currentPassword}
+                onChange={(e) => setPwForm((p) => ({ ...p, currentPassword: e.target.value }))}
+                placeholder="••••••••"
+                className="h-10 w-full rounded-xl border border-white/10 bg-slate-950/50 px-3 text-sm text-white outline-none placeholder:text-slate-600 focus:border-orange-500/40 focus:ring-1 focus:ring-orange-500/20"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                Mật khẩu mới
+              </label>
+              <input
+                type="password"
+                value={pwForm.newPassword}
+                onChange={(e) => setPwForm((p) => ({ ...p, newPassword: e.target.value }))}
+                placeholder="Tối thiểu 6 ký tự"
+                className="h-10 w-full rounded-xl border border-white/10 bg-slate-950/50 px-3 text-sm text-white outline-none placeholder:text-slate-600 focus:border-orange-500/40 focus:ring-1 focus:ring-orange-500/20"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                Xác nhận mật khẩu
+              </label>
+              <input
+                type="password"
+                value={pwForm.confirmPassword}
+                onChange={(e) => setPwForm((p) => ({ ...p, confirmPassword: e.target.value }))}
+                placeholder="Nhập lại mật khẩu mới"
+                className="h-10 w-full rounded-xl border border-white/10 bg-slate-950/50 px-3 text-sm text-white outline-none placeholder:text-slate-600 focus:border-orange-500/40 focus:ring-1 focus:ring-orange-500/20"
+              />
+            </div>
+            <div className="sm:col-span-3 flex items-center gap-3 flex-wrap">
+              <button
+                type="submit"
+                disabled={pwSaving}
+                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 px-5 py-2 text-xs font-black uppercase tracking-wider text-slate-950 hover:brightness-110 disabled:opacity-50 transition-all"
+              >
+                {pwSaving ? <Loader2 size={12} className="animate-spin" /> : <KeyRound size={12} />}
+                {pwSaving ? 'Đang lưu...' : 'Đổi mật khẩu'}
+              </button>
+              {pwError && (
+                <p className="flex items-center gap-1 text-xs text-rose-400">
+                  <AlertCircle size={12} /> {pwError}
+                </p>
+              )}
+              {pwSuccess && (
+                <p className="flex items-center gap-1 text-xs text-emerald-400">
+                  <CheckCircle2 size={12} /> {pwSuccess}
+                </p>
+              )}
+            </div>
+          </form>
+        </div>
+      </div>
+
+      {/* QR Modal */}
+      <UserQRModal
+        isOpen={showQRModal}
+        onClose={() => setShowQRModal(false)}
+        userId={session?.userId || ''}
+        fullName={user?.fullName}
+      />
     </main>
   );
 }

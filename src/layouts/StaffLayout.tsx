@@ -1,6 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { CalendarClock, Car, LayoutDashboard, LogOut } from 'lucide-react';
+import { NavLink, Outlet, useLocation, useMatch, useNavigate } from 'react-router-dom';
+import {
+  CalendarClock,
+  CalendarCheck2,
+  ChevronLeft,
+  LayoutDashboard,
+  LogOut,
+  ScanLine,
+  ShieldAlert,
+  User,
+  Wallet,
+} from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
@@ -9,14 +19,21 @@ import { cn } from '@/utils/cn';
 
 const navItems = [
   { to: '', label: 'Tổng quan', icon: LayoutDashboard, end: true },
+  { to: 'operations', label: 'Check-in / Out', icon: ScanLine },
+  { to: 'reservations', label: 'Đặt chỗ trước', icon: CalendarCheck2 },
   { to: 'my-shifts', label: 'Ca làm việc', icon: CalendarClock },
-  { to: 'sessions', label: 'Phiên gửi xe', icon: Car },
+  { to: 'sessions', label: 'Thanh toán', icon: Wallet },
+  { to: 'incidents', label: 'Sự cố', icon: ShieldAlert },
 ];
 
 const pageTitle: Record<string, string> = {
   '': 'Tổng quan',
+  dashboard: 'Tổng quan',
+  operations: 'Check-in / Check-out',
+  reservations: 'Đặt chỗ trước',
   'my-shifts': 'Ca làm việc của tôi',
-  sessions: 'Phiên gửi xe',
+  sessions: 'Theo dõi thanh toán',
+  incidents: 'Quản lý sự cố',
 };
 
 export function StaffLayout() {
@@ -26,6 +43,7 @@ export function StaffLayout() {
   const [buildings, setBuildings] = useState<StaffBuilding[]>([]);
   const [selectedBuildingId, setSelectedBuildingId] = useState<string | null>(null);
   const [bootstrapping, setBootstrapping] = useState(true);
+  const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
     staffApi
@@ -47,6 +65,7 @@ export function StaffLayout() {
 
   const title = pageTitle[slug] ?? 'Nhân viên';
   const selectedBuilding = buildings.find((b) => b._id === selectedBuildingId);
+  const isProfileRoute = Boolean(useMatch('/staff/profile'));
 
   const onLogout = () => {
     logout();
@@ -54,22 +73,56 @@ export function StaffLayout() {
   };
 
   return (
-    <div className="admin-theme relative min-h-screen overflow-hidden bg-background text-foreground">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_8%,rgba(16,185,129,0.14),transparent_24%),radial-gradient(circle_at_86%_10%,rgba(52,211,153,0.10),transparent_22%),linear-gradient(180deg,rgba(255,255,255,0.55),rgba(240,253,250,0.16))]" />
+    <div className="admin-theme relative min-h-screen bg-background text-foreground">
+      {/* Background glows */}
+      <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+        <div className="absolute -right-24 -top-24 h-[420px] w-[420px] rounded-full bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.08),transparent_65%)] blur-3xl" />
+        <div className="absolute bottom-0 left-0 h-[320px] w-[320px] rounded-full bg-[radial-gradient(circle_at_center,rgba(52,211,153,0.05),transparent_60%)] blur-3xl" />
+      </div>
 
       <div className="relative z-10 flex min-h-screen">
-        <aside className="sticky top-0 hidden h-screen w-[240px] flex-col border-r border-border/80 bg-[rgba(240,253,250,0.92)] p-3 shadow-[12px_0_36px_rgba(16,185,129,0.10)] backdrop-blur-2xl lg:flex">
-          <div className="mb-4 rounded-2xl border border-border/80 bg-white/78 p-3 shadow-[0_10px_24px_rgba(16,185,129,0.08)]">
-            <p className="text-xs uppercase tracking-[0.2em] text-emerald-700">PBMS Staff</p>
-            <p className="mt-1 text-sm font-semibold text-black">Vận hành ca trực</p>
-            {selectedBuilding ? (
-              <p className="mt-1 truncate text-xs text-stone-500">
-                {selectedBuilding.code} · {selectedBuilding.name}
-              </p>
-            ) : null}
+        {/* ── Sidebar ── */}
+        <aside
+          className={cn(
+            'sticky top-0 hidden h-screen border-r border-white/8 bg-slate-900/95 p-4 shadow-[4px_0_30px_rgba(0,0,0,0.25)] backdrop-blur-xl lg:flex lg:flex-col transition-all duration-300 ease-in-out',
+            collapsed ? 'w-[80px]' : 'w-[248px]',
+          )}
+        >
+          {/* Sidebar header */}
+          <div className="mb-5 flex items-center justify-between rounded-2xl border border-white/8 bg-slate-800/60 p-3 shadow-sm">
+            {!collapsed ? (
+              <div className="pl-1 min-w-0">
+                <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-slate-500">
+                  PBMS Staff
+                </p>
+                <p className="text-xs font-extrabold text-slate-100">Nhân viên vận hành</p>
+                {selectedBuilding ? (
+                  <p className="mt-0.5 truncate text-[10px] text-slate-500">
+                    {selectedBuilding.code} · {selectedBuilding.name}
+                  </p>
+                ) : null}
+              </div>
+            ) : (
+              <ScanLine
+                size={18}
+                className="mx-auto text-emerald-400 drop-shadow-[0_0_8px_rgba(16,185,129,0.3)]"
+              />
+            )}
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setCollapsed((p) => !p)}
+              className="h-7 w-7 shrink-0 rounded-lg p-0 text-slate-400 hover:bg-white/8 hover:text-white"
+            >
+              <ChevronLeft
+                size={14}
+                className={cn('transition-transform duration-300', collapsed && 'rotate-180')}
+              />
+            </Button>
           </div>
 
-          <nav className="flex-1 space-y-0.5 overflow-y-auto pr-1">
+          {/* Nav */}
+          <nav className="flex-1 space-y-1 overflow-y-auto pr-1">
             {navItems.map((item) => {
               const Icon = item.icon;
               return (
@@ -79,27 +132,46 @@ export function StaffLayout() {
                   end={item.end}
                   className={({ isActive }) =>
                     cn(
-                      'flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition',
+                      'flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold transition-all duration-200',
                       isActive
-                        ? 'bg-gradient-to-r from-emerald-500 to-teal-400 text-white shadow-[0_8px_18px_rgba(16,185,129,0.22)]'
-                        : 'text-stone-700 hover:bg-emerald-500/10 hover:text-black'
+                        ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-md shadow-emerald-500/25 scale-[1.02]'
+                        : 'text-slate-400 hover:bg-white/6 hover:text-slate-100',
                     )
                   }
                 >
-                  <Icon size={15} />
-                  <span>{item.label}</span>
+                  <Icon size={15} className="shrink-0" />
+                  {!collapsed ? <span className="tracking-wide">{item.label}</span> : null}
                 </NavLink>
               );
             })}
           </nav>
+
+          {/* Logout button pinned to bottom */}
+          <div className="mt-3 border-t border-white/8 pt-3">
+            <button
+              type="button"
+              onClick={onLogout}
+              className={cn(
+                'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold text-rose-400 transition-all duration-200 hover:bg-rose-500/10 hover:text-rose-300',
+                collapsed && 'justify-center',
+              )}
+            >
+              <LogOut size={15} className="shrink-0" />
+              {!collapsed ? <span className="tracking-wide">Đăng xuất</span> : null}
+            </button>
+          </div>
         </aside>
 
+        {/* ── Main area ── */}
         <div className="flex min-h-screen flex-1 flex-col">
-          <header className="sticky top-0 z-20 border-b border-border/80 bg-[rgba(240,253,250,0.86)] px-4 py-3 backdrop-blur-2xl">
+          {/* Header */}
+          <header className="sticky top-0 z-20 border-b border-white/8 bg-slate-950/80 px-5 py-3 backdrop-blur-xl">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className="text-xs uppercase tracking-[0.18em] text-emerald-700">Nhân viên</p>
-                <h1 className="text-xl font-semibold text-black">{title}</h1>
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-600">
+                  Nhân viên
+                </p>
+                <h1 className="text-lg font-semibold text-white">{title}</h1>
               </div>
 
               <div className="flex items-center gap-2">
@@ -107,7 +179,7 @@ export function StaffLayout() {
                   <select
                     value={selectedBuildingId ?? ''}
                     onChange={(e) => setSelectedBuildingId(e.target.value)}
-                    className="h-9 rounded-md border border-border bg-white px-3 text-sm text-foreground outline-none"
+                    className="h-9 rounded-lg border border-white/10 bg-slate-800 px-3 text-sm text-slate-200 outline-none focus:ring-1 focus:ring-emerald-500"
                   >
                     {buildings.map((b) => (
                       <option key={b._id} value={b._id}>
@@ -119,8 +191,15 @@ export function StaffLayout() {
 
                 <DropdownMenu.Root>
                   <DropdownMenu.Trigger asChild>
-                    <Button variant="secondary" size="sm" className="gap-2">
-                      <span className="max-w-[150px] truncate text-xs sm:text-sm">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="gap-2 border-white/10 bg-slate-800 text-slate-200 hover:bg-slate-700"
+                    >
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-[11px] font-bold text-emerald-400 border border-emerald-500/20">
+                        {(user?.fullName ?? user?.email ?? 'S')[0]?.toUpperCase()}
+                      </span>
+                      <span className="max-w-[120px] truncate text-xs">
                         {user?.email}
                       </span>
                     </Button>
@@ -128,19 +207,60 @@ export function StaffLayout() {
                   <DropdownMenu.Portal>
                     <DropdownMenu.Content
                       sideOffset={6}
-                      className="z-50 min-w-[200px] rounded-md border border-border/80 bg-[rgba(240,253,250,0.98)] p-1 shadow-[0_20px_45px_rgba(16,185,129,0.14)]"
+                      className="z-50 w-72 overflow-hidden rounded-2xl border border-white/10 bg-slate-900 shadow-[0_20px_45px_rgba(0,0,0,0.5)]"
                     >
-                      <div className="px-3 py-2">
-                        <p className="text-sm font-semibold text-foreground">{user?.fullName}</p>
-                        <p className="text-xs text-muted-foreground">{user?.role}</p>
+                      {/* Profile card */}
+                      <div className="border-b border-white/8 px-4 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-emerald-500/25 bg-emerald-500/10">
+                            <span className="text-base font-bold text-emerald-400">
+                              {(user?.fullName ?? user?.email ?? 'S')[0]?.toUpperCase()}
+                            </span>
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-white truncate">
+                              {user?.fullName || 'Nhân viên'}
+                            </p>
+                            <p className="text-xs text-slate-400 truncate">{user?.email}</p>
+                            <p className="mt-0.5 text-[10px] font-bold uppercase tracking-widest text-emerald-500">
+                              Staff
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Building info */}
+                        {selectedBuilding && (
+                          <div className="mt-3 rounded-xl border border-white/8 bg-slate-800/60 px-3 py-2">
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Tòa nhà phụ trách</p>
+                            <p className="mt-0.5 text-xs font-semibold text-slate-200">
+                              {selectedBuilding.name}
+                            </p>
+                            <p className="text-[10px] text-slate-500">
+                              {selectedBuilding.code}
+                              {selectedBuilding.operatingHours
+                                ? ` · ${selectedBuilding.operatingHours.open}–${selectedBuilding.operatingHours.close}`
+                                : ''}
+                            </p>
+                          </div>
+                        )}
                       </div>
-                      <DropdownMenu.Separator className="my-1 h-px bg-border/80" />
-                      <DropdownMenu.Item
-                        className="flex items-center gap-2 rounded px-3 py-2 text-sm text-emerald-700 outline-none hover:bg-emerald-500/10 cursor-pointer"
-                        onClick={onLogout}
-                      >
-                        <LogOut size={14} /> Đăng xuất
-                      </DropdownMenu.Item>
+
+                      {/* Actions */}
+                      <div className="p-1">
+                        <DropdownMenu.Item
+                          className="flex cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-slate-300 outline-none hover:bg-white/6 hover:text-white"
+                          onClick={() => navigate('profile')}
+                        >
+                          <User size={14} className="text-emerald-400" /> Xem hồ sơ
+                        </DropdownMenu.Item>
+                        <DropdownMenu.Separator className="my-1 h-px bg-white/8" />
+                        <DropdownMenu.Item
+                          className="flex cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-rose-400 outline-none hover:bg-rose-500/10 hover:text-rose-300"
+                          onClick={onLogout}
+                        >
+                          <LogOut size={14} /> Đăng xuất
+                        </DropdownMenu.Item>
+                      </div>
                     </DropdownMenu.Content>
                   </DropdownMenu.Portal>
                 </DropdownMenu.Root>
@@ -148,15 +268,20 @@ export function StaffLayout() {
             </div>
           </header>
 
+          {/* Content */}
           <main className="flex-1 p-4 md:p-6">
-            {bootstrapping ? (
-              <div className="text-sm text-muted-foreground">Đang tải...</div>
-            ) : !selectedBuildingId ? (
-              <div className="rounded-md border border-border bg-card p-6 text-sm text-muted-foreground">
+            {bootstrapping && !isProfileRoute ? (
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-slate-400">
+                Đang tải...
+              </div>
+            ) : !selectedBuildingId && !isProfileRoute ? (
+              <div className="rounded-2xl border border-amber-500/20 bg-amber-500/8 p-6 text-sm text-amber-200">
                 Tài khoản này chưa được gán tòa nhà nào. Vui lòng liên hệ quản lý.
               </div>
             ) : (
-              <Outlet context={{ buildingId: selectedBuildingId }} />
+              <Outlet
+                context={{ buildingId: selectedBuildingId ?? '', building: selectedBuilding ?? null }}
+              />
             )}
           </main>
         </div>
