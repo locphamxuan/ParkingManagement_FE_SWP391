@@ -21,7 +21,7 @@ import {
 import { ParkingMap2D } from '@/components/shared/ParkingMap2D';
 import { useAuth } from '@/hooks/useAuth';
 import { CustomSelect } from '@/components/ui/select';
-import { userApi, type Building } from '@/services/user';
+import { userApi, type Building, type VehicleType, type ParkingSlot as ApiParkingSlot, type FloorAvailability } from '@/services/user';
 import {
   cancelUserReservation,
   createUserReservation,
@@ -112,6 +112,9 @@ export default function ReservationsPage() {
   const [payments, setPayments] = useState<UserPaymentRecord[]>([]);
   const [walletTransactions, setWalletTransactions] = useState<UserWalletTransactionRecord[]>([]);
   const [walletBalance, setWalletBalance] = useState(0);
+  const [floorsData, setFloorsData] = useState<FloorAvailability[]>([]);
+  const [vehicleTypesForBuilding, setVehicleTypesForBuilding] = useState<VehicleType[]>([]);
+  const [selectedFloorIdModal, setSelectedFloorIdModal] = useState<string>('');
 
   const [isLoadingBuildings, setIsLoadingBuildings] = useState(true);
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
@@ -208,24 +211,97 @@ export default function ReservationsPage() {
   useEffect(() => {
     let ignore = false;
 
-    async function loadSlots() {
+    async function loadSlotsAndFloors() {
       if (!selectedBuildingId) {
         setSlots([]);
+        setFloorsData([]);
+        setVehicleTypesForBuilding([]);
         return;
       }
 
       setIsLoadingSlots(true);
-      const slotRows = await listParkingSlotsByBuilding(selectedBuildingId);
-      if (ignore) return;
-      setSlots(slotRows);
-      setIsLoadingSlots(false);
+
+      try {
+        // 1) Load vehicle types for this building to map FE vehicle kind to backend id
+        const vtRes = await userApi.buildings.vehicleTypes(selectedBuildingId);
+        if (ignore) return;
+        const vtypes = vtRes.data.items || [];
+        setVehicleTypesForBuilding(vtypes);
+
+        const desiredCode = selectedVehicleType === 'car' ? 'car' : selectedVehicleType === 'motorcycle' ? 'motorcycle' : undefined;
+        const matched = desiredCode ? vtypes.find((v) => String(v.code).toLowerCase() === desiredCode) : undefined;
+        const vehicleTypeId = matched?._id;
+
+        // 2) Load floors availability for building (optionally filtered by vehicleType)
+        const floorsRes = await userApi.buildings.floors(selectedBuildingId, vehicleTypeId ? { vehicleTypeId } : undefined);
+        if (ignore) return;
+        const floors = floorsRes.data.floors || [];
+        setFloorsData(floors);
+
+        // Do NOT auto-load slots here — let user pick a floor in the modal first.
+        setSlots([]);
+        setSelectedFloorIdModal('');
+      } catch (err) {
+        // fallback: keep existing mock behavior if API fails
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-var-requires
+          const { listParkingSlotsByBuilding } = await import('@/pages/User/mockReservationsData');
+          const slotRows = await listParkingSlotsByBuilding(selectedBuildingId);
+          if (!ignore) setSlots(slotRows);
+        } catch (e) {
+          console.error('Failed to load slots/floors', err);
+        }
+      } finally {
+        if (!ignore) setIsLoadingSlots(false);
+      }
     }
 
-    loadSlots();
+    loadSlotsAndFloors();
     return () => {
       ignore = true;
     };
-  }, [selectedBuildingId]);
+  }, [selectedBuildingId, selectedVehicleType]);
+
+  // Load slots for the selected floor in the modal
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadSlotsForFloor() {
+      if (!selectedBuildingId || !selectedFloorIdModal) {
+        return;
+      }
+
+      setIsLoadingSlots(true);
+      try {
+        const slotsRes = await userApi.buildings.slots(selectedBuildingId, selectedFloorIdModal);
+        if (ignore) return;
+        const apiSlots: ApiParkingSlot[] = slotsRes.data.slots || [];
+        const mapped = apiSlots.map((s) => ({
+          _id: s._id,
+          buildingId: selectedBuildingId,
+          code: s.code,
+          floorCode: s.floor ? String(s.floor) : undefined,
+          vehicleType: (s.vehicleType && (s.vehicleType.code as any)) || 'all',
+          reservable: s.reservable ?? true,
+          status: (s.status as any) || 'available',
+        } as UserParkingSlotRecord));
+
+        setSlots(mapped);
+        // clear any previously selected slot/plate when switching floors
+        setSelectedSlot(null);
+        setSelectedPlate('');
+      } catch (err) {
+        console.error('Failed to load slots for floor', err);
+      } finally {
+        if (!ignore) setIsLoadingSlots(false);
+      }
+    }
+
+    loadSlotsForFloor();
+    return () => {
+      ignore = true;
+    };
+  }, [selectedBuildingId, selectedFloorIdModal]);
 
   const policyByBuildingId = useMemo(() => {
     return new Map(policies.map((item) => [item.buildingId, item]));
@@ -316,6 +392,18 @@ export default function ReservationsPage() {
     const unavailable = new Set(unavailableSlotCodes);
     return slots.filter((slot) => !unavailable.has(slot.code)).length;
   }, [selectedVehicleType, slots, unavailableSlotCodes]);
+
+  const floorsAvailableCount = useMemo(() => {
+    return floorsData.reduce((acc, f) => acc + (f.availableSlots || 0), 0);
+  }, [floorsData]);
+
+  const floorsTotalSlots = useMemo(() => {
+    return floorsData.reduce((acc, f) => acc + (f.totalSlots || 0), 0);
+  }, [floorsData]);
+
+  const selectedFloorInfo = useMemo(() => {
+    return floorsData.find((f) => f._id === selectedFloorIdModal) || null;
+  }, [floorsData, selectedFloorIdModal]);
 
   useEffect(() => {
     if (!selectedSlot) return;
@@ -755,7 +843,7 @@ export default function ReservationsPage() {
                                 <span className="font-mono text-[10px] uppercase tracking-[0.24em] text-emerald-200">Bước 1 đang hoạt động</span>
                               </div>
                               <span className="rounded-full border border-emerald-300/25 bg-emerald-300/10 px-3 py-1 font-mono text-[11px] font-black text-emerald-200">
-                                Khả dụng: {selectedVehicleType ? `${availableSlotCount}/${slots.length}` : '--'}
+                                Khả dụng: {selectedVehicleType ? (floorsData.length ? `${floorsAvailableCount}/${floorsTotalSlots}` : `${availableSlotCount}/${slots.length}`) : '--'}
                               </span>
                             </div>
 
@@ -1187,7 +1275,7 @@ export default function ReservationsPage() {
             className="relative max-h-[88vh] w-full max-w-5xl overflow-auto rounded-[28px] border border-slate-700/80 bg-[#0b111d] p-4 shadow-[0_30px_120px_rgba(0,0,0,0.55)] sm:p-6"
           >
             <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                 <span className="rounded-2xl bg-cyan-300/10 p-2 text-cyan-200">
                   <MapPin size={18} />
                 </span>
@@ -1195,7 +1283,7 @@ export default function ReservationsPage() {
                   Chọn ô đỗ
                 </h2>
                 <span className="text-xs font-bold text-slate-400">
-                  Khả dụng: <span className="text-emerald-300">{availableSlotCount}</span> / {slots.length}
+                  Khả dụng: <span className="text-emerald-300">{selectedFloorInfo ? selectedFloorInfo.availableSlots : floorsData.length ? floorsAvailableCount : availableSlotCount}</span> / {selectedFloorInfo ? selectedFloorInfo.totalSlots : floorsData.length ? floorsTotalSlots : slots.length}
                 </span>
               </div>
               <motion.button
@@ -1207,6 +1295,25 @@ export default function ReservationsPage() {
               >
                 <X size={20} />
               </motion.button>
+            </div>
+
+            <div className="mb-3">
+              <span className={fieldLabelClass(true)}>Chọn tầng</span>
+              <CustomSelect
+                value={selectedFloorIdModal}
+                onChange={(val) => {
+                  const next = String(val || '');
+                  setSelectedFloorIdModal(next);
+                  setSelectedSlot(null);
+                  setSelectedPlate('');
+                }}
+                options={[
+                  { value: '', label: '-- Chọn tầng --' },
+                  ...floorsData.map((f) => ({ value: f._id, label: `${f.name} (${f.availableSlots}/${f.totalSlots})` })),
+                ]}
+                placeholder="-- Chọn tầng --"
+              />
+              <p className="mt-2 text-xs text-slate-400">Chọn tầng để tải danh sách ô đỗ tương ứng.</p>
             </div>
 
             <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">

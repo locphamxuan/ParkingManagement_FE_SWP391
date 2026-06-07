@@ -31,7 +31,7 @@ export function HomeRoute() {
 
   const onViewReservationHistory = useCallback(() => {
     if (!session) { onOpenAuth('login'); return; }
-    navigate('/reservations');
+    navigate('/parking-history');
   }, [navigate, onOpenAuth, session]);
 
   const onAction = useCallback(
