@@ -72,6 +72,16 @@ function StatCard({ label, value, icon: Icon, accent, bg, loading }: StatCardPro
   );
 }
 
+function formatSlotLocation(session: ParkingSession): string {
+  const floor = session.slot?.floor?.name || session.slot?.floor?.code || null;
+  const slotCode = session.slot?.code || null;
+  
+  if (!floor && !slotCode) return 'Vị trí —';
+  if (!floor) return `Ô ${slotCode}`;
+  if (!slotCode) return `Tầng ${floor}`;
+  return `Tầng ${floor} • Ô ${slotCode}`;
+}
+
 export function StaffDashboardPage() {
   const { building } = useBuildingContext();
   const [shifts, setShifts] = useState<MyShift[]>([]);
@@ -86,7 +96,7 @@ export function StaffDashboardPage() {
     const buildingId = building?._id;
     Promise.all([
       staffApi.myShifts({ from: d, to: d }),
-      staffApi.getActiveSessions(),
+      staffApi.getActiveSessions({ populate: 'slot.floor,vehicleType,entryGate,exitGate' }),
       staffApi.incidents.list(buildingId),
       staffApi.listReservations(buildingId ? { buildingId, status: 'confirmed' } : {}),
     ])
@@ -344,6 +354,9 @@ export function StaffDashboardPage() {
                       <DoorOpen size={11} className="mr-1 inline-block" />
                       {session.entryGate?.name ?? session.entryGate?.code ?? '—'}
                       {session.vehicleType ? ` · ${session.vehicleType.name}` : ''}
+                    </p>
+                    <p className="mt-1 text-xs font-semibold text-orange-300">
+                      {formatSlotLocation(session)}
                     </p>
                     <p className="mt-0.5 text-[11px] text-slate-500">
                       Vào lúc {fmtTime(session.entryTime)}
