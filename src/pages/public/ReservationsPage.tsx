@@ -1,29 +1,261 @@
-import { useEffect, useState } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { useCallback, useEffect, useState } from 'react';
+import { Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   ArrowLeft,
   CalendarClock,
   CheckCircle2,
+  Clock,
   DollarSign,
+  History,
   MapPin,
+  RefreshCw,
   User,
   WalletCards,
+  XCircle,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { userApi, type Building, type ReservationEstimate } from '@/services/user/userApi';
+import { userApi, type Building, type Reservation, type ReservationEstimate } from '@/services/user/userApi';
+import { StatusBadge } from '@/components/shared/StatusBadge';
 
 const money = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 });
 const fmtMoney = (n: number | undefined | null) => (n != null ? money.format(n) : '—');
+const fmtTime = (s?: string | null) =>
+  s ? new Date(s).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' }) : '—';
 
 function toLocalDatetimeValue(date: Date): string {
   const off = date.getTimezoneOffset() * 60_000;
   return new Date(date.getTime() - off).toISOString().slice(0, 16);
 }
 
+type TabType = 'new' | 'history';
+
+const STATUS_LABELS: Record<string, string> = {
+  pending: 'Đang chờ',
+  confirmed: 'Đã xác nhận',
+  checked_in: 'Đã check-in',
+  completed: 'Hoàn thành',
+  expired: 'Hết hạn',
+  cancelled: 'Đã hủy',
+};
+
+// ─── Reservation History Sub-Component ───────────────────────────────────────
+
+function ReservationHistoryTab() {
+  const [items, setItems] = useState<Reservation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+
+  const load = useCallback((p = 1, status = statusFilter) => {
+    setLoading(true);
+    setError(null);
+    userApi.reservations
+      .list({ page: p, limit: 10, status: status === 'all' ? undefined : status })
+      .then((res) => {
+        const raw = (res as any)?.data;
+        setItems(raw?.items ?? []);
+        setTotalPages(raw?.pagination?.totalPages ?? 1);
+        setPage(p);
+      })
+      .catch((err) => setError(err instanceof Error ? err.message : 'Tải lịch sử thất bại'))
+      .finally(() => setLoading(false));
+  }, [statusFilter]);
+
+  useEffect(() => {
+    load(1);
+  }, [load]);
+
+  const handleCancel = async (id: string) => {
+    if (!window.confirm('Bạn có chắc muốn hủy đặt chỗ này? Tiền cọc sẽ không được hoàn lại.')) return;
+    setCancellingId(id);
+    try {
+      await userApi.reservations.cancel(id);
+      setItems((prev) => prev.map((r) => (r._id === id ? { ...r, status: 'cancelled' } : r)));
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Hủy đặt chỗ thất bại');
+    } finally {
+      setCancellingId(null);
+    }
+  };
+
+  const filterTabs = [
+    { value: 'all', label: 'Tất cả' },
+    { value: 'pending', label: 'Đang chờ' },
+    { value: 'confirmed', label: 'Đã xác nhận' },
+    { value: 'checked_in', label: 'Đã check-in' },
+    { value: 'completed', label: 'Hoàn thành' },
+    { value: 'expired', label: 'Hết hạn' },
+    { value: 'cancelled', label: 'Đã hủy' },
+  ];
+
+  return (
+    <div className="space-y-4">
+      {/* Header controls */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap gap-1.5">
+          {filterTabs.map((tab) => (
+            <button
+              key={tab.value}
+              type="button"
+              onClick={() => {
+                setStatusFilter(tab.value);
+                load(1, tab.value);
+              }}
+              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
+                statusFilter === tab.value
+                  ? 'bg-orange-500 text-white shadow-sm'
+                  : 'border border-white/10 bg-white/5 text-slate-400 hover:text-white'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={() => load(page)}
+          className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-300 hover:text-white transition-colors"
+        >
+          <RefreshCw size={12} className={loading ? 'animate-spin' : ''} /> Làm mới
+        </button>
+      </div>
+
+      {/* Error */}
+      {error && (
+        <div className="rounded-xl border border-rose-500/25 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
+          {error}
+        </div>
+      )}
+
+      {/* List */}
+      {loading ? (
+        <div className="py-12 text-center text-sm text-slate-400">Đang tải lịch sử đặt chỗ...</div>
+      ) : items.length === 0 ? (
+        <div className="rounded-2xl border border-white/8 bg-white/5 p-10 text-center">
+          <CalendarClock size={32} className="mx-auto mb-3 text-slate-600" />
+          <p className="text-sm font-semibold text-slate-400">Bạn chưa có lịch sử đặt chỗ nào.</p>
+          <p className="mt-1 text-xs text-slate-600">Hãy tạo đặt chỗ mới để bắt đầu.</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {items.map((r) => (
+            <div
+              key={r._id}
+              className="rounded-2xl border border-white/8 bg-white/3 p-4 transition-all hover:border-orange-500/20 hover:bg-white/5"
+            >
+              {/* Top row */}
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-mono text-sm font-black text-orange-300">{r.code}</span>
+                    <span className="rounded border border-amber-500/25 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-bold text-amber-300">
+                      {r.plateNumber}
+                    </span>
+                  </div>
+                  <p className="mt-0.5 text-xs text-slate-400">{r.building?.name ?? '—'}</p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <StatusBadge status={r.status} />
+                  {(r.status === 'pending' || r.status === 'confirmed') && (
+                    <button
+                      type="button"
+                      disabled={cancellingId === r._id}
+                      onClick={() => handleCancel(r._id)}
+                      className="flex items-center gap-1 rounded-lg border border-rose-500/30 bg-rose-500/10 px-2 py-1 text-[10px] font-bold text-rose-400 hover:bg-rose-500/20 transition-colors disabled:opacity-50"
+                    >
+                      <XCircle size={10} />
+                      {cancellingId === r._id ? 'Đang hủy...' : 'Hủy'}
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Detail row */}
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {/* Slot */}
+                <div>
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Slot</p>
+                  <p className="mt-1 text-xs text-slate-300">{r.slot?.code ?? '—'}</p>
+                </div>
+
+                {/* Start time */}
+                <div>
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Bắt đầu</p>
+                  <p className="mt-1 text-xs text-slate-300">{fmtTime(r.startTime)}</p>
+                </div>
+
+                {/* End time */}
+                <div>
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Kết thúc</p>
+                  <p className="mt-1 text-xs text-slate-300">{fmtTime(r.endTime)}</p>
+                </div>
+
+                {/* Fee */}
+                <div>
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Phí cọc</p>
+                  <p className={`mt-1 text-xs font-bold ${r.fee ? 'text-emerald-400' : 'text-slate-500'}`}>
+                    {fmtMoney(r.fee)}
+                  </p>
+                </div>
+              </div>
+
+              {/* Footer */}
+              {r.createdAt && (
+                <div className="mt-2 flex items-center gap-2 border-t border-white/5 pt-2">
+                  <Clock size={10} className="text-slate-600" />
+                  <span className="text-[10px] text-slate-500">Tạo lúc: {fmtTime(r.createdAt)}</span>
+                  {r.vehicleType && (
+                    <span className="ml-auto text-[10px] text-slate-500">{(r.vehicleType as any)?.name ?? ''}</span>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 pt-2">
+          <button
+            type="button"
+            disabled={page <= 1 || loading}
+            onClick={() => load(page - 1)}
+            className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-300 hover:text-white disabled:opacity-40 transition-colors"
+          >
+            ← Trước
+          </button>
+          <span className="text-xs text-slate-400">
+            Trang {page} / {totalPages}
+          </span>
+          <button
+            type="button"
+            disabled={page >= totalPages || loading}
+            onClick={() => load(page + 1)}
+            className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-300 hover:text-white disabled:opacity-40 transition-colors"
+          >
+            Sau →
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Main ReservationsPage ────────────────────────────────────────────────────
+
 export default function ReservationsPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { session } = useAuth();
+
+  // Determine initial tab: if navigated with openHistory state, open history tab
+  const initialTab: TabType = (location.state as any)?.openHistory ? 'history' : 'new';
+  const [activeTab, setActiveTab] = useState<TabType>(initialTab);
 
   const [buildings, setBuildings] = useState<Building[]>([]);
   const [isLoadingBuildings, setIsLoadingBuildings] = useState(true);
@@ -39,7 +271,9 @@ export default function ReservationsPage() {
   const [estimate, setEstimate] = useState<ReservationEstimate | null>(null);
   const [estimating, setEstimating] = useState(false);
 
+  // All hooks must be declared before any conditional return (Rules of Hooks)
   useEffect(() => {
+    if (!session) return;
     setIsLoadingBuildings(true);
     userApi.buildings
       .list({ limit: 100 })
@@ -50,7 +284,7 @@ export default function ReservationsPage() {
       })
       .catch(() => undefined)
       .finally(() => setIsLoadingBuildings(false));
-  }, []);
+  }, [session]);
 
   useEffect(() => {
     if (!selectedBuildingId) return;
@@ -105,6 +339,7 @@ export default function ReservationsPage() {
     };
   }, [selectedBuildingId, selectedVehicleTypeId, startTime, endTime]);
 
+  // Guard: must be after all hooks
   if (!session) return <Navigate to="/auth/login" replace />;
 
   const licensePlates = session.licensePlates || [];
@@ -115,7 +350,6 @@ export default function ReservationsPage() {
       setFormMessage({ type: 'err', text: 'Vui lòng điền đầy đủ thông tin đặt chỗ.' });
       return;
     }
-    // Backend requires an explicit checkout time to compute the 15% deposit.
     if (!endTime) {
       setFormMessage({ type: 'err', text: 'Vui lòng chọn thời gian kết thúc (giờ lấy xe).' });
       return;
@@ -193,12 +427,42 @@ export default function ReservationsPage() {
 
         {/* Header */}
         <div className="mb-6">
-          <p className="text-xs font-black uppercase tracking-[0.24em] text-orange-300">Đặt chỗ trước</p>
-          <h1 className="mt-1 text-2xl font-black text-white">Đặt chỗ mới</h1>
+          <p className="text-xs font-black uppercase tracking-[0.24em] text-orange-300">Đặt chỗ</p>
+          <h1 className="mt-1 text-2xl font-black text-white">Quản lý đặt chỗ</h1>
         </div>
 
-        {/* Form */}
-        <motion.div
+        {/* Tabs */}
+        <div className="mb-6 flex gap-1 rounded-xl border border-white/8 bg-white/5 p-1 w-fit">
+          <button
+            type="button"
+            onClick={() => setActiveTab('new')}
+            className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold transition-all ${
+              activeTab === 'new'
+                ? 'bg-orange-500 text-white shadow-sm'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <CalendarClock size={13} /> Đặt chỗ mới
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('history')}
+            className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold transition-all ${
+              activeTab === 'history'
+                ? 'bg-orange-500 text-white shadow-sm'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <History size={13} /> Lịch sử đặt chỗ
+          </button>
+        </div>
+
+        {/* Tab content */}
+        {activeTab === 'history' ? (
+          <ReservationHistoryTab />
+        ) : (
+          /* ─── New Reservation Form ─── */
+          <motion.div
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             className="mb-6 rounded-3xl border border-orange-300/20 bg-slate-900/80 p-6 shadow-2xl backdrop-blur-xl"
@@ -295,7 +559,7 @@ export default function ReservationsPage() {
                 />
               </div>
 
-              {/* Thời gian kết thúc (bắt buộc) */}
+              {/* Thời gian kết thúc */}
               <div className="sm:col-span-2">
                 <label className="mb-1.5 block text-[10px] font-black uppercase tracking-widest text-slate-400">
                   Thời gian lấy xe (kết thúc) <span className="text-rose-400">*</span>
@@ -313,7 +577,7 @@ export default function ReservationsPage() {
               </div>
             </div>
 
-            {/* Tóm tắt chi phí — đặt cọc 15% */}
+            {/* Fee estimate */}
             {endTime && new Date(endTime) > new Date(startTime) && (
               <div className="mt-4 rounded-2xl border border-cyan-400/20 bg-cyan-500/5 p-4">
                 <p className="mb-3 flex items-center gap-2 text-xs font-black uppercase tracking-wider text-cyan-200">
@@ -368,10 +632,17 @@ export default function ReservationsPage() {
                 <CalendarClock size={15} />
                 {isSubmitting ? 'Đang xử lý...' : 'Xác nhận đặt chỗ'}
               </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('history')}
+                className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-6 py-2.5 text-sm font-bold text-slate-300 transition hover:text-white"
+              >
+                <History size={14} /> Xem lịch sử
+              </button>
             </div>
           </motion.div>
+        )}
       </div>
     </main>
   );
 }
-
