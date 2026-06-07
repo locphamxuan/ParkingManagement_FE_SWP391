@@ -83,6 +83,14 @@ function vehicleTypeLabel(value: ReservationVehicleType): string {
   return value === 'car' ? 'Ô tô' : 'Xe máy';
 }
 
+function normalizeVehicleTypeCode(raw?: string | null): ReservationVehicleType | 'all' {
+  if (!raw) return 'all';
+  const code = String(raw).toLowerCase();
+  if (code.includes('car') || code.includes('ô tô') || code.includes('oto') || code.includes('ôto')) return 'car';
+  if (code.includes('motor') || code.includes('moto') || code.includes('xe') || code.includes('motorcycle')) return 'motorcycle';
+  return 'all';
+}
+
 function holdAmountForVehicleType(value: ReservationVehicleType | ''): number {
   if (value === 'car') return 40_000;
   if (value === 'motorcycle') return 15_000;
@@ -276,15 +284,41 @@ export default function ReservationsPage() {
         const slotsRes = await userApi.buildings.slots(selectedBuildingId, selectedFloorIdModal);
         if (ignore) return;
         const apiSlots: ApiParkingSlot[] = slotsRes.data.slots || [];
-        const mapped = apiSlots.map((s) => ({
-          _id: s._id,
-          buildingId: selectedBuildingId,
-          code: s.code,
-          floorCode: s.floor ? String(s.floor) : undefined,
-          vehicleType: (s.vehicleType && (s.vehicleType.code as any)) || 'all',
-          reservable: s.reservable ?? true,
-          status: (s.status as any) || 'available',
-        } as UserParkingSlotRecord));
+        const mapped = apiSlots.map((s) => {
+          // floor may be populated object or an id
+          let floorCode: string | undefined;
+          if (s.floor && typeof s.floor === 'object' && 'code' in (s.floor as any)) {
+            floorCode = String((s.floor as any).code);
+          } else if (s.floor && typeof s.floor === 'string') {
+            // try to find from floorsData
+            const found = floorsData.find((f) => f._id === s.floor || String(f._id) === String(s.floor));
+            if (found) floorCode = found.code ?? found.name ?? (typeof found.levelNumber === 'number' ? String(found.levelNumber) : undefined);
+            else floorCode = String(s.floor);
+          } else {
+            // fallback: use selectedFloorInfo if available
+            floorCode = selectedFloorInfo?.code ?? selectedFloorInfo?.name ?? undefined;
+          }
+
+          // vehicleType may be object or id — normalize to 'car'|'motorcycle'|'all'
+          let rawCode: string | undefined;
+          if (s.vehicleType && typeof s.vehicleType === 'object' && 'code' in (s.vehicleType as any)) {
+            rawCode = String((s.vehicleType as any).code);
+          } else if (s.vehicleType && typeof s.vehicleType === 'string') {
+            const found = vehicleTypesForBuilding.find((v) => v._id === s.vehicleType || String(v._id) === String(s.vehicleType));
+            rawCode = found ? String(found.code) : String(s.vehicleType);
+          }
+          const vt = normalizeVehicleTypeCode(rawCode);
+
+          return {
+            _id: s._id,
+            buildingId: selectedBuildingId,
+            code: s.code,
+            floorCode,
+            vehicleType: vt,
+            reservable: s.reservable ?? true,
+            status: (s.status as any) || 'available',
+          } as UserParkingSlotRecord;
+        });
 
         setSlots(mapped);
         // clear any previously selected slot/plate when switching floors
