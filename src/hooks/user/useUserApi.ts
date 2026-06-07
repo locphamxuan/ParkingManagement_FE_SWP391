@@ -637,7 +637,7 @@ export function useBuildingVehicleTypes(buildingId: string) {
       setState((prev) => ({
         ...prev,
         isLoading: false,
-        error: error instanceof Error ? error : new Error('Unknown error'),
+        error: error instanceof Error ? error : new Error('Unknown   error'),
       }));
     }
   }, [buildingId]);
