@@ -645,7 +645,7 @@ export function useBuildingVehicleTypes(buildingId: string) {
   return { ...state, refresh };
 }
 
-export function useBuildingFloors(buildingId: string) {
+export function useBuildingFloors(buildingId: string, query?: { vehicleTypeId?: string }) {
   const [state, setState] = useState<ListFetchState<FloorAvailability>>({
     items: [],
     isLoading: true,
@@ -661,7 +661,7 @@ export function useBuildingFloors(buildingId: string) {
     const fetchFloors = async () => {
       setState((prev) => ({ ...prev, isLoading: true, error: null }));
       try {
-        const result = await userApi.buildings.floors(buildingId);
+        const result = await userApi.buildings.floors(buildingId, query);
         setState({
           items: result.data.floors,
           isLoading: false,
@@ -677,13 +677,13 @@ export function useBuildingFloors(buildingId: string) {
     };
 
     fetchFloors();
-  }, [buildingId]);
+  }, [buildingId, query?.vehicleTypeId]);
 
   const refresh = useCallback(async () => {
     if (!buildingId) return;
     setState((prev) => ({ ...prev, isLoading: true }));
     try {
-      const result = await userApi.buildings.floors(buildingId);
+      const result = await userApi.buildings.floors(buildingId, query);
       setState({
         items: result.data.floors,
         isLoading: false,
@@ -696,7 +696,7 @@ export function useBuildingFloors(buildingId: string) {
         error: error instanceof Error ? error : new Error('Unknown error'),
       }));
     }
-  }, [buildingId]);
+  }, [buildingId, query?.vehicleTypeId]);
 
   return { ...state, refresh };
 }
