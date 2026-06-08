@@ -21,24 +21,78 @@ import {
 import { ParkingMap2D } from '@/components/shared/ParkingMap2D';
 import { useAuth } from '@/hooks/useAuth';
 import { CustomSelect } from '@/components/ui/select';
-import { userApi, type Building, type VehicleType, type ParkingSlot as ApiParkingSlot, type FloorAvailability } from '@/services/user';
-import {
-  cancelUserReservation,
-  createUserReservation,
-  getUserWalletBalance,
-  listParkingSlotsByBuilding,
-  listReservationPolicies,
-  listUserPayments,
-  listUserReservations,
-  listUserWalletTransactions,
-  slotSupportsVehicle,
-  type ReservationVehicleType,
-  type UserParkingSlotRecord,
-  type UserPaymentRecord,
-  type UserReservationPolicyRecord,
-  type UserReservationRecord,
-  type UserWalletTransactionRecord,
-} from '@/pages/User/mockReservationsData';
+import { userApi, type Building, type VehicleType, type ParkingSlot as ApiParkingSlot, type FloorAvailability, type Reservation } from '@/services/user';
+
+// Local minimal types (replacing mock types)
+type ReservationVehicleType = 'car' | 'motorcycle';
+
+interface UserParkingSlotRecord {
+  _id: string;
+  buildingId: string;
+  code: string;
+  floorCode?: string;
+  vehicleType: ReservationVehicleType | 'all';
+  reservable: boolean;
+  status: string;
+}
+
+interface UserReservationPolicyRecord {
+  _id?: string;
+  buildingId: string;
+  minAdvanceMinutes: number;
+  maxAdvanceHours: number;
+  maxHoldMinutes?: number;
+  reservableRatio?: number;
+  refundPercent?: number;
+  isActive?: boolean;
+}
+
+interface UserReservationRecord {
+  id: string;
+  userId: string;
+  buildingId: string;
+  buildingName: string;
+  slotCode: string;
+  plateNumber: string;
+  vehicleType: ReservationVehicleType;
+  scheduledAt: string;
+  createdAt: string;
+  status: string;
+  amountPaid: number;
+  paymentId?: string;
+  refundAmount?: number;
+  refundPercent?: number;
+}
+
+interface UserPaymentRecord {
+  id: string;
+  userId: string;
+  reservationId: string;
+  buildingId: string;
+  type: string;
+  direction: string;
+  method: string;
+  amount: number;
+  status: string;
+  note: string;
+  createdAt: string;
+}
+
+interface UserWalletTransactionRecord {
+  id: string;
+  userId: string;
+  paymentId?: string;
+  reservationId?: string;
+  type: string;
+  amount: number;
+  balanceAfter?: number;
+  description?: string;
+  createdAt: string;
+}
+
+function slotSupportsVehicle(slot: UserParkingSlotRecord, vehicleType: ReservationVehicleType) {
+  return slot.vehicleType === 'all' || slot.vehicleType === vehicleType;
+}
 
 interface ReservationLocationState {
   buildingId?: string;
@@ -81,6 +135,14 @@ function formatMoney(value: number): string {
 
 function vehicleTypeLabel(value: ReservationVehicleType): string {
   return value === 'car' ? 'Ô tô' : 'Xe máy';
+}
+
+function normalizeVehicleTypeCode(raw?: string | null): ReservationVehicleType | 'all' {
+  if (!raw) return 'all';
+  const code = String(raw).toLowerCase();
+  if (code.includes('car') || code.includes('ô tô') || code.includes('oto') || code.includes('ôto')) return 'car';
+  if (code.includes('motor') || code.includes('moto') || code.includes('xe') || code.includes('motorcycle')) return 'motorcycle';
+  return 'all';
 }
 
 function holdAmountForVehicleType(value: ReservationVehicleType | ''): number {
@@ -171,6 +233,7 @@ export default function ReservationsPage() {
     };
   }, [state?.buildingId]);
 
+
   useEffect(() => {
     let ignore = false;
 
@@ -181,18 +244,48 @@ export default function ReservationsPage() {
       }
 
       setIsLoadingUserData(true);
-      const [reservationRows, paymentRows, walletTxRows, balance] = await Promise.all([
-        listUserReservations(user.userId),
-        listUserPayments(user.userId),
-        listUserWalletTransactions(user.userId),
-        getUserWalletBalance(user.userId),
-      ]);
+      try {
+        const [resRes, walletRes, walletTxRes] = await Promise.all([
+          userApi.reservations.list({}),
+          userApi.wallet.get(),
+          userApi.wallet.transactions({ limit: 50 }),
+        ]);
+        if (ignore) return;
 
-      if (ignore) return;
-      setReservations(reservationRows);
-      setPayments(paymentRows);
-      setWalletTransactions(walletTxRows);
-      setWalletBalance(balance);
+        const reservationRows: UserReservationRecord[] = (resRes.data.items || []).map((r: Reservation) => ({
+          id: r._id,
+          userId: user.userId,
+          buildingId: r.building?._id || '',
+          buildingName: r.building?.name || '',
+          slotCode: r.slot?.code || (r.code || ''),
+          plateNumber: r.plateNumber,
+          vehicleType: (r.vehicleType?.code === 'car' ? 'car' : 'motorcycle') as ReservationVehicleType,
+          scheduledAt: r.startTime,
+          createdAt: r.createdAt || new Date().toISOString(),
+          status: r.status,
+          amountPaid: r.fee || 0,
+        }));
+
+        const balance = walletRes.data.wallet?.balance ?? 0;
+        const walletTxRows: UserWalletTransactionRecord[] = (walletTxRes.data.items || []).map((t: any) => ({
+          id: t._id || t.id,
+          userId: t.userId,
+          paymentId: t.paymentId,
+          reservationId: t.reservationId,
+          type: t.type,
+          amount: t.amount,
+          balanceAfter: t.balanceAfter,
+          description: t.description,
+          createdAt: t.createdAt,
+        }));
+
+        setReservations(reservationRows);
+        setPayments([]);
+        setWalletTransactions(walletTxRows);
+        setWalletBalance(balance);
+      } catch (err) {
+        console.error('Failed to load user data via API', err);
+      }
       setIsLoadingUserData(false);
     }
 
@@ -243,14 +336,7 @@ export default function ReservationsPage() {
         setSelectedFloorIdModal('');
       } catch (err) {
         // fallback: keep existing mock behavior if API fails
-        try {
-          // eslint-disable-next-line @typescript-eslint/no-var-requires
-          const { listParkingSlotsByBuilding } = await import('@/pages/User/mockReservationsData');
-          const slotRows = await listParkingSlotsByBuilding(selectedBuildingId);
-          if (!ignore) setSlots(slotRows);
-        } catch (e) {
-          console.error('Failed to load slots/floors', err);
-        }
+        console.error('Failed to load slots/floors', err);
       } finally {
         if (!ignore) setIsLoadingSlots(false);
       }
@@ -276,15 +362,43 @@ export default function ReservationsPage() {
         const slotsRes = await userApi.buildings.slots(selectedBuildingId, selectedFloorIdModal);
         if (ignore) return;
         const apiSlots: ApiParkingSlot[] = slotsRes.data.slots || [];
-        const mapped = apiSlots.map((s) => ({
-          _id: s._id,
-          buildingId: selectedBuildingId,
-          code: s.code,
-          floorCode: s.floor ? String(s.floor) : undefined,
-          vehicleType: (s.vehicleType && (s.vehicleType.code as any)) || 'all',
-          reservable: s.reservable ?? true,
-          status: (s.status as any) || 'available',
-        } as UserParkingSlotRecord));
+        const mapped = apiSlots.map((s) => {
+          // floor may be populated object or an id
+          let floorCode: string | undefined;
+          if (s.floor && typeof s.floor === 'object' && 'code' in (s.floor as any)) {
+            floorCode = String((s.floor as any).code);
+          } else if (s.floor && typeof s.floor === 'string') {
+            // try to find from floorsData
+            const floorId = s.floor;
+            const found = floorsData.find((f) => f._id === floorId || String(f._id) === floorId);
+            if (found) floorCode = found.code ?? found.name ?? (typeof found.levelNumber === 'number' ? String(found.levelNumber) : undefined);
+            else floorCode = floorId;
+          } else {
+            // fallback: use selectedFloorInfo if available
+            floorCode = selectedFloorInfo?.code ?? selectedFloorInfo?.name ?? undefined;
+          }
+
+          // vehicleType may be object or id — normalize to 'car'|'motorcycle'|'all'
+          let rawCode: string | undefined;
+          if (s.vehicleType && typeof s.vehicleType === 'object' && 'code' in (s.vehicleType as any)) {
+            rawCode = String((s.vehicleType as any).code);
+          } else if (s.vehicleType && typeof s.vehicleType === 'string') {
+            const vehicleTypeId = s.vehicleType;
+            const found = vehicleTypesForBuilding.find((v) => v._id === vehicleTypeId || String(v._id) === vehicleTypeId);
+            rawCode = found ? String(found.code) : vehicleTypeId;
+          }
+          const vt = normalizeVehicleTypeCode(rawCode);
+
+          return {
+            _id: s._id,
+            buildingId: selectedBuildingId,
+            code: s.code,
+            floorCode,
+            vehicleType: vt,
+            reservable: s.reservable ?? true,
+            status: (s.status as any) || 'available',
+          } as UserParkingSlotRecord;
+        });
 
         setSlots(mapped);
         // clear any previously selected slot/plate when switching floors
@@ -313,7 +427,14 @@ export default function ReservationsPage() {
   );
 
   const reservationPolicy = useMemo(
-    () => policyByBuildingId.get(selectedBuildingId) || null,
+    () =>
+      policyByBuildingId.get(selectedBuildingId) || {
+        minAdvanceMinutes: 15,
+        maxAdvanceHours: 72,
+        maxHoldMinutes: 30,
+        refundPercent: 0,
+        isActive: true,
+      },
     [policyByBuildingId, selectedBuildingId],
   );
 
@@ -454,17 +575,47 @@ export default function ReservationsPage() {
   const activeFieldGlow = 'shadow-[0_0_0_1px_rgba(249,115,22,0.18),0_0_24px_rgba(249,115,22,0.08)]';
 
   const refreshUserData = async () => {
-    const [reservationRows, paymentRows, walletTxRows, balance] = await Promise.all([
-      listUserReservations(user.userId),
-      listUserPayments(user.userId),
-      listUserWalletTransactions(user.userId),
-      getUserWalletBalance(user.userId),
-    ]);
+    try {
+      const [resRes, walletRes, walletTxRes] = await Promise.all([
+        userApi.reservations.list({}),
+        userApi.wallet.get(),
+        userApi.wallet.transactions({ limit: 50 }),
+      ]);
 
-    setReservations(reservationRows);
-    setPayments(paymentRows);
-    setWalletTransactions(walletTxRows);
-    setWalletBalance(balance);
+      const reservationRows: UserReservationRecord[] = (resRes.data.items || []).map((r: Reservation) => ({
+        id: r._id,
+        userId: user.userId,
+        buildingId: r.building?._id || '',
+        buildingName: r.building?.name || '',
+        slotCode: r.slot?.code || (r.code || ''),
+        plateNumber: r.plateNumber,
+        vehicleType: (r.vehicleType?.code === 'car' ? 'car' : 'motorcycle') as ReservationVehicleType,
+        scheduledAt: r.startTime,
+        createdAt: r.createdAt || new Date().toISOString(),
+        status: r.status,
+        amountPaid: r.fee || 0,
+      }));
+
+      const balance = walletRes.data.wallet?.balance ?? 0;
+      const walletTxRows: UserWalletTransactionRecord[] = (walletTxRes.data.items || []).map((t: any) => ({
+        id: t._id || t.id,
+        userId: t.userId,
+        paymentId: t.paymentId,
+        reservationId: t.reservationId,
+        type: t.type,
+        amount: t.amount,
+        balanceAfter: t.balanceAfter,
+        description: t.description,
+        createdAt: t.createdAt,
+      }));
+
+      setReservations(reservationRows);
+      setPayments([]);
+      setWalletTransactions(walletTxRows);
+      setWalletBalance(balance);
+    } catch (err) {
+      console.error('Failed to refresh user data via API', err);
+    }
   };
 
   const handleSlotClick = (slotCode: string) => {
@@ -545,19 +696,25 @@ export default function ReservationsPage() {
 
     setIsSubmitting(true);
     try {
-      const created = await createUserReservation({
-        userId: user.userId,
-        buildingId: selectedBuilding.building._id,
-        buildingName: selectedBuilding.building.name,
-        slotCode: selectedSlot,
+      const slotId = slots.find((s) => s.code === selectedSlot)?._id;
+      const start = new Date(scheduledAt);
+      const holdMinutes = reservationPolicy?.maxHoldMinutes ?? 30;
+      const end = new Date(start.getTime() + holdMinutes * 60_000);
+      const body: any = {
         plateNumber: selectedPlate,
-        vehicleType: selectedVehicleType,
-        scheduledAt,
-      });
+        buildingId: selectedBuilding.building._id,
+        startTime: start.toISOString(),
+        endTime: end.toISOString(),
+      };
+      if (slotId) body.slotId = slotId;
+      if (selectedVehicleType) body.vehicleType = selectedVehicleType;
+
+      const res = await userApi.reservations.create(body);
+      const createdReservation: Reservation = res.data.reservation;
 
       await refreshUserData();
       setBookingSuccess(
-        `Đặt chỗ thành công: ${selectedBuilding.building.name} - ${selectedSlot} - ${selectedPlate}. Đã giữ ${formatMoney(created.amountPaid)} trong ví.`,
+        `Đặt chỗ thành công: ${selectedBuilding.building.name} - ${selectedSlot} - ${selectedPlate}.`,
       );
       setSelectedSlot(null);
       setSelectedPlate('');
@@ -573,11 +730,11 @@ export default function ReservationsPage() {
     setBookingSuccess(null);
 
     try {
-      const result = await cancelUserReservation(reservationId, user.userId);
+      const res = await userApi.reservations.cancel(reservationId);
+      // backend returns reservation detail
       await refreshUserData();
-      setBookingSuccess(
-        `Đã hủy lượt đặt ${result.reservation.slotCode}. Hoàn ${result.refundPercent}%: ${formatMoney(result.refundAmount)}.`,
-      );
+      const cancelled = res.data.reservation;
+      setBookingSuccess(`Đã hủy lượt đặt. Trạng thái: ${cancelled.status}`);
     } catch (error) {
       setBookingError(error instanceof Error ? error.message : 'Không thể hủy lượt đặt.');
     }
@@ -1215,7 +1372,7 @@ export default function ReservationsPage() {
                                 </span>
                                 <span className="text-slate-500"> • </span>
                                 <span className="text-slate-400">Số dư:</span>{' '}
-                                <span className="text-emerald-300">{formatMoney(tx.balanceAfter)}</span>
+                                <span className="text-emerald-300">{formatMoney(tx.balanceAfter ?? 0)}</span>
                               </p>
                             </div>
                           ))}

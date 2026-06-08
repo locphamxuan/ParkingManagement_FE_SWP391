@@ -544,7 +544,18 @@ export async function listParkingSlotsByBuilding(
 export async function getReservationPolicyByBuilding(
   buildingId: string,
 ): Promise<UserReservationPolicyRecord | null> {
-  return RESERVATION_POLICY_MOCK_DATA.find((item) => item.buildingId === buildingId) || null;
+  return (
+    RESERVATION_POLICY_MOCK_DATA.find((item) => item.buildingId === buildingId) || {
+      _id: `rp-${buildingId}`,
+      buildingId,
+      minAdvanceMinutes: 15,
+      maxAdvanceHours: 72,
+      maxHoldMinutes: 30,
+      reservableRatio: 0.35,
+      refundPercent: 80,
+      isActive: true,
+    }
+  );
 }
 
 export async function listUserReservations(userId: string): Promise<UserReservationRecord[]> {

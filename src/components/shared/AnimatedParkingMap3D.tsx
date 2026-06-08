@@ -243,6 +243,7 @@ export function AnimatedParkingMap3D({
               stroke="#06b6d4" 
               strokeWidth="1.5"
               strokeDasharray="4 3"
+              initial={{ strokeDashoffset: 0 }}
               animate={{ strokeDashoffset: -20 }}
               transition={{ repeat: Infinity, duration: 1.2, ease: 'linear' }}
             />
@@ -365,6 +366,7 @@ export function AnimatedParkingMap3D({
               <g transform="translate(190, 25)">
                 <motion.ellipse 
                   cx="32" cy="22" 
+                  initial={{ rx: 24, ry: 14, opacity: 0.35 }}
                   animate={{ rx: [24, 30, 24], ry: [14, 18, 14], opacity: [0.35, 0.65, 0.35] }}
                   transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
                   fill="url(#evShield)" 
