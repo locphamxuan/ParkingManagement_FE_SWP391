@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
 import { AIAutoScanZone } from './AIAutoScanZone';
-import { CameraModal } from './CameraModal';
+import { CameraModal, type ScanResult } from './CameraModal';
 import { QRCodeScannerModal } from './QRCodeScannerModal';
 import { staffApi, type PlateInfo } from '@/services/staff/staffApi';
 
@@ -84,10 +84,13 @@ export function SessionCheckInModal({
   }, [isOpen]);
 
   // Handle AI plate detection
-  const handleAIPlateDetected = async (plate: string) => {
+  const handleAIPlateDetected = async (result: ScanResult) => {
+    const plate = result.plateNumber;
     setPlateNumber(plate);
     setIsAIScanning(false);
-    
+
+    if (!plate) return;
+
     // Auto-lookup plate info
     if (onLookup) {
       setLookingUp(true);

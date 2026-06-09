@@ -24,6 +24,7 @@ export interface MyShift {
 export interface ParkingSession {
   _id: string;
   plateNumber: string;
+  vehicleBrand?: string | null;
   vehicleType?: { _id: string; name: string; code: string } | null;
   slot?: { _id: string; code: string; floor?: { _id: string; name: string; code: string } | null } | null;
   entryGate?: { _id: string; code: string; name: string } | null;
@@ -32,6 +33,9 @@ export interface ParkingSession {
   exitTime?: string | null;
   duration?: number | null;
   fee?: number | null;
+  currentFee?: number | null;        // live fee (per manager PricePolicy) for active sessions
+  isMember?: boolean;                 // true if the plate is linked to an account
+  user?: { _id: string; fullName?: string; email?: string } | null;
   paymentMethod?: 'cash' | 'wallet' | 'qr' | 'card' | 'payos' | 'long_term' | null;
   status: 'active' | 'completed' | 'cancelled';
 }
@@ -98,6 +102,7 @@ export interface Dashboard {
 export interface PlateInfo {
   plateNumber: string;
   hasAccount: boolean;
+  registeredVehicleType?: 'car' | 'motorcycle' | null;
   user?: {
     id: string;
     fullName: string;
@@ -161,7 +166,7 @@ export const staffApi = {
   getActiveSessions: (query?: Record<string, string | number | boolean | undefined>) =>
     api.get<Wrap<ApiList<ParkingSession>>>('/staff/parking-sessions/active', { query }),
 
-  checkIn: (payload: { plateNumber: string; vehicleType?: string; gate?: string; building?: string }) =>
+  checkIn: (payload: { plateNumber: string; vehicleType?: string; gate?: string; building?: string; vehicleBrand?: string }) =>
     api.post<Wrap<{ item: ParkingSession }>>('/staff/parking-sessions/check-in', payload),
 
   checkOut: (sessionId: string, body?: { paymentMethod?: string }) =>
@@ -195,6 +200,44 @@ export const staffApi = {
 
   addCustomerPlate: (customerId: string, payload: { plateNumber: string; vehicleType?: string }) =>
     api.post<Wrap<{ success: boolean }>>(`/staff/users/${customerId}/license-plates`, payload),
+
+  // AI camera (Camera 1): send a captured frame (base64, data-URL prefix allowed),
+  // get back the recognized plate + brand and the resolved owner account.
+  scanVehicle: (image: string) =>
+    api.post<
+      Wrap<{
+        plateNumber: string;
+        plateConfidence: number;
+        vehicleType: 'car' | 'motorcycle' | null;
+        brand: string | null;
+        brandConfidence: number;
+        vehicleTypeMismatch: boolean;
+        hasAccount: boolean;
+        registeredVehicleType: 'car' | 'motorcycle' | null;
+        user: { id: string; fullName: string; email: string; phone: string | null; walletBalance: number } | null;
+        activeSession: { id: string; building: string; entryTime: string } | null;
+      }>
+    >('/staff/parking-sessions/scan', { image }),
+
+  // Staff rejects a check-in/check-out → backend notifies the plate owner.
+  reject: (payload: { plateNumber: string; stage: 'check-in' | 'check-out'; reason: string; building?: string }) =>
+    api.post<Wrap<{ plateNumber: string; stage: string; notified: boolean }>>(
+      '/staff/parking-sessions/reject',
+      payload
+    ),
+
+  // Camera 2: unified QR resolver — PLT- plate token or account ID.
+  resolveQr: (code: string) =>
+    api.get<
+      Wrap<{
+        kind: 'plate' | 'user';
+        found?: boolean;
+        hasAccount?: boolean;
+        plate?: { plateNumber: string; vehicleType: string; brand?: string | null } | null;
+        user: { id: string; fullName: string; email: string; phone?: string | null; walletBalance?: number } | null;
+        activeSessions?: { id: string; building: string; plateNumber: string; entryTime: string; fee: number }[];
+      }>
+    >(`/staff/users/resolve-qr/${encodeURIComponent(code)}`),
 
   checkInReservation: (code: string) =>
     api.post(`/staff/reservations/${code}/check-in`),

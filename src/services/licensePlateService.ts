@@ -4,7 +4,10 @@ export interface PlateRecord {
   _id?: string;
   plateNumber: string;
   vehicleType: 'car' | 'motorcycle';
+  brand?: string | null;
   isDefault?: boolean;
+  // Opaque per-plate QR token (PLT-...). Staff scan this with Camera 2 to identify the vehicle.
+  qrCode?: string;
 }
 
 interface LicensePlateResponse {
@@ -25,10 +28,15 @@ export async function listPlates(): Promise<PlateRecord[]> {
  * Add a new plate for the current user.
  * Returns the updated list of all plates.
  */
-export async function addPlate(plateNumber: string, vehicleType: 'car' | 'motorcycle'): Promise<PlateRecord[]> {
+export async function addPlate(
+  plateNumber: string,
+  vehicleType: 'car' | 'motorcycle',
+  brand?: string | null
+): Promise<PlateRecord[]> {
   const res = await api.post<LicensePlateResponse>('/users/license-plates', {
     plateNumber: plateNumber.trim().toUpperCase(),
     vehicleType,
+    brand: brand || null,
   });
   return (res?.data?.licensePlates ?? []) as PlateRecord[];
 }
@@ -49,11 +57,12 @@ export async function removePlate(plateId: string): Promise<PlateRecord[]> {
  */
 export async function syncPlates(
   currentServerPlates: PlateRecord[],
-  desiredPlates: Array<{ plateNumber: string; vehicleType: 'car' | 'motorcycle' }>
+  desiredPlates: Array<{ plateNumber: string; vehicleType: 'car' | 'motorcycle'; brand?: string | null }>
 ): Promise<PlateRecord[]> {
   const normalizedDesired = desiredPlates.map((p) => ({
     plateNumber: p.plateNumber.trim().toUpperCase(),
     vehicleType: p.vehicleType,
+    brand: p.brand ?? null,
   }));
 
   // Plates on server that are NOT in the desired list → remove them
@@ -66,13 +75,17 @@ export async function syncPlates(
     (dp) => !currentServerPlates.some((sp) => sp.plateNumber.trim().toUpperCase() === dp.plateNumber)
   );
 
+  // Collect failures so the caller can surface them (don't silently swallow —
+  // a swallowed add error makes the UI show a plate that was never saved).
+  const errors: string[] = [];
+
   // Perform removals
   for (const plate of platesToRemove) {
     if (plate._id) {
       try {
         await removePlate(plate._id);
       } catch (err) {
-        console.error(`[licensePlateService] Failed to remove plate ${plate.plateNumber}:`, err);
+        errors.push(`Xoá ${plate.plateNumber}: ${err instanceof Error ? err.message : 'lỗi'}`);
       }
     }
   }
@@ -81,9 +94,9 @@ export async function syncPlates(
   let latestPlates: PlateRecord[] = currentServerPlates;
   for (const plate of platesToAdd) {
     try {
-      latestPlates = await addPlate(plate.plateNumber, plate.vehicleType);
+      latestPlates = await addPlate(plate.plateNumber, plate.vehicleType, plate.brand);
     } catch (err) {
-      console.error(`[licensePlateService] Failed to add plate ${plate.plateNumber}:`, err);
+      errors.push(`Thêm ${plate.plateNumber}: ${err instanceof Error ? err.message : 'lỗi'}`);
     }
   }
 
@@ -92,6 +105,10 @@ export async function syncPlates(
     latestPlates = await listPlates();
   } catch {
     // Keep last known state if re-fetch fails
+  }
+
+  if (errors.length) {
+    throw new Error(`Đồng bộ biển số thất bại — ${errors.join('; ')}`);
   }
 
   return latestPlates;
