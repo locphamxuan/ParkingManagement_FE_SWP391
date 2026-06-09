@@ -207,10 +207,16 @@ export default function ParkingHistoryPage() {
                     <div>
                       <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Vào</p>
                       <p className="mt-1 text-xs text-slate-300">{fmtTime(session.checkIn)}</p>
+                      {session.entryGate?.name && (
+                        <p className="mt-0.5 text-[10px] text-slate-500">Cổng: {session.entryGate.name}</p>
+                      )}
                     </div>
                     <div>
                       <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Ra</p>
                       <p className="mt-1 text-xs text-slate-300">{fmtTime(session.checkOut)}</p>
+                      {session.exitGate?.name && (
+                        <p className="mt-0.5 text-[10px] text-slate-500">Cổng: {session.exitGate.name}</p>
+                      )}
                     </div>
 
                     {/* Fee */}
