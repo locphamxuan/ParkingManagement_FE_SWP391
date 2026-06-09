@@ -1,102 +1,12 @@
 import { useState } from 'react';
-import { Camera, Upload, Loader2 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Camera, Upload, Loader2, ScanLine, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { staffApi } from '@/services/staff/staffApi';
+import type { ScanResult } from '@/components/staff/CameraModal';
 
 interface AIAutoScanZoneProps {
-  onPlateDetected: (plate: string) => void;
+  onPlateDetected: (result: ScanResult) => void;
   onCameraOpen: () => void;
   isScanning?: boolean;
-}
-
-const OCR_API_KEY = 'K87161803788957';
-const OCR_API_URL = 'https://api.ocr.space/parse/image';
-
-function cleanOcrText(rawText: string): string {
-  const upperText = rawText.toUpperCase().trim();
-
-  const correctOcrDigits = (suffix: string): string => {
-    let corrected = '';
-    for (let i = 0; i < suffix.length; i++) {
-      const char = suffix[i];
-      if (/[0-9]/.test(char)) {
-        corrected += char;
-      } else {
-        const prev = i > 0 ? suffix[i - 1] : '';
-        const next = i < suffix.length - 1 ? suffix[i + 1] : '';
-        if (char === 'S') corrected += prev === '8' ? '9' : prev === '5' ? '6' : next === '7' ? '6' : '5';
-        else if (char === 'B') corrected += '8';
-        else if (char === 'O' || char === 'D' || char === 'Q') corrected += '0';
-        else if (char === 'I' || char === 'T' || char === 'J' || char === 'L') corrected += '1';
-        else if (char === 'Z') corrected += '2';
-        else if (char === 'A') corrected += '4';
-        else if (char === 'G') corrected += '6';
-        else corrected += '0';
-      }
-    }
-    return corrected;
-  };
-
-  const normalizedSpaces = upperText.replace(/[^A-Z0-9]+/g, ' ');
-  const parts = normalizedSpaces.split(' ').filter((p) => p.length > 0);
-
-  if (parts.length >= 2) {
-    const part1 = parts[0];
-    const suffixParts = parts.slice(1);
-    const cleanSuffixParts = suffixParts.map((p) => correctOcrDigits(p));
-
-    if (cleanSuffixParts.length === 2) {
-      const s1 = cleanSuffixParts[0];
-      const s2 = cleanSuffixParts[1];
-      if (s1.length === 3 && s2.length === 2) return `${part1}-${s1}.${s2}`;
-    }
-
-    const combinedSuffix = cleanSuffixParts.join('');
-    if (combinedSuffix.length === 5) return `${part1}-${combinedSuffix.substring(0, 3)}.${combinedSuffix.substring(3)}`;
-    if (combinedSuffix.length === 4) return `${part1}-${combinedSuffix}`;
-  }
-
-  const pattern = /(\d{2}[^A-Z0-9]*[A-Z]{1,2}\d{0,2})[\s\-_.]*(\d{3}[\s\-_.]*\d{2}|\d{3,5})/g;
-  const match = pattern.exec(upperText);
-  if (match) {
-    const p1 = match[1].replace(/[^A-Z0-9]/g, '');
-    const p2 = correctOcrDigits(match[2].replace(/[^A-Z0-9]/g, ''));
-    const fmt = p2.length === 5 ? `${p2.substring(0, 3)}.${p2.substring(3)}` : p2;
-    return `${p1}-${fmt}`;
-  }
-
-  return upperText.replace(/[^A-Z0-9]/g, '').substring(0, 12);
-}
-
-async function recognizePlateFromImage(imageBase64: string): Promise<string | null> {
-  try {
-    const formData = new FormData();
-    formData.append('apikey', OCR_API_KEY);
-    formData.append('base64Image', imageBase64);
-    formData.append('language', 'eng');
-    formData.append('isOverlayRequired', 'false');
-
-    const response = await fetch(OCR_API_URL, {
-      method: 'POST',
-      body: formData,
-    });
-
-    if (!response.ok) throw new Error(`OCR API lỗi: ${response.status}`);
-
-    const data = await response.json();
-
-    if (data.IsErroredOnProcessing) {
-      throw new Error(data.ErrorMessage?.[0] || 'Lỗi nhận diện OCR');
-    }
-
-    const text = data.ParsedResults?.[0]?.ParsedText || '';
-    if (!text.trim()) return null;
-
-    const cleaned = cleanOcrText(text);
-    return cleaned || null;
-  } catch (error) {
-    console.error('OCR recognition error:', error);
-    return null;
-  }
 }
 
 function fileToBase64(file: File): Promise<string> {
@@ -134,16 +44,19 @@ export function AIAutoScanZone({
       }
 
       const base64 = await fileToBase64(file);
-      const plate = await recognizePlateFromImage(`data:${file.type};base64,${base64}`);
+      const res = await staffApi.scanVehicle(base64);
+      const data = (res as { data?: { plateNumber?: string; brand?: string | null } })?.data;
+      const plateNumber = data?.plateNumber || '';
+      const brand = data?.brand ?? null;
 
-      if (plate) {
-        setSuccess(`✓ Phát hiện biển số: ${plate}`);
+      if (plateNumber) {
+        setSuccess(`Biển số: ${plateNumber}${brand ? ` · ${brand}` : ''}`);
         setTimeout(() => {
-          onPlateDetected(plate);
+          onPlateDetected({ plateNumber, brand });
           setSuccess(null);
         }, 500);
       } else {
-        setError('Không thể phát hiện biển số từ ảnh. Vui lòng thử lại.');
+        setError('Không đọc được biển số — hãy dùng Camera QR (Camera 2) để nhận diện.');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Lỗi xử lý ảnh');
@@ -182,108 +95,67 @@ export function AIAutoScanZone({
     }
   };
 
+  const busy = isScanning || isProcessing;
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: -10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className={`relative rounded-2xl border-2 border-dashed p-6 transition-all duration-300 ${
-        isDragging
-          ? 'border-orange-400 bg-orange-500/10'
-          : 'border-orange-500/20 bg-gradient-to-br from-orange-500/5 to-amber-500/5 backdrop-blur-md'
+    <div
+      className={`rounded-xl border border-dashed p-4 transition-colors ${
+        isDragging ? 'border-primary bg-primary/5' : 'border-border bg-card/40'
       }`}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      <div className="relative space-y-4">
+      <div className="space-y-3">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-black uppercase tracking-wider text-orange-400 font-mono">
-              🤖 AI Auto-Scan Zone
-            </p>
-            <p className="text-xs text-slate-400 mt-1 font-semibold">
-              Quét biển số xe thông minh bằng AI
-            </p>
-          </div>
+        <div className="flex items-center gap-2">
+          <ScanLine size={15} className="text-primary" />
+          <p className="text-sm font-semibold text-foreground">Camera 1 · Quét biển số</p>
         </div>
 
         {/* Action Buttons */}
-        <div className="flex gap-3 flex-wrap">
-          {/* Camera Button */}
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+        <div className="grid gap-2 sm:grid-cols-2">
+          <button
+            type="button"
             onClick={onCameraOpen}
-            disabled={isScanning || isProcessing}
-            className="flex-1 min-w-[200px] px-4 py-3 rounded-xl bg-gradient-to-r from-orange-500/80 to-amber-500/80 hover:from-orange-500 hover:to-amber-500 text-white font-black text-sm uppercase tracking-wider transition-all duration-300 border border-orange-400/50 hover:border-orange-300 shadow-lg hover:shadow-[0_0_20px_rgba(249,115,22,0.3)] inline-flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+            disabled={busy}
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition hover:brightness-110 disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {isScanning ? (
-              <>
-                <Loader2 size={16} className="animate-spin" />
-                Đang xử lý...
-              </>
-            ) : (
-              <>
-                <Camera size={16} className="stroke-[2.5]" />
-                📷 Quét WebCam Trực Tiếp
-              </>
-            )}
-          </motion.button>
+            {isScanning ? <Loader2 size={15} className="animate-spin" /> : <Camera size={15} />}
+            Quét webcam
+          </button>
 
-          {/* Upload Button */}
-          <motion.label
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="flex-1 min-w-[200px] px-4 py-3 rounded-xl border-2 border-slate-400/30 hover:border-slate-300 text-slate-300 hover:text-white font-black text-sm uppercase tracking-wider transition-all duration-300 shadow-lg cursor-pointer inline-flex items-center justify-center gap-2 bg-slate-900/20 hover:bg-slate-900/40 disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            {isProcessing ? (
-              <>
-                <Loader2 size={16} className="animate-spin" />
-                Đang xử lý...
-              </>
-            ) : (
-              <>
-                <Upload size={16} className="stroke-[2.5]" />
-                📁 Tải Lên Ảnh Biển Số
-              </>
-            )}
+          <label className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-semibold text-foreground transition hover:border-primary/40 cursor-pointer disabled:opacity-60">
+            {isProcessing ? <Loader2 size={15} className="animate-spin" /> : <Upload size={15} />}
+            Tải ảnh lên
             <input
               type="file"
               accept="image/*"
               onChange={handleFileChange}
-              disabled={isScanning || isProcessing}
+              disabled={busy}
               className="hidden"
             />
-          </motion.label>
+          </label>
         </div>
 
-        {/* Drag and drop hint */}
-        <p className="text-xs text-slate-500 font-semibold text-center">
-          💡 Hoặc kéo & thả ảnh biển số vào đây
+        <p className="text-[11px] text-muted-foreground text-center">
+          Hoặc kéo &amp; thả ảnh biển số vào đây
         </p>
 
-        {/* Status Messages */}
+        {/* Status messages */}
         {error && (
-          <motion.div
-            initial={{ opacity: 0, y: -5 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-400 font-semibold"
-          >
-            ❌ {error}
-          </motion.div>
+          <div className="flex items-start gap-2 rounded-lg border border-rose-500/30 bg-rose-500/10 p-2.5 text-xs text-rose-400">
+            <AlertCircle size={14} className="mt-0.5 shrink-0" />
+            <span>{error}</span>
+          </div>
         )}
-
         {success && (
-          <motion.div
-            initial={{ opacity: 0, y: -5 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-400 font-semibold"
-          >
-            {success}
-          </motion.div>
+          <div className="flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-2.5 text-xs text-emerald-400">
+            <CheckCircle2 size={14} className="shrink-0" />
+            <span>{success}</span>
+          </div>
         )}
       </div>
-    </motion.div>
+    </div>
   );
 }

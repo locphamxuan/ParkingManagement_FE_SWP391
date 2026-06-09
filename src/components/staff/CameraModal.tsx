@@ -1,102 +1,17 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Loader2 } from 'lucide-react';
+import { staffApi } from '@/services/staff/staffApi';
+
+export interface ScanResult {
+  plateNumber: string;
+  brand: string | null;
+}
 
 interface CameraModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCapture: (plate: string) => void;
-}
-
-const OCR_API_KEY = 'K87161803788957';
-const OCR_API_URL = 'https://api.ocr.space/parse/image';
-
-function cleanOcrText(rawText: string): string {
-  const upperText = rawText.toUpperCase().trim();
-
-  const correctOcrDigits = (suffix: string): string => {
-    let corrected = '';
-    for (let i = 0; i < suffix.length; i++) {
-      const char = suffix[i];
-      if (/[0-9]/.test(char)) {
-        corrected += char;
-      } else {
-        const prev = i > 0 ? suffix[i - 1] : '';
-        const next = i < suffix.length - 1 ? suffix[i + 1] : '';
-        if (char === 'S') corrected += prev === '8' ? '9' : prev === '5' ? '6' : next === '7' ? '6' : '5';
-        else if (char === 'B') corrected += '8';
-        else if (char === 'O' || char === 'D' || char === 'Q') corrected += '0';
-        else if (char === 'I' || char === 'T' || char === 'J' || char === 'L') corrected += '1';
-        else if (char === 'Z') corrected += '2';
-        else if (char === 'A') corrected += '4';
-        else if (char === 'G') corrected += '6';
-        else corrected += '0';
-      }
-    }
-    return corrected;
-  };
-
-  const normalizedSpaces = upperText.replace(/[^A-Z0-9]+/g, ' ');
-  const parts = normalizedSpaces.split(' ').filter((p) => p.length > 0);
-
-  if (parts.length >= 2) {
-    const part1 = parts[0];
-    const suffixParts = parts.slice(1);
-    const cleanSuffixParts = suffixParts.map((p) => correctOcrDigits(p));
-
-    if (cleanSuffixParts.length === 2) {
-      const s1 = cleanSuffixParts[0];
-      const s2 = cleanSuffixParts[1];
-      if (s1.length === 3 && s2.length === 2) return `${part1}-${s1}.${s2}`;
-    }
-
-    const combinedSuffix = cleanSuffixParts.join('');
-    if (combinedSuffix.length === 5) return `${part1}-${combinedSuffix.substring(0, 3)}.${combinedSuffix.substring(3)}`;
-    if (combinedSuffix.length === 4) return `${part1}-${combinedSuffix}`;
-  }
-
-  const pattern = /(\d{2}[^A-Z0-9]*[A-Z]{1,2}\d{0,2})[\s\-_.]*(\d{3}[\s\-_.]*\d{2}|\d{3,5})/g;
-  const match = pattern.exec(upperText);
-  if (match) {
-    const p1 = match[1].replace(/[^A-Z0-9]/g, '');
-    const p2 = correctOcrDigits(match[2].replace(/[^A-Z0-9]/g, ''));
-    const fmt = p2.length === 5 ? `${p2.substring(0, 3)}.${p2.substring(3)}` : p2;
-    return `${p1}-${fmt}`;
-  }
-
-  return upperText.replace(/[^A-Z0-9]/g, '').substring(0, 12);
-}
-
-async function recognizePlateFromImage(imageBase64: string): Promise<string | null> {
-  try {
-    const formData = new FormData();
-    formData.append('apikey', OCR_API_KEY);
-    formData.append('base64Image', imageBase64);
-    formData.append('language', 'eng');
-    formData.append('isOverlayRequired', 'false');
-
-    const response = await fetch(OCR_API_URL, {
-      method: 'POST',
-      body: formData,
-    });
-
-    if (!response.ok) throw new Error(`OCR API lỗi: ${response.status}`);
-
-    const data = await response.json();
-
-    if (data.IsErroredOnProcessing) {
-      throw new Error(data.ErrorMessage?.[0] || 'Lỗi nhận diện OCR');
-    }
-
-    const text = data.ParsedResults?.[0]?.ParsedText || '';
-    if (!text.trim()) return null;
-
-    const cleaned = cleanOcrText(text);
-    return cleaned || null;
-  } catch (error) {
-    console.error('OCR recognition error:', error);
-    return null;
-  }
+  onCapture: (result: ScanResult) => void;
 }
 
 export function CameraModal({ isOpen, onClose, onCapture }: CameraModalProps) {
@@ -156,9 +71,9 @@ export function CameraModal({ isOpen, onClose, onCapture }: CameraModalProps) {
     initCamera();
 
     return () => {
-      if (streamRef) {
-        streamRef.getTracks().forEach((track) => track.stop());
-      }
+      // Stop the live stream off the video element (streamRef state is stale here on first run).
+      const stream = videoRef.current?.srcObject as MediaStream | null;
+      stream?.getTracks().forEach((track) => track.stop());
     };
   }, [isOpen]);
 
@@ -177,36 +92,39 @@ export function CameraModal({ isOpen, onClose, onCapture }: CameraModalProps) {
         throw new Error('Video dimensions not available. Camera may not be ready.');
       }
 
-      console.log('Capturing frame:', videoRef.current.videoWidth, 'x', videoRef.current.videoHeight);
-
-      // Draw video frame to canvas
+      // Draw video frame to canvas, downscaled to keep the upload small (and AI fast/cheap).
       const ctx = canvasRef.current.getContext('2d');
       if (!ctx) throw new Error('Canvas context not available');
 
-      canvasRef.current.width = videoRef.current.videoWidth;
-      canvasRef.current.height = videoRef.current.videoHeight;
-      ctx.drawImage(videoRef.current, 0, 0);
+      const MAX_W = 1280;
+      const scale = Math.min(1, MAX_W / videoRef.current.videoWidth);
+      canvasRef.current.width = Math.round(videoRef.current.videoWidth * scale);
+      canvasRef.current.height = Math.round(videoRef.current.videoHeight * scale);
+      ctx.drawImage(videoRef.current, 0, 0, canvasRef.current.width, canvasRef.current.height);
 
-      // Convert to base64
-      const imageData = canvasRef.current.toDataURL('image/jpeg');
+      // Convert to base64 (JPEG q=0.8)
+      const imageData = canvasRef.current.toDataURL('image/jpeg', 0.8);
       const base64 = imageData.split(',')[1];
 
-      // Send to OCR
-      const plate = await recognizePlateFromImage(`data:image/jpeg;base64,${base64}`);
+      // Send to backend AI scan (plate + brand)
+      const res = await staffApi.scanVehicle(base64);
+      const data = (res as { data?: { plateNumber?: string; brand?: string | null } })?.data;
+      const plateNumber = data?.plateNumber || '';
+      const brand = data?.brand ?? null;
 
-      if (plate) {
+      if (plateNumber) {
         // Stop camera
         if (streamRef) {
           streamRef.getTracks().forEach((track) => track.stop());
         }
         setCameraActive(false);
-        onCapture(plate);
+        onCapture({ plateNumber, brand });
         onClose();
       } else {
-        setError('Không phát hiện biển số. Vui lòng thử lại.');
+        setError('Không đọc được biển số — hãy dùng Camera QR (Camera 2) để nhận diện.');
       }
     } catch (err) {
-      console.error('Capture error:', err);
+      console.error('Scan error:', err);
       setError(err instanceof Error ? err.message : 'Lỗi xử lý ảnh');
     } finally {
       setIsProcessing(false);
@@ -249,7 +167,7 @@ export function CameraModal({ isOpen, onClose, onCapture }: CameraModalProps) {
               {/* Header */}
               <div className="relative bg-gradient-to-r from-orange-500/10 to-amber-500/10 border-b border-white/5 p-6 flex items-center justify-between">
                 <div className="space-y-1">
-                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-orange-400 font-mono">📷 Quét Webcam</p>
+                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-orange-400 font-mono">Quét Webcam</p>
                   <h2 className="text-xl font-black text-white">Nhận Diện Biển Số Xe</h2>
                 </div>
                 <button
@@ -264,17 +182,16 @@ export function CameraModal({ isOpen, onClose, onCapture }: CameraModalProps) {
               <div className="p-6 space-y-4">
                 {/* Video Container */}
                 <div className="relative rounded-2xl overflow-hidden bg-black/50 border border-white/10">
-                  {cameraActive && (
-                    <video
-                      ref={videoRef}
-                      autoPlay
-                      playsInline
-                      muted
-                      crossOrigin="anonymous"
-                      className="w-full h-auto"
-                      style={{ aspectRatio: '4/3' }}
-                    />
-                  )}
+                  {/* Always render the <video> so the ref exists when the camera stream is attached. */}
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    crossOrigin="anonymous"
+                    className="w-full h-auto"
+                    style={{ aspectRatio: '4/3' }}
+                  />
 
                   {/* Laser Scan Overlay */}
                   {cameraActive && (
@@ -302,7 +219,7 @@ export function CameraModal({ isOpen, onClose, onCapture }: CameraModalProps) {
                   {error && (
                     <div className="absolute inset-0 flex items-center justify-center bg-black/70">
                       <div className="text-center">
-                        <p className="text-red-400 font-semibold">❌ Lỗi</p>
+                        <p className="text-red-400 font-semibold">Lỗi</p>
                         <p className="text-sm text-red-300 mt-2">{error}</p>
                       </div>
                     </div>
@@ -313,7 +230,7 @@ export function CameraModal({ isOpen, onClose, onCapture }: CameraModalProps) {
                 {cameraActive && !error && (
                   <div className="rounded-lg bg-blue-500/10 border border-blue-500/30 p-3">
                     <p className="text-xs text-blue-200 font-semibold leading-relaxed">
-                      📍 Hướng camera vào biển số xe và bấm "Chụp & Nhận Diện" khi hình ảnh rõ ràng.
+                      Hướng camera vào biển số xe và bấm "Chụp & Nhận Diện" khi hình ảnh rõ ràng.
                     </p>
                   </div>
                 )}
@@ -332,7 +249,7 @@ export function CameraModal({ isOpen, onClose, onCapture }: CameraModalProps) {
                       </>
                     ) : (
                       <>
-                        🎯 Chụp & Nhận Diện
+                        Chụp & Nhận Diện
                       </>
                     )}
                   </button>
