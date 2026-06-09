@@ -181,17 +181,14 @@ export function CameraModal({ isOpen, onClose, onCapture }: CameraModalProps) {
               {/* Content */}
               <div className="p-6 space-y-4">
                 {/* Video Container */}
-                <div className="relative rounded-2xl overflow-hidden bg-black/50 border border-white/10">
-                  {/* Always render the <video> so the ref exists when the camera stream is attached. */}
                 <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-black/50 border border-white/10">
+                  {/* Always render the <video> so the ref exists when the camera stream is attached. */}
                   <video
                     ref={videoRef}
                     autoPlay
                     playsInline
                     muted
                     crossOrigin="anonymous"
-                    className="w-full h-auto"
-                    style={{ aspectRatio: '4/3' }}
                     className={`w-full h-full object-cover ${cameraActive ? 'block' : 'hidden'}`}
                   />
 

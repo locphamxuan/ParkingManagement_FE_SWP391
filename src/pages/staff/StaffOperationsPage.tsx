@@ -152,54 +152,27 @@ export function StaffOperationsPage() {
     }
   }, [plateNumber]);
 
-  // Camera 2: resolve a scanned QR (plate token or account ID) → prefill the
-  // plate + show the account. This is the fallback identifier when Camera 1
-  // can't read the plate.
-  const handleResolveIdQr = async (code: string) => {
-    setIsIdQrOpen(false);
-  const handleScanSuccess = async (plate: string) => {
-    const clean = plate.trim().toUpperCase();
+  // Tra cứu biển số rồi mở popup đối chiếu (dùng cho cả Camera 1 và Camera 2/QR).
+  const openPlateInfo = async (plate: string, brand: string | null = null) => {
+    const clean = normalizePlate(plate) || plate.trim().toUpperCase();
     setPlateNumber(clean);
-    setOpMessage({ type: 'ok', text: `Nhận diện biển số: ${clean}` });
-    
-    let matchedSession = null;
-    if (activeForm === 'check-out') {
-      const matched = sessions.find((s) => s.status === 'active' && s.plateNumber.replace(/[^A-Z0-9]/g, '') === clean.replace(/[^A-Z0-9]/g, ''));
-      if (matched) {
-        setSelectedSessionId(matched._id);
-        matchedSession = matched;
-      }
-    }
-
+    if (brand) setVehicleBrand(brand);
     setIsPlateInfoLoading(true);
     try {
       const res = await staffApi.lookupPlate(clean);
       const info = (res as { data?: PlateInfo })?.data ?? null;
-      setScannedPlateInfo(info);
-      setIsPlateInfoModalOpen(true);
-    } catch (err) {
-      console.error('Lỗi đối chiếu biển số:', err);
-      // Fallback
-      setScannedPlateInfo({
-        plateNumber: clean,
-        hasAccount: false,
-        activeSession: matchedSession ? {
-          id: matchedSession._id,
-          building: buildingId || '',
-          entryTime: matchedSession.entryTime,
-        } : undefined,
-      });
-      setIsPlateInfoModalOpen(true);
+      setScannedPlateInfo(info ?? { plateNumber: clean, hasAccount: false });
+    } catch {
+      setScannedPlateInfo({ plateNumber: clean, hasAccount: false });
     } finally {
       setIsPlateInfoLoading(false);
+      setIsPlateInfoModalOpen(true);
     }
   };
 
-  const handleLookupCustomer = async () => {
-    if (!customerIdOrEmail.trim()) return;
-    setBindingLoading(true);
-    setBindingError(null);
-    setFoundCustomer(null);
+  // Camera 2: giải QR (token biển số PLT- hoặc ID tài khoản) → mở popup đối chiếu.
+  const handleResolveIdQr = async (code: string) => {
+    setIsIdQrOpen(false);
     try {
       const res = await staffApi.resolveQr(code);
       const data = (res as {
@@ -213,27 +186,12 @@ export function StaffOperationsPage() {
         setOpMessage({ type: 'err', text: 'Không nhận diện được mã QR.' });
         return;
       }
-      const user = data.user ?? null;
       if (data.kind === 'plate' && data.plate?.plateNumber) {
-        const plate = data.plate.plateNumber;
-        const brand = data.plate.brand ?? null;
-        setPlateAccountInfo({ hasAccount: Boolean(user), user });
-        setVehicleBrand(brand);
         if (data.plate.vehicleType === 'motorcycle') setVehicleType('motorcycle');
         else if (data.plate.vehicleType) setVehicleType('car');
-        const norm = plate.replace(/[^A-Z0-9]/g, '');
-        const parked = sessions.find((s) => s.status === 'active' && s.plateNumber.replace(/[^A-Z0-9]/g, '') === norm);
-        if (parked) {
-          // Xe đang đỗ → mở thanh toán cho xe ra.
-          setCheckoutTarget(parked);
-          setOpMessage({ type: 'ok', text: `Xe ${plate}${user ? ` · ${user.fullName}` : ''} đang đỗ — mở thanh toán để cho ra.` });
-        } else {
-          setPlateNumber(plate);
-          setOpMessage({ type: 'ok', text: `Nhận diện xe ${plate}${brand ? ` · ${brand}` : ''}${user ? ` · ${user.fullName}` : ''}.` });
-        }
-      } else if (user) {
-        setPlateAccountInfo({ hasAccount: true, user });
-        setOpMessage({ type: 'ok', text: `Nhận diện tài khoản: ${user.fullName} (${user.email}).` });
+        await openPlateInfo(data.plate.plateNumber, data.plate.brand ?? null);
+      } else if (data.user) {
+        setOpMessage({ type: 'ok', text: `Nhận diện tài khoản: ${data.user.fullName} (${data.user.email}).` });
       } else {
         setOpMessage({ type: 'err', text: 'Mã QR không khớp với tài khoản hoặc phương tiện nào.' });
       }
@@ -429,20 +387,7 @@ export function StaffOperationsPage() {
             <div className="space-y-2.5">
               <p className="text-[10px] font-black uppercase tracking-[0.24em] text-muted-foreground">Bước 1 · Nhận diện (xe vào)</p>
               <AIAutoScanZone
-                onPlateDetected={({ plateNumber: plate, brand }: ScanResult) => {
-                  setVehicleBrand(brand);
-                  const norm = plate.replace(/[^A-Z0-9]/g, '');
-                  const parked = sessions.find((s) => s.status === 'active' && s.plateNumber.replace(/[^A-Z0-9]/g, '') === norm);
-                  if (parked) {
-                    // Xe này đang đỗ → mở thanh toán để cho ra.
-                    setCheckoutTarget(parked);
-                    setOpMessage({ type: 'ok', text: `Xe ${plate} đang đỗ — mở thanh toán để cho xe ra.` });
-                  } else {
-                    setPlateNumber(plate);
-                    setOpMessage({ type: 'ok', text: `Nhận diện: ${plate}${brand ? ` · ${brand}` : ''}` });
-                  }
-                }}
-                onPlateDetected={handleScanSuccess}
+                onPlateDetected={({ plateNumber: plate, brand }: ScanResult) => openPlateInfo(plate, brand)}
                 onCameraOpen={() => setIsCameraModalOpen(true)}
                 isScanning={isPlateInfoLoading}
               />
@@ -693,12 +638,7 @@ export function StaffOperationsPage() {
         onClose={() => setIsCameraModalOpen(false)}
         onCapture={({ plateNumber: plate, brand }: ScanResult) => {
           setIsCameraModalOpen(false);
-          if (plate) {
-            setPlateNumber(plate);
-            setVehicleBrand(brand);
-            setOpMessage({ type: 'ok', text: `Nhận diện: ${plate}${brand ? ` · ${brand}` : ''}` });
-            handleScanSuccess(plate);
-          }
+          if (plate) openPlateInfo(plate, brand);
         }}
       />
 
@@ -920,31 +860,19 @@ export function StaffOperationsPage() {
               )}
 
               {/* Active Session Status (Important context for check-in / check-out decision) */}
-              {scannedPlateInfo.activeSession ? (
+              {scannedPlateInfo.activeSession && (
                 <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-3 flex gap-2.5 items-start">
                   <div className="rounded-lg bg-rose-500/10 p-2 text-rose-400 shrink-0">
                     <Calendar size={15} />
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-rose-400">Xe đang có phiên hoạt động trong bãi</p>
+                    <p className="text-xs font-bold text-rose-400">Xe đang đỗ trong bãi — chọn "Thanh toán &amp; cho ra"</p>
                     <p className="text-[11px] text-muted-foreground mt-0.5">
                       Vào lúc: {new Date(scannedPlateInfo.activeSession.entryTime).toLocaleString('vi-VN')}
                     </p>
                   </div>
                 </div>
-              ) : activeForm === 'check-out' ? (
-                <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-3 flex gap-2.5 items-start">
-                  <div className="rounded-lg bg-rose-500/10 p-2 text-rose-400 shrink-0">
-                    <AlertCircle size={15} />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-rose-400">Không tìm thấy xe trong bãi</p>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">
-                      Biển số này hiện không có phiên đỗ xe nào chưa hoàn thành để Check-out.
-                    </p>
-                  </div>
-                </div>
-              ) : null}
+              )}
             </div>
 
             {/* Actions Footer */}
@@ -960,43 +888,30 @@ export function StaffOperationsPage() {
                 Đóng
               </Button>
 
-              {scannedPlateInfo.hasAccount ? (
-                activeForm === 'check-in' ? (
-                  <Button
-                    onClick={async () => {
-                      setIsPlateInfoModalOpen(false);
-                      setScannedPlateInfo(null);
-                      await onCheckIn();
-                    }}
-                    disabled={!!scannedPlateInfo.activeSession || !gate.trim() || !!buildingSupportWarning}
-                    className="flex-1 bg-gradient-to-r from-orange-500 to-amber-400 text-slate-950 font-bold text-xs"
-                  >
-                    Check-in ngay
-                  </Button>
-                ) : (
-                  <Button
-                    onClick={async () => {
-                      setIsPlateInfoModalOpen(false);
-                      setScannedPlateInfo(null);
-                      await onCheckOut();
-                    }}
-                    disabled={!scannedPlateInfo.activeSession || loading}
-                    className="flex-1 bg-gradient-to-r from-orange-500 to-amber-400 text-slate-950 font-bold text-xs"
-                  >
-                    Check-out ngay
-                  </Button>
-                )
-              ) : (
+              {scannedPlateInfo.activeSession ? (
                 <Button
                   onClick={() => {
-                    setScannedPlateForBinding(scannedPlateInfo.plateNumber);
+                    const full = sessions.find((s) => s._id === scannedPlateInfo.activeSession!.id);
                     setIsPlateInfoModalOpen(false);
                     setScannedPlateInfo(null);
-                    setIsBindingModalOpen(true);
+                    if (full) { setCheckoutTarget(full); setPaymentMethod('cash'); }
+                    else setOpMessage({ type: 'err', text: 'Không tìm thấy phiên trong danh sách — bấm Làm mới rồi thử lại.' });
                   }}
-                  className="flex-1 bg-gradient-to-r from-orange-500 to-amber-400 text-slate-950 font-bold text-xs gap-1.5"
+                  className="flex-1 bg-gradient-to-r from-orange-500 to-amber-400 text-slate-950 font-bold text-xs"
                 >
-                  <UserPlus size={14} /> Liên kết ngay
+                  Thanh toán &amp; cho ra
+                </Button>
+              ) : (
+                <Button
+                  onClick={async () => {
+                    setIsPlateInfoModalOpen(false);
+                    setScannedPlateInfo(null);
+                    await onCheckIn();
+                  }}
+                  disabled={!!buildingSupportWarning}
+                  className="flex-1 bg-gradient-to-r from-orange-500 to-amber-400 text-slate-950 font-bold text-xs"
+                >
+                  Check-in ngay
                 </Button>
               )}
             </div>
