@@ -42,9 +42,9 @@ export default function UserDashboardPage() {
   const [activeSession, setActiveSession] = useState<ParkingHistory | null>(null);
   const [loading, setLoading] = useState(true);
 
-  if (!session) return <Navigate to="/auth/login" replace />;
-
+  // All hooks must be declared before any conditional return (Rules of Hooks)
   useEffect(() => {
+    if (!session) return;
     setLoading(true);
     Promise.all([
       userApi.wallet.get(),
@@ -66,7 +66,9 @@ export default function UserDashboardPage() {
       })
       .catch(() => undefined)
       .finally(() => setLoading(false));
-  }, []);
+  }, [session]);
+
+  if (!session) return <Navigate to="/auth/login" replace />;
 
   const onLogout = () => {
     logout();
@@ -169,7 +171,7 @@ export default function UserDashboardPage() {
               </p>
               <button
                 type="button"
-                onClick={() => navigate('/reservations')}
+                onClick={() => navigate('/reservations', { state: { openHistory: true } })}
                 className="text-[10px] text-orange-400 hover:text-orange-300 font-semibold"
               >
                 Xem tất cả →
