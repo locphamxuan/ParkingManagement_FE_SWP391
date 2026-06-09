@@ -72,6 +72,9 @@ export async function apiRequest<T = unknown>(
         : null) || `Request failed (${res.status})`;
     if (res.status === 401) {
       setStoredToken(null);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('auth-unauthorized'));
+      }
     }
     throw new ApiError(message, res.status, payload);
   }
