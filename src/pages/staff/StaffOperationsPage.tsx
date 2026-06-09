@@ -10,6 +10,13 @@ import {
   UserPlus,
   Car,
   Bike,
+  User,
+  Mail,
+  Phone,
+  Wallet,
+  Calendar,
+  ShieldCheck,
+  ShieldAlert,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -18,7 +25,7 @@ import { Input } from '@/components/ui/input';
 import { DataTable, type DataColumn } from '@/components/shared/DataTable';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { useBuildingContext } from '@/hooks/useBuildingContext';
-import { staffApi, type ParkingSession } from '@/services/staff/staffApi';
+import { staffApi, type ParkingSession, type PlateInfo } from '@/services/staff/staffApi';
 import { AIAutoScanZone } from '@/components/staff/AIAutoScanZone';
 import { QRCodeScannerModal } from '@/components/staff/QRCodeScannerModal';
 import { CameraModal } from '@/components/staff/CameraModal';
@@ -69,6 +76,11 @@ export function StaffOperationsPage() {
   const [foundCustomer, setFoundCustomer] = useState<{ id: string; fullName: string; email: string } | null>(null);
   const [plateAccountInfo, setPlateAccountInfo] = useState<{ hasAccount: boolean; user: { id: string; fullName: string; email: string } | null } | null>(null);
   const [plateToPromptBinding, setPlateToPromptBinding] = useState<string | null>(null);
+
+  // Popup đối chiếu biển số sau khi quét
+  const [scannedPlateInfo, setScannedPlateInfo] = useState<PlateInfo | null>(null);
+  const [isPlateInfoModalOpen, setIsPlateInfoModalOpen] = useState(false);
+  const [isPlateInfoLoading, setIsPlateInfoLoading] = useState(false);
 
   // Bank transfer modal
   const [bankTransfer, setBankTransfer] = useState<BankTransferState | null>(null);
@@ -144,6 +156,44 @@ export function StaffOperationsPage() {
       setPlateAccountInfo(null);
     }
   }, [plateNumber]);
+
+  const handleScanSuccess = async (plate: string) => {
+    const clean = plate.trim().toUpperCase();
+    setPlateNumber(clean);
+    setOpMessage({ type: 'ok', text: `Nhận diện biển số: ${clean}` });
+    
+    let matchedSession = null;
+    if (activeForm === 'check-out') {
+      const matched = sessions.find((s) => s.status === 'active' && s.plateNumber.replace(/[^A-Z0-9]/g, '') === clean.replace(/[^A-Z0-9]/g, ''));
+      if (matched) {
+        setSelectedSessionId(matched._id);
+        matchedSession = matched;
+      }
+    }
+
+    setIsPlateInfoLoading(true);
+    try {
+      const res = await staffApi.lookupPlate(clean);
+      const info = (res as { data?: PlateInfo })?.data ?? null;
+      setScannedPlateInfo(info);
+      setIsPlateInfoModalOpen(true);
+    } catch (err) {
+      console.error('Lỗi đối chiếu biển số:', err);
+      // Fallback
+      setScannedPlateInfo({
+        plateNumber: clean,
+        hasAccount: false,
+        activeSession: matchedSession ? {
+          id: matchedSession._id,
+          building: buildingId || '',
+          entryTime: matchedSession.entryTime,
+        } : undefined,
+      });
+      setIsPlateInfoModalOpen(true);
+    } finally {
+      setIsPlateInfoLoading(false);
+    }
+  };
 
   const handleLookupCustomer = async () => {
     if (!customerIdOrEmail.trim()) return;
@@ -382,15 +432,9 @@ export function StaffOperationsPage() {
             {/* Quét LPR tự động */}
             <div className="rounded-xl border border-border bg-card/50 p-4">
               <AIAutoScanZone
-                onPlateDetected={(plate: string) => {
-                  setPlateNumber(plate);
-                  setOpMessage({ type: 'ok', text: `Nhận diện biển số: ${plate}` });
-                  if (activeForm === 'check-out') {
-                    const matched = sessions.find((s) => s.status === 'active' && s.plateNumber.replace(/[^A-Z0-9]/g, '') === plate.replace(/[^A-Z0-9]/g, ''));
-                    if (matched) setSelectedSessionId(matched._id);
-                  }
-                }}
+                onPlateDetected={handleScanSuccess}
                 onCameraOpen={() => setIsCameraModalOpen(true)}
+                isScanning={isPlateInfoLoading}
               />
 
               <div className="mt-4 grid gap-4 md:grid-cols-2">
@@ -612,8 +656,7 @@ export function StaffOperationsPage() {
         onCapture={(plate: string) => {
           setIsCameraModalOpen(false);
           if (plate) {
-            setPlateNumber(plate);
-            setOpMessage({ type: 'ok', text: `Nhận diện biển số: ${plate}` });
+            handleScanSuccess(plate);
           }
         }}
       />
@@ -734,6 +777,188 @@ export function StaffOperationsPage() {
               <Button variant="secondary" onClick={() => setBankTransfer(null)} disabled={verifying}>Đóng</Button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Modal đối chiếu thông tin biển số xe sau khi quét */}
+      {isPlateInfoModalOpen && scannedPlateInfo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
+          <motion.div
+            initial={{ scale: 0.92, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 350 }}
+            className="w-full max-w-md overflow-hidden rounded-2xl border border-border bg-card shadow-2xl"
+          >
+            {/* Header with status gradient */}
+            <div className={`px-6 py-4 flex items-center gap-3 border-b border-border bg-gradient-to-r ${
+              scannedPlateInfo.hasAccount
+                ? 'from-emerald-500/10 to-teal-500/10 text-emerald-400'
+                : 'from-amber-500/10 to-orange-500/10 text-amber-400'
+            }`}>
+              {scannedPlateInfo.hasAccount ? (
+                <ShieldCheck className="h-5 w-5 shrink-0" />
+              ) : (
+                <ShieldAlert className="h-5 w-5 shrink-0" />
+              )}
+              <div>
+                <p className="text-[9px] font-black uppercase tracking-[0.24em] opacity-80">
+                  {scannedPlateInfo.hasAccount ? 'Thành viên hệ thống' : 'Khách vãng lai'}
+                </p>
+                <h3 className="text-base font-bold text-foreground">
+                  {scannedPlateInfo.hasAccount ? 'Đối chiếu thành công' : 'Chưa liên kết tài khoản'}
+                </h3>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-5">
+              {/* Realistic Vehicle Plate Visualizer */}
+              <div className="flex justify-center">
+                <div className="relative border-4 border-slate-800 bg-white text-slate-900 px-6 py-2.5 rounded-xl font-mono font-black text-2xl tracking-widest shadow-lg flex flex-col items-center min-w-[200px] select-none before:content-[''] before:absolute before:inset-0.5 before:border before:border-slate-300 before:rounded-lg">
+                  <span className="text-[8px] font-sans font-black uppercase tracking-widest text-slate-400 border-b border-slate-100 w-full text-center pb-0.5 mb-1 z-10">
+                    VIỆT NAM
+                  </span>
+                  <span className="z-10 drop-shadow-[0_1px_1px_rgba(0,0,0,0.15)]">{scannedPlateInfo.plateNumber}</span>
+                </div>
+              </div>
+
+              {/* Status and Details */}
+              {scannedPlateInfo.hasAccount && scannedPlateInfo.user ? (
+                <div className="space-y-3">
+                  <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 space-y-3">
+                    <div className="flex items-center gap-3">
+                      <div className="rounded-full bg-emerald-500/15 p-2 text-emerald-400">
+                        <User size={16} />
+                      </div>
+                      <div>
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Họ và tên</p>
+                        <p className="text-sm font-semibold text-foreground">{scannedPlateInfo.user.fullName}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 border-t border-border/50 pt-2.5">
+                      <div className="rounded-full bg-emerald-500/15 p-2 text-emerald-400">
+                        <Mail size={16} />
+                      </div>
+                      <div>
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Email</p>
+                        <p className="text-sm font-semibold text-foreground truncate max-w-[240px]">{scannedPlateInfo.user.email}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 border-t border-border/50 pt-2.5">
+                      <div className="rounded-full bg-emerald-500/15 p-2 text-emerald-400">
+                        <Phone size={16} />
+                      </div>
+                      <div>
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Số điện thoại</p>
+                        <p className="text-sm font-semibold text-foreground">{scannedPlateInfo.user.phone || 'Chưa cập nhật'}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 border-t border-border/50 pt-2.5">
+                      <div className="rounded-full bg-emerald-500/15 p-2 text-emerald-400">
+                        <Wallet size={16} />
+                      </div>
+                      <div>
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Số dư ví</p>
+                        <p className="text-base font-black text-emerald-400">{scannedPlateInfo.user.walletBalance.toLocaleString('vi-VN')} đ</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 space-y-3 text-center">
+                  <p className="text-sm text-amber-200/90 leading-relaxed">
+                    Hệ thống không tìm thấy tài khoản thành viên nào được liên kết với biển số <strong className="text-amber-400 font-mono">{scannedPlateInfo.plateNumber}</strong>.
+                  </p>
+                  <p className="text-xs text-muted-foreground italic">
+                    "Dạ thưa anh/chị, biển số này chưa đăng ký tài khoản. Anh/chị có muốn liên kết vào tài khoản thành viên để được hưởng ưu đãi và nhận diện tự động không ạ?"
+                  </p>
+                </div>
+              )}
+
+              {/* Active Session Status (Important context for check-in / check-out decision) */}
+              {scannedPlateInfo.activeSession ? (
+                <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-3 flex gap-2.5 items-start">
+                  <div className="rounded-lg bg-rose-500/10 p-2 text-rose-400 shrink-0">
+                    <Calendar size={15} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-rose-400">Xe đang có phiên hoạt động trong bãi</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      Vào lúc: {new Date(scannedPlateInfo.activeSession.entryTime).toLocaleString('vi-VN')}
+                    </p>
+                  </div>
+                </div>
+              ) : activeForm === 'check-out' ? (
+                <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-3 flex gap-2.5 items-start">
+                  <div className="rounded-lg bg-rose-500/10 p-2 text-rose-400 shrink-0">
+                    <AlertCircle size={15} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-rose-400">Không tìm thấy xe trong bãi</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      Biển số này hiện không có phiên đỗ xe nào chưa hoàn thành để Check-out.
+                    </p>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
+            {/* Actions Footer */}
+            <div className="bg-muted/50 border-t border-border/80 px-6 py-4 flex gap-3">
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setIsPlateInfoModalOpen(false);
+                  setScannedPlateInfo(null);
+                }}
+                className="flex-1 text-xs"
+              >
+                Đóng
+              </Button>
+
+              {scannedPlateInfo.hasAccount ? (
+                activeForm === 'check-in' ? (
+                  <Button
+                    onClick={async () => {
+                      setIsPlateInfoModalOpen(false);
+                      setScannedPlateInfo(null);
+                      await onCheckIn();
+                    }}
+                    disabled={!!scannedPlateInfo.activeSession || !gate.trim() || !!buildingSupportWarning}
+                    className="flex-1 bg-gradient-to-r from-orange-500 to-amber-400 text-slate-950 font-bold text-xs"
+                  >
+                    Check-in ngay
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={async () => {
+                      setIsPlateInfoModalOpen(false);
+                      setScannedPlateInfo(null);
+                      await onCheckOut();
+                    }}
+                    disabled={!scannedPlateInfo.activeSession || loading}
+                    className="flex-1 bg-gradient-to-r from-orange-500 to-amber-400 text-slate-950 font-bold text-xs"
+                  >
+                    Check-out ngay
+                  </Button>
+                )
+              ) : (
+                <Button
+                  onClick={() => {
+                    setScannedPlateForBinding(scannedPlateInfo.plateNumber);
+                    setIsPlateInfoModalOpen(false);
+                    setScannedPlateInfo(null);
+                    setIsBindingModalOpen(true);
+                  }}
+                  className="flex-1 bg-gradient-to-r from-orange-500 to-amber-400 text-slate-950 font-bold text-xs gap-1.5"
+                >
+                  <UserPlus size={14} /> Liên kết ngay
+                </Button>
+              )}
+            </div>
+          </motion.div>
         </div>
       )}
     </motion.div>

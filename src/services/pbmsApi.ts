@@ -38,6 +38,11 @@ export async function requestJson<T = unknown>({
   }
 
   if (!response.ok) {
+    if (response.status === 401) {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('auth-unauthorized'));
+      }
+    }
     const message =
       typeof payload === 'object' && payload !== null && 'message' in payload
         ? String((payload as { message?: unknown }).message || 'Khong the xu ly yeu cau')
