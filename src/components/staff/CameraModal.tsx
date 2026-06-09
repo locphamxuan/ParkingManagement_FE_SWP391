@@ -263,18 +263,15 @@ export function CameraModal({ isOpen, onClose, onCapture }: CameraModalProps) {
               {/* Content */}
               <div className="p-6 space-y-4">
                 {/* Video Container */}
-                <div className="relative rounded-2xl overflow-hidden bg-black/50 border border-white/10">
-                  {cameraActive && (
-                    <video
-                      ref={videoRef}
-                      autoPlay
-                      playsInline
-                      muted
-                      crossOrigin="anonymous"
-                      className="w-full h-auto"
-                      style={{ aspectRatio: '4/3' }}
-                    />
-                  )}
+                <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-black/50 border border-white/10">
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    crossOrigin="anonymous"
+                    className={`w-full h-full object-cover ${cameraActive ? 'block' : 'hidden'}`}
+                  />
 
                   {/* Laser Scan Overlay */}
                   {cameraActive && (
@@ -286,12 +283,14 @@ export function CameraModal({ isOpen, onClose, onCapture }: CameraModalProps) {
                   )}
 
                   {/* Scan Frame Border */}
-                  <div className="absolute inset-0 border-2 border-green-400/30 pointer-events-none rounded-lg">
-                    <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-green-400" />
-                    <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-green-400" />
-                    <div className="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-green-400" />
-                    <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-green-400" />
-                  </div>
+                  {cameraActive && (
+                    <div className="absolute inset-0 border-2 border-green-400/30 pointer-events-none rounded-lg">
+                      <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-green-400" />
+                      <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-green-400" />
+                      <div className="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-green-400" />
+                      <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-green-400" />
+                    </div>
+                  )}
 
                   {!cameraActive && !error && (
                     <div className="absolute inset-0 flex items-center justify-center">
