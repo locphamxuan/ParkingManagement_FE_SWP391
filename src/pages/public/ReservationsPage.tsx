@@ -959,13 +959,19 @@ export default function ReservationsPage() {
         });
         setBookingSuccess(`Đặt chỗ thành công! Ô ${selectedSlot} từ ${fmtShort(startDateTime)} đến ${fmtShort(endDateTime)}`);
       } else if (selectedPkg) {
-        await userApi.longTermSubscriptions.create({
+        const res = await userApi.longTermSubscriptions.create({
           packageId: selectedPkg._id,
           plateNumber: selectedPlate,
           slotId: slots.find((s) => s.code === selectedSlot)?._id,
           startDate: startDateTime.toISOString(),
         });
-        setBookingSuccess(`Đăng ký gói "${selectedPkg.name}" thành công!`);
+        const data = (res as any)?.data;
+        if (data?.checkoutUrl) {
+          setBookingSuccess('Chuyển hướng đến cổng thanh toán PayOS...');
+          window.location.href = data.checkoutUrl;
+        } else {
+          setBookingSuccess(`Đăng ký gói "${selectedPkg.name}" thành công!`);
+        }
       }
       setSelectedSlot(null);
       setShowSlotModal(false);
