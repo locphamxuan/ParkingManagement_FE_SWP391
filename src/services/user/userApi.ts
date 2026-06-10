@@ -55,7 +55,7 @@ export interface Reservation {
   vehicleType?: VehicleType | null;
   slot?: ParkingSlot | null;
   building: Building;
-  status: 'pending' | 'confirmed' | 'checked_in' | 'expired' | 'cancelled';
+  status: 'pending' | 'confirmed' | 'checked_in' | 'expired' | 'cancelled' | 'completed';
   startTime: string;
   endTime?: string | null;
   fee?: number;
@@ -65,6 +65,14 @@ export interface Reservation {
   refundAmount?: number;
   createdAt?: string;
   updatedAt?: string;
+  parkingSession?: {
+    _id: string;
+    fee: number;
+    status: string;
+    entryTime: string;
+    exitTime?: string | null;
+    paymentStatus?: string;
+  } | null;
 }
 
 export interface ParkingHistory {
@@ -188,6 +196,35 @@ export interface UserWalletTransaction {
   balanceAfter: number;
   note?: string;
   createdAt: string;
+}
+
+export interface Feedback {
+  _id: string;
+  user: { _id: string; fullName: string; email: string };
+  building: { _id: string; name: string; code: string };
+  parkingSession: { _id: string; plateNumber: string; entryTime: string; exitTime: string; fee: number; status: string };
+  rating: number;
+  comment: string;
+  portraitImageUrl?: string | null;
+  plateImageUrl?: string | null;
+  status: 'pending' | 'resolved';
+  staffReply?: string | null;
+  repliedBy?: { _id: string; fullName: string; role: string } | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Notification {
+  _id: string;
+  user: string;
+  type: 'checkin_rejected' | 'checkout_rejected' | 'general';
+  title: string;
+  message: string;
+  plateNumber?: string | null;
+  building?: string | null;
+  isRead: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export type LongTermPaymentMethod = 'wallet' | 'qr';
@@ -368,5 +405,29 @@ export const userApi = {
 
     verifyTopup: (orderCode: number) =>
       api.get<Wrap<{ status: string; settled: boolean }>>(`/users/wallet/topup/${orderCode}/status`),
+  },
+
+  // ========== FEEDBACK ==========
+  feedbacks: {
+    create: (body: {
+      buildingId: string;
+      parkingSessionId: string;
+      rating: number;
+      comment: string;
+      portraitImageUrl?: string | null;
+      plateImageUrl?: string | null;
+    }) => api.post<Wrap<{ feedback: Feedback }>>('/users/feedbacks', body),
+
+    list: (query?: { status?: 'pending' | 'resolved'; rating?: number; limit?: number; page?: number }) =>
+      api.get<Wrap<ListResult<Feedback>>>('/users/feedbacks/me', { query }),
+  },
+
+  // ========== NOTIFICATIONS ==========
+  notifications: {
+    list: () => api.get<Wrap<{ items: Notification[]; unread: number }>>('/users/notifications'),
+    
+    markAsRead: (id: string) => api.patch<Wrap<Notification>>(`/users/notifications/${id}/read`),
+
+    markAllRead: () => api.patch<Wrap<{ ok: boolean }>>('/users/notifications/read-all'),
   },
 };
