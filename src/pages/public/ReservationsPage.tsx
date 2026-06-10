@@ -99,8 +99,8 @@ function isSameDay(a: Date, b: Date) {
 function normalizeVehicleTypeCode(raw?: string | null): VehicleKind | 'all' {
   if (!raw) return 'all';
   const code = String(raw).toLowerCase();
+  if (code.includes('motor') || code.includes('moto') || code.includes('xe') || code.includes('motorcycle') || code.includes('bike')) return 'motorcycle';
   if (code.includes('car') || code.includes('ô tô') || code.includes('oto') || code.includes('ôto')) return 'car';
-  if (code.includes('motor') || code.includes('moto') || code.includes('xe') || code.includes('motorcycle')) return 'motorcycle';
   return 'all';
 }
 
@@ -108,15 +108,19 @@ function isCarPackage(pkg: LongTermPackage): boolean {
   const vt = pkg.vehicleType;
   if (vt && typeof vt === 'object') {
     const code = String(vt.code || vt.name || '').toLowerCase();
-    return code.includes('car') || code.includes('oto') || code.includes('ô tô') || code.includes('ôto');
+    if (code.includes('motor') || code.includes('moto') || code.includes('xe') || code.includes('bike')) return false;
+    if (code.includes('car') || code.includes('oto') || code.includes('ô tô') || code.includes('ôto')) return true;
   }
   if (typeof vt === 'string') {
     const code = vt.toLowerCase();
-    return code.includes('car') || code.includes('oto') || code.includes('ô tô') || code.includes('ôto');
+    if (code.includes('motor') || code.includes('moto') || code.includes('xe') || code.includes('bike')) return false;
+    if (code.includes('car') || code.includes('oto') || code.includes('ô tô') || code.includes('ôto')) return true;
   }
   const name = String(pkg.name || '').toLowerCase();
   const codeAttr = String(pkg.code || '').toLowerCase();
-  return name.includes('ô tô') || name.includes('oto') || name.includes('car') || codeAttr.includes('car');
+  if (name.includes('xe máy') || name.includes('motor') || name.includes('moto') || codeAttr.includes('moto') || codeAttr.includes('bike')) return false;
+  if (name.includes('ô tô') || name.includes('oto') || name.includes('car') || codeAttr.includes('car')) return true;
+  return false;
 }
 
 function getMaxCalendarDate(mode: BookingMode, pkg?: LongTermPackage | null): Date {
