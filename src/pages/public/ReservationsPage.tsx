@@ -456,6 +456,11 @@ function PackageCard({
         <span>{pkg.name}</span>
       </h4>
       <p className="mt-1 text-xs text-slate-400 relative z-10">{pkg.durationDays} ngày</p>
+      {pkg.description && (
+        <p className="mt-1.5 text-[10px] leading-relaxed text-slate-400/80 italic relative z-10 border-t border-white/5 pt-1.5">
+          {pkg.description}
+        </p>
+      )}
       <p className={`mt-2 text-lg font-black ${colors.text} relative z-10`}>{fmtMoney(pkg.price)}</p>
       {pkg.allowDedicatedSlot && (
         <span className="mt-2 inline-flex items-center gap-1 rounded-full border border-emerald-400/20 bg-emerald-400/5 px-2 py-0.5 text-[9px] font-bold text-emerald-300 relative z-10">
@@ -479,15 +484,15 @@ function StatusBadge({ status }: { status: string }) {
     completed: 'Hoàn thành', expired: 'Hết hạn', cancelled: 'Đã hủy',
   };
   const colors: Record<string, string> = {
-    pending: 'border-amber-400/25 bg-amber-400/10 text-amber-300',
-    confirmed: 'border-emerald-400/25 bg-emerald-400/10 text-emerald-300',
-    checked_in: 'border-cyan-400/25 bg-cyan-400/10 text-cyan-300',
-    completed: 'border-slate-400/25 bg-slate-400/10 text-slate-300',
-    expired: 'border-slate-500/25 bg-slate-500/10 text-slate-400',
-    cancelled: 'border-rose-400/25 bg-rose-400/10 text-rose-300',
+    pending: 'border-amber-500/30 bg-amber-500/10 text-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.1)]',
+    confirmed: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.1)]',
+    checked_in: 'border-cyan-500/30 bg-cyan-500/10 text-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.1)]',
+    completed: 'border-blue-500/30 bg-blue-500/10 text-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.1)]',
+    expired: 'border-slate-500/30 bg-slate-500/10 text-slate-400',
+    cancelled: 'border-rose-500/30 bg-rose-500/10 text-rose-400 shadow-[0_0_10px_rgba(244,63,94,0.1)]',
   };
   return (
-    <span className={`rounded-full border px-2 py-0.5 text-[9px] font-black uppercase tracking-wider ${colors[status] || 'border-slate-500/25 bg-slate-500/10 text-slate-400'}`}>
+    <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider ${colors[status] || 'border-slate-500/30 bg-slate-500/10 text-slate-400'}`}>
       {labels[status] || status}
     </span>
   );
@@ -533,23 +538,23 @@ function ReservationHistoryTab() {
   };
 
   const filterTabs = [
-    { value: 'all', label: 'Tất cả' }, { value: 'pending', label: 'Đang chờ' },
-    { value: 'confirmed', label: 'Đã xác nhận' }, { value: 'completed', label: 'Hoàn thành' },
+    { value: 'all', label: 'Tất cả' },
+    { value: 'completed', label: 'Hoàn thành' },
     { value: 'cancelled', label: 'Đã hủy' },
   ];
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/5 pb-4">
+        <div className="flex items-center gap-1.5 rounded-xl bg-white/[0.02] border border-white/5 p-1">
           {filterTabs.map((tab) => (
             <button
               key={tab.value}
               type="button"
               onClick={() => { setStatusFilter(tab.value); load(1, tab.value); }}
-              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${statusFilter === tab.value
-                ? 'bg-orange-500 text-white shadow-sm'
-                : 'border border-white/10 bg-white/5 text-slate-400 hover:text-white'
+              className={`rounded-lg px-4 py-1.5 text-xs font-bold transition-all duration-200 ${statusFilter === tab.value
+                ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-lg shadow-orange-500/20'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.03]'
                 }`}
             >
               {tab.label}
@@ -559,9 +564,9 @@ function ReservationHistoryTab() {
         <button
           type="button"
           onClick={() => load(page)}
-          className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-300 hover:text-white transition-colors"
+          className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold text-slate-300 hover:text-white transition-all hover:bg-white/10"
         >
-          <RefreshCw size={12} className={loading ? 'animate-spin' : ''} /> Làm mới
+          <RefreshCw size={13} className={loading ? 'animate-spin' : ''} /> Làm mới
         </button>
       </div>
 
@@ -571,55 +576,132 @@ function ReservationHistoryTab() {
         <div className="py-12 text-center text-sm text-slate-400">Đang tải lịch sử đặt chỗ...</div>
       ) : items.length === 0 ? (
         <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-10 text-center">
-          <CalendarClock size={32} className="mx-auto mb-3 text-slate-600" />
+          <CalendarClock size={32} className="mx-auto mb-3 text-slate-600 animate-pulse" />
           <p className="text-sm font-semibold text-slate-400">Bạn chưa có lịch sử đặt chỗ nào.</p>
         </div>
       ) : (
-        <div className="space-y-3">
-          {items.map((r) => (
-            <div key={r._id} className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 transition-all hover:border-orange-500/15">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-mono text-sm font-black text-orange-300">{r.code}</span>
-                    <span className="rounded border border-amber-500/25 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-bold text-amber-300">{r.plateNumber}</span>
+        <div className="space-y-4 max-h-[55vh] overflow-y-auto pr-1">
+          {items.map((r) => {
+            let statusColorClass = 'border-slate-500/20';
+            if (r.status === 'completed') statusColorClass = 'border-l-blue-500/80';
+            else if (r.status === 'cancelled') statusColorClass = 'border-l-rose-500/80';
+            else if (r.status === 'checked_in') statusColorClass = 'border-l-cyan-500/80';
+            else if (r.status === 'confirmed') statusColorClass = 'border-l-emerald-500/80';
+            else if (r.status === 'pending') statusColorClass = 'border-l-amber-500/80';
+
+            return (
+              <div 
+                key={r._id} 
+                className={`relative rounded-2xl border-l-[3px] border-y border-r border-white/[0.05] bg-white/[0.01] p-4 transition-all duration-300 hover:border-r-white/10 hover:border-y-white/10 hover:bg-white/[0.03] hover:shadow-[0_8px_30px_rgb(0,0,0,0.3)] group ${statusColorClass}`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-mono text-sm font-black text-orange-400 tracking-wider flex items-center gap-1">
+                        <span className="text-slate-500 text-[10px]">ID:</span>
+                        {r.code}
+                      </span>
+                      <span className="rounded-lg border border-amber-500/20 bg-amber-500/5 px-2 py-0.5 text-xs font-bold text-amber-400 tracking-wide flex items-center gap-1 shadow-sm">
+                        <Car size={12} className="opacity-80" />
+                        {r.plateNumber}
+                      </span>
+                    </div>
+                    <p className="mt-1.5 text-xs font-medium text-slate-400 flex items-center gap-1">
+                      <Building2 size={12} className="text-slate-500" />
+                      {(r.building as any)?.name ?? '—'}
+                    </p>
                   </div>
-                  <p className="mt-0.5 text-xs text-slate-400">{(r.building as any)?.name ?? '—'}</p>
+                  
+                  <div className="flex items-center gap-2 shrink-0">
+                    <StatusBadge status={r.status} />
+                    {(r.status === 'pending' || r.status === 'confirmed') && (
+                      <button
+                        type="button"
+                        disabled={cancellingId === r._id}
+                        onClick={() => handleCancel(r._id)}
+                        className="flex items-center gap-1 rounded-lg border border-rose-500/30 bg-rose-500/10 px-2.5 py-1 text-xs font-bold text-rose-400 hover:bg-rose-500/20 hover:border-rose-500/50 transition-all disabled:opacity-50"
+                      >
+                        <XCircle size={12} />
+                        {cancellingId === r._id ? 'Đang hủy...' : 'Hủy'}
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <StatusBadge status={r.status} />
-                  {(r.status === 'pending' || r.status === 'confirmed') && (
-                    <button
-                      type="button"
-                      disabled={cancellingId === r._id}
-                      onClick={() => handleCancel(r._id)}
-                      className="flex items-center gap-1 rounded-lg border border-rose-500/30 bg-rose-500/10 px-2 py-1 text-[10px] font-bold text-rose-400 hover:bg-rose-500/20 transition-colors disabled:opacity-50"
-                    >
-                      <XCircle size={10} />
-                      {cancellingId === r._id ? 'Đang hủy...' : 'Hủy'}
-                    </button>
-                  )}
+
+                <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 border-t border-white/[0.03] pt-4">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Vị trí đỗ</p>
+                    <p className="mt-1 text-sm font-bold text-slate-200">{(r.slot as any)?.code ?? '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Bắt đầu</p>
+                    <p className="mt-1 text-xs font-medium text-slate-300">{fmtTime(r.startTime)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Kết thúc</p>
+                    <p className="mt-1 text-xs font-medium text-slate-300">{r.endTime ? fmtTime(r.endTime) : '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Tiền cọc</p>
+                    <p className={`mt-1 text-sm font-black ${r.fee ? 'text-emerald-400' : 'text-slate-500'}`}>{fmtMoney(r.fee)}</p>
+                  </div>
                 </div>
+
+                {r.parkingSession && (
+                  <div className="mt-4 rounded-xl border border-white/[0.04] bg-white/[0.01] p-3 shadow-inner">
+                    <div className="flex items-center gap-1.5 border-b border-white/[0.04] pb-2 mb-2">
+                      <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                      <h5 className="text-[10px] font-bold uppercase tracking-wider text-cyan-400">Phiên gửi xe thực tế</h5>
+                    </div>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 text-xs">
+                      <div>
+                        <span className="text-slate-500 text-[10px] block">Giờ vào:</span>
+                        <span className="text-slate-300 font-medium">{fmtTime(r.parkingSession.entryTime)}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 text-[10px] block">Giờ ra:</span>
+                        <span className="text-slate-300 font-medium">
+                          {r.parkingSession.exitTime ? fmtTime(r.parkingSession.exitTime) : '—'}
+                        </span>
+                      </div>
+                      <div className="flex flex-col justify-center">
+                        <span className="text-slate-500 text-[10px] block">Thanh toán thêm:</span>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className={`font-black ${r.parkingSession.fee > 0 ? 'text-amber-400 font-extrabold' : 'text-emerald-400'}`}>
+                            {fmtMoney(r.parkingSession.fee)}
+                          </span>
+                          <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded uppercase ${
+                            r.parkingSession.paymentStatus === 'paid'
+                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                              : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                          }`}>
+                            {r.parkingSession.paymentStatus === 'paid' ? 'Đã trả' : 'Chưa trả'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {r.createdAt && (
+                  <div className="mt-3 flex items-center justify-between border-t border-white/[0.03] pt-3 text-[10px] text-slate-500">
+                    <div className="flex items-center gap-1">
+                      <Clock size={10} className="text-slate-600" />
+                      <span>Đặt lúc: {fmtTime(r.createdAt)}</span>
+                    </div>
+                    {r.updatedAt && r.updatedAt !== r.createdAt && (
+                      <span>Cập nhật: {fmtTime(r.updatedAt)}</span>
+                    )}
+                  </div>
+                )}
               </div>
-              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                <div><p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Slot</p><p className="mt-1 text-xs text-slate-300">{(r.slot as any)?.code ?? '—'}</p></div>
-                <div><p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Bắt đầu</p><p className="mt-1 text-xs text-slate-300">{fmtTime(r.startTime)}</p></div>
-                <div><p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Kết thúc</p><p className="mt-1 text-xs text-slate-300">{fmtTime(r.endTime)}</p></div>
-                <div><p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Phí cọc</p><p className={`mt-1 text-xs font-bold ${r.fee ? 'text-emerald-400' : 'text-slate-500'}`}>{fmtMoney(r.fee)}</p></div>
-              </div>
-              {r.createdAt && (
-                <div className="mt-2 flex items-center gap-2 border-t border-white/5 pt-2">
-                  <Clock size={10} className="text-slate-600" />
-                  <span className="text-[10px] text-slate-500">Tạo lúc: {fmtTime(r.createdAt)}</span>
-                </div>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
       {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 pt-2">
+        <div className="flex items-center justify-center gap-2 pt-2 border-t border-white/5 mt-2">
           <button type="button" disabled={page <= 1 || loading} onClick={() => load(page - 1)} className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-300 hover:text-white disabled:opacity-40">← Trước</button>
           <span className="text-xs text-slate-400">Trang {page} / {totalPages}</span>
           <button type="button" disabled={page >= totalPages || loading} onClick={() => load(page + 1)} className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-300 hover:text-white disabled:opacity-40">Sau →</button>
@@ -1094,17 +1176,6 @@ export default function ReservationsPage() {
                       </p>
                     </div>
                   )}
-
-                  {/* Package Time */}
-                  {selectedPkg && pkgStartDate && (
-                    <div className="rounded-3xl border border-white/[0.06] bg-white/[0.02] p-5">
-                      <div className="flex items-center gap-2 mb-3">
-                        <Clock size={16} className="text-purple-300/70" />
-                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-purple-300/70">Giờ nhận xe</span>
-                      </div>
-                      <TimeScroller selected={selectedTime} onSelect={setSelectedTime} />
-                    </div>
-                  )}
                 </motion.div>
               )}
             </AnimatePresence>
@@ -1318,72 +1389,44 @@ export default function ReservationsPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-md"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md"
             onClick={() => setShowHistory(false)}
           >
+            {/* Background glowing flare */}
+            <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[350px] h-[350px] rounded-full bg-orange-500/10 blur-[120px] pointer-events-none" />
+
             <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
+              initial={{ scale: 0.95, opacity: 0, y: 15 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 15 }}
+              transition={{ type: "spring", duration: 0.4 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative max-h-[90vh] w-full max-w-4xl overflow-auto rounded-3xl border border-slate-700/60 bg-[#080d17] p-5 shadow-[0_30px_120px_rgba(0,0,0,0.55)] sm:p-6"
+              className="relative max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-3xl border border-white/10 bg-slate-950/95 p-6 shadow-[0_0_80px_rgba(0,0,0,0.8),_inset_0_1px_1px_rgba(255,255,255,0.1)] flex flex-col"
             >
               {/* Modal Header */}
-              <div className="mb-5 flex items-center justify-between">
+              <div className="mb-6 flex items-center justify-between border-b border-white/5 pb-4">
                 <div className="flex items-center gap-3">
-                  <CalendarClock size={18} className="text-yellow-400" />
-                  <h2 className="text-lg font-black text-white">Lịch sử đặt chỗ</h2>
+                  <div className="rounded-xl bg-orange-500/10 p-2 border border-orange-500/20 shadow-[0_0_15px_rgba(249,115,22,0.15)]">
+                    <CalendarClock size={20} className="text-orange-400" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-black text-white tracking-wide">Lịch sử đặt chỗ</h2>
+                    <p className="text-[10px] text-slate-500 font-semibold tracking-wider uppercase mt-0.5">Theo dõi & Quản lý các lượt đỗ xe</p>
+                  </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => setShowHistory(false)}
-                  className="rounded-full border border-white/10 bg-white/[0.03] p-2 text-slate-400 hover:text-white transition"
+                  className="rounded-full border border-white/5 bg-white/[0.02] p-2 text-slate-400 hover:text-white hover:bg-white/10 hover:rotate-90 transition-all duration-300"
                 >
                   <X size={18} />
                 </button>
               </div>
 
               {/* Modal Body */}
-              <ReservationHistoryTab />
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ── History Modal ── */}
-      <AnimatePresence>
-        {showHistory && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-md"
-            onClick={() => setShowHistory(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
-              className="relative max-h-[90vh] w-full max-w-4xl overflow-auto rounded-3xl border border-slate-700/60 bg-[#080d17] p-5 shadow-[0_30px_120px_rgba(0,0,0,0.55)] sm:p-6"
-            >
-              {/* Modal Header */}
-              <div className="mb-5 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <CalendarClock size={18} className="text-yellow-400" />
-                  <h2 className="text-lg font-black text-white">Lịch sử đặt chỗ</h2>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowHistory(false)}
-                  className="rounded-full border border-white/10 bg-white/[0.03] p-2 text-slate-400 hover:text-white transition"
-                >
-                  <X size={18} />
-                </button>
+              <div className="flex-1 overflow-auto pr-1">
+                <ReservationHistoryTab />
               </div>
-
-              {/* Modal Body */}
-              <ReservationHistoryTab />
             </motion.div>
           </motion.div>
         )}

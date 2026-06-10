@@ -56,7 +56,13 @@ export const mainFlowModules: LegacyModule[] = [
     actionLabel: 'Sắp ra mắt',
     available: false,
   },
-
+  {
+    id: 'feedback',
+    title: 'Đánh giá dịch vụ',
+    description: 'Gửi phản hồi và đánh giá trải nghiệm gửi xe của bạn để chúng tôi nâng cao chất lượng dịch vụ.',
+    actionLabel: 'Đánh giá ngay',
+    available: true,
+  },
   {
     id: 'notifications',
     title: 'Thông báo',
