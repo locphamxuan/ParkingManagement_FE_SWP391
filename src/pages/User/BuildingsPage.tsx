@@ -54,13 +54,21 @@ function plateMatchesVehicleTypes(plate: LicensePlate, vtypes: VehicleType[]): b
 function StatusBadge({ open }: { open: boolean }) {
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-wider ${
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider transition-all duration-300 ${
         open
-          ? 'border-emerald-400/25 bg-emerald-400/10 text-emerald-300'
-          : 'border-rose-400/25 bg-rose-400/10 text-rose-300'
+          ? 'border-emerald-500/20 bg-emerald-500/5 text-emerald-400'
+          : 'border-rose-500/20 bg-rose-500/5 text-rose-400'
       }`}
     >
-      <span className={`h-1.5 w-1.5 rounded-full ${open ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.6)]' : 'bg-rose-400'}`} />
+      <span className="relative flex h-1.5 w-1.5">
+        {open && (
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
+        )}
+        {!open && (
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-400 opacity-75"></span>
+        )}
+        <span className={`relative inline-flex h-1.5 w-1.5 rounded-full ${open ? 'bg-emerald-500' : 'bg-rose-500'}`}></span>
+      </span>
       {open ? 'Đang mở' : 'Tạm đóng'}
     </span>
   );
@@ -81,30 +89,37 @@ function BuildingCard({
     <motion.button
       type="button"
       onClick={onSelect}
-      whileHover={{ scale: 1.01 }}
+      whileHover={{ y: -2 }}
       whileTap={{ scale: 0.99 }}
-      className={`group w-full rounded-2xl border p-5 text-left transition-all duration-300 ${
+      className={`group relative w-full overflow-hidden rounded-2xl border p-5 text-left transition-all duration-300 backdrop-blur-md ${
         selected
-          ? 'border-orange-400/50 bg-gradient-to-br from-orange-500/10 to-amber-500/5 shadow-[0_0_32px_rgba(249,115,22,0.12)]'
-          : 'border-white/8 bg-white/[0.03] hover:border-orange-400/25 hover:bg-white/[0.05]'
+          ? 'border-orange-500/30 bg-gradient-to-br from-orange-500/10 via-slate-900/40 to-slate-900/40 shadow-[0_0_30px_rgba(249,115,22,0.12)]'
+          : 'border-white/[0.06] bg-slate-900/20 hover:border-white/10 hover:bg-slate-900/30'
       }`}
     >
+      {/* Selected Indicator Bar on Left */}
+      {selected && (
+        <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-orange-500 to-amber-500" />
+      )}
+
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-300/80">
+          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-orange-400/80">
             {building.code || 'BUILDING'}
           </p>
-          <h2 className="mt-2 text-lg font-black text-white">{building.name}</h2>
-          <p className="mt-2 flex items-start gap-2 text-xs font-semibold leading-relaxed text-slate-400">
-            <MapPin size={13} className="mt-0.5 shrink-0 text-cyan-300/70" />
-            <span className="line-clamp-2">{addressText(building)}</span>
+          <h2 className="mt-1.5 text-base font-extrabold text-white group-hover:text-orange-200 transition-colors">
+            {building.name}
+          </h2>
+          <p className="mt-2 flex items-start gap-1.5 text-xs font-semibold leading-relaxed text-slate-400">
+            <MapPin size={13} className="mt-0.5 shrink-0 text-cyan-400/70" />
+            <span className="line-clamp-1">{addressText(building)}</span>
           </p>
         </div>
         <StatusBadge open={open} />
       </div>
 
-      <div className="mt-4 flex items-center gap-2 text-[11px] font-bold text-slate-500 transition-colors group-hover:text-slate-400">
-        <CheckCircle2 size={13} className={selected ? 'text-orange-300' : 'text-emerald-400/60'} />
+      <div className="mt-4 flex items-center gap-2 text-[10px] font-bold text-slate-500 transition-colors group-hover:text-slate-400">
+        <CheckCircle2 size={13} className={selected ? 'text-orange-400' : 'text-emerald-500/50'} />
         {selected ? 'Đang xem chi tiết' : 'Bấm để xem chi tiết'}
       </div>
     </motion.button>
@@ -127,8 +142,8 @@ function VehiclePlateDropdown({
 
   const vehicleIcon = (type: string) => {
     const t = type?.toLowerCase() ?? '';
-    if (t === 'motorcycle' || t === 'bike') return <Bike size={16} className="text-purple-300" />;
-    return <Car size={16} className="text-cyan-300" />;
+    if (t === 'motorcycle' || t === 'bike') return <Bike size={16} className="text-purple-400" />;
+    return <Car size={16} className="text-cyan-400" />;
   };
 
   const vehicleLabel = (type: string) => {
@@ -142,19 +157,21 @@ function VehiclePlateDropdown({
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className={`flex h-14 w-full items-center justify-between gap-3 rounded-2xl border px-4 transition-all duration-300 ${
+        className={`flex h-14 w-full items-center justify-between gap-3 rounded-2xl border px-4 transition-all duration-300 backdrop-blur-md ${
           open
-            ? 'border-orange-400/50 bg-white/[0.06] shadow-[0_0_24px_rgba(249,115,22,0.1)]'
-            : 'border-white/10 bg-white/[0.03] hover:border-white/20'
+            ? 'border-orange-500 bg-orange-500/[0.04] shadow-[0_0_24px_rgba(249,115,22,0.15)]'
+            : 'border-white/10 bg-slate-900/30 hover:border-white/20'
         }`}
       >
         <div className="flex items-center gap-3 min-w-0">
           {selected ? (
             <>
-              {vehicleIcon(selected.vehicleType)}
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/[0.04] border border-white/[0.08]">
+                {vehicleIcon(selected.vehicleType)}
+              </div>
               <div className="text-left min-w-0">
-                <p className="text-sm font-black text-white truncate">{selected.plateNumber}</p>
-                <p className="text-[10px] font-semibold text-slate-400">{vehicleLabel(selected.vehicleType)}</p>
+                <p className="text-sm font-black text-white tracking-wide truncate">{selected.plateNumber}</p>
+                <p className="text-[9px] font-bold uppercase tracking-wider text-slate-500">{vehicleLabel(selected.vehicleType)}</p>
               </div>
             </>
           ) : (
@@ -162,7 +179,7 @@ function VehiclePlateDropdown({
           )}
         </div>
         <motion.div animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }}>
-          <ChevronDown size={16} className="text-orange-300/60" />
+          <ChevronDown size={16} className="text-orange-400" />
         </motion.div>
       </button>
 
@@ -173,7 +190,7 @@ function VehiclePlateDropdown({
             animate={{ opacity: 1, y: 4, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.98 }}
             transition={{ duration: 0.15 }}
-            className="absolute left-0 top-full z-50 w-full overflow-hidden rounded-2xl border border-white/10 bg-[#0c1220]/95 shadow-[0_20px_60px_rgba(0,0,0,0.5)] backdrop-blur-xl"
+            className="absolute left-0 top-full z-50 w-full overflow-hidden rounded-2xl border border-white/10 bg-[#0c1220]/95 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] backdrop-blur-xl"
           >
             {plates.length === 0 ? (
               <div className="px-4 py-6 text-center text-xs font-semibold text-slate-500">
@@ -193,20 +210,22 @@ function VehiclePlateDropdown({
                       }}
                       className={`flex w-full items-center gap-3 rounded-xl px-3.5 py-3 text-left transition-all duration-150 ${
                         isActive
-                          ? 'bg-orange-400/15 text-white'
-                          : 'text-slate-300 hover:bg-white/[0.06] hover:text-white'
+                          ? 'bg-orange-500/10 text-white border border-orange-500/20'
+                          : 'text-slate-300 hover:bg-white/[0.04] hover:text-white border border-transparent'
                       }`}
                     >
-                      {vehicleIcon(plate.vehicleType)}
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/[0.04] border border-white/[0.06]">
+                        {vehicleIcon(plate.vehicleType)}
+                      </div>
                       <div className="min-w-0 flex-1">
-                        <p className={`text-sm font-black ${isActive ? 'text-orange-200' : 'text-white'}`}>
+                        <p className={`text-sm font-black tracking-wide ${isActive ? 'text-orange-300' : 'text-white'}`}>
                           {plate.plateNumber}
                         </p>
-                        <p className="text-[10px] font-semibold text-slate-500">{vehicleLabel(plate.vehicleType)}</p>
+                        <p className="text-[9px] font-bold uppercase tracking-wider text-slate-500">{vehicleLabel(plate.vehicleType)}</p>
                       </div>
-                      {isActive && <CheckCircle2 size={14} className="text-orange-300 shrink-0" />}
+                      {isActive && <CheckCircle2 size={14} className="text-orange-400 shrink-0" />}
                       {plate.isDefault && (
-                        <span className="rounded-full border border-emerald-400/25 bg-emerald-400/10 px-2 py-0.5 text-[9px] font-bold text-emerald-300 shrink-0">
+                        <span className="rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5 text-[9px] font-bold text-emerald-400 shrink-0">
                           Mặc định
                         </span>
                       )}
@@ -327,7 +346,10 @@ export default function BuildingsPage() {
   const canProceed = Boolean(selectedBuilding && selectedPlate && isBuildingOpen(selectedBuilding));
 
   return (
-    <main className="min-h-screen bg-[#060a11] text-slate-100">
+    <main className="relative min-h-screen bg-[#060a11] text-slate-100 selection:bg-orange-500 selection:text-white overflow-hidden">
+      {/* Background Radial Glow */}
+      <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top_right,rgba(249,115,22,0.06),transparent_50%),radial-gradient(ellipse_at_bottom_left,rgba(6,182,212,0.04),transparent_50%)] pointer-events-none" />
+
       {/* ── Top Bar ── */}
       <div className="border-b border-white/[0.06] bg-[#060a11]/80 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
@@ -354,7 +376,7 @@ export default function BuildingsPage() {
           className="mb-8 grid gap-6 lg:grid-cols-[1fr_360px] lg:items-end"
         >
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.28em] text-orange-300/70">
+            <p className="text-[10px] font-black uppercase tracking-[0.28em] text-orange-400/80">
               Chọn tòa nhà
             </p>
             <h1 className="mt-3 text-3xl font-black tracking-tight text-white md:text-4xl">
@@ -374,20 +396,20 @@ export default function BuildingsPage() {
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Tìm theo tên, mã hoặc địa chỉ"
-              className="h-12 w-full rounded-2xl border border-white/10 bg-white/[0.03] pl-11 pr-4 text-sm font-semibold text-white outline-none transition placeholder:text-slate-500 focus:border-orange-400/50 focus:shadow-[0_0_20px_rgba(249,115,22,0.08)]"
+              className="h-12 w-full rounded-2xl border border-white/10 bg-slate-900/30 pl-11 pr-4 text-sm font-semibold text-white outline-none transition placeholder:text-slate-500 focus:border-orange-500 focus:shadow-[0_0_20px_rgba(249,115,22,0.15)]"
             />
           </label>
         </motion.div>
 
         {isLoading ? (
-          <div className="flex min-h-[360px] items-center justify-center rounded-3xl border border-white/[0.06] bg-white/[0.02]">
-            <div className="flex items-center gap-3 text-sm font-bold text-slate-400">
-              <Loader2 size={18} className="animate-spin text-orange-300" />
+          <div className="flex min-h-[360px] items-center justify-center rounded-3xl border border-white/[0.06] bg-slate-900/40 backdrop-blur-md">
+            <div className="flex items-center gap-3 text-sm font-bold text-slate-400 animate-pulse">
+              <Loader2 size={18} className="animate-spin text-orange-400" />
               Đang tải thông tin tòa nhà...
             </div>
           </div>
         ) : buildings.length === 0 ? (
-          <div className="rounded-3xl border border-rose-400/20 bg-rose-500/5 p-6 text-sm font-semibold text-rose-200">
+          <div className="rounded-3xl border border-rose-500/20 bg-rose-500/5 p-6 text-sm font-semibold text-rose-300">
             Không có tòa nhà nào. Vui lòng thử lại sau.
           </div>
         ) : (
@@ -404,7 +426,7 @@ export default function BuildingsPage() {
               ))}
 
               {filteredRows.length === 0 && (
-                <div className="rounded-3xl border border-white/[0.06] bg-white/[0.02] p-8 text-center text-sm font-semibold text-slate-500">
+                <div className="rounded-3xl border border-white/[0.06] bg-slate-900/40 backdrop-blur-md p-8 text-center text-sm font-semibold text-slate-500">
                   Không tìm thấy tòa nhà phù hợp.
                 </div>
               )}
@@ -412,16 +434,16 @@ export default function BuildingsPage() {
 
             {/* ── Detail Panel ── */}
             {selectedBuilding && (
-              <aside className="rounded-3xl border border-white/[0.06] bg-gradient-to-b from-white/[0.04] to-transparent p-6 shadow-2xl lg:sticky lg:top-6 lg:self-start">
+              <aside className="rounded-3xl border border-white/[0.06] bg-slate-900/40 backdrop-blur-md p-6 shadow-2xl lg:sticky lg:top-6 lg:self-start">
                 {/* Header */}
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.22em] text-cyan-300/80">
+                    <p className="text-[10px] font-black uppercase tracking-[0.22em] text-cyan-400/80">
                       {selectedBuilding.code || 'BUILDING'}
                     </p>
                     <h2 className="mt-2 text-2xl font-black text-white">{selectedBuilding.name}</h2>
                     <p className="mt-2 flex items-start gap-2 text-sm font-semibold leading-relaxed text-slate-400">
-                      <MapPin size={16} className="mt-0.5 shrink-0 text-orange-300/70" />
+                      <MapPin size={16} className="mt-0.5 shrink-0 text-orange-400/70" />
                       <span>{addressText(selectedBuilding)}</span>
                     </p>
                   </div>
@@ -430,22 +452,22 @@ export default function BuildingsPage() {
 
                 {/* Stats Grid */}
                 <div className="mt-6 grid grid-cols-3 gap-3">
-                  <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
-                    <Layers size={18} className="text-cyan-300/70" />
+                  <div className="rounded-2xl border border-white/[0.06] bg-gradient-to-br from-white/[0.02] to-transparent p-4 transition-all duration-300 hover:border-white/10 hover:bg-white/[0.01]">
+                    <Layers size={18} className="text-cyan-400/80" />
                     <p className="mt-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">Số tầng</p>
                     <p className="mt-1 text-xl font-black text-white">
                       {detailLoading ? '…' : floorCount}
                     </p>
                   </div>
-                  <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
-                    <SquareParking size={18} className="text-emerald-300/70" />
+                  <div className="rounded-2xl border border-emerald-500/10 bg-gradient-to-br from-emerald-500/5 to-transparent p-4 transition-all duration-300 hover:border-emerald-500/20 hover:bg-emerald-500/[0.02]">
+                    <SquareParking size={18} className="text-emerald-400/80" />
                     <p className="mt-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">Chỗ trống</p>
-                    <p className="mt-1 text-xl font-black text-emerald-300">
+                    <p className="mt-1 text-xl font-black text-emerald-400 shadow-emerald-400/10">
                       {detailLoading ? '…' : availableSlots}
                     </p>
                   </div>
-                  <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
-                    <Building2 size={18} className="text-orange-300/70" />
+                  <div className="rounded-2xl border border-white/[0.06] bg-gradient-to-br from-white/[0.02] to-transparent p-4 transition-all duration-300 hover:border-white/10 hover:bg-white/[0.01]">
+                    <Building2 size={18} className="text-orange-400/80" />
                     <p className="mt-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">Tổng ô</p>
                     <p className="mt-1 text-xl font-black text-white">
                       {detailLoading ? '…' : totalSlots}
@@ -454,27 +476,35 @@ export default function BuildingsPage() {
                 </div>
 
                 {/* Vehicle Types */}
-                <div className="mt-5 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
+                <div className="mt-5 rounded-2xl border border-white/[0.06] bg-slate-900/40 backdrop-blur-md p-4">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Loại xe được hỗ trợ</p>
                   {detailLoading ? (
-                    <p className="mt-2 text-sm font-semibold text-slate-500">Đang tải...</p>
+                    <p className="mt-2 text-sm font-semibold text-slate-500 animate-pulse">Đang tải...</p>
                   ) : (detail?.vehicleTypes.length ?? 0) > 0 ? (
-                    <div className="mt-2 flex flex-wrap gap-2">
+                    <div className="mt-2.5 flex flex-wrap gap-2">
                       {detail!.vehicleTypes.map((vt) => {
                         const isBike = /motor|xe|máy|bike|moto/i.test((vt.code || vt.name || ''));
                         return (
                           <span
                             key={vt._id}
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-xs font-bold text-slate-200"
+                            className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-bold transition-all ${
+                              isBike
+                                ? 'border-purple-500/15 bg-purple-500/5 text-purple-300'
+                                : 'border-cyan-500/15 bg-cyan-500/5 text-cyan-300'
+                            }`}
                           >
-                            {isBike ? <Bike size={12} className="text-purple-300/70" /> : <Car size={12} className="text-cyan-300/70" />}
+                            {isBike ? (
+                              <Bike size={12} className="text-purple-300" />
+                            ) : (
+                              <Car size={12} className="text-cyan-300" />
+                            )}
                             {vt.name}
                           </span>
                         );
                       })}
                     </div>
                   ) : (
-                    <p className="mt-2 text-sm font-semibold text-slate-500">Đang cập nhật</p>
+                    <p className="mt-2 text-xs font-semibold text-slate-500">Đang cập nhật</p>
                   )}
                 </div>
 
@@ -497,9 +527,13 @@ export default function BuildingsPage() {
                       state: { buildingId: selectedBuilding._id, plateNumber: selectedPlate },
                     })
                   }
-                  whileHover={canProceed ? { scale: 1.01 } : {}}
-                  whileTap={canProceed ? { scale: 0.99 } : {}}
-                  className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-400 px-5 py-3.5 text-sm font-black uppercase tracking-wider text-slate-950 shadow-[0_0_30px_rgba(249,115,22,0.25)] transition-all duration-300 hover:shadow-[0_0_40px_rgba(249,115,22,0.35)] disabled:cursor-not-allowed disabled:from-slate-700 disabled:to-slate-700 disabled:text-slate-400 disabled:shadow-none"
+                  whileHover={canProceed ? { scale: 1.015 } : {}}
+                  whileTap={canProceed ? { scale: 0.985 } : {}}
+                  className={`mt-6 flex w-full items-center justify-center gap-2 rounded-2xl px-5 py-4 text-sm font-black uppercase tracking-wider transition-all duration-300 ${
+                    canProceed
+                      ? 'bg-gradient-to-r from-orange-500 to-amber-400 text-slate-950 shadow-[0_4px_20px_rgba(249,115,22,0.3)] hover:shadow-[0_4px_30px_rgba(249,115,22,0.45)] cursor-pointer'
+                      : 'bg-gradient-to-r from-slate-800 to-slate-900 border border-slate-700/30 text-slate-500 cursor-not-allowed opacity-50 shadow-none'
+                  }`}
                 >
                   <ShieldCheck size={16} />
                   Xem chỗ đỗ để đặt chỗ
