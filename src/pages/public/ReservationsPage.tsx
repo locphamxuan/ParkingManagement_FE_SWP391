@@ -127,9 +127,9 @@ function packageCategory(pkg: LongTermPackage): 'weekly' | 'monthly' | 'yearly' 
 
 const categoryLabels = { weekly: 'Gói tuần', monthly: 'Gói tháng', yearly: 'Gói năm' };
 const categoryColors = {
-  weekly: { border: 'border-cyan-400/25', bg: 'bg-cyan-400/5', text: 'text-cyan-300', accent: 'from-cyan-500 to-blue-400' },
-  monthly: { border: 'border-orange-400/25', bg: 'bg-orange-400/5', text: 'text-orange-300', accent: 'from-orange-500 to-amber-400' },
-  yearly: { border: 'border-purple-400/25', bg: 'bg-purple-400/5', text: 'text-purple-300', accent: 'from-purple-500 to-pink-400' },
+  weekly: { border: 'border-cyan-400/20', bg: 'bg-cyan-400/5', text: 'text-cyan-300', accent: 'from-cyan-500 to-blue-400' },
+  monthly: { border: 'border-orange-400/20', bg: 'bg-orange-400/5', text: 'text-orange-300', accent: 'from-orange-500 to-amber-400' },
+  yearly: { border: 'border-purple-500/40 bg-purple-950/15', bg: 'bg-purple-500/10', text: 'text-purple-300', accent: 'from-yellow-400 via-pink-500 to-purple-600' },
 };
 
 /* ─── Calendar Component ──────────────────────────────────────────────────── */
@@ -656,14 +656,12 @@ export default function ReservationsPage() {
   const maxCalDate = useMemo(() => getMaxCalendarDate(mode, selectedPkg), [mode, selectedPkg]);
 
   const startDateTime = useMemo(() => {
-    if (mode === 'hourly') {
-      if (!selectedDate) return null;
-      const [h, m] = selectedTime.split(':').map(Number);
-      const d = new Date(selectedDate);
-      d.setHours(h, m, 0, 0);
-      return d;
-    }
-    return pkgStartDate;
+    const baseDate = mode === 'hourly' ? selectedDate : pkgStartDate;
+    if (!baseDate) return null;
+    const [h, m] = selectedTime.split(':').map(Number);
+    const d = new Date(baseDate);
+    d.setHours(h, m, 0, 0);
+    return d;
   }, [mode, selectedDate, selectedTime, pkgStartDate]);
 
   const endDateTime = useMemo(() => {
@@ -797,7 +795,7 @@ export default function ReservationsPage() {
           </button>
           <div className="flex gap-2">
             <button type="button" onClick={() => setShowHistory(true)}
-              className="inline-flex items-center gap-2 rounded-xl border border-yellow-500/20 bg-yellow-500/5 px-4 py-2 text-xs font-black uppercase tracking-wider text-yellow-400 transition hover:border-yellow-400/40 hover:text-yellow-300 hover:bg-yellow-500/10"
+              className="inline-flex items-center gap-2 rounded-xl border border-yellow-500/20 bg-yellow-500/5 px-4 py-2 text-xs font-black uppercase tracking-wider text-yellow-400 transition hover:border-yellow-400/40 hover:bg-yellow-500/10 hover:text-yellow-300"
             >
               <CalendarClock size={14} /> Lịch sử
             </button>
@@ -954,16 +952,34 @@ export default function ReservationsPage() {
                                 setSelectedPkg(pkg);
                                 setPkgStartDate(null);
                               }}
-                              className={`relative rounded-2xl border p-4 text-left transition-all duration-200 ${
+                              className={`relative rounded-2xl border p-4 text-left transition-all duration-300 ${
                                 isSelected
-                                  ? `${colors.border} ${colors.bg} shadow-[0_0_24px_rgba(249,115,22,0.1)]`
-                                  : 'border-white/[0.06] bg-white/[0.02] hover:border-white/15'
+                                  ? cat === 'yearly'
+                                    ? 'border-purple-400 bg-purple-950/20 scale-[1.04] shadow-[0_0_40px_rgba(168,85,247,0.35)] ring-2 ring-purple-400/30'
+                                    : `${colors.border} ${colors.bg} scale-[1.02] shadow-[0_0_30px_rgba(${cat === 'weekly' ? '34,211,238' : '249,115,22'},0.25)]`
+                                  : cat === 'yearly'
+                                    ? 'border-purple-500/30 bg-purple-500/5 hover:border-purple-400/50 hover:scale-[1.02] hover:bg-purple-500/10 hover:shadow-[0_0_20px_rgba(168,85,247,0.1)]'
+                                    : 'border-white/[0.06] bg-white/[0.02] hover:border-white/15 hover:scale-[1.01] hover:bg-white/[0.04]'
                               }`}
                             >
+                              {/* Floating Ribbon / Badge */}
+                              <span className={`absolute -top-2.5 right-4 rounded-full bg-gradient-to-r ${colors.accent} px-2.5 py-0.5 text-[8px] font-black uppercase tracking-wider text-slate-950 shadow-[0_0_12px_rgba(251,191,36,0.25)] animate-pulse`}>
+                                {cat === 'weekly' ? 'Tiết kiệm' : cat === 'monthly' ? 'Phổ biến' : '💎 VIP GIÁ TỐT'}
+                              </span>
                               <span className={`text-[9px] font-black uppercase tracking-wider ${colors.text}`}>
                                 {categoryLabels[cat]}
                               </span>
-                              <h4 className="mt-1 text-sm font-black text-white">{pkg.name}</h4>
+                              <h4 className="mt-1 text-sm font-black text-white flex items-center gap-1.5">
+                                {((typeof pkg.vehicleType === 'object' && pkg.vehicleType?.code === 'CAR') ||
+                                  (typeof pkg.vehicleType === 'string' && pkg.vehicleType.includes('CAR')) ||
+                                  pkg.code?.includes('CAR') ||
+                                  pkg.name?.includes('Ô tô')) ? (
+                                  <Car size={15} className={`${colors.text} shrink-0`} />
+                                ) : (
+                                  <Bike size={15} className={`${colors.text} shrink-0`} />
+                                )}
+                                <span>{pkg.name}</span>
+                              </h4>
                               <p className="mt-1 text-xs text-slate-400">{pkg.durationDays} ngày</p>
                               <p className={`mt-2 text-lg font-black ${colors.text}`}>{fmtMoney(pkg.price)}</p>
                               {pkg.allowDedicatedSlot && (
@@ -998,6 +1014,17 @@ export default function ReservationsPage() {
                             ? 'Gói tháng: chọn trong tháng này hoặc tháng sau'
                             : 'Gói năm: chọn trong năm nay hoặc năm sau'}
                       </p>
+                    </div>
+                  )}
+
+                  {/* Package Time */}
+                  {selectedPkg && pkgStartDate && (
+                    <div className="rounded-3xl border border-white/[0.06] bg-white/[0.02] p-5">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Clock size={16} className="text-purple-300/70" />
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-purple-300/70">Giờ nhận xe</span>
+                      </div>
+                      <TimeScroller selected={selectedTime} onSelect={setSelectedTime} />
                     </div>
                   )}
                 </motion.div>
@@ -1157,83 +1184,89 @@ export default function ReservationsPage() {
               onClick={(e) => e.stopPropagation()}
               className="relative max-h-[90vh] w-full max-w-5xl overflow-auto rounded-3xl border border-slate-700/60 bg-[#080d17] p-4 shadow-[0_30px_120px_rgba(0,0,0,0.55)] sm:p-6"
             >
+              <ParkingMap2D
+                interactive
+                slots={selectedFloorIdModal ? slots.map((s) => ({
+                  code: s.code,
+                  status: s.status === 'available' && s.reservable ? 'available' : 'unavailable',
+                  vehicleType: s.vehicleType === 'all' ? undefined : s.vehicleType,
+                })) : []}
+                selectedSlot={selectedSlot}
+                unavailableSlots={unavailableSlotCodes}
+                onSlotClick={handleSlotClick}
+                onConfirm={() => setShowSlotModal(false)}
+                onClose={() => setShowSlotModal(false)}
+                className="w-full bg-transparent p-0 border-none rounded-none shadow-none"
+                placeholder={
+                  !selectedFloorIdModal ? (
+                    <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+                      <MapPin size={36} className="text-slate-600 mb-3 animate-pulse" />
+                      <span className="text-sm font-medium">Vui lòng chọn tầng để hiển thị sơ đồ ô đỗ</span>
+                    </div>
+                  ) : isLoadingSlots ? (
+                    <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+                      <div className="h-8 w-8 animate-spin rounded-full border-2 border-orange-500 border-t-transparent mb-3" />
+                      <span className="text-sm font-medium">Đang tải danh sách ô đỗ...</span>
+                    </div>
+                  ) : null
+                }
+              >
+                {/* Floor selector */}
+                <div className="mb-6">
+                  <span className="mb-2 block text-[10px] font-bold uppercase tracking-widest text-slate-500">Khu vực / Tầng</span>
+                  <CustomSelect
+                    value={selectedFloorIdModal}
+                    onChange={(val) => {
+                      setSelectedFloorIdModal(String(val || ''));
+                      setSelectedSlot(null);
+                    }}
+                    options={[
+                      { value: '', label: '-- Chọn tầng --' },
+                      ...floorsData.map((f) => ({ value: f._id, label: `Tầng ${f.code || f.name || ''} (${f.availableSlots}/${f.totalSlots})` })),
+                    ]}
+                    placeholder="-- Chọn tầng --"
+                  />
+                </div>
+              </ParkingMap2D>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── History Modal ── */}
+      <AnimatePresence>
+        {showHistory && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-md"
+            onClick={() => setShowHistory(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative max-h-[90vh] w-full max-w-4xl overflow-auto rounded-3xl border border-slate-700/60 bg-[#080d17] p-5 shadow-[0_30px_120px_rgba(0,0,0,0.55)] sm:p-6"
+            >
               {/* Modal Header */}
               <div className="mb-5 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <MapPin size={18} className="text-cyan-300/70" />
-                  <h2 className="text-lg font-black text-white">Chọn chỗ đỗ</h2>
-                  <span className="text-xs font-bold text-slate-400">
-                    Khả dụng: <span className="text-emerald-300">{selectedFloorInfo ? selectedFloorInfo.availableSlots : '—'}</span>
-                    {selectedFloorInfo ? ` / ${selectedFloorInfo.totalSlots}` : ''}
-                  </span>
+                  <CalendarClock size={18} className="text-yellow-400" />
+                  <h2 className="text-lg font-black text-white">Lịch sử đặt chỗ</h2>
                 </div>
                 <button
                   type="button"
-                  onClick={() => setShowSlotModal(false)}
+                  onClick={() => setShowHistory(false)}
                   className="rounded-full border border-white/10 bg-white/[0.03] p-2 text-slate-400 hover:text-white transition"
                 >
                   <X size={18} />
                 </button>
               </div>
 
-              {/* Floor selector */}
-              <div className="mb-4">
-                <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Chọn tầng</span>
-                <CustomSelect
-                  value={selectedFloorIdModal}
-                  onChange={(val) => {
-                    setSelectedFloorIdModal(String(val || ''));
-                    setSelectedSlot(null);
-                  }}
-                  options={[
-                    { value: '', label: '-- Chọn tầng --' },
-                    ...floorsData.map((f) => ({ value: f._id, label: `${f.name} (${f.availableSlots}/${f.totalSlots})` })),
-                  ]}
-                  placeholder="-- Chọn tầng --"
-                />
-              </div>
-
-              {/* Parking Map */}
-              {selectedFloorIdModal ? (
-                isLoadingSlots ? (
-                  <div className="flex items-center justify-center py-16 text-sm text-slate-400">Đang tải ô đỗ...</div>
-                ) : (
-                  <ParkingMap2D
-                    interactive
-                    slots={slots.map((s) => ({
-                      code: s.code,
-                      status: s.status === 'available' && s.reservable ? 'available' : 'unavailable',
-                      vehicleType: s.vehicleType === 'all' ? undefined : s.vehicleType,
-                    }))}
-                    selectedSlot={selectedSlot}
-                    unavailableSlots={unavailableSlotCodes}
-                    onSlotClick={handleSlotClick}
-                  />
-                )
-              ) : (
-                <div className="flex items-center justify-center py-16 text-sm text-slate-500">
-                  Chọn tầng để xem sơ đồ đỗ xe
-                </div>
-              )}
-
-              {/* Modal Footer */}
-              <div className="mt-4 flex items-center justify-between rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
-                <p className="text-sm font-semibold text-slate-400">
-                  {selectedSlot ? (
-                    <>Ô <span className="font-black text-orange-300">{selectedSlot}</span> đã chọn</>
-                  ) : (
-                    'Nhấn vào ô đỗ để chọn'
-                  )}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setShowSlotModal(false)}
-                  disabled={!selectedSlot}
-                  className="rounded-2xl bg-orange-400 px-5 py-2.5 text-sm font-black uppercase tracking-wider text-slate-950 transition hover:bg-orange-300 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-500"
-                >
-                  Hoàn tất
-                </button>
-              </div>
+              {/* Modal Body */}
+              <ReservationHistoryTab />
             </motion.div>
           </motion.div>
         )}
