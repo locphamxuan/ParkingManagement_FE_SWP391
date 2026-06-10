@@ -550,7 +550,7 @@ function StatusBadge({ status }: { status: string }) {
   const labels: Record<string, string> = {
     pending: 'Đang chờ', confirmed: 'Đã xác nhận', checked_in: 'Đã check-in',
     completed: 'Hoàn thành', expired: 'Hết hạn', cancelled: 'Đã hủy',
-    active: 'Hoạt động',
+    active: 'Đã đặt',
   };
   const colors: Record<string, string> = {
     pending: 'border-amber-500/30 bg-amber-500/10 text-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.1)]',
@@ -621,18 +621,7 @@ function ReservationHistoryTab() {
     }
   };
 
-  const handleCancelPackage = async (id: string) => {
-    if (!window.confirm('Bạn có chắc muốn hủy đăng ký gói này?')) return;
-    setCancellingId(id);
-    try {
-      await userApi.longTermSubscriptions.cancel(id);
-      setItems((prev) => prev.map((sub) => (sub._id === id ? { ...sub, status: 'cancelled' } : sub)));
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Hủy đăng ký thất bại');
-    } finally {
-      setCancellingId(null);
-    }
-  };
+
 
   const handleModeChange = (mode: 'hourly' | 'package') => {
     setActiveMode(mode);
@@ -651,8 +640,7 @@ function ReservationHistoryTab() {
       ]
     : [
         { value: 'all', label: 'Tất cả' },
-        { value: 'active', label: 'Hoạt động' },
-        { value: 'pending', label: 'Chờ xử lý' },
+        { value: 'active', label: 'Đã đặt' },
         { value: 'cancelled', label: 'Đã hủy' },
         { value: 'expired', label: 'Hết hạn' },
       ];
@@ -873,7 +861,7 @@ function ReservationHistoryTab() {
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-mono text-sm font-black text-orange-400 tracking-wider flex items-center gap-1">
                           <span className="text-slate-500 text-[10px]">GÓI:</span>
-                          {sub.package.name}
+                          {sub.package?.name ?? 'Gói không xác định'}
                         </span>
                         <span className="rounded-lg border border-amber-500/20 bg-amber-500/5 px-2 py-0.5 text-xs font-bold text-amber-400 tracking-wide flex items-center gap-1 shadow-sm">
                           <Car size={12} className="opacity-80" />
@@ -882,23 +870,12 @@ function ReservationHistoryTab() {
                       </div>
                       <p className="mt-1.5 text-xs font-medium text-slate-400 flex items-center gap-1">
                         <Building2 size={12} className="text-slate-500" />
-                        {sub.building ? ((sub.building as any).name ?? (sub.building as any)) : '—'}
+                        {(sub.building as any)?.name ?? (sub.building as any) ?? '—'}
                       </p>
                     </div>
                     
                     <div className="flex items-center gap-2 shrink-0">
                       <StatusBadge status={sub.status} />
-                      {(sub.status === 'pending' || sub.status === 'active') && (
-                        <button
-                          type="button"
-                          disabled={cancellingId === sub._id}
-                          onClick={() => handleCancelPackage(sub._id)}
-                          className="flex items-center gap-1 rounded-lg border border-rose-500/30 bg-rose-500/10 px-2.5 py-1 text-xs font-bold text-rose-400 hover:bg-rose-500/20 hover:border-rose-500/50 transition-all disabled:opacity-50"
-                        >
-                          <XCircle size={12} />
-                          {cancellingId === sub._id ? 'Đang hủy...' : 'Hủy gói'}
-                        </button>
-                      )}
                     </div>
                   </div>
 
@@ -906,7 +883,7 @@ function ReservationHistoryTab() {
                     <div>
                       <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Chỗ đỗ cố định</p>
                       <p className="mt-1 text-sm font-bold text-slate-200">
-                        {sub.slot ? (sub.slot.code ?? sub.slot) : 'Không cố định'}
+                        {sub.slot ? ((sub.slot as any).code ?? sub.slot) : 'Không cố định'}
                       </p>
                     </div>
                     <div>
@@ -919,11 +896,11 @@ function ReservationHistoryTab() {
                     </div>
                     <div>
                       <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Giá gói</p>
-                      <p className="mt-1 text-sm font-black text-emerald-400">{fmtMoney(sub.price ?? sub.package.price)}</p>
+                      <p className="mt-1 text-sm font-black text-emerald-400">{fmtMoney(sub.price ?? sub.package?.price)}</p>
                     </div>
                     <div>
                       <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Mã gói</p>
-                      <p className="mt-1 text-xs font-semibold text-slate-300">{sub.package.code}</p>
+                      <p className="mt-1 text-xs font-semibold text-slate-300">{sub.package?.code ?? '—'}</p>
                     </div>
                   </div>
 
@@ -1014,6 +991,36 @@ export default function ReservationsPage() {
       return () => clearTimeout(timer);
     }
   }, [bookingError]);
+
+  const [bookedPlates, setBookedPlates] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+    
+    // Fetch reservations
+    const p1 = userApi.reservations.list({ limit: 100 }).then(res => {
+      const items = (res as any)?.data?.items || [];
+      return items
+        .filter((r: any) => ['pending', 'confirmed', 'checked_in'].includes(r.status))
+        .map((r: any) => r.plateNumber);
+    }).catch(() => []);
+
+    // Fetch subscriptions
+    const p2 = userApi.longTermSubscriptions.list({ limit: 100 }).then(res => {
+      const items = (res as any)?.data?.items || [];
+      return items
+        .filter((s: any) => ['pending', 'active'].includes(s.status))
+        .map((s: any) => s.plateNumber || s.linkedPlates?.[0]);
+    }).catch(() => []);
+
+    Promise.all([p1, p2]).then(([resPlates, subPlates]) => {
+      const allBooked = Array.from(new Set([
+        ...resPlates.filter(Boolean),
+        ...subPlates.filter(Boolean)
+      ]));
+      setBookedPlates(allBooked);
+    });
+  }, [user, bookingSuccess]);
 
   /* ── Data Loading ── */
   useEffect(() => {
@@ -1155,13 +1162,15 @@ export default function ReservationsPage() {
 
   const plateOptions = useMemo(() => {
     if (!user) return [];
-    if (!selectedVehicleType) return user.licensePlates;
-    return user.licensePlates.filter((p) => {
-      const t = p.vehicleType?.toLowerCase();
-      if (selectedVehicleType === 'motorcycle') return t === 'motorcycle' || t === 'bike';
-      return t !== 'motorcycle' && t !== 'bike';
-    });
-  }, [user, selectedVehicleType]);
+    const base = selectedVehicleType
+      ? user.licensePlates.filter((p) => {
+          const t = p.vehicleType?.toLowerCase();
+          if (selectedVehicleType === 'motorcycle') return t === 'motorcycle' || t === 'bike';
+          return t !== 'motorcycle' && t !== 'bike';
+        })
+      : user.licensePlates;
+    return base.filter((p) => !bookedPlates.includes(p.plateNumber));
+  }, [user, selectedVehicleType, bookedPlates]);
 
   const unavailableSlotCodes = useMemo(() => {
     return slots.filter((s) => {
@@ -1367,7 +1376,7 @@ export default function ReservationsPage() {
                   onChange={setSelectedPlate}
                   disabled={plateOptions.length === 0}
                   options={[
-                    { value: '', label: '-- Chọn biển số --' },
+                    { value: '', label: plateOptions.length === 0 ? '-- Tất cả biển số xe phù hợp đều đã đặt chỗ --' : '-- Chọn biển số --' },
                     ...plateOptions.map((p) => ({
                       value: p.plateNumber,
                       label: `${p.plateNumber} — ${p.vehicleType === 'motorcycle' ? '🏍️ Xe máy' : '🚗 Ô tô'}`,
