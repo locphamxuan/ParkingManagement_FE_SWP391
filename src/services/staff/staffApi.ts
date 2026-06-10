@@ -16,6 +16,8 @@ export interface MyShift {
   _id: string;
   shift: { _id: string; code: string; name: string; startTime: string; endTime: string };
   building: { _id: string; name: string; code: string };
+  /** Gate assigned by the manager for this shift (ra / vào). */
+  gate?: { _id: string; code: string; name?: string; direction: 'in' | 'out' | 'both'; status?: string } | null;
   workDate: string;
   status: 'scheduled' | 'active' | 'completed' | 'cancelled';
   note?: string;
@@ -35,7 +37,10 @@ export interface ParkingSession {
   fee?: number | null;
   currentFee?: number | null;        // live fee (per manager PricePolicy) for active sessions
   isMember?: boolean;                 // true if the plate is linked to an account
+  plateImage?: string | null;        // license-plate camera snapshot (Camera 1)
+  portraitImage?: string | null;     // QR / account camera snapshot (Camera 2 — driver portrait)
   user?: { _id: string; fullName?: string; email?: string } | null;
+  staff?: { _id: string; fullName?: string; email?: string } | null; // check-in staff
   paymentMethod?: 'cash' | 'wallet' | 'qr' | 'card' | 'payos' | 'long_term' | null;
   status: 'active' | 'completed' | 'cancelled';
 }
@@ -166,7 +171,7 @@ export const staffApi = {
   getActiveSessions: (query?: Record<string, string | number | boolean | undefined>) =>
     api.get<Wrap<ApiList<ParkingSession>>>('/staff/parking-sessions/active', { query }),
 
-  checkIn: (payload: { plateNumber: string; vehicleType?: string; gate?: string; building?: string; vehicleBrand?: string }) =>
+  checkIn: (payload: { plateNumber: string; vehicleType?: string; gate?: string; building?: string; vehicleBrand?: string; plateImage?: string | null; portraitImage?: string | null }) =>
     api.post<Wrap<{ item: ParkingSession }>>('/staff/parking-sessions/check-in', payload),
 
   checkOut: (sessionId: string, body?: { paymentMethod?: string }) =>

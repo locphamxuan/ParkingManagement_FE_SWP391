@@ -31,7 +31,9 @@ export function HomeRoute() {
 
   const onViewReservationHistory = useCallback(() => {
     if (!session) { onOpenAuth('login'); return; }
-    navigate('/parking-history');
+    // Lịch sử ĐẶT CHỖ → mở chế độ xem lịch sử đặt chỗ trong trang đặt chỗ
+    // (KHÔNG phải trang lịch sử gửi xe).
+    navigate('/reservations', { state: { openHistory: true } });
   }, [navigate, onOpenAuth, session]);
 
   const onAction = useCallback(

@@ -50,6 +50,7 @@ export function ManagerStaffShiftsPage() {
     staff: string;
     shift: string;
     workDate: string;
+    gate?: string | null;
     note?: string;
   }) => {
     setIsSubmitting(true);
@@ -72,7 +73,7 @@ export function ManagerStaffShiftsPage() {
   };
 
   const onDelete = async (row: StaffShift) => {
-    if (!window.confirm(`Xóa assignment cho ${row.staff.fullName}?`)) return;
+    if (!window.confirm(`Xóa assignment cho ${row.staff?.fullName ?? 'nhân viên'}?`)) return;
     try {
       await managerApi.shifts.removeStaffShift(buildingId, row._id);
       refresh();
@@ -87,9 +88,9 @@ export function ManagerStaffShiftsPage() {
       title: 'Ca Trực',
       render: (row) => (
         <div>
-          <div className="font-medium">{row.shift.code}</div>
+          <div className="font-medium">{row.shift?.code ?? '—'}</div>
           <div className="text-xs text-muted-foreground">
-            {row.shift.startTime}–{row.shift.endTime}
+            {row.shift ? `${row.shift.startTime}–${row.shift.endTime}` : ''}
           </div>
         </div>
       ),
@@ -97,12 +98,30 @@ export function ManagerStaffShiftsPage() {
     {
       key: 'staff',
       title: 'Nhân Viên',
-      render: (row) => (
-        <div>
-          <div className="font-medium">{row.staff.fullName}</div>
-          <div className="text-xs text-muted-foreground">{row.staff.email}</div>
-        </div>
-      ),
+      render: (row) =>
+        row.staff ? (
+          <div>
+            <div className="font-medium">{row.staff.fullName}</div>
+            <div className="text-xs text-muted-foreground">{row.staff.email}</div>
+          </div>
+        ) : (
+          <span className="text-xs italic text-muted-foreground">Nhân viên đã bị xóa</span>
+        ),
+    },
+    {
+      key: 'gate',
+      title: 'Cổng',
+      render: (row) =>
+        row.gate ? (
+          <div>
+            <div className="font-medium">{row.gate.code}</div>
+            <div className="text-xs text-muted-foreground">
+              {row.gate.direction === 'in' ? 'Cổng vào' : row.gate.direction === 'out' ? 'Cổng ra' : 'Hai chiều'}
+            </div>
+          </div>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        ),
     },
     {
       key: 'workDate',

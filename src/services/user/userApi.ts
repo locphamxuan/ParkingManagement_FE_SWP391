@@ -59,6 +59,10 @@ export interface Reservation {
   startTime: string;
   endTime?: string | null;
   fee?: number;
+  /** % hoàn tiền theo chính sách của tòa nhà (BE gắn vào danh sách). */
+  refundPercent?: number;
+  /** Số tiền đã hoàn thực tế (với lượt đã hủy). */
+  refundAmount?: number;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -148,6 +152,10 @@ export interface ReservationEstimate {
   estimatedFee: number;
   depositAmount: number;
   remainingFee: number;
+  /** % cọc khi đặt (do manager cấu hình). */
+  depositPercent?: number;
+  /** % còn lại thu sau checkout = 100 - depositPercent. */
+  remainingPercent?: number;
   hourlyRate: number;
   hours: number;
   regularHours: number;
@@ -232,9 +240,11 @@ export const userApi = {
     }) =>
       api.post<Wrap<{ reservation: Reservation }>>('/users/reservations', body),
 
-    /** Cancel reservation */
+    /** Cancel reservation — BE hoàn refundPercent% tiền cọc vào ví. */
     cancel: (id: string) =>
-      api.delete<Wrap<{ reservation: Reservation }>>(`/users/reservations/${id}`),
+      api.delete<Wrap<{ reservation: Reservation; refund: number; amountPaid: number; refundPercent: number }>>(
+        `/users/reservations/${id}`,
+      ),
   },
 
   // ========== PARKING HISTORY ==========

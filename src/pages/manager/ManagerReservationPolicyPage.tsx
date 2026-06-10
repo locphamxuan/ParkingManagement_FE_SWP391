@@ -9,12 +9,14 @@ import { managerApi, type ReservationPolicy } from '@/services/manager/managerAp
 interface FormState {
   maxHoldMinutes: string;
   refundPercent: string;
+  depositPercent: string;
   isActive: boolean;
 }
 
 const toForm = (p: ReservationPolicy | null): FormState => ({
   maxHoldMinutes: String(p?.maxHoldMinutes ?? 30),
   refundPercent: String(p?.refundPercent ?? 80),
+  depositPercent: String(p?.depositPercent ?? 15),
   isActive: p?.isActive ?? true,
 });
 
@@ -46,6 +48,7 @@ export function ManagerReservationPolicyPage() {
       const res = await managerApi.reservationPolicy.update(buildingId, {
         maxHoldMinutes: Number(form.maxHoldMinutes),
         refundPercent: Number(form.refundPercent),
+        depositPercent: Number(form.depositPercent),
         isActive: form.isActive,
       });
       setPolicy(res.data.item);
@@ -99,6 +102,38 @@ export function ManagerReservationPolicyPage() {
                   setForm((f) => ({ ...f, refundPercent: e.target.value }))
                 }
               />
+            </div>
+            <div className="grid gap-1.5">
+              <label className="text-xs uppercase text-muted-foreground">
+                % Đặt cọc khi đặt chỗ
+              </label>
+              <Input
+                type="number"
+                min={0}
+                max={100}
+                value={form.depositPercent}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, depositPercent: e.target.value }))
+                }
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Khách trả phần trăm này khi đặt chỗ.
+              </p>
+            </div>
+            <div className="grid gap-1.5">
+              <label className="text-xs uppercase text-muted-foreground">
+                % Còn lại (thu sau checkout)
+              </label>
+              <Input
+                type="number"
+                value={Math.max(0, 100 - Number(form.depositPercent || 0))}
+                readOnly
+                disabled
+                className="cursor-not-allowed opacity-70"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Hệ thống tự tính = 100% − % đặt cọc. Khách thanh toán phần này khi xe ra (checkout).
+              </p>
             </div>
             <label className="flex items-center gap-2 text-sm md:col-span-2">
               <input

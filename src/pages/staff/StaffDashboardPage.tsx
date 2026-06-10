@@ -13,6 +13,8 @@ import {
   Ticket,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
+import { ScanLine } from 'lucide-react';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { useBuildingContext } from '@/hooks/useBuildingContext';
 import {
@@ -23,8 +25,6 @@ import {
   type StaffIncident,
   type StaffReservation,
 } from '@/services/staff/staffApi';
-
-const todayStr = () => new Date().toISOString().slice(0, 10);
 
 function fmtTime(iso: string) {
   return new Date(iso).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
@@ -92,10 +92,11 @@ export function StaffDashboardPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const d = todayStr();
     const buildingId = building?._id;
     Promise.all([
-      staffApi.myShifts({ from: d, to: d }),
+      // Fetch the staff's shifts (no strict date filter) and match "today" locally
+      // to avoid UTC/local off-by-one — server stores workDate at midnight UTC.
+      staffApi.myShifts(),
       staffApi.getActiveSessions({ populate: 'slot.floor,vehicleType,entryGate,exitGate' }),
       staffApi.incidents.list(buildingId),
       staffApi.listReservations(buildingId ? { buildingId, status: 'confirmed' } : {}),
@@ -129,6 +130,20 @@ export function StaffDashboardPage() {
       .finally(() => setLoading(false));
   }, [building]);
 
+  // Shifts whose workDate falls on the local "today" (timezone-safe).
+  const todayShifts = useMemo(() => {
+    const now = new Date();
+    const sameDay = (iso: string) => {
+      const d = new Date(iso);
+      return (
+        d.getFullYear() === now.getFullYear() &&
+        d.getMonth() === now.getMonth() &&
+        d.getDate() === now.getDate()
+      );
+    };
+    return shifts.filter((s) => sameDay(s.workDate));
+  }, [shifts]);
+
   const activeSessions = useMemo(() => sessions.filter((s) => s.status === 'active'), [sessions]);
   const openIncidents = useMemo(
     () => incidents.filter((i) => ['open', 'investigating', 'escalated'].includes(i.status ?? '')),
@@ -138,11 +153,32 @@ export function StaffDashboardPage() {
     () => reservations.filter((r) => r.status === 'confirmed'),
     [reservations],
   );
+  // Distinct gates assigned to this staff. Prefer today's shifts; if there are
+  // none today, fall back to the gate of the nearest upcoming/most-recent shift
+  // so the staff still sees where they are assigned.
+  const assignedGates = useMemo(() => {
+    const pickFrom = todayShifts.length > 0 ? todayShifts : shifts.slice(0, 1);
+    const map = new Map<string, NonNullable<MyShift['gate']>>();
+    pickFrom.forEach((s) => {
+      if (s.gate?._id) map.set(s.gate._id, s.gate);
+    });
+    return Array.from(map.values());
+  }, [todayShifts, shifts]);
+
+  const directionText = (d: 'in' | 'out' | 'both') =>
+    d === 'in' ? 'Cổng vào' : d === 'out' ? 'Cổng ra' : 'Hai chiều';
+
+  // Gán cổng vào → làm check-in; gán cổng ra → làm check-out. Chưa gán → hiện cả hai.
+  const hasInGate = assignedGates.some((g) => g.direction === 'in' || g.direction === 'both');
+  const hasOutGate = assignedGates.some((g) => g.direction === 'out' || g.direction === 'both');
+  const unassignedGate = assignedGates.length === 0;
+  const showCheckIn = hasInGate || unassignedGate;
+  const showCheckOut = hasOutGate || unassignedGate;
 
   const stats: StatCardProps[] = [
     {
       label: 'Ca hôm nay',
-      value: shifts.length,
+      value: todayShifts.length,
       icon: CalendarClock,
       accent: 'border-teal-500/30',
       bg: 'bg-teal-500/5',
@@ -217,6 +253,23 @@ export function StaffDashboardPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            {!loading && (
+              assignedGates.length > 0 ? (
+                assignedGates.map((g) => (
+                  <div
+                    key={g._id}
+                    className="flex items-center gap-1.5 rounded-lg border border-teal-500/30 bg-teal-500/10 px-3 py-1.5 text-xs font-semibold text-teal-300"
+                  >
+                    <DoorOpen size={13} />
+                    Cổng {g.code}{g.name ? ` · ${g.name}` : ''} · {directionText(g.direction)}
+                  </div>
+                ))
+              ) : (
+                <div className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-400">
+                  <DoorOpen size={13} /> Chưa được gán cổng
+                </div>
+              )
+            )}
             {building?.operatingHours && (
               <div className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-400">
                 <Clock size={12} />
@@ -234,6 +287,67 @@ export function StaffDashboardPage() {
           <StatCard key={s.label} {...s} />
         ))}
       </div>
+
+      {/* Nhiệm vụ theo cổng được gán: cổng vào → check-in, cổng ra → check-out.
+          Trang "Xe đang đỗ" (chỉ xem) hiện cho cả hai. */}
+      {!loading && (
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {showCheckIn && (
+            <Link
+              to="/staff/operations"
+              className="group relative overflow-hidden rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-5 transition hover:border-emerald-500/60 hover:bg-emerald-500/10"
+            >
+              <div className="flex items-center gap-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-emerald-500/30 bg-emerald-500/10">
+                  <ScanLine size={22} className="text-emerald-400" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-500">
+                    {hasInGate ? 'Cổng vào được gán' : 'Nhiệm vụ'}
+                  </p>
+                  <h3 className="mt-0.5 text-lg font-bold text-white">Check-in xe vào</h3>
+                  <p className="text-xs text-slate-400">Quét biển số / QR để cho xe vào bãi</p>
+                </div>
+              </div>
+            </Link>
+          )}
+          {showCheckOut && (
+            <Link
+              to="/staff/checkout"
+              className="group relative overflow-hidden rounded-2xl border border-orange-500/30 bg-orange-500/5 p-5 transition hover:border-orange-500/60 hover:bg-orange-500/10"
+            >
+              <div className="flex items-center gap-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-orange-500/30 bg-orange-500/10">
+                  <ScanLine size={22} className="text-orange-400" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-500">
+                    {hasOutGate ? 'Cổng ra được gán' : 'Nhiệm vụ'}
+                  </p>
+                  <h3 className="mt-0.5 text-lg font-bold text-white">Check-out xe ra</h3>
+                  <p className="text-xs text-slate-400">Quét biển số / QR → đối chiếu ảnh → thu phí & cho ra</p>
+                </div>
+              </div>
+            </Link>
+          )}
+          {/* Trang "Xe đang đỗ" (chỉ xem) — cả hai loại nhân viên đều xem được. */}
+          <Link
+            to="/staff/parked"
+            className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-5 transition hover:border-white/25 hover:bg-white/10"
+          >
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/5">
+                <Car size={22} className="text-slate-300" />
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Giám sát</p>
+                <h3 className="mt-0.5 text-lg font-bold text-white">Xe đang đỗ</h3>
+                <p className="text-xs text-slate-400">Xem danh sách xe đang đỗ (chỉ xem)</p>
+              </div>
+            </div>
+          </Link>
+        </div>
+      )}
 
       {/* Error */}
       {error && (
@@ -268,7 +382,7 @@ export function StaffDashboardPage() {
               <h2 className="text-sm font-bold text-white">Ca làm việc hôm nay</h2>
             </div>
             <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[11px] font-semibold text-slate-400">
-              {loading ? '…' : shifts.length}
+              {loading ? '…' : todayShifts.length}
             </span>
           </div>
 
@@ -278,13 +392,13 @@ export function StaffDashboardPage() {
                 <Skeleton className="h-16 w-full" />
                 <Skeleton className="h-16 w-full" />
               </>
-            ) : shifts.length === 0 ? (
+            ) : todayShifts.length === 0 ? (
               <div className="flex flex-col items-center gap-2 py-8 text-center">
                 <Circle size={28} className="text-slate-700" />
                 <p className="text-sm text-slate-500">Không có ca nào hôm nay</p>
               </div>
             ) : (
-              shifts.map((s) => (
+              todayShifts.map((s) => (
                 <div
                   key={s._id}
                   className="flex items-center gap-4 rounded-xl border border-white/6 bg-white/3 px-4 py-3"
@@ -304,6 +418,17 @@ export function StaffDashboardPage() {
                       {s.shift.code} — {s.shift.name}
                     </p>
                     <p className="mt-0.5 truncate text-xs text-slate-500">{s.building.name}</p>
+                    {s.gate ? (
+                      <p className="mt-1 inline-flex items-center gap-1 rounded-md border border-teal-500/25 bg-teal-500/10 px-1.5 py-0.5 text-[11px] font-semibold text-teal-300">
+                        <DoorOpen size={11} />
+                        Cổng {s.gate.code}
+                        {s.gate.name ? ` · ${s.gate.name}` : ''}
+                        {' · '}
+                        {s.gate.direction === 'in' ? 'Cổng vào' : s.gate.direction === 'out' ? 'Cổng ra' : 'Hai chiều'}
+                      </p>
+                    ) : (
+                      <p className="mt-1 text-[11px] italic text-slate-600">Chưa phân công cổng</p>
+                    )}
                     {s.note && (
                       <p className="mt-0.5 truncate text-[11px] italic text-slate-600">{s.note}</p>
                     )}

@@ -93,9 +93,12 @@ export default function ParkingHistoryPage() {
           >
             <ArrowLeft size={15} />
           </button>
-          <div className="flex items-center gap-2">
-            <History size={16} className="text-orange-400" />
-            <h1 className="text-sm font-bold text-white">Lịch sử gửi xe</h1>
+          <div className="flex flex-col">
+            <div className="flex items-center gap-2">
+              <History size={16} className="text-orange-400" />
+              <h1 className="text-sm font-bold text-white">Lịch sử gửi xe</h1>
+            </div>
+            <p className="text-[11px] text-slate-500">Phiên gửi xe trực tiếp (không qua đặt chỗ)</p>
           </div>
           <button
             type="button"
