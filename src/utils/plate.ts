@@ -1,0 +1,77 @@
+/**
+ * Vietnamese license-plate normalization & validation (mirrors the backend
+ * `plate.util.js`). Canonical form: `59G2-038.80`.
+ *
+ *   - province: 2 digits
+ *   - series:   1 letter + 1 digit (G2, A1, F1) OR 2 letters (LD, MD). A bare
+ *               single letter (e.g. `59G`) is NOT valid.
+ *   - number:   4 or 5 digits. 5-digit groups render as `NNN.NN`; 4-digit plain.
+ *
+ * `normalizePlate` is idempotent on canonical input.
+ */
+
+export const CANONICAL_PLATE_REGEX = /^\d{2}(?:[A-Z]\d|[A-Z]{2})-(?:\d{3}\.\d{2}|\d{4})$/;
+
+/** Popular car makes on Vietnamese roads. */
+export const CAR_BRANDS = [
+  'Toyota', 'Honda', 'Hyundai', 'Kia', 'Mazda', 'Ford', 'Mitsubishi',
+  'VinFast', 'Suzuki', 'Nissan', 'Isuzu', 'Chevrolet', 'Mercedes-Benz',
+  'BMW', 'Audi', 'Lexus', 'Peugeot', 'Daewoo',
+  'Khác',
+] as const;
+
+/** Popular motorcycle makes on Vietnamese roads. */
+export const MOTORCYCLE_BRANDS = [
+  'Honda', 'Yamaha', 'Suzuki', 'SYM', 'Piaggio', 'Vespa', 'VinFast',
+  'Kymco', 'Detech', 'Espero',
+  'Khác',
+] as const;
+
+/** Return the brand list matching a vehicle type (defaults to car list). */
+export function brandsForVehicleType(vehicleType: 'car' | 'motorcycle'): readonly string[] {
+  return vehicleType === 'motorcycle' ? MOTORCYCLE_BRANDS : CAR_BRANDS;
+}
+
+/** Normalize arbitrary input to the canonical VN plate form, or '' if unparseable. */
+export function normalizePlate(raw: string | null | undefined): string {
+  const s = `${raw ?? ''}`.toUpperCase();
+
+  const head = s.match(/(\d{2})[^A-Z0-9]*([A-Z]{1,2})(.*)$/);
+  if (!head) return '';
+
+  const province = head[1];
+  const letters = head[2];
+  const rest = head[3];
+
+  let seriesDigit = '';
+  let numberDigits: string;
+
+  const sep = rest.match(/^\s*(\d?)\s*[-_.\s]+\s*([\d.\s]+)$/);
+  if (sep) {
+    seriesDigit = sep[1] || '';
+    numberDigits = sep[2].replace(/[^0-9]/g, '');
+  } else {
+    const tail = rest.replace(/[^0-9]/g, '');
+    if (tail.length >= 6) {
+      seriesDigit = tail.slice(0, tail.length - 5);
+      numberDigits = tail.slice(tail.length - 5);
+    } else {
+      numberDigits = tail;
+    }
+  }
+
+  if (seriesDigit.length > 1) return '';
+  if (numberDigits.length < 4 || numberDigits.length > 5) return '';
+
+  const formattedNumber =
+    numberDigits.length === 5
+      ? `${numberDigits.slice(0, 3)}.${numberDigits.slice(3)}`
+      : numberDigits;
+
+  return `${province}${letters}${seriesDigit}-${formattedNumber}`;
+}
+
+/** True when `value` is already a canonical Vietnamese plate. */
+export function isValidVietnamPlate(value: string | null | undefined): boolean {
+  return CANONICAL_PLATE_REGEX.test(`${value ?? ''}`);
+}

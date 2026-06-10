@@ -34,16 +34,22 @@ export default function ParkingHistoryPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  if (!session) return <Navigate to="/auth/login" replace />;
-
+  // Load all hooks BEFORE any conditional return (Rules of Hooks)
   const load = useCallback((p = 1) => {
     setLoading(true);
     setError(null);
     userApi.parkingHistory
       .list({ page: p, limit: 20 })
       .then((res) => {
+        // Backend returns { data: { items, pagination } }
         const raw = (res as { data?: { items?: ParkingHistory[]; pagination?: { totalPages?: number } } })?.data;
-        setItems(raw?.items ?? []);
+        // Normalize: backend ParkingSession uses entryTime/exitTime; map to checkIn/checkOut
+        const normalized: ParkingHistory[] = (raw?.items ?? []).map((item: any) => ({
+          ...item,
+          checkIn: item.checkIn ?? item.entryTime ?? null,
+          checkOut: item.checkOut ?? item.exitTime ?? null,
+        }));
+        setItems(normalized);
         setTotalPages(raw?.pagination?.totalPages ?? 1);
         setPage(p);
       })
@@ -52,8 +58,9 @@ export default function ParkingHistoryPage() {
   }, []);
 
   useEffect(() => {
+    if (!session) return;
     load(1);
-  }, [load]);
+  }, [load, session]);
 
   const filtered = useMemo(() => {
     if (statusFilter === 'all') return items;
@@ -70,6 +77,9 @@ export default function ParkingHistoryPage() {
     { value: 'active', label: `Đang gửi (${items.filter((s) => s.status === 'active').length})` },
     { value: 'completed', label: `Đã xong (${items.filter((s) => s.status === 'completed').length})` },
   ];
+
+  // Guard: redirect after all hooks have been declared
+  if (!session) return <Navigate to="/auth/login" replace />;
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">

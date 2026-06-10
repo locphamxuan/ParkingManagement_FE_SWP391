@@ -21,78 +21,24 @@ import {
 import { ParkingMap2D } from '@/components/shared/ParkingMap2D';
 import { useAuth } from '@/hooks/useAuth';
 import { CustomSelect } from '@/components/ui/select';
-import { userApi, type Building, type VehicleType, type ParkingSlot as ApiParkingSlot, type FloorAvailability, type Reservation } from '@/services/user';
-
-// Local minimal types (replacing mock types)
-type ReservationVehicleType = 'car' | 'motorcycle';
-
-interface UserParkingSlotRecord {
-  _id: string;
-  buildingId: string;
-  code: string;
-  floorCode?: string;
-  vehicleType: ReservationVehicleType | 'all';
-  reservable: boolean;
-  status: string;
-}
-
-interface UserReservationPolicyRecord {
-  _id?: string;
-  buildingId: string;
-  minAdvanceMinutes: number;
-  maxAdvanceHours: number;
-  maxHoldMinutes?: number;
-  reservableRatio?: number;
-  refundPercent?: number;
-  isActive?: boolean;
-}
-
-interface UserReservationRecord {
-  id: string;
-  userId: string;
-  buildingId: string;
-  buildingName: string;
-  slotCode: string;
-  plateNumber: string;
-  vehicleType: ReservationVehicleType;
-  scheduledAt: string;
-  createdAt: string;
-  status: string;
-  amountPaid: number;
-  paymentId?: string;
-  refundAmount?: number;
-  refundPercent?: number;
-}
-
-interface UserPaymentRecord {
-  id: string;
-  userId: string;
-  reservationId: string;
-  buildingId: string;
-  type: string;
-  direction: string;
-  method: string;
-  amount: number;
-  status: string;
-  note: string;
-  createdAt: string;
-}
-
-interface UserWalletTransactionRecord {
-  id: string;
-  userId: string;
-  paymentId?: string;
-  reservationId?: string;
-  type: string;
-  amount: number;
-  balanceAfter?: number;
-  description?: string;
-  createdAt: string;
-}
-
-function slotSupportsVehicle(slot: UserParkingSlotRecord, vehicleType: ReservationVehicleType) {
-  return slot.vehicleType === 'all' || slot.vehicleType === vehicleType;
-}
+import { userApi, type Building, type VehicleType, type ParkingSlot as ApiParkingSlot, type FloorAvailability } from '@/services/user';
+import {
+  cancelUserReservation,
+  createUserReservation,
+  getUserWalletBalance,
+  listParkingSlotsByBuilding,
+  listReservationPolicies,
+  listUserPayments,
+  listUserReservations,
+  listUserWalletTransactions,
+  slotSupportsVehicle,
+  type ReservationVehicleType,
+  type UserParkingSlotRecord,
+  type UserPaymentRecord,
+  type UserReservationPolicyRecord,
+  type UserReservationRecord,
+  type UserWalletTransactionRecord,
+} from '@/pages/User/mockReservationsData';
 
 interface ReservationLocationState {
   buildingId?: string;
@@ -156,10 +102,228 @@ function paymentTypeLabel(type: UserPaymentRecord['type']): string {
 }
 
 function fieldLabelClass(active: boolean): string {
-  return `mb-1.5 block font-mono text-[10px] uppercase tracking-widest ${
-    active ? 'border-l-2 border-orange-500/60 pl-2 text-slate-200' : 'text-slate-400'
-  }`;
+  return `mb-1.5 block font-mono text-[10px] uppercase tracking-widest ${active ? 'border-l-2 border-orange-500/60 pl-2 text-slate-200' : 'text-slate-400'
+    }`;
 }
+
+type TabType = 'new' | 'history';
+
+const STATUS_LABELS: Record<string, string> = {
+  pending: 'Đang chờ',
+  confirmed: 'Đã xác nhận',
+  checked_in: 'Đã check-in',
+  completed: 'Hoàn thành',
+  expired: 'Hết hạn',
+  cancelled: 'Đã hủy',
+};
+
+// ─── Reservation History Sub-Component ───────────────────────────────────────
+
+function ReservationHistoryTab() {
+  const [items, setItems] = useState<Reservation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+
+  const load = useCallback((p = 1, status = statusFilter) => {
+    setLoading(true);
+    setError(null);
+    userApi.reservations
+      .list({ page: p, limit: 10, status: status === 'all' ? undefined : status })
+      .then((res) => {
+        const raw = (res as any)?.data;
+        setItems(raw?.items ?? []);
+        setTotalPages(raw?.pagination?.totalPages ?? 1);
+        setPage(p);
+      })
+      .catch((err) => setError(err instanceof Error ? err.message : 'Tải lịch sử thất bại'))
+      .finally(() => setLoading(false));
+  }, [statusFilter]);
+
+  useEffect(() => {
+    load(1);
+  }, [load]);
+
+  const handleCancel = async (id: string) => {
+    if (!window.confirm('Bạn có chắc muốn hủy đặt chỗ này? Tiền cọc sẽ không được hoàn lại.')) return;
+    setCancellingId(id);
+    try {
+      await userApi.reservations.cancel(id);
+      setItems((prev) => prev.map((r) => (r._id === id ? { ...r, status: 'cancelled' } : r)));
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Hủy đặt chỗ thất bại');
+    } finally {
+      setCancellingId(null);
+    }
+  };
+
+  const filterTabs = [
+    { value: 'all', label: 'Tất cả' },
+    { value: 'pending', label: 'Đang chờ' },
+    { value: 'confirmed', label: 'Đã xác nhận' },
+    { value: 'checked_in', label: 'Đã check-in' },
+    { value: 'completed', label: 'Hoàn thành' },
+    { value: 'expired', label: 'Hết hạn' },
+    { value: 'cancelled', label: 'Đã hủy' },
+  ];
+
+  return (
+    <div className="space-y-4">
+      {/* Header controls */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap gap-1.5">
+          {filterTabs.map((tab) => (
+            <button
+              key={tab.value}
+              type="button"
+              onClick={() => {
+                setStatusFilter(tab.value);
+                load(1, tab.value);
+              }}
+              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${statusFilter === tab.value
+                  ? 'bg-orange-500 text-white shadow-sm'
+                  : 'border border-white/10 bg-white/5 text-slate-400 hover:text-white'
+                }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={() => load(page)}
+          className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-300 hover:text-white transition-colors"
+        >
+          <RefreshCw size={12} className={loading ? 'animate-spin' : ''} /> Làm mới
+        </button>
+      </div>
+
+      {/* Error */}
+      {error && (
+        <div className="rounded-xl border border-rose-500/25 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
+          {error}
+        </div>
+      )}
+
+      {/* List */}
+      {loading ? (
+        <div className="py-12 text-center text-sm text-slate-400">Đang tải lịch sử đặt chỗ...</div>
+      ) : items.length === 0 ? (
+        <div className="rounded-2xl border border-white/8 bg-white/5 p-10 text-center">
+          <CalendarClock size={32} className="mx-auto mb-3 text-slate-600" />
+          <p className="text-sm font-semibold text-slate-400">Bạn chưa có lịch sử đặt chỗ nào.</p>
+          <p className="mt-1 text-xs text-slate-600">Hãy tạo đặt chỗ mới để bắt đầu.</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {items.map((r) => (
+            <div
+              key={r._id}
+              className="rounded-2xl border border-white/8 bg-white/3 p-4 transition-all hover:border-orange-500/20 hover:bg-white/5"
+            >
+              {/* Top row */}
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-mono text-sm font-black text-orange-300">{r.code}</span>
+                    <span className="rounded border border-amber-500/25 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-bold text-amber-300">
+                      {r.plateNumber}
+                    </span>
+                  </div>
+                  <p className="mt-0.5 text-xs text-slate-400">{r.building?.name ?? '—'}</p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <StatusBadge status={r.status} />
+                  {(r.status === 'pending' || r.status === 'confirmed') && (
+                    <button
+                      type="button"
+                      disabled={cancellingId === r._id}
+                      onClick={() => handleCancel(r._id)}
+                      className="flex items-center gap-1 rounded-lg border border-rose-500/30 bg-rose-500/10 px-2 py-1 text-[10px] font-bold text-rose-400 hover:bg-rose-500/20 transition-colors disabled:opacity-50"
+                    >
+                      <XCircle size={10} />
+                      {cancellingId === r._id ? 'Đang hủy...' : 'Hủy'}
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Detail row */}
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {/* Slot */}
+                <div>
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Slot</p>
+                  <p className="mt-1 text-xs text-slate-300">{r.slot?.code ?? '—'}</p>
+                </div>
+
+                {/* Start time */}
+                <div>
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Bắt đầu</p>
+                  <p className="mt-1 text-xs text-slate-300">{fmtTime(r.startTime)}</p>
+                </div>
+
+                {/* End time */}
+                <div>
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Kết thúc</p>
+                  <p className="mt-1 text-xs text-slate-300">{fmtTime(r.endTime)}</p>
+                </div>
+
+                {/* Fee */}
+                <div>
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Phí cọc</p>
+                  <p className={`mt-1 text-xs font-bold ${r.fee ? 'text-emerald-400' : 'text-slate-500'}`}>
+                    {fmtMoney(r.fee)}
+                  </p>
+                </div>
+              </div>
+
+              {/* Footer */}
+              {r.createdAt && (
+                <div className="mt-2 flex items-center gap-2 border-t border-white/5 pt-2">
+                  <Clock size={10} className="text-slate-600" />
+                  <span className="text-[10px] text-slate-500">Tạo lúc: {fmtTime(r.createdAt)}</span>
+                  {r.vehicleType && (
+                    <span className="ml-auto text-[10px] text-slate-500">{(r.vehicleType as any)?.name ?? ''}</span>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 pt-2">
+          <button
+            type="button"
+            disabled={page <= 1 || loading}
+            onClick={() => load(page - 1)}
+            className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-300 hover:text-white disabled:opacity-40 transition-colors"
+          >
+            ← Trước
+          </button>
+          <span className="text-xs text-slate-400">
+            Trang {page} / {totalPages}
+          </span>
+          <button
+            type="button"
+            disabled={page >= totalPages || loading}
+            onClick={() => load(page + 1)}
+            className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-300 hover:text-white disabled:opacity-40 transition-colors"
+          >
+            Sau →
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Main ReservationsPage ────────────────────────────────────────────────────
 
 export default function ReservationsPage() {
   const navigate = useNavigate();
@@ -233,7 +397,6 @@ export default function ReservationsPage() {
     };
   }, [state?.buildingId]);
 
-
   useEffect(() => {
     let ignore = false;
 
@@ -244,48 +407,18 @@ export default function ReservationsPage() {
       }
 
       setIsLoadingUserData(true);
-      try {
-        const [resRes, walletRes, walletTxRes] = await Promise.all([
-          userApi.reservations.list({}),
-          userApi.wallet.get(),
-          userApi.wallet.transactions({ limit: 50 }),
-        ]);
-        if (ignore) return;
+      const [reservationRows, paymentRows, walletTxRows, balance] = await Promise.all([
+        listUserReservations(user.userId),
+        listUserPayments(user.userId),
+        listUserWalletTransactions(user.userId),
+        getUserWalletBalance(user.userId),
+      ]);
 
-        const reservationRows: UserReservationRecord[] = (resRes.data.items || []).map((r: Reservation) => ({
-          id: r._id,
-          userId: user.userId,
-          buildingId: r.building?._id || '',
-          buildingName: r.building?.name || '',
-          slotCode: r.slot?.code || (r.code || ''),
-          plateNumber: r.plateNumber,
-          vehicleType: (r.vehicleType?.code === 'car' ? 'car' : 'motorcycle') as ReservationVehicleType,
-          scheduledAt: r.startTime,
-          createdAt: r.createdAt || new Date().toISOString(),
-          status: r.status,
-          amountPaid: r.fee || 0,
-        }));
-
-        const balance = walletRes.data.wallet?.balance ?? 0;
-        const walletTxRows: UserWalletTransactionRecord[] = (walletTxRes.data.items || []).map((t: any) => ({
-          id: t._id || t.id,
-          userId: t.userId,
-          paymentId: t.paymentId,
-          reservationId: t.reservationId,
-          type: t.type,
-          amount: t.amount,
-          balanceAfter: t.balanceAfter,
-          description: t.description,
-          createdAt: t.createdAt,
-        }));
-
-        setReservations(reservationRows);
-        setPayments([]);
-        setWalletTransactions(walletTxRows);
-        setWalletBalance(balance);
-      } catch (err) {
-        console.error('Failed to load user data via API', err);
-      }
+      if (ignore) return;
+      setReservations(reservationRows);
+      setPayments(paymentRows);
+      setWalletTransactions(walletTxRows);
+      setWalletBalance(balance);
       setIsLoadingUserData(false);
     }
 
@@ -336,7 +469,14 @@ export default function ReservationsPage() {
         setSelectedFloorIdModal('');
       } catch (err) {
         // fallback: keep existing mock behavior if API fails
-        console.error('Failed to load slots/floors', err);
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-var-requires
+          const { listParkingSlotsByBuilding } = await import('@/pages/User/mockReservationsData');
+          const slotRows = await listParkingSlotsByBuilding(selectedBuildingId);
+          if (!ignore) setSlots(slotRows);
+        } catch (e) {
+          console.error('Failed to load slots/floors', err);
+        }
       } finally {
         if (!ignore) setIsLoadingSlots(false);
       }
@@ -369,10 +509,9 @@ export default function ReservationsPage() {
             floorCode = String((s.floor as any).code);
           } else if (s.floor && typeof s.floor === 'string') {
             // try to find from floorsData
-            const floorId = s.floor;
-            const found = floorsData.find((f) => f._id === floorId || String(f._id) === floorId);
+            const found = floorsData.find((f) => f._id === s.floor || String(f._id) === String(s.floor));
             if (found) floorCode = found.code ?? found.name ?? (typeof found.levelNumber === 'number' ? String(found.levelNumber) : undefined);
-            else floorCode = floorId;
+            else floorCode = String(s.floor);
           } else {
             // fallback: use selectedFloorInfo if available
             floorCode = selectedFloorInfo?.code ?? selectedFloorInfo?.name ?? undefined;
@@ -383,9 +522,8 @@ export default function ReservationsPage() {
           if (s.vehicleType && typeof s.vehicleType === 'object' && 'code' in (s.vehicleType as any)) {
             rawCode = String((s.vehicleType as any).code);
           } else if (s.vehicleType && typeof s.vehicleType === 'string') {
-            const vehicleTypeId = s.vehicleType;
-            const found = vehicleTypesForBuilding.find((v) => v._id === vehicleTypeId || String(v._id) === vehicleTypeId);
-            rawCode = found ? String(found.code) : vehicleTypeId;
+            const found = vehicleTypesForBuilding.find((v) => v._id === s.vehicleType || String(v._id) === String(s.vehicleType));
+            rawCode = found ? String(found.code) : String(s.vehicleType);
           }
           const vt = normalizeVehicleTypeCode(rawCode);
 
@@ -427,14 +565,7 @@ export default function ReservationsPage() {
   );
 
   const reservationPolicy = useMemo(
-    () =>
-      policyByBuildingId.get(selectedBuildingId) || {
-        minAdvanceMinutes: 15,
-        maxAdvanceHours: 72,
-        maxHoldMinutes: 30,
-        refundPercent: 0,
-        isActive: true,
-      },
+    () => policyByBuildingId.get(selectedBuildingId) || null,
     [policyByBuildingId, selectedBuildingId],
   );
 
@@ -575,47 +706,17 @@ export default function ReservationsPage() {
   const activeFieldGlow = 'shadow-[0_0_0_1px_rgba(249,115,22,0.18),0_0_24px_rgba(249,115,22,0.08)]';
 
   const refreshUserData = async () => {
-    try {
-      const [resRes, walletRes, walletTxRes] = await Promise.all([
-        userApi.reservations.list({}),
-        userApi.wallet.get(),
-        userApi.wallet.transactions({ limit: 50 }),
-      ]);
+    const [reservationRows, paymentRows, walletTxRows, balance] = await Promise.all([
+      listUserReservations(user.userId),
+      listUserPayments(user.userId),
+      listUserWalletTransactions(user.userId),
+      getUserWalletBalance(user.userId),
+    ]);
 
-      const reservationRows: UserReservationRecord[] = (resRes.data.items || []).map((r: Reservation) => ({
-        id: r._id,
-        userId: user.userId,
-        buildingId: r.building?._id || '',
-        buildingName: r.building?.name || '',
-        slotCode: r.slot?.code || (r.code || ''),
-        plateNumber: r.plateNumber,
-        vehicleType: (r.vehicleType?.code === 'car' ? 'car' : 'motorcycle') as ReservationVehicleType,
-        scheduledAt: r.startTime,
-        createdAt: r.createdAt || new Date().toISOString(),
-        status: r.status,
-        amountPaid: r.fee || 0,
-      }));
-
-      const balance = walletRes.data.wallet?.balance ?? 0;
-      const walletTxRows: UserWalletTransactionRecord[] = (walletTxRes.data.items || []).map((t: any) => ({
-        id: t._id || t.id,
-        userId: t.userId,
-        paymentId: t.paymentId,
-        reservationId: t.reservationId,
-        type: t.type,
-        amount: t.amount,
-        balanceAfter: t.balanceAfter,
-        description: t.description,
-        createdAt: t.createdAt,
-      }));
-
-      setReservations(reservationRows);
-      setPayments([]);
-      setWalletTransactions(walletTxRows);
-      setWalletBalance(balance);
-    } catch (err) {
-      console.error('Failed to refresh user data via API', err);
-    }
+    setReservations(reservationRows);
+    setPayments(paymentRows);
+    setWalletTransactions(walletTxRows);
+    setWalletBalance(balance);
   };
 
   const handleSlotClick = (slotCode: string) => {
@@ -696,25 +797,19 @@ export default function ReservationsPage() {
 
     setIsSubmitting(true);
     try {
-      const slotId = slots.find((s) => s.code === selectedSlot)?._id;
-      const start = new Date(scheduledAt);
-      const holdMinutes = reservationPolicy?.maxHoldMinutes ?? 30;
-      const end = new Date(start.getTime() + holdMinutes * 60_000);
-      const body: any = {
-        plateNumber: selectedPlate,
+      const created = await createUserReservation({
+        userId: user.userId,
         buildingId: selectedBuilding.building._id,
-        startTime: start.toISOString(),
-        endTime: end.toISOString(),
-      };
-      if (slotId) body.slotId = slotId;
-      if (selectedVehicleType) body.vehicleType = selectedVehicleType;
-
-      const res = await userApi.reservations.create(body);
-      const createdReservation: Reservation = res.data.reservation;
+        buildingName: selectedBuilding.building.name,
+        slotCode: selectedSlot,
+        plateNumber: selectedPlate,
+        vehicleType: selectedVehicleType,
+        scheduledAt,
+      });
 
       await refreshUserData();
       setBookingSuccess(
-        `Đặt chỗ thành công: ${selectedBuilding.building.name} - ${selectedSlot} - ${selectedPlate}.`,
+        `Đặt chỗ thành công: ${selectedBuilding.building.name} - ${selectedSlot} - ${selectedPlate}. Đã giữ ${formatMoney(created.amountPaid)} trong ví.`,
       );
       setSelectedSlot(null);
       setSelectedPlate('');
@@ -730,11 +825,11 @@ export default function ReservationsPage() {
     setBookingSuccess(null);
 
     try {
-      const res = await userApi.reservations.cancel(reservationId);
-      // backend returns reservation detail
+      const result = await cancelUserReservation(reservationId, user.userId);
       await refreshUserData();
-      const cancelled = res.data.reservation;
-      setBookingSuccess(`Đã hủy lượt đặt. Trạng thái: ${cancelled.status}`);
+      setBookingSuccess(
+        `Đã hủy lượt đặt ${result.reservation.slotCode}. Hoàn ${result.refundPercent}%: ${formatMoney(result.refundAmount)}.`,
+      );
     } catch (error) {
       setBookingError(error instanceof Error ? error.message : 'Không thể hủy lượt đặt.');
     }
@@ -752,18 +847,16 @@ export default function ReservationsPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: idx * 0.05, duration: 0.35 }}
               whileHover={{ scale: 1.01, borderColor: entry.status === 'active' ? 'rgba(249,115,22,0.25)' : 'rgba(255,255,255,0.1)' }}
-              className={`rounded-2xl border p-4 transition-all duration-300 ${
-                entry.status === 'active'
+              className={`rounded-2xl border p-4 transition-all duration-300 ${entry.status === 'active'
                   ? 'border-orange-500/15 bg-slate-950 shadow-[0_0_10px_rgba(249,115,22,0.03)]'
                   : 'border-white/5 bg-slate-950/50 opacity-70'
-              }`}
+                }`}
             >
               <div className="flex items-center justify-between gap-3">
                 <p className="font-mono text-xs font-black text-orange-400">{entry.id}</p>
                 <span
-                  className={`rounded px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider ${
-                    entry.status === 'active' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-500'
-                  }`}
+                  className={`rounded px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider ${entry.status === 'active' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-500'
+                    }`}
                 >
                   {entry.status === 'active' ? 'Đang giữ' : entry.status === 'cancelled' ? 'Đã hủy' : 'Hoàn tất'}
                 </span>
@@ -842,27 +935,27 @@ export default function ReservationsPage() {
             Trang chủ
           </motion.button>
           <div className="flex flex-wrap items-center gap-2">
-          <motion.button
-            type="button"
-            onClick={() => navigate('/long-term-subscriptions')}
-            whileHover={{ scale: 1.05, boxShadow: '0 0 15px rgba(16,185,129,0.3)', borderColor: 'rgba(16,185,129,0.3)' }}
-            whileTap={{ scale: 0.95 }}
-            className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2.5 text-xs font-black uppercase tracking-wider text-slate-200 transition-all duration-300 hover:border-emerald-300/40 hover:bg-emerald-300/10 hover:text-emerald-200"
-          >
-            <CalendarClock size={14} />
-            Gói dài hạn
-          </motion.button>
-          <motion.button
-            type="button"
-            onClick={() => navigate('/profile')}
-            whileHover={{ scale: 1.05, boxShadow: '0 0 15px rgba(249,115,22,0.3)', borderColor: 'rgba(249,115,22,0.3)' }}
-            whileTap={{ scale: 0.95 }}
-            className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2.5 text-xs font-black uppercase tracking-wider text-slate-200 transition-all duration-300 hover:border-orange-300/40 hover:bg-orange-300/10 hover:text-orange-200"
-          >
-            <User size={14} />
-            Hồ sơ
-          </motion.button>
-        </div>
+            <motion.button
+              type="button"
+              onClick={() => navigate('/long-term-subscriptions')}
+              whileHover={{ scale: 1.05, boxShadow: '0 0 15px rgba(16,185,129,0.3)', borderColor: 'rgba(16,185,129,0.3)' }}
+              whileTap={{ scale: 0.95 }}
+              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2.5 text-xs font-black uppercase tracking-wider text-slate-200 transition-all duration-300 hover:border-emerald-300/40 hover:bg-emerald-300/10 hover:text-emerald-200"
+            >
+              <CalendarClock size={14} />
+              Gói dài hạn
+            </motion.button>
+            <motion.button
+              type="button"
+              onClick={() => navigate('/profile')}
+              whileHover={{ scale: 1.05, boxShadow: '0 0 15px rgba(249,115,22,0.3)', borderColor: 'rgba(249,115,22,0.3)' }}
+              whileTap={{ scale: 0.95 }}
+              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2.5 text-xs font-black uppercase tracking-wider text-slate-200 transition-all duration-300 hover:border-orange-300/40 hover:bg-orange-300/10 hover:text-orange-200"
+            >
+              <User size={14} />
+              Hồ sơ
+            </motion.button>
+          </div>
         </motion.div>
 
         <motion.div
@@ -922,65 +1015,64 @@ export default function ReservationsPage() {
             </div>
           </div>
         ) : (
-        <div className="flex justify-center">
-          <div className="w-full max-w-6xl">
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:gap-6">
-              <div className="lg:col-span-7 xl:col-span-8">
-                <form
-                  onSubmit={handleConfirmBooking}
-                  className="rounded-[28px] border border-slate-800/90 bg-slate-900/80 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.28)] sm:p-6"
-                >
-                  <div className="mb-5 flex flex-col gap-4">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                      <div className="flex items-start gap-3">
-                        <div className="rounded-2xl border border-orange-300/20 bg-orange-300/10 p-3 text-orange-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
-                          <CalendarClock size={20} />
+          <div className="flex justify-center">
+            <div className="w-full max-w-6xl">
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:gap-6">
+                <div className="lg:col-span-7 xl:col-span-8">
+                  <form
+                    onSubmit={handleConfirmBooking}
+                    className="rounded-[28px] border border-slate-800/90 bg-slate-900/80 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.28)] sm:p-6"
+                  >
+                    <div className="mb-5 flex flex-col gap-4">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="flex items-start gap-3">
+                          <div className="rounded-2xl border border-orange-300/20 bg-orange-300/10 p-3 text-orange-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+                            <CalendarClock size={20} />
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-orange-300">Đặt chỗ nhanh</p>
+                            <h2 className="mt-1 text-xl font-black text-white">Chọn đúng ô, đúng xe, đúng biển số</h2>
+                            <p className="mt-1 text-xs font-semibold text-slate-400">
+                              Hoàn tất theo 4 bước, phần chọn ô mở riêng trong popup để màn hình không bị chật.
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-orange-300">Đặt chỗ nhanh</p>
-                          <h2 className="mt-1 text-xl font-black text-white">Chọn đúng ô, đúng xe, đúng biển số</h2>
-                          <p className="mt-1 text-xs font-semibold text-slate-400">
-                            Hoàn tất theo 4 bước, phần chọn ô mở riêng trong popup để màn hình không bị chật.
-                          </p>
-                        </div>
-                      </div>
-                      <motion.button
-                        type="button"
-                        onClick={() => setShowHistoryPanel((visible) => !visible)}
-                        whileHover={{ scale: 1.03 }}
-                        whileTap={{ scale: 0.97 }}
-                        className="inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-bold uppercase tracking-wider text-slate-300 transition-all duration-300 hover:border-cyan-300/30 hover:bg-cyan-300/10 hover:text-cyan-200"
-                      >
-                        <History size={14} />
-                        <span>{showHistoryPanel ? 'Ẩn lịch sử' : 'Lịch sử'} ({isLoadingUserData ? '...' : reservations.length})</span>
-                      </motion.button>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                      {[
-                        { step: 1, label: 'Thông tin', done: Boolean(selectedBuildingId && selectedVehicleType && scheduledAt) },
-                        { step: 2, label: 'Ô đỗ', done: Boolean(selectedSlot) },
-                        { step: 3, label: 'Biển số', done: Boolean(selectedPlate) },
-                        { step: 4, label: 'Xác nhận', done: canSubmit },
-                      ].map((item) => (
-                        <div
-                          key={item.step}
-                          className={`rounded-full border px-3 py-2 transition-all duration-300 ${
-                            item.done
-                              ? 'border-emerald-300/25 bg-emerald-300/10 text-emerald-200'
-                              : bookingStep === item.step
-                                ? item.step === 1
-                                  ? 'border-emerald-300/40 bg-emerald-300/12 text-emerald-200 shadow-[0_0_24px_rgba(52,211,153,0.14)]'
-                                  : 'border-orange-300/30 bg-orange-300/10 text-orange-200'
-                                : 'border-white/10 bg-white/[0.03] text-slate-500'
-                          }`}
+                        <motion.button
+                          type="button"
+                          onClick={() => setShowHistoryPanel((visible) => !visible)}
+                          whileHover={{ scale: 1.03 }}
+                          whileTap={{ scale: 0.97 }}
+                          className="inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-bold uppercase tracking-wider text-slate-300 transition-all duration-300 hover:border-cyan-300/30 hover:bg-cyan-300/10 hover:text-cyan-200"
                         >
-                          <p className="text-[10px] font-black uppercase tracking-wider">Bước {item.step}</p>
-                          <p className="mt-0.5 text-xs font-black">{item.label}</p>
-                        </div>
-                      ))}
+                          <History size={14} />
+                          <span>{showHistoryPanel ? 'Ẩn lịch sử' : 'Lịch sử'} ({isLoadingUserData ? '...' : reservations.length})</span>
+                        </motion.button>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                        {[
+                          { step: 1, label: 'Thông tin', done: Boolean(selectedBuildingId && selectedVehicleType && scheduledAt) },
+                          { step: 2, label: 'Ô đỗ', done: Boolean(selectedSlot) },
+                          { step: 3, label: 'Biển số', done: Boolean(selectedPlate) },
+                          { step: 4, label: 'Xác nhận', done: canSubmit },
+                        ].map((item) => (
+                          <div
+                            key={item.step}
+                            className={`rounded-full border px-3 py-2 transition-all duration-300 ${item.done
+                                ? 'border-emerald-300/25 bg-emerald-300/10 text-emerald-200'
+                                : bookingStep === item.step
+                                  ? item.step === 1
+                                    ? 'border-emerald-300/40 bg-emerald-300/12 text-emerald-200 shadow-[0_0_24px_rgba(52,211,153,0.14)]'
+                                    : 'border-orange-300/30 bg-orange-300/10 text-orange-200'
+                                  : 'border-white/10 bg-white/[0.03] text-slate-500'
+                              }`}
+                          >
+                            <p className="text-[10px] font-black uppercase tracking-wider">Bước {item.step}</p>
+                            <p className="mt-0.5 text-xs font-black">{item.label}</p>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
 
                   <div className="rounded-3xl border border-slate-800 bg-[#0b111d] p-4 sm:p-5">
                     <AnimatePresence mode="wait">
@@ -1004,414 +1096,413 @@ export default function ReservationsPage() {
                               </span>
                             </div>
 
-                            <div className="space-y-4">
-                              <div className="block">
-                                <span className={fieldLabelClass(true)}>Tòa nhà</span>
-                                <CustomSelect
-                                  value={selectedBuildingId}
-                                  onChange={(val) => handleBuildingChange(val)}
-                                  options={[
-                                    { value: '', label: '-- Chọn tòa nhà --' },
-                                    ...rows.map((row) => ({
-                                      value: row.building._id,
-                                      label: row.building.name,
-                                    })),
-                                  ]}
-                                  placeholder="-- Chọn tòa nhà --"
-                                />
-                              </div>
+                              <div className="space-y-4">
+                                <div className="block">
+                                  <span className={fieldLabelClass(true)}>Tòa nhà</span>
+                                  <CustomSelect
+                                    value={selectedBuildingId}
+                                    onChange={(val) => handleBuildingChange(val)}
+                                    options={[
+                                      { value: '', label: '-- Chọn tòa nhà --' },
+                                      ...rows.map((row) => ({
+                                        value: row.building._id,
+                                        label: row.building.name,
+                                      })),
+                                    ]}
+                                    placeholder="-- Chọn tòa nhà --"
+                                  />
+                                </div>
 
-                              <div className="block">
-                                <span className={fieldLabelClass(true)}>Loại xe</span>
-                                <CustomSelect
-                                  value={selectedVehicleType}
-                                  onChange={(val) => {
-                                    const next = val as ReservationVehicleType | '';
-                                    setSelectedVehicleType(next);
-                                    setSelectedSlot(null);
-                                    setSelectedPlate('');
-                                    setCurrentStep(1);
-                                  }}
-                                  options={[
-                                    { value: '', label: '-- Chọn loại xe --' },
-                                    { value: 'car', label: 'Ô tô' },
-                                    { value: 'motorcycle', label: 'Xe máy' },
-                                  ]}
-                                  placeholder="-- Chọn loại xe --"
-                                />
-                              </div>
+                                <div className="block">
+                                  <span className={fieldLabelClass(true)}>Loại xe</span>
+                                  <CustomSelect
+                                    value={selectedVehicleType}
+                                    onChange={(val) => {
+                                      const next = val as ReservationVehicleType | '';
+                                      setSelectedVehicleType(next);
+                                      setSelectedSlot(null);
+                                      setSelectedPlate('');
+                                      setCurrentStep(1);
+                                    }}
+                                    options={[
+                                      { value: '', label: '-- Chọn loại xe --' },
+                                      { value: 'car', label: 'Ô tô' },
+                                      { value: 'motorcycle', label: 'Xe máy' },
+                                    ]}
+                                    placeholder="-- Chọn loại xe --"
+                                  />
+                                </div>
 
-                              <label className="block">
-                                <span className={fieldLabelClass(true)}>Thời gian đặt chỗ</span>
-                                <input
-                                  type="datetime-local"
-                                  value={scheduledAt}
-                                  min={minDateTime}
-                                  max={maxDateTime}
-                                  onChange={(event) => {
-                                    setScheduledAt(event.target.value);
-                                    setSelectedSlot(null);
-                                    setCurrentStep(1);
-                                  }}
-                                  className="mt-1 h-12 w-full rounded-2xl border border-slate-700/80 bg-[#070b12] px-4 text-sm font-semibold text-white outline-none transition-all duration-300 focus:border-orange-300/60 focus:ring-4 focus:ring-orange-300/10 font-mono"
-                                />
-                              </label>
-                            </div>
-                          </div>
-
-                          <motion.button
-                            type="button"
-                            onClick={() => setCurrentStep(2)}
-                            disabled={!canOpenBookingForm}
-                            whileHover={canOpenBookingForm ? { scale: 1.01 } : {}}
-                            whileTap={canOpenBookingForm ? { scale: 0.99 } : {}}
-                            className="min-h-12 w-full rounded-2xl border border-emerald-300/20 bg-gradient-to-r from-emerald-400 to-cyan-300 px-4 text-sm font-black uppercase tracking-wider text-slate-950 shadow-[0_0_24px_rgba(52,211,153,0.28)] transition-all duration-300 disabled:cursor-not-allowed disabled:border-slate-700 disabled:bg-slate-800 disabled:text-slate-500 disabled:shadow-none"
-                          >
-                            Tiếp tục chọn ô đỗ
-                          </motion.button>
-                        </motion.div>
-                      ) : null}
-
-                      {currentStep === 2 ? (
-                        <motion.div
-                          key="step-2"
-                          initial={{ opacity: 0, y: 12 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -12 }}
-                          transition={{ duration: 0.22, ease: 'easeOut' }}
-                          className="space-y-4"
-                        >
-                          <div className="rounded-3xl border border-cyan-300/15 bg-white/[0.03] p-4">
-                            <span className={fieldLabelClass(true)}>Chọn ô đỗ</span>
-                            <div className="mt-2 grid items-stretch gap-3 sm:grid-cols-[minmax(0,1fr)_190px]">
-                              <motion.button
-                                type="button"
-                                onClick={() => {
-                                  if (!selectedBuildingId) {
-                                    setBookingError('Vui lòng chọn tòa nhà trước.');
-                                    setCurrentStep(1);
-                                    return;
-                                  }
-                                  if (!selectedVehicleType) {
-                                    setBookingError('Vui lòng chọn loại xe trước.');
-                                    setCurrentStep(1);
-                                    return;
-                                  }
-                                  if (!scheduledAt) {
-                                    setBookingError('Vui lòng chọn thời gian đặt chỗ trước.');
-                                    setCurrentStep(1);
-                                    return;
-                                  }
-                                  setShowSlotModal(true);
-                                }}
-                                disabled={!canOpenBookingForm || isLoadingSlots}
-                                whileHover={canOpenBookingForm ? { scale: 1.01 } : {}}
-                                whileTap={canOpenBookingForm ? { scale: 0.99 } : {}}
-                                className="flex min-h-16 items-center justify-center gap-2 rounded-2xl border border-cyan-300/20 bg-[#08131f] px-4 text-sm font-black uppercase tracking-wider text-cyan-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition-all duration-300 hover:border-cyan-300/40 hover:bg-cyan-300/10 disabled:cursor-not-allowed disabled:border-slate-700 disabled:bg-slate-800 disabled:text-slate-500"
-                              >
-                                <MapPin size={16} />
-                                Chọn ô đỗ
-                              </motion.button>
-                              <div className="rounded-2xl border border-orange-300/20 bg-[#070b12] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
-                                <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-slate-500">Console slot</p>
-                                <p className="mt-2 font-mono text-2xl font-black text-orange-300">{selectedSlot || '--'}</p>
+                                <label className="block">
+                                  <span className={fieldLabelClass(true)}>Thời gian đặt chỗ</span>
+                                  <input
+                                    type="datetime-local"
+                                    value={scheduledAt}
+                                    min={minDateTime}
+                                    max={maxDateTime}
+                                    onChange={(event) => {
+                                      setScheduledAt(event.target.value);
+                                      setSelectedSlot(null);
+                                      setCurrentStep(1);
+                                    }}
+                                    className="mt-1 h-12 w-full rounded-2xl border border-slate-700/80 bg-[#070b12] px-4 text-sm font-semibold text-white outline-none transition-all duration-300 focus:border-orange-300/60 focus:ring-4 focus:ring-orange-300/10 font-mono"
+                                  />
+                                </label>
                               </div>
                             </div>
-                          </div>
 
-                          <div className="flex gap-3">
-                            <button
-                              type="button"
-                              onClick={() => setCurrentStep(1)}
-                              className="min-h-11 flex-1 rounded-2xl border border-white/10 bg-white/[0.03] px-4 text-sm font-black uppercase tracking-wider text-slate-300 transition hover:bg-white/[0.06]"
-                            >
-                              Quay lại
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setCurrentStep(3)}
-                              disabled={!selectedSlot}
-                              className="min-h-11 flex-1 rounded-2xl border border-orange-300/20 bg-gradient-to-r from-orange-500 to-amber-400 px-4 text-sm font-black uppercase tracking-wider text-slate-950 shadow-[0_0_25px_rgba(249,115,22,0.4)] transition disabled:cursor-not-allowed disabled:border-slate-700 disabled:bg-slate-800 disabled:text-slate-500 disabled:shadow-none"
-                            >
-                              Tiếp tục chọn biển số
-                            </button>
-                          </div>
-                        </motion.div>
-                      ) : null}
-
-                      {currentStep === 3 ? (
-                        <motion.div
-                          key="step-3"
-                          initial={{ opacity: 0, y: 12 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -12 }}
-                          transition={{ duration: 0.22, ease: 'easeOut' }}
-                          className="space-y-4"
-                        >
-                          <div className={`rounded-3xl border border-orange-300/12 bg-white/[0.03] p-4 ${activeFieldGlow}`}>
-                            <span className={fieldLabelClass(true)}>Biển số xe</span>
-                            <CustomSelect
-                              value={selectedPlate}
-                              onChange={(value) => {
-                                setSelectedPlate(value);
-                                if (value) setCurrentStep(4);
-                              }}
-                              disabled={!selectedSlot || availablePlateOptions.length === 0}
-                              options={[
-                                { value: '', label: '-- Chọn biển số --' },
-                                ...plateOptions.map((plate) => {
-                                  const isBusy = activePlateNumbers.has(plate.plateNumber);
-                                  return {
-                                    value: plate.plateNumber,
-                                    label: `${plate.plateNumber} - ${vehicleTypeLabel(plate.vehicleType)} ${isBusy ? '(đang sử dụng)' : ''}`,
-                                    disabled: isBusy,
-                                  };
-                                }),
-                              ]}
-                              placeholder="-- Chọn biển số --"
-                            />
-                            <p className="mt-2 text-[11px] font-semibold text-slate-500">
-                              {selectedSlot
-                                ? selectedPlateRecord
-                                  ? `Đang dùng ${selectedPlateRecord.plateNumber} cho ô ${selectedSlot}.`
-                                  : 'Chỉ hiện biển số phù hợp với loại xe của ô đã chọn.'
-                                : 'Chọn ô đỗ trước để tải đúng danh sách biển số.'}
-                            </p>
-                          </div>
-
-                          <div className="flex gap-3">
-                            <button
+                            <motion.button
                               type="button"
                               onClick={() => setCurrentStep(2)}
-                              className="min-h-11 flex-1 rounded-2xl border border-white/10 bg-white/[0.03] px-4 text-sm font-black uppercase tracking-wider text-slate-300 transition hover:bg-white/[0.06]"
+                              disabled={!canOpenBookingForm}
+                              whileHover={canOpenBookingForm ? { scale: 1.01 } : {}}
+                              whileTap={canOpenBookingForm ? { scale: 0.99 } : {}}
+                              className="min-h-12 w-full rounded-2xl border border-emerald-300/20 bg-gradient-to-r from-emerald-400 to-cyan-300 px-4 text-sm font-black uppercase tracking-wider text-slate-950 shadow-[0_0_24px_rgba(52,211,153,0.28)] transition-all duration-300 disabled:cursor-not-allowed disabled:border-slate-700 disabled:bg-slate-800 disabled:text-slate-500 disabled:shadow-none"
                             >
-                              Quay lại
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setCurrentStep(4)}
-                              disabled={!selectedPlate}
-                              className="min-h-11 flex-1 rounded-2xl border border-orange-300/20 bg-gradient-to-r from-orange-500 to-amber-400 px-4 text-sm font-black uppercase tracking-wider text-slate-950 shadow-[0_0_25px_rgba(249,115,22,0.4)] transition disabled:cursor-not-allowed disabled:border-slate-700 disabled:bg-slate-800 disabled:text-slate-500 disabled:shadow-none"
-                            >
-                              Xem xác nhận
-                            </button>
-                          </div>
-                        </motion.div>
-                      ) : null}
-
-                      {currentStep === 4 ? (
-                        <motion.div
-                          key="step-4"
-                          initial={{ opacity: 0, y: 12 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -12 }}
-                          transition={{ duration: 0.22, ease: 'easeOut' }}
-                          className="space-y-4"
-                        >
-                          <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-4">
-                            <span className={fieldLabelClass(true)}>Xác nhận đặt chỗ</span>
-                            <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                              <div className="rounded-2xl border border-white/5 bg-[#070b12] p-3">
-                                <p className="font-mono text-[10px] uppercase tracking-widest text-slate-500">Tòa nhà</p>
-                                <p className="mt-1 text-sm font-black text-white">{selectedBuilding?.building.name || '--'}</p>
-                              </div>
-                              <div className="rounded-2xl border border-white/5 bg-[#070b12] p-3">
-                                <p className="font-mono text-[10px] uppercase tracking-widest text-slate-500">Thời gian</p>
-                                <p className="mt-1 text-sm font-black text-white">{scheduledAt ? formatDateTime(scheduledAt) : '--'}</p>
-                              </div>
-                              <div className="rounded-2xl border border-white/5 bg-[#070b12] p-3">
-                                <p className="font-mono text-[10px] uppercase tracking-widest text-slate-500">Ô đỗ</p>
-                                <p className="mt-1 font-mono text-lg font-black text-orange-300">{selectedSlot || '--'}</p>
-                              </div>
-                              <div className="rounded-2xl border border-white/5 bg-[#070b12] p-3">
-                                <p className="font-mono text-[10px] uppercase tracking-widest text-slate-500">Biển số</p>
-                                <p className="mt-1 font-mono text-lg font-black text-cyan-200">{selectedPlate || '--'}</p>
-                              </div>
-                            </div>
-                            <div className="mt-3 rounded-2xl border border-emerald-300/20 bg-emerald-300/10 px-4 py-3">
-                              <div className="flex items-center justify-between gap-3">
-                                <span className="font-mono text-[10px] uppercase tracking-widest text-emerald-100">Tiền giữ chỗ</span>
-                                <span className="font-mono text-sm font-black text-emerald-200">{holdAmount ? formatMoney(holdAmount) : '--'}</span>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="flex gap-3">
-                            <button
-                              type="button"
-                              onClick={() => setCurrentStep(3)}
-                              className="min-h-11 flex-1 rounded-2xl border border-white/10 bg-white/[0.03] px-4 text-sm font-black uppercase tracking-wider text-slate-300 transition hover:bg-white/[0.06]"
-                            >
-                              Quay lại
-                            </button>
-                            <motion.button
-                              type="submit"
-                              disabled={!canSubmit}
-                              animate={canSubmit ? { boxShadow: ['0 0 20px rgba(249,115,22,0.22)', '0 0 25px rgba(249,115,22,0.4)', '0 0 20px rgba(249,115,22,0.22)'] } : {}}
-                              transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
-                              whileHover={canSubmit ? { scale: 1.01 } : {}}
-                              whileTap={canSubmit ? { scale: 0.99 } : {}}
-                              className="min-h-11 flex-1 rounded-2xl border border-orange-300/20 bg-gradient-to-r from-orange-500 to-amber-400 px-4 text-sm font-black uppercase tracking-wider text-slate-950 shadow-[0_0_25px_rgba(249,115,22,0.4)] transition disabled:cursor-not-allowed disabled:border-slate-700 disabled:bg-slate-800 disabled:text-slate-500 disabled:shadow-none"
-                            >
-                              {isSubmitting ? 'Đang xử lý...' : 'Xác nhận đặt chỗ'}
+                              Tiếp tục chọn ô đỗ
                             </motion.button>
-                          </div>
-                        </motion.div>
-                      ) : null}
-                    </AnimatePresence>
-                  </div>
-                </form>
-              </div>
+                          </motion.div>
+                        ) : null}
 
-              <div className="lg:col-span-5 xl:col-span-4">
-                <div className="rounded-[28px] border border-slate-800/90 bg-slate-900/70 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.22)] sm:p-5 lg:sticky lg:top-6">
-                  <div className="mb-5 rounded-3xl border border-slate-800 bg-[#0b111d] p-4">
-                    <p className="text-[10px] font-black uppercase tracking-[0.22em] text-orange-200">Tóm tắt đặt chỗ</p>
-                    <div className="mt-4 space-y-3">
-                      <div className="flex items-start justify-between gap-3">
-                        <span className="text-xs font-bold text-slate-400">Tòa nhà</span>
-                        <span className="max-w-[65%] text-right text-sm font-black text-white">
-                          {selectedBuilding?.building.name || '--'}
-                        </span>
-                      </div>
-                      <div className="flex items-start justify-between gap-3">
-                        <span className="text-xs font-bold text-slate-400">Thời gian</span>
-                        <span className="text-right text-sm font-black text-white">
-                          {scheduledAt ? formatDateTime(scheduledAt) : '--'}
-                        </span>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="rounded-2xl border border-slate-800 bg-[#070b12] p-3">
-                          <p className="text-[10px] font-bold uppercase text-slate-500">Ô đỗ</p>
-                          <p className="mt-1 font-mono text-lg font-black text-orange-300">{selectedSlot || '--'}</p>
-                        </div>
-                        <div className="rounded-2xl border border-slate-800 bg-[#070b12] p-3">
-                          <p className="text-[10px] font-bold uppercase text-slate-500">Xe</p>
-                          <div className="mt-1 flex items-center gap-2 text-sm font-black text-white">
-                            {selectedVehicleType === 'motorcycle' ? (
-                              <Bike size={15} className="text-purple-300" />
-                            ) : selectedVehicleType === 'car' ? (
-                              <Car size={15} className="text-cyan-300" />
-                            ) : (
-                              <ParkingCircle size={15} className="text-slate-500" />
-                            )}
-                            <span>{selectedVehicleType ? vehicleTypeLabel(selectedVehicleType) : '--'}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="rounded-2xl border border-slate-800 bg-[#070b12] p-3">
-                        <p className="text-[10px] font-bold uppercase text-slate-500">Biển số</p>
-                        <p className="mt-1 text-sm font-black text-cyan-200">
-                          {selectedPlateRecord
-                            ? `${selectedPlateRecord.plateNumber} - ${vehicleTypeLabel(selectedPlateRecord.vehicleType)}`
-                            : '--'}
-                        </p>
-                      </div>
-                      <div className="flex items-center justify-between rounded-2xl border border-emerald-300/20 bg-emerald-300/10 p-3">
-                        <span className="text-xs font-bold text-emerald-100">Tiền giữ chỗ</span>
-                        <span className="text-sm font-black text-emerald-200">{holdAmount ? formatMoney(holdAmount) : '--'}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                      <div className="mb-4 flex items-center justify-between">
-                    <h2 className="flex items-center gap-2 text-sm font-black uppercase tracking-wider text-white">
-                      <WalletCards size={16} className="text-cyan-300" />
-                      Ví và giao dịch hoàn tiền
-                    </h2>
-                    <p className="rounded-full bg-emerald-300/10 px-3 py-1 text-xs font-black text-emerald-200">{formatMoney(walletBalance)}</p>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div className="rounded-2xl border border-white/5 bg-slate-900/40 p-4">
-                      <p className="mb-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Payments</p>
-                      {payments.length > 0 ? (
-                        <div className="space-y-0">
-                          {payments.slice(0, 4).map((payment, index) => (
-                            <div
-                              key={payment.id}
-                              className={`py-3 ${index < Math.min(payments.slice(0, 4).length, 4) - 1 ? 'border-b border-white/5' : ''}`}
-                            >
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="min-w-0">
-                                  <p className="text-sm font-black text-white">{paymentTypeLabel(payment.type)}</p>
-                                  <p className="mt-1 text-[11px] text-slate-400">{payment.note}</p>
-                                </div>
-                                <p
-                                  className={`font-mono text-sm font-black ${
-                                    payment.direction === 'credit' ? 'text-emerald-300' : 'text-rose-300'
-                                  }`}
+                        {currentStep === 2 ? (
+                          <motion.div
+                            key="step-2"
+                            initial={{ opacity: 0, y: 12 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -12 }}
+                            transition={{ duration: 0.22, ease: 'easeOut' }}
+                            className="space-y-4"
+                          >
+                            <div className="rounded-3xl border border-cyan-300/15 bg-white/[0.03] p-4">
+                              <span className={fieldLabelClass(true)}>Chọn ô đỗ</span>
+                              <div className="mt-2 grid items-stretch gap-3 sm:grid-cols-[minmax(0,1fr)_190px]">
+                                <motion.button
+                                  type="button"
+                                  onClick={() => {
+                                    if (!selectedBuildingId) {
+                                      setBookingError('Vui lòng chọn tòa nhà trước.');
+                                      setCurrentStep(1);
+                                      return;
+                                    }
+                                    if (!selectedVehicleType) {
+                                      setBookingError('Vui lòng chọn loại xe trước.');
+                                      setCurrentStep(1);
+                                      return;
+                                    }
+                                    if (!scheduledAt) {
+                                      setBookingError('Vui lòng chọn thời gian đặt chỗ trước.');
+                                      setCurrentStep(1);
+                                      return;
+                                    }
+                                    setShowSlotModal(true);
+                                  }}
+                                  disabled={!canOpenBookingForm || isLoadingSlots}
+                                  whileHover={canOpenBookingForm ? { scale: 1.01 } : {}}
+                                  whileTap={canOpenBookingForm ? { scale: 0.99 } : {}}
+                                  className="flex min-h-16 items-center justify-center gap-2 rounded-2xl border border-cyan-300/20 bg-[#08131f] px-4 text-sm font-black uppercase tracking-wider text-cyan-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition-all duration-300 hover:border-cyan-300/40 hover:bg-cyan-300/10 disabled:cursor-not-allowed disabled:border-slate-700 disabled:bg-slate-800 disabled:text-slate-500"
                                 >
-                                  {payment.direction === 'credit' ? '+' : '-'}
-                                  {formatMoney(payment.amount)}
-                                </p>
+                                  <MapPin size={16} />
+                                  Chọn ô đỗ
+                                </motion.button>
+                                <div className="rounded-2xl border border-orange-300/20 bg-[#070b12] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+                                  <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-slate-500">Console slot</p>
+                                  <p className="mt-2 font-mono text-2xl font-black text-orange-300">{selectedSlot || '--'}</p>
+                                </div>
                               </div>
                             </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-xs font-semibold text-slate-500">Chưa có giao dịch payment.</p>
-                      )}
-                    </div>
 
-                    <div className="rounded-2xl border border-white/5 bg-slate-900/40 p-4">
-                      <p className="mb-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Wallet Transactions</p>
-                      {walletTransactions.length > 0 ? (
-                        <div className="space-y-0">
-                          {walletTransactions.slice(0, 4).map((tx, index) => (
-                            <div
-                              key={tx.id}
-                              className={`py-3 ${index < Math.min(walletTransactions.slice(0, 4).length, 4) - 1 ? 'border-b border-white/5' : ''}`}
-                            >
-                              <p className="text-sm font-black text-white">{tx.description}</p>
-                              <p className="mt-1 text-[11px] text-slate-400">{formatDateTime(tx.createdAt)}</p>
-                              <p className="mt-2 font-mono text-xs font-black text-slate-300">
-                                <span className={tx.type === 'credit' ? 'text-emerald-300' : 'text-rose-300'}>
-                                  {tx.type === 'credit' ? '+' : '-'}
-                                  {formatMoney(tx.amount)}
-                                </span>
-                                <span className="text-slate-500"> • </span>
-                                <span className="text-slate-400">Số dư:</span>{' '}
-                                <span className="text-emerald-300">{formatMoney(tx.balanceAfter ?? 0)}</span>
+                            <div className="flex gap-3">
+                              <button
+                                type="button"
+                                onClick={() => setCurrentStep(1)}
+                                className="min-h-11 flex-1 rounded-2xl border border-white/10 bg-white/[0.03] px-4 text-sm font-black uppercase tracking-wider text-slate-300 transition hover:bg-white/[0.06]"
+                              >
+                                Quay lại
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setCurrentStep(3)}
+                                disabled={!selectedSlot}
+                                className="min-h-11 flex-1 rounded-2xl border border-orange-300/20 bg-gradient-to-r from-orange-500 to-amber-400 px-4 text-sm font-black uppercase tracking-wider text-slate-950 shadow-[0_0_25px_rgba(249,115,22,0.4)] transition disabled:cursor-not-allowed disabled:border-slate-700 disabled:bg-slate-800 disabled:text-slate-500 disabled:shadow-none"
+                              >
+                                Tiếp tục chọn biển số
+                              </button>
+                            </div>
+                          </motion.div>
+                        ) : null}
+
+                        {currentStep === 3 ? (
+                          <motion.div
+                            key="step-3"
+                            initial={{ opacity: 0, y: 12 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -12 }}
+                            transition={{ duration: 0.22, ease: 'easeOut' }}
+                            className="space-y-4"
+                          >
+                            <div className={`rounded-3xl border border-orange-300/12 bg-white/[0.03] p-4 ${activeFieldGlow}`}>
+                              <span className={fieldLabelClass(true)}>Biển số xe</span>
+                              <CustomSelect
+                                value={selectedPlate}
+                                onChange={(value) => {
+                                  setSelectedPlate(value);
+                                  if (value) setCurrentStep(4);
+                                }}
+                                disabled={!selectedSlot || availablePlateOptions.length === 0}
+                                options={[
+                                  { value: '', label: '-- Chọn biển số --' },
+                                  ...plateOptions.map((plate) => {
+                                    const isBusy = activePlateNumbers.has(plate.plateNumber);
+                                    return {
+                                      value: plate.plateNumber,
+                                      label: `${plate.plateNumber} - ${vehicleTypeLabel(plate.vehicleType)} ${isBusy ? '(đang sử dụng)' : ''}`,
+                                      disabled: isBusy,
+                                    };
+                                  }),
+                                ]}
+                                placeholder="-- Chọn biển số --"
+                              />
+                              <p className="mt-2 text-[11px] font-semibold text-slate-500">
+                                {selectedSlot
+                                  ? selectedPlateRecord
+                                    ? `Đang dùng ${selectedPlateRecord.plateNumber} cho ô ${selectedSlot}.`
+                                    : 'Chỉ hiện biển số phù hợp với loại xe của ô đã chọn.'
+                                  : 'Chọn ô đỗ trước để tải đúng danh sách biển số.'}
                               </p>
                             </div>
-                          ))}
+
+                            <div className="flex gap-3">
+                              <button
+                                type="button"
+                                onClick={() => setCurrentStep(2)}
+                                className="min-h-11 flex-1 rounded-2xl border border-white/10 bg-white/[0.03] px-4 text-sm font-black uppercase tracking-wider text-slate-300 transition hover:bg-white/[0.06]"
+                              >
+                                Quay lại
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setCurrentStep(4)}
+                                disabled={!selectedPlate}
+                                className="min-h-11 flex-1 rounded-2xl border border-orange-300/20 bg-gradient-to-r from-orange-500 to-amber-400 px-4 text-sm font-black uppercase tracking-wider text-slate-950 shadow-[0_0_25px_rgba(249,115,22,0.4)] transition disabled:cursor-not-allowed disabled:border-slate-700 disabled:bg-slate-800 disabled:text-slate-500 disabled:shadow-none"
+                              >
+                                Xem xác nhận
+                              </button>
+                            </div>
+                          </motion.div>
+                        ) : null}
+
+                        {currentStep === 4 ? (
+                          <motion.div
+                            key="step-4"
+                            initial={{ opacity: 0, y: 12 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -12 }}
+                            transition={{ duration: 0.22, ease: 'easeOut' }}
+                            className="space-y-4"
+                          >
+                            <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-4">
+                              <span className={fieldLabelClass(true)}>Xác nhận đặt chỗ</span>
+                              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                                <div className="rounded-2xl border border-white/5 bg-[#070b12] p-3">
+                                  <p className="font-mono text-[10px] uppercase tracking-widest text-slate-500">Tòa nhà</p>
+                                  <p className="mt-1 text-sm font-black text-white">{selectedBuilding?.building.name || '--'}</p>
+                                </div>
+                                <div className="rounded-2xl border border-white/5 bg-[#070b12] p-3">
+                                  <p className="font-mono text-[10px] uppercase tracking-widest text-slate-500">Thời gian</p>
+                                  <p className="mt-1 text-sm font-black text-white">{scheduledAt ? formatDateTime(scheduledAt) : '--'}</p>
+                                </div>
+                                <div className="rounded-2xl border border-white/5 bg-[#070b12] p-3">
+                                  <p className="font-mono text-[10px] uppercase tracking-widest text-slate-500">Ô đỗ</p>
+                                  <p className="mt-1 font-mono text-lg font-black text-orange-300">{selectedSlot || '--'}</p>
+                                </div>
+                                <div className="rounded-2xl border border-white/5 bg-[#070b12] p-3">
+                                  <p className="font-mono text-[10px] uppercase tracking-widest text-slate-500">Biển số</p>
+                                  <p className="mt-1 font-mono text-lg font-black text-cyan-200">{selectedPlate || '--'}</p>
+                                </div>
+                              </div>
+                              <div className="mt-3 rounded-2xl border border-emerald-300/20 bg-emerald-300/10 px-4 py-3">
+                                <div className="flex items-center justify-between gap-3">
+                                  <span className="font-mono text-[10px] uppercase tracking-widest text-emerald-100">Tiền giữ chỗ</span>
+                                  <span className="font-mono text-sm font-black text-emerald-200">{holdAmount ? formatMoney(holdAmount) : '--'}</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex gap-3">
+                              <button
+                                type="button"
+                                onClick={() => setCurrentStep(3)}
+                                className="min-h-11 flex-1 rounded-2xl border border-white/10 bg-white/[0.03] px-4 text-sm font-black uppercase tracking-wider text-slate-300 transition hover:bg-white/[0.06]"
+                              >
+                                Quay lại
+                              </button>
+                              <motion.button
+                                type="submit"
+                                disabled={!canSubmit}
+                                animate={canSubmit ? { boxShadow: ['0 0 20px rgba(249,115,22,0.22)', '0 0 25px rgba(249,115,22,0.4)', '0 0 20px rgba(249,115,22,0.22)'] } : {}}
+                                transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
+                                whileHover={canSubmit ? { scale: 1.01 } : {}}
+                                whileTap={canSubmit ? { scale: 0.99 } : {}}
+                                className="min-h-11 flex-1 rounded-2xl border border-orange-300/20 bg-gradient-to-r from-orange-500 to-amber-400 px-4 text-sm font-black uppercase tracking-wider text-slate-950 shadow-[0_0_25px_rgba(249,115,22,0.4)] transition disabled:cursor-not-allowed disabled:border-slate-700 disabled:bg-slate-800 disabled:text-slate-500 disabled:shadow-none"
+                              >
+                                {isSubmitting ? 'Đang xử lý...' : 'Xác nhận đặt chỗ'}
+                              </motion.button>
+                            </div>
+                          </motion.div>
+                        ) : null}
+                      </AnimatePresence>
+                    </div>
+                  </form>
+                </div>
+
+                <div className="lg:col-span-5 xl:col-span-4">
+                  <div className="rounded-[28px] border border-slate-800/90 bg-slate-900/70 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.22)] sm:p-5 lg:sticky lg:top-6">
+                    <div className="mb-5 rounded-3xl border border-slate-800 bg-[#0b111d] p-4">
+                      <p className="text-[10px] font-black uppercase tracking-[0.22em] text-orange-200">Tóm tắt đặt chỗ</p>
+                      <div className="mt-4 space-y-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <span className="text-xs font-bold text-slate-400">Tòa nhà</span>
+                          <span className="max-w-[65%] text-right text-sm font-black text-white">
+                            {selectedBuilding?.building.name || '--'}
+                          </span>
                         </div>
-                      ) : (
-                        <p className="text-xs font-semibold text-slate-500">Chưa có giao dịch ví.</p>
-                      )}
+                        <div className="flex items-start justify-between gap-3">
+                          <span className="text-xs font-bold text-slate-400">Thời gian</span>
+                          <span className="text-right text-sm font-black text-white">
+                            {scheduledAt ? formatDateTime(scheduledAt) : '--'}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="rounded-2xl border border-slate-800 bg-[#070b12] p-3">
+                            <p className="text-[10px] font-bold uppercase text-slate-500">Ô đỗ</p>
+                            <p className="mt-1 font-mono text-lg font-black text-orange-300">{selectedSlot || '--'}</p>
+                          </div>
+                          <div className="rounded-2xl border border-slate-800 bg-[#070b12] p-3">
+                            <p className="text-[10px] font-bold uppercase text-slate-500">Xe</p>
+                            <div className="mt-1 flex items-center gap-2 text-sm font-black text-white">
+                              {selectedVehicleType === 'motorcycle' ? (
+                                <Bike size={15} className="text-purple-300" />
+                              ) : selectedVehicleType === 'car' ? (
+                                <Car size={15} className="text-cyan-300" />
+                              ) : (
+                                <ParkingCircle size={15} className="text-slate-500" />
+                              )}
+                              <span>{selectedVehicleType ? vehicleTypeLabel(selectedVehicleType) : '--'}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="rounded-2xl border border-slate-800 bg-[#070b12] p-3">
+                          <p className="text-[10px] font-bold uppercase text-slate-500">Biển số</p>
+                          <p className="mt-1 text-sm font-black text-cyan-200">
+                            {selectedPlateRecord
+                              ? `${selectedPlateRecord.plateNumber} - ${vehicleTypeLabel(selectedPlateRecord.vehicleType)}`
+                              : '--'}
+                          </p>
+                        </div>
+                        <div className="flex items-center justify-between rounded-2xl border border-emerald-300/20 bg-emerald-300/10 p-3">
+                          <span className="text-xs font-bold text-emerald-100">Tiền giữ chỗ</span>
+                          <span className="text-sm font-black text-emerald-200">{holdAmount ? formatMoney(holdAmount) : '--'}</span>
+                        </div>
+                      </div>
                     </div>
 
-                    {showHistoryPanel ? (
-                      <div className="rounded-3xl border border-cyan-300/20 bg-slate-950/80 p-4 shadow-[inset_0_0_24px_rgba(16,185,129,0.12)]">
-                        <div className="mb-4 flex items-center justify-between gap-3">
-                          <div>
-                            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-cyan-200">Lịch sử đặt chỗ</p>
-                            <p className="mt-1 text-sm font-semibold text-slate-400">Các lượt đặt chỗ gần nhất và trạng thái hiện tại.</p>
+                    <div className="mb-4 flex items-center justify-between">
+                      <h2 className="flex items-center gap-2 text-sm font-black uppercase tracking-wider text-white">
+                        <WalletCards size={16} className="text-cyan-300" />
+                        Ví và giao dịch hoàn tiền
+                      </h2>
+                      <p className="rounded-full bg-emerald-300/10 px-3 py-1 text-xs font-black text-emerald-200">{formatMoney(walletBalance)}</p>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="rounded-2xl border border-white/5 bg-slate-900/40 p-4">
+                        <p className="mb-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Payments</p>
+                        {payments.length > 0 ? (
+                          <div className="space-y-0">
+                            {payments.slice(0, 4).map((payment, index) => (
+                              <div
+                                key={payment.id}
+                                className={`py-3 ${index < Math.min(payments.slice(0, 4).length, 4) - 1 ? 'border-b border-white/5' : ''}`}
+                              >
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="min-w-0">
+                                    <p className="text-sm font-black text-white">{paymentTypeLabel(payment.type)}</p>
+                                    <p className="mt-1 text-[11px] text-slate-400">{payment.note}</p>
+                                  </div>
+                                  <p
+                                    className={`font-mono text-sm font-black ${payment.direction === 'credit' ? 'text-emerald-300' : 'text-rose-300'
+                                      }`}
+                                  >
+                                    {payment.direction === 'credit' ? '+' : '-'}
+                                    {formatMoney(payment.amount)}
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => setShowHistoryPanel(false)}
-                            className="rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs font-black uppercase tracking-wider text-slate-300 transition hover:bg-white/[0.06]"
-                          >
-                            Đóng
-                          </button>
-                        </div>
-                        {historyPanel}
+                        ) : (
+                          <p className="text-xs font-semibold text-slate-500">Chưa có giao dịch payment.</p>
+                        )}
                       </div>
-                    ) : null}
+
+                      <div className="rounded-2xl border border-white/5 bg-slate-900/40 p-4">
+                        <p className="mb-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Wallet Transactions</p>
+                        {walletTransactions.length > 0 ? (
+                          <div className="space-y-0">
+                            {walletTransactions.slice(0, 4).map((tx, index) => (
+                              <div
+                                key={tx.id}
+                                className={`py-3 ${index < Math.min(walletTransactions.slice(0, 4).length, 4) - 1 ? 'border-b border-white/5' : ''}`}
+                              >
+                                <p className="text-sm font-black text-white">{tx.description}</p>
+                                <p className="mt-1 text-[11px] text-slate-400">{formatDateTime(tx.createdAt)}</p>
+                                <p className="mt-2 font-mono text-xs font-black text-slate-300">
+                                  <span className={tx.type === 'credit' ? 'text-emerald-300' : 'text-rose-300'}>
+                                    {tx.type === 'credit' ? '+' : '-'}
+                                    {formatMoney(tx.amount)}
+                                  </span>
+                                  <span className="text-slate-500"> • </span>
+                                  <span className="text-slate-400">Số dư:</span>{' '}
+                                  <span className="text-emerald-300">{formatMoney(tx.balanceAfter)}</span>
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-xs font-semibold text-slate-500">Chưa có giao dịch ví.</p>
+                        )}
+                      </div>
+
+                      {showHistoryPanel ? (
+                        <div className="rounded-3xl border border-cyan-300/20 bg-slate-950/80 p-4 shadow-[inset_0_0_24px_rgba(16,185,129,0.12)]">
+                          <div className="mb-4 flex items-center justify-between gap-3">
+                            <div>
+                              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-cyan-200">Lịch sử đặt chỗ</p>
+                              <p className="mt-1 text-sm font-semibold text-slate-400">Các lượt đặt chỗ gần nhất và trạng thái hiện tại.</p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setShowHistoryPanel(false)}
+                              className="rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs font-black uppercase tracking-wider text-slate-300 transition hover:bg-white/[0.06]"
+                            >
+                              Đóng
+                            </button>
+                          </div>
+                          {historyPanel}
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {isLoadingBuildings || isLoadingSlots ? (
-                <p className="text-xs font-semibold text-slate-500">
-                  Đang tải dữ liệu tòa nhà và danh sách slot...
-                </p>
-              ) : null}
+                {isLoadingBuildings || isLoadingSlots ? (
+                  <p className="text-xs font-semibold text-slate-500">
+                    Đang tải dữ liệu tòa nhà và danh sách slot...
+                  </p>
+                ) : null}
+              </div>
             </div>
           </div>
-        </div>
         )}
       </div>
 
@@ -1474,86 +1565,86 @@ export default function ReservationsPage() {
             </div>
 
             <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
-            <div className="rounded-3xl border border-slate-800 bg-[#070b12] p-3 sm:p-4">
-              <ParkingMap2D
-                interactive
-                slots={slots.map((slot) => ({
-                  code: slot.code,
-                  status: slot.status === 'available' && slot.reservable ? 'available' : 'unavailable',
-                  vehicleType: slot.vehicleType === 'all' ? undefined : slot.vehicleType,
-                }))}
-                selectedSlot={selectedSlot}
-                activeReservations={activeReservationsForSelectedBuilding.map((item) => ({
-                  slotCode: item.slotCode,
-                  plateNumber: item.plateNumber,
-                  vehicleType: item.vehicleType,
-                }))}
-                unavailableSlots={unavailableSlotCodes}
-                onSlotClick={handleSlotClick}
-              />
-            </div>
+              <div className="rounded-3xl border border-slate-800 bg-[#070b12] p-3 sm:p-4">
+                <ParkingMap2D
+                  interactive
+                  slots={slots.map((slot) => ({
+                    code: slot.code,
+                    status: slot.status === 'available' && slot.reservable ? 'available' : 'unavailable',
+                    vehicleType: slot.vehicleType === 'all' ? undefined : slot.vehicleType,
+                  }))}
+                  selectedSlot={selectedSlot}
+                  activeReservations={activeReservationsForSelectedBuilding.map((item) => ({
+                    slotCode: item.slotCode,
+                    plateNumber: item.plateNumber,
+                    vehicleType: item.vehicleType,
+                  }))}
+                  unavailableSlots={unavailableSlotCodes}
+                  onSlotClick={handleSlotClick}
+                />
+              </div>
 
-            <div className="rounded-3xl border border-slate-800 bg-[#070b12] p-4 lg:sticky lg:top-0">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-wider text-cyan-200">Xe dùng cho ô đang chọn</p>
-                  <p className="mt-1 text-sm font-semibold text-slate-300">
-                    {selectedSlot ? (
-                      <>
-                        Ô <span className="font-mono font-black text-orange-300">{selectedSlot}</span>
-                        <span className="mx-2 text-slate-600">•</span>
-                        Chỉ nhận <span className="font-black text-cyan-200">{selectedSlotVehicleLabel}</span>
-                      </>
-                    ) : (
-                      'Chạm vào một ô đỗ để xem đúng loại xe và biển số phù hợp.'
-                    )}
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-slate-800 bg-[#0b111d] px-3 py-2">
-                  <p className="text-[10px] font-bold uppercase text-slate-500">Đang lọc</p>
-                  <div className="mt-1 flex items-center gap-2 text-sm font-black text-white">
-                    {selectedVehicleType === 'motorcycle' ? (
-                      <Bike size={15} className="text-purple-300" />
-                    ) : selectedVehicleType === 'car' ? (
-                      <Car size={15} className="text-cyan-300" />
-                    ) : (
-                      <ParkingCircle size={15} className="text-slate-500" />
-                    )}
-                    <span>{selectedVehicleType ? vehicleTypeLabel(selectedVehicleType) : '--'}</span>
+              <div className="rounded-3xl border border-slate-800 bg-[#070b12] p-4 lg:sticky lg:top-0">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-wider text-cyan-200">Xe dùng cho ô đang chọn</p>
+                    <p className="mt-1 text-sm font-semibold text-slate-300">
+                      {selectedSlot ? (
+                        <>
+                          Ô <span className="font-mono font-black text-orange-300">{selectedSlot}</span>
+                          <span className="mx-2 text-slate-600">•</span>
+                          Chỉ nhận <span className="font-black text-cyan-200">{selectedSlotVehicleLabel}</span>
+                        </>
+                      ) : (
+                        'Chạm vào một ô đỗ để xem đúng loại xe và biển số phù hợp.'
+                      )}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-slate-800 bg-[#0b111d] px-3 py-2">
+                    <p className="text-[10px] font-bold uppercase text-slate-500">Đang lọc</p>
+                    <div className="mt-1 flex items-center gap-2 text-sm font-black text-white">
+                      {selectedVehicleType === 'motorcycle' ? (
+                        <Bike size={15} className="text-purple-300" />
+                      ) : selectedVehicleType === 'car' ? (
+                        <Car size={15} className="text-cyan-300" />
+                      ) : (
+                        <ParkingCircle size={15} className="text-slate-500" />
+                      )}
+                      <span>{selectedVehicleType ? vehicleTypeLabel(selectedVehicleType) : '--'}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="mt-4">
-                <span className="mb-1 block text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono">
-                  Biển số xe của bạn
-                </span>
-                <CustomSelect
-                  value={selectedPlate}
-                  onChange={setSelectedPlate}
-                  disabled={!selectedSlot || availablePlateOptions.length === 0}
-                  options={[
-                    { value: '', label: '-- Chọn biển số --' },
-                    ...plateOptions.map((plate) => {
-                      const isBusy = activePlateNumbers.has(plate.plateNumber);
-                      return {
-                        value: plate.plateNumber,
-                        label: `${plate.plateNumber} - ${vehicleTypeLabel(plate.vehicleType)} ${isBusy ? '(đang sử dụng)' : ''}`,
-                        disabled: isBusy,
-                      };
-                    }),
-                  ]}
-                  placeholder="-- Chọn biển số --"
-                />
-                <p className="mt-2 text-[11px] font-semibold text-slate-500">
-                  {selectedSlot
-                    ? selectedPlateRecord
-                      ? `Sẽ đặt ${selectedSlot} cho ${selectedPlateRecord.plateNumber} - ${vehicleTypeLabel(selectedPlateRecord.vehicleType)}.`
-                      : 'Không có biển số rảnh cho loại xe này.'
-                    : 'Nếu ô chỉ nhận xe máy, danh sách này chỉ hiện biển số xe máy.'}
-                </p>
+                <div className="mt-4">
+                  <span className="mb-1 block text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono">
+                    Biển số xe của bạn
+                  </span>
+                  <CustomSelect
+                    value={selectedPlate}
+                    onChange={setSelectedPlate}
+                    disabled={!selectedSlot || availablePlateOptions.length === 0}
+                    options={[
+                      { value: '', label: '-- Chọn biển số --' },
+                      ...plateOptions.map((plate) => {
+                        const isBusy = activePlateNumbers.has(plate.plateNumber);
+                        return {
+                          value: plate.plateNumber,
+                          label: `${plate.plateNumber} - ${vehicleTypeLabel(plate.vehicleType)} ${isBusy ? '(đang sử dụng)' : ''}`,
+                          disabled: isBusy,
+                        };
+                      }),
+                    ]}
+                    placeholder="-- Chọn biển số --"
+                  />
+                  <p className="mt-2 text-[11px] font-semibold text-slate-500">
+                    {selectedSlot
+                      ? selectedPlateRecord
+                        ? `Sẽ đặt ${selectedSlot} cho ${selectedPlateRecord.plateNumber} - ${vehicleTypeLabel(selectedPlateRecord.vehicleType)}.`
+                        : 'Không có biển số rảnh cho loại xe này.'
+                      : 'Nếu ô chỉ nhận xe máy, danh sách này chỉ hiện biển số xe máy.'}
+                  </p>
+                </div>
               </div>
-            </div>
             </div>
 
             <div className="mt-4 flex flex-col gap-3 rounded-3xl border border-slate-800 bg-[#070b12] p-4 sm:flex-row sm:items-center sm:justify-between">
@@ -1585,4 +1676,3 @@ export default function ReservationsPage() {
     </main>
   );
 }
-
