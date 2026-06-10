@@ -300,11 +300,10 @@ function ViewToggle({ view, onChange }: { view: '2D' | '3D'; onChange: (v: '2D' 
           key={v}
           type="button"
           onClick={() => onChange(v)}
-          className={`relative rounded-lg px-4 py-1.5 text-xs font-black uppercase tracking-wider transition-all duration-200 ${
-            view === v
-              ? 'bg-orange-400 text-slate-950 shadow-[0_0_12px_rgba(251,191,36,0.3)]'
-              : 'text-slate-400 hover:text-white'
-          }`}
+          className={`relative rounded-lg px-4 py-1.5 text-xs font-black uppercase tracking-wider transition-all duration-200 ${view === v
+            ? 'bg-orange-400 text-slate-950 shadow-[0_0_12px_rgba(251,191,36,0.3)]'
+            : 'text-slate-400 hover:text-white'
+            }`}
         >
           {v}
         </button>
@@ -525,7 +524,7 @@ export function ParkingMap2D({
       {/* Footer */}
       <div className="mt-4 border-t border-slate-800/60 pt-4 text-center">
         <p className="text-xs font-semibold text-slate-500">
-          Tổng số ô: <span className="font-black text-white">{slots.length}</span>
+          Tổng số ô đỗ: <span className="font-black text-white">{slots.length}</span>
           {' · '}
           Đang xem: <span className="font-black text-orange-300">{view}</span>
         </p>

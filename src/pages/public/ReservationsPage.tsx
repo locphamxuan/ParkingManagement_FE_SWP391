@@ -796,10 +796,10 @@ export default function ReservationsPage() {
             <ArrowLeft size={14} /> Trang chủ
           </button>
           <div className="flex gap-2">
-            <button type="button" onClick={() => setShowHistory(!showHistory)}
-              className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2 text-xs font-black uppercase tracking-wider text-slate-300 transition hover:border-cyan-300/30 hover:text-cyan-200"
+            <button type="button" onClick={() => setShowHistory(true)}
+              className="inline-flex items-center gap-2 rounded-xl border border-yellow-500/20 bg-yellow-500/5 px-4 py-2 text-xs font-black uppercase tracking-wider text-yellow-400 transition hover:border-yellow-400/40 hover:text-yellow-300 hover:bg-yellow-500/10"
             >
-              <CalendarClock size={14} /> {showHistory ? 'Ẩn lịch sử' : 'Lịch sử'}
+              <CalendarClock size={14} /> Lịch sử
             </button>
           </div>
         </motion.div>
@@ -841,22 +841,6 @@ export default function ReservationsPage() {
           </motion.div>
         )}
 
-        {/* ── History Panel ── */}
-        <AnimatePresence>
-          {showHistory && (
-            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
-              className="mb-6 overflow-hidden rounded-3xl border border-white/[0.06] bg-white/[0.02] p-5"
-            >
-              <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-lg font-black text-white">Lịch sử đặt chỗ</h2>
-                <button type="button" onClick={() => setShowHistory(false)}
-                  className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-bold text-slate-400 hover:text-white transition"
-                >Đóng</button>
-              </div>
-              <ReservationHistoryTab />
-            </motion.div>
-          )}
-        </AnimatePresence>
 
         {/* ── Main Wizard ── */}
         <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
@@ -1250,6 +1234,45 @@ export default function ReservationsPage() {
                   Hoàn tất
                 </button>
               </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── History Modal ── */}
+      <AnimatePresence>
+        {showHistory && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-md"
+            onClick={() => setShowHistory(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative max-h-[90vh] w-full max-w-4xl overflow-auto rounded-3xl border border-slate-700/60 bg-[#080d17] p-5 shadow-[0_30px_120px_rgba(0,0,0,0.55)] sm:p-6"
+            >
+              {/* Modal Header */}
+              <div className="mb-5 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <CalendarClock size={18} className="text-yellow-400" />
+                  <h2 className="text-lg font-black text-white">Lịch sử đặt chỗ</h2>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowHistory(false)}
+                  className="rounded-full border border-white/10 bg-white/[0.03] p-2 text-slate-400 hover:text-white transition"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <ReservationHistoryTab />
             </motion.div>
           </motion.div>
         )}
