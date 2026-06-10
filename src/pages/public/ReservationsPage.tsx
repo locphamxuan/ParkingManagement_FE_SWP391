@@ -127,9 +127,45 @@ function packageCategory(pkg: LongTermPackage): 'weekly' | 'monthly' | 'yearly' 
 
 const categoryLabels = { weekly: 'Gói tuần', monthly: 'Gói tháng', yearly: 'Gói năm' };
 const categoryColors = {
-  weekly: { border: 'border-cyan-400/20', bg: 'bg-cyan-400/5', text: 'text-cyan-300', accent: 'from-cyan-500 to-blue-400' },
-  monthly: { border: 'border-orange-400/20', bg: 'bg-orange-400/5', text: 'text-orange-300', accent: 'from-orange-500 to-amber-400' },
-  yearly: { border: 'border-purple-500/40 bg-purple-950/15', bg: 'bg-purple-500/10', text: 'text-purple-300', accent: 'from-yellow-400 via-pink-500 to-purple-600' },
+  weekly: {
+    borderSelected: 'border-cyan-400 ring-2 ring-cyan-400/40',
+    bgSelected: 'bg-gradient-to-br from-cyan-950/40 via-slate-900/60 to-slate-950/80',
+    shadowSelected: 'shadow-[0_0_30px_rgba(34,211,238,0.35)]',
+    borderNormal: 'border-cyan-500/20',
+    bgNormal: 'bg-cyan-950/5',
+    borderHover: 'hover:border-cyan-400/50',
+    bgHover: 'hover:bg-cyan-950/15',
+    shadowHover: 'hover:shadow-[0_0_15px_rgba(34,211,238,0.15)]',
+    text: 'text-cyan-300',
+    accent: 'from-cyan-500 to-blue-400',
+    glitterColors: ['bg-cyan-300', 'bg-sky-200', 'bg-blue-300']
+  },
+  monthly: {
+    borderSelected: 'border-orange-400 ring-2 ring-orange-400/40',
+    bgSelected: 'bg-gradient-to-br from-orange-950/40 via-slate-900/60 to-slate-950/80',
+    shadowSelected: 'shadow-[0_0_30px_rgba(249,115,22,0.35)]',
+    borderNormal: 'border-orange-500/20',
+    bgNormal: 'bg-orange-950/5',
+    borderHover: 'hover:border-orange-400/50',
+    bgHover: 'hover:bg-orange-950/15',
+    shadowHover: 'hover:shadow-[0_0_15px_rgba(249,115,22,0.15)]',
+    text: 'text-orange-300',
+    accent: 'from-orange-500 to-amber-400',
+    glitterColors: ['bg-amber-300', 'bg-orange-400', 'bg-yellow-300']
+  },
+  yearly: {
+    borderSelected: 'border-purple-400 ring-2 ring-purple-400/40',
+    bgSelected: 'bg-gradient-to-br from-purple-950/40 via-slate-900/60 to-slate-950/80',
+    shadowSelected: 'shadow-[0_0_35px_rgba(168,85,247,0.35)]',
+    borderNormal: 'border-purple-500/25',
+    bgNormal: 'bg-purple-950/5',
+    borderHover: 'hover:border-purple-400/55',
+    bgHover: 'hover:bg-purple-950/15',
+    shadowHover: 'hover:shadow-[0_0_15px_rgba(168,85,247,0.15)]',
+    text: 'text-purple-300',
+    accent: 'from-yellow-400 via-pink-500 to-purple-600',
+    glitterColors: ['bg-purple-300', 'bg-pink-300', 'bg-yellow-300']
+  },
 };
 
 /* ─── Calendar Component ──────────────────────────────────────────────────── */
@@ -386,12 +422,8 @@ function PackageCard({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       className={`relative rounded-2xl border p-4 text-left transition-all duration-300 ${isSelected
-        ? cat === 'yearly'
-          ? 'border-purple-400 bg-purple-950/20 scale-[1.04] shadow-[0_0_40px_rgba(168,85,247,0.35)] ring-2 ring-purple-400/30'
-          : `${colors.border} ${colors.bg} scale-[1.02] shadow-[0_0_30px_rgba(${cat === 'weekly' ? '34,211,238' : '249,115,22'},0.25)]`
-        : cat === 'yearly'
-          ? 'border-purple-500/30 bg-purple-500/5 hover:border-purple-400/50 hover:scale-[1.02] hover:bg-purple-500/10 hover:shadow-[0_0_20px_rgba(168,85,247,0.1)]'
-          : 'border-white/[0.06] bg-white/[0.02] hover:border-white/15 hover:scale-[1.01] hover:bg-white/[0.04]'
+        ? `${colors.borderSelected} ${colors.bgSelected} ${colors.shadowSelected} scale-[1.04]`
+        : `${colors.borderNormal} ${colors.bgNormal} ${colors.borderHover} ${colors.bgHover} ${colors.shadowHover} hover:scale-[1.02]`
         }`}
     >
       {/* Glitter particles shown on hover */}
@@ -399,12 +431,8 @@ function PackageCard({
         <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-2xl z-0">
           {particles.map((p) => {
             let color = 'bg-amber-400';
-            if (cat === 'weekly') {
-              color = p.id % 2 === 0 ? 'bg-cyan-300' : 'bg-sky-200';
-            } else if (cat === 'monthly') {
-              color = p.id % 2 === 0 ? 'bg-amber-300' : 'bg-orange-400';
-            } else {
-              color = p.id % 3 === 0 ? 'bg-purple-300' : p.id % 3 === 1 ? 'bg-pink-300' : 'bg-yellow-300';
+            if (colors.glitterColors) {
+              color = colors.glitterColors[p.id % colors.glitterColors.length];
             }
 
             const style: React.CSSProperties = {
@@ -444,7 +472,7 @@ function PackageCard({
       <span className={`text-[9px] font-black uppercase tracking-wider ${colors.text} relative z-10`}>
         {categoryLabels[cat]}
       </span>
-      <h4 className="mt-1 text-sm font-black text-white flex items-center gap-1.5 relative z-10">
+      <h4 className={`mt-1 text-sm font-black flex items-center gap-1.5 relative z-10 transition-colors ${isSelected ? 'text-white' : 'text-slate-200'}`}>
         {((typeof pkg.vehicleType === 'object' && pkg.vehicleType?.code === 'CAR') ||
           (typeof pkg.vehicleType === 'string' && pkg.vehicleType.includes('CAR')) ||
           pkg.code?.includes('CAR') ||
@@ -461,16 +489,26 @@ function PackageCard({
           {pkg.description}
         </p>
       )}
-      <p className={`mt-2 text-lg font-black ${colors.text} relative z-10`}>{fmtMoney(pkg.price)}</p>
+      <p className={`mt-2 text-lg font-black ${colors.text} relative z-10 transition-all duration-300 ${
+        isSelected ? 'drop-shadow-[0_0_10px_rgba(255,255,255,0.15)] scale-105 origin-left' : ''
+      }`}>{fmtMoney(pkg.price)}</p>
       {pkg.allowDedicatedSlot && (
-        <span className="mt-2 inline-flex items-center gap-1 rounded-full border border-emerald-400/20 bg-emerald-400/5 px-2 py-0.5 text-[9px] font-bold text-emerald-300 relative z-10">
+        <span className={`mt-2 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] font-bold relative z-10 ${
+          isSelected 
+            ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200' 
+            : 'border-emerald-400/20 bg-emerald-400/5 text-emerald-300'
+        }`}>
           <ShieldCheck size={10} /> Chỗ cố định
         </span>
       )}
       {isSelected && (
-        <div className="absolute right-3 top-3 z-10">
-          <CheckCircle2 size={16} className={colors.text} />
-        </div>
+        <motion.div
+          initial={{ scale: 0, rotate: -45 }}
+          animate={{ scale: 1, rotate: 0 }}
+          className="absolute right-3 top-3 z-20"
+        >
+          <CheckCircle2 size={18} className={`${colors.text} drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]`} />
+        </motion.div>
       )}
     </button>
   );
@@ -761,6 +799,21 @@ export default function ReservationsPage() {
   const [bookingError, setBookingError] = useState<string | null>(null);
   const [bookingSuccess, setBookingSuccess] = useState<string | null>(null);
 
+  // Auto-dismiss alerts after 5 seconds
+  useEffect(() => {
+    if (bookingSuccess) {
+      const timer = setTimeout(() => setBookingSuccess(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [bookingSuccess]);
+
+  useEffect(() => {
+    if (bookingError) {
+      const timer = setTimeout(() => setBookingError(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [bookingError]);
+
   /* ── Data Loading ── */
   useEffect(() => {
     let ignore = false;
@@ -1046,21 +1099,7 @@ export default function ReservationsPage() {
           ))}
         </div>
 
-        {/* ── Alerts ── */}
-        {bookingSuccess && (
-          <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
-            className="mb-4 flex items-center gap-2 rounded-2xl border border-emerald-400/25 bg-emerald-500/10 p-3 text-sm font-semibold text-emerald-300"
-          >
-            <CheckCircle2 size={16} /> {bookingSuccess}
-          </motion.div>
-        )}
-        {bookingError && (
-          <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
-            className="mb-4 flex items-center gap-2 rounded-2xl border border-rose-400/25 bg-rose-500/10 p-3 text-sm font-semibold text-rose-300"
-          >
-            <XCircle size={16} /> {bookingError}
-          </motion.div>
-        )}
+        {/* Alerts are now displayed as floating notification toasts */}
 
 
         {/* ── Main Wizard ── */}
@@ -1464,6 +1503,55 @@ export default function ReservationsPage() {
                 <ReservationHistoryTab />
               </div>
             </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Floating Notification Toast ── */}
+      <AnimatePresence>
+        {(bookingSuccess || bookingError) && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.9 }}
+            transition={{ type: 'spring', duration: 0.4 }}
+            className="fixed top-6 left-4 right-4 sm:left-auto sm:right-6 sm:w-[420px] z-50 pointer-events-auto"
+          >
+            {bookingSuccess ? (
+              <div className="flex items-start gap-3 rounded-2xl border border-emerald-500/30 bg-slate-900/90 p-4 text-emerald-300 shadow-[0_10px_35px_rgba(0,0,0,0.6),0_0_20px_rgba(16,185,129,0.15)] backdrop-blur-xl">
+                <div className="rounded-full bg-emerald-500/10 p-1.5 border border-emerald-500/20 shrink-0">
+                  <CheckCircle2 size={18} className="text-emerald-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-black uppercase tracking-wider text-emerald-400">Thành công</p>
+                  <p className="mt-1 text-xs font-medium text-slate-300 leading-relaxed break-words">{bookingSuccess}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setBookingSuccess(null)}
+                  className="text-slate-400 hover:text-white hover:bg-white/5 rounded-lg p-1 transition shrink-0"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-start gap-3 rounded-2xl border border-rose-500/30 bg-slate-900/90 p-4 text-rose-300 shadow-[0_10px_35px_rgba(0,0,0,0.6),0_0_20px_rgba(244,63,94,0.15)] backdrop-blur-xl">
+                <div className="rounded-full bg-rose-500/10 p-1.5 border border-rose-500/20 shrink-0">
+                  <XCircle size={18} className="text-rose-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-black uppercase tracking-wider text-rose-400">Thất bại</p>
+                  <p className="mt-1 text-xs font-medium text-slate-300 leading-relaxed break-words">{bookingError}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setBookingError(null)}
+                  className="text-slate-400 hover:text-white hover:bg-white/5 rounded-lg p-1 transition shrink-0"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
