@@ -34,6 +34,7 @@ import {
   type FloorAvailability,
   type LongTermPackage,
   type Reservation,
+  type LongTermSubscription,
 } from '@/services/user/userApi';
 
 /* ─── Types ────────────────────────────────────────────────────────────────── */
@@ -549,6 +550,7 @@ function StatusBadge({ status }: { status: string }) {
   const labels: Record<string, string> = {
     pending: 'Đang chờ', confirmed: 'Đã xác nhận', checked_in: 'Đã check-in',
     completed: 'Hoàn thành', expired: 'Hết hạn', cancelled: 'Đã hủy',
+    active: 'Hoạt động',
   };
   const colors: Record<string, string> = {
     pending: 'border-amber-500/30 bg-amber-500/10 text-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.1)]',
@@ -557,6 +559,7 @@ function StatusBadge({ status }: { status: string }) {
     completed: 'border-blue-500/30 bg-blue-500/10 text-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.1)]',
     expired: 'border-slate-500/30 bg-slate-500/10 text-slate-400',
     cancelled: 'border-rose-500/30 bg-rose-500/10 text-rose-400 shadow-[0_0_10px_rgba(244,63,94,0.1)]',
+    active: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.1)]',
   };
   return (
     <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider ${colors[status] || 'border-slate-500/30 bg-slate-500/10 text-slate-400'}`}>
@@ -566,7 +569,8 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function ReservationHistoryTab() {
-  const [items, setItems] = useState<Reservation[]>([]);
+  const [activeMode, setActiveMode] = useState<'hourly' | 'package'>('hourly');
+  const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
@@ -574,22 +578,35 @@ function ReservationHistoryTab() {
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
-  const load = useCallback((p = 1, status = statusFilter) => {
+  const load = useCallback((p = 1, mode = activeMode, status = statusFilter) => {
     setLoading(true);
     setError(null);
-    userApi.reservations
-      .list({ page: p, limit: 10, status: status === 'all' ? undefined : status })
-      .then((res) => {
-        const raw = (res as any)?.data;
-        setItems(raw?.items ?? []);
-        setTotalPages(raw?.pagination?.totalPages ?? 1);
-        setPage(p);
-      })
-      .catch((err) => setError(err instanceof Error ? err.message : 'Tải lịch sử thất bại'))
-      .finally(() => setLoading(false));
-  }, [statusFilter]);
+    if (mode === 'hourly') {
+      userApi.reservations
+        .list({ page: p, limit: 10, status: status === 'all' ? undefined : status })
+        .then((res) => {
+          const raw = (res as any)?.data;
+          setItems(raw?.items ?? []);
+          setTotalPages(raw?.pagination?.totalPages ?? 1);
+          setPage(p);
+        })
+        .catch((err) => setError(err instanceof Error ? err.message : 'Tải lịch sử thất bại'))
+        .finally(() => setLoading(false));
+    } else {
+      userApi.longTermSubscriptions
+        .list({ page: p, limit: 10, status: status === 'all' ? undefined : status })
+        .then((res) => {
+          const raw = (res as any)?.data;
+          setItems(raw?.items ?? []);
+          setTotalPages(raw?.pagination?.totalPages ?? 1);
+          setPage(p);
+        })
+        .catch((err) => setError(err instanceof Error ? err.message : 'Tải danh sách đăng ký gói thất bại'))
+        .finally(() => setLoading(false));
+    }
+  }, [activeMode, statusFilter]);
 
-  useEffect(() => { load(1); }, [load]);
+  useEffect(() => { load(1, activeMode, statusFilter); }, [load, activeMode, statusFilter]);
 
   const handleCancel = async (id: string) => {
     if (!window.confirm('Bạn có chắc muốn hủy đặt chỗ này?')) return;
@@ -604,21 +621,86 @@ function ReservationHistoryTab() {
     }
   };
 
-  const filterTabs = [
-    { value: 'all', label: 'Tất cả' },
-    { value: 'completed', label: 'Hoàn thành' },
-    { value: 'cancelled', label: 'Đã hủy' },
-  ];
+  const handleCancelPackage = async (id: string) => {
+    if (!window.confirm('Bạn có chắc muốn hủy đăng ký gói này?')) return;
+    setCancellingId(id);
+    try {
+      await userApi.longTermSubscriptions.cancel(id);
+      setItems((prev) => prev.map((sub) => (sub._id === id ? { ...sub, status: 'cancelled' } : sub)));
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Hủy đăng ký thất bại');
+    } finally {
+      setCancellingId(null);
+    }
+  };
+
+  const handleModeChange = (mode: 'hourly' | 'package') => {
+    setActiveMode(mode);
+    setStatusFilter('all');
+    setItems([]);
+    setPage(1);
+    setTotalPages(1);
+  };
+
+  const filterTabs = activeMode === 'hourly'
+    ? [
+        { value: 'all', label: 'Tất cả' },
+        { value: 'confirmed', label: 'Đã đặt chỗ' },
+        { value: 'completed', label: 'Hoàn thành' },
+        { value: 'cancelled', label: 'Đã hủy' },
+      ]
+    : [
+        { value: 'all', label: 'Tất cả' },
+        { value: 'active', label: 'Hoạt động' },
+        { value: 'pending', label: 'Chờ xử lý' },
+        { value: 'cancelled', label: 'Đã hủy' },
+        { value: 'expired', label: 'Hết hạn' },
+      ];
+
+  const fmtDateOnly = (iso: string | undefined | null) => {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
+    return d.toLocaleDateString('vi-VN');
+  };
 
   return (
     <div className="space-y-4">
+      {/* Mode Switcher */}
+      <div className="flex justify-center border-b border-white/5 pb-4">
+        <div className="inline-flex rounded-xl bg-white/[0.02] p-1 border border-white/5 shadow-inner">
+          <button
+            type="button"
+            onClick={() => handleModeChange('hourly')}
+            className={`rounded-lg px-6 py-2 text-xs font-black uppercase tracking-wider transition-all duration-300 ${
+              activeMode === 'hourly'
+                ? 'bg-orange-500 text-slate-950 shadow-[0_0_12px_rgba(249,115,22,0.3)]'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            Đặt theo giờ
+          </button>
+          <button
+            type="button"
+            onClick={() => handleModeChange('package')}
+            className={`rounded-lg px-6 py-2 text-xs font-black uppercase tracking-wider transition-all duration-300 ${
+              activeMode === 'package'
+                ? 'bg-orange-500 text-slate-950 shadow-[0_0_12px_rgba(249,115,22,0.3)]'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            Đăng ký gói dài hạn
+          </button>
+        </div>
+      </div>
+
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/5 pb-4">
         <div className="flex items-center gap-1.5 rounded-xl bg-white/[0.02] border border-white/5 p-1">
           {filterTabs.map((tab) => (
             <button
               key={tab.value}
               type="button"
-              onClick={() => { setStatusFilter(tab.value); load(1, tab.value); }}
+              onClick={() => { setStatusFilter(tab.value); load(1, activeMode, tab.value); }}
               className={`rounded-lg px-4 py-1.5 text-xs font-bold transition-all duration-200 ${statusFilter === tab.value
                 ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-lg shadow-orange-500/20'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.03]'
@@ -640,135 +722,225 @@ function ReservationHistoryTab() {
       {error && <div className="rounded-xl border border-rose-500/25 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">{error}</div>}
 
       {loading ? (
-        <div className="py-12 text-center text-sm text-slate-400">Đang tải lịch sử đặt chỗ...</div>
+        <div className="py-12 text-center text-sm text-slate-400">Đang tải dữ liệu...</div>
       ) : items.length === 0 ? (
         <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-10 text-center">
           <CalendarClock size={32} className="mx-auto mb-3 text-slate-600 animate-pulse" />
-          <p className="text-sm font-semibold text-slate-400">Bạn chưa có lịch sử đặt chỗ nào.</p>
+          <p className="text-sm font-semibold text-slate-400">
+            {activeMode === 'hourly' ? 'Bạn chưa có lịch sử đặt chỗ nào.' : 'Bạn chưa có đăng ký gói dài hạn nào.'}
+          </p>
         </div>
       ) : (
         <div className="space-y-4 max-h-[55vh] overflow-y-auto pr-1">
-          {items.map((r) => {
-            let statusColorClass = 'border-slate-500/20';
-            if (r.status === 'completed') statusColorClass = 'border-l-blue-500/80';
-            else if (r.status === 'cancelled') statusColorClass = 'border-l-rose-500/80';
-            else if (r.status === 'checked_in') statusColorClass = 'border-l-cyan-500/80';
-            else if (r.status === 'confirmed') statusColorClass = 'border-l-emerald-500/80';
-            else if (r.status === 'pending') statusColorClass = 'border-l-amber-500/80';
+          {items.map((item) => {
+            if (activeMode === 'hourly') {
+              const r = item as Reservation;
+              let statusColorClass = 'border-slate-500/20';
+              if (r.status === 'completed') statusColorClass = 'border-l-blue-500/80';
+              else if (r.status === 'cancelled') statusColorClass = 'border-l-rose-500/80';
+              else if (r.status === 'checked_in') statusColorClass = 'border-l-cyan-500/80';
+              else if (r.status === 'confirmed') statusColorClass = 'border-l-emerald-500/80';
+              else if (r.status === 'pending') statusColorClass = 'border-l-amber-500/80';
 
-            return (
-              <div 
-                key={r._id} 
-                className={`relative rounded-2xl border-l-[3px] border-y border-r border-white/[0.05] bg-white/[0.01] p-4 transition-all duration-300 hover:border-r-white/10 hover:border-y-white/10 hover:bg-white/[0.03] hover:shadow-[0_8px_30px_rgb(0,0,0,0.3)] group ${statusColorClass}`}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-mono text-sm font-black text-orange-400 tracking-wider flex items-center gap-1">
-                        <span className="text-slate-500 text-[10px]">ID:</span>
-                        {r.code}
-                      </span>
-                      <span className="rounded-lg border border-amber-500/20 bg-amber-500/5 px-2 py-0.5 text-xs font-bold text-amber-400 tracking-wide flex items-center gap-1 shadow-sm">
-                        <Car size={12} className="opacity-80" />
-                        {r.plateNumber}
-                      </span>
-                    </div>
-                    <p className="mt-1.5 text-xs font-medium text-slate-400 flex items-center gap-1">
-                      <Building2 size={12} className="text-slate-500" />
-                      {(r.building as any)?.name ?? '—'}
-                    </p>
-                  </div>
-                  
-                  <div className="flex items-center gap-2 shrink-0">
-                    <StatusBadge status={r.status} />
-                    {(r.status === 'pending' || r.status === 'confirmed') && (
-                      <button
-                        type="button"
-                        disabled={cancellingId === r._id}
-                        onClick={() => handleCancel(r._id)}
-                        className="flex items-center gap-1 rounded-lg border border-rose-500/30 bg-rose-500/10 px-2.5 py-1 text-xs font-bold text-rose-400 hover:bg-rose-500/20 hover:border-rose-500/50 transition-all disabled:opacity-50"
-                      >
-                        <XCircle size={12} />
-                        {cancellingId === r._id ? 'Đang hủy...' : 'Hủy'}
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5 border-t border-white/[0.03] pt-4">
-                  <div>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Vị trí đỗ</p>
-                    <p className="mt-1 text-sm font-bold text-slate-200">{(r.slot as any)?.code ?? '—'}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Bắt đầu</p>
-                    <p className="mt-1 text-xs font-medium text-slate-300">{fmtTime(r.startTime)}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Kết thúc</p>
-                    <p className="mt-1 text-xs font-medium text-slate-300">{r.endTime ? fmtTime(r.endTime) : '—'}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Tiền cọc</p>
-                    <p className={`mt-1 text-sm font-black ${r.fee ? 'text-emerald-400' : 'text-slate-500'}`}>{fmtMoney(r.fee)}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Còn lại phải trả</p>
-                    <p className="mt-1 text-sm font-black text-orange-400">
-                      {fmtMoney(r.parkingSession ? r.parkingSession.fee : (r.estimatedFee && r.fee ? r.estimatedFee - r.fee : 0))}
-                    </p>
-                  </div>
-                </div>
-
-                {r.parkingSession && (
-                  <div className="mt-4 rounded-xl border border-white/[0.04] bg-white/[0.01] p-3 shadow-inner">
-                    <div className="flex items-center gap-1.5 border-b border-white/[0.04] pb-2 mb-2">
-                      <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />
-                      <h5 className="text-[10px] font-bold uppercase tracking-wider text-cyan-400">Phiên gửi xe thực tế</h5>
-                    </div>
-                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 text-xs">
-                      <div>
-                        <span className="text-slate-500 text-[10px] block">Giờ vào:</span>
-                        <span className="text-slate-300 font-medium">{fmtTime(r.parkingSession.entryTime)}</span>
-                      </div>
-                      <div>
-                        <span className="text-slate-500 text-[10px] block">Giờ ra:</span>
-                        <span className="text-slate-300 font-medium">
-                          {r.parkingSession.exitTime ? fmtTime(r.parkingSession.exitTime) : '—'}
+              return (
+                <div 
+                  key={r._id} 
+                  className={`relative rounded-2xl border-l-[3px] border-y border-r border-white/[0.05] bg-white/[0.01] p-4 transition-all duration-300 hover:border-r-white/10 hover:border-y-white/10 hover:bg-white/[0.03] hover:shadow-[0_8px_30px_rgb(0,0,0,0.3)] group ${statusColorClass}`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-mono text-sm font-black text-orange-400 tracking-wider flex items-center gap-1">
+                          <span className="text-slate-500 text-[10px]">ID:</span>
+                          {r.code}
+                        </span>
+                        <span className="rounded-lg border border-amber-500/20 bg-amber-500/5 px-2 py-0.5 text-xs font-bold text-amber-400 tracking-wide flex items-center gap-1 shadow-sm">
+                          <Car size={12} className="opacity-80" />
+                          {r.plateNumber}
                         </span>
                       </div>
-                      <div className="flex flex-col justify-center">
-                        <span className="text-slate-500 text-[10px] block">Thanh toán thêm:</span>
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className={`font-black ${r.parkingSession.fee > 0 ? 'text-amber-400 font-extrabold' : 'text-emerald-400'}`}>
-                            {fmtMoney(r.parkingSession.fee)}
+                      <p className="mt-1.5 text-xs font-medium text-slate-400 flex items-center gap-1">
+                        <Building2 size={12} className="text-slate-500" />
+                        {(r.building as any)?.name ?? '—'}
+                      </p>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 shrink-0">
+                      <StatusBadge status={r.status} />
+                      {(r.status === 'pending' || r.status === 'confirmed') && (
+                        <button
+                          type="button"
+                          disabled={cancellingId === r._id}
+                          onClick={() => handleCancel(r._id)}
+                          className="flex items-center gap-1 rounded-lg border border-rose-500/30 bg-rose-500/10 px-2.5 py-1 text-xs font-bold text-rose-400 hover:bg-rose-500/20 hover:border-rose-500/50 transition-all disabled:opacity-50"
+                        >
+                          <XCircle size={12} />
+                          {cancellingId === r._id ? 'Đang hủy...' : 'Hủy'}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5 border-t border-white/[0.03] pt-4">
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Vị trí đỗ</p>
+                      <p className="mt-1 text-sm font-bold text-slate-200">{(r.slot as any)?.code ?? '—'}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Bắt đầu</p>
+                      <p className="mt-1 text-xs font-medium text-slate-300">{fmtTime(r.startTime)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Kết thúc</p>
+                      <p className="mt-1 text-xs font-medium text-slate-300">{r.endTime ? fmtTime(r.endTime) : '—'}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Tiền cọc</p>
+                      <p className={`mt-1 text-sm font-black ${r.fee ? 'text-emerald-400' : 'text-slate-500'}`}>{fmtMoney(r.fee)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Còn lại phải trả</p>
+                      <p className="mt-1 text-sm font-black text-orange-400">
+                        {fmtMoney(r.parkingSession ? r.parkingSession.fee : (r.estimatedFee && r.fee ? r.estimatedFee - r.fee : 0))}
+                      </p>
+                    </div>
+                  </div>
+
+                  {r.parkingSession && (
+                    <div className="mt-4 rounded-xl border border-white/[0.04] bg-white/[0.01] p-3 shadow-inner">
+                      <div className="flex items-center gap-1.5 border-b border-white/[0.04] pb-2 mb-2">
+                        <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                        <h5 className="text-[10px] font-bold uppercase tracking-wider text-cyan-400">Phiên gửi xe thực tế</h5>
+                      </div>
+                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 text-xs">
+                        <div>
+                          <span className="text-slate-500 text-[10px] block">Giờ vào:</span>
+                          <span className="text-slate-300 font-medium">{fmtTime(r.parkingSession.entryTime)}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 text-[10px] block">Giờ ra:</span>
+                          <span className="text-slate-300 font-medium">
+                            {r.parkingSession.exitTime ? fmtTime(r.parkingSession.exitTime) : '—'}
                           </span>
-                          <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded uppercase ${
-                            r.parkingSession.paymentStatus === 'paid'
-                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                              : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                          }`}>
-                            {r.parkingSession.paymentStatus === 'paid' ? 'Đã trả' : 'Chưa trả'}
-                          </span>
+                        </div>
+                        <div className="flex flex-col justify-center">
+                          <span className="text-slate-500 text-[10px] block">Thanh toán thêm:</span>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className={`font-black ${r.parkingSession.fee > 0 ? 'text-amber-400 font-extrabold' : 'text-emerald-400'}`}>
+                              {fmtMoney(r.parkingSession.fee)}
+                            </span>
+                            <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded uppercase ${
+                              r.parkingSession.paymentStatus === 'paid'
+                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                            }`}>
+                              {r.parkingSession.paymentStatus === 'paid' ? 'Đã trả' : 'Chưa trả'}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {r.createdAt && (
-                  <div className="mt-3 flex items-center justify-between border-t border-white/[0.03] pt-3 text-[10px] text-slate-500">
-                    <div className="flex items-center gap-1">
-                      <Clock size={10} className="text-slate-600" />
-                      <span>Đặt lúc: {fmtTime(r.createdAt)}</span>
+                  {r.createdAt && (
+                    <div className="mt-3 flex items-center justify-between border-t border-white/[0.03] pt-3 text-[10px] text-slate-500">
+                      <div className="flex items-center gap-1">
+                        <Clock size={10} className="text-slate-600" />
+                        <span>Đặt lúc: {fmtTime(r.createdAt)}</span>
+                      </div>
+                      {r.updatedAt && r.updatedAt !== r.createdAt && (
+                        <span>Cập nhật: {fmtTime(r.updatedAt)}</span>
+                      )}
                     </div>
-                    {r.updatedAt && r.updatedAt !== r.createdAt && (
-                      <span>Cập nhật: {fmtTime(r.updatedAt)}</span>
-                    )}
+                  )}
+                </div>
+              );
+            } else {
+              const sub = item as LongTermSubscription;
+              let statusColorClass = 'border-slate-500/20';
+              if (sub.status === 'active') statusColorClass = 'border-l-emerald-500/80';
+              else if (sub.status === 'cancelled') statusColorClass = 'border-l-rose-500/80';
+              else if (sub.status === 'expired') statusColorClass = 'border-l-slate-500/80';
+              else if (sub.status === 'pending') statusColorClass = 'border-l-amber-500/80';
+
+              return (
+                <div 
+                  key={sub._id} 
+                  className={`relative rounded-2xl border-l-[3px] border-y border-r border-white/[0.05] bg-white/[0.01] p-4 transition-all duration-300 hover:border-r-white/10 hover:border-y-white/10 hover:bg-white/[0.03] hover:shadow-[0_8px_30px_rgb(0,0,0,0.3)] group ${statusColorClass}`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-mono text-sm font-black text-orange-400 tracking-wider flex items-center gap-1">
+                          <span className="text-slate-500 text-[10px]">GÓI:</span>
+                          {sub.package.name}
+                        </span>
+                        <span className="rounded-lg border border-amber-500/20 bg-amber-500/5 px-2 py-0.5 text-xs font-bold text-amber-400 tracking-wide flex items-center gap-1 shadow-sm">
+                          <Car size={12} className="opacity-80" />
+                          {sub.plateNumber ?? sub.linkedPlates?.join(', ') ?? '—'}
+                        </span>
+                      </div>
+                      <p className="mt-1.5 text-xs font-medium text-slate-400 flex items-center gap-1">
+                        <Building2 size={12} className="text-slate-500" />
+                        {sub.building ? ((sub.building as any).name ?? (sub.building as any)) : '—'}
+                      </p>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 shrink-0">
+                      <StatusBadge status={sub.status} />
+                      {(sub.status === 'pending' || sub.status === 'active') && (
+                        <button
+                          type="button"
+                          disabled={cancellingId === sub._id}
+                          onClick={() => handleCancelPackage(sub._id)}
+                          className="flex items-center gap-1 rounded-lg border border-rose-500/30 bg-rose-500/10 px-2.5 py-1 text-xs font-bold text-rose-400 hover:bg-rose-500/20 hover:border-rose-500/50 transition-all disabled:opacity-50"
+                        >
+                          <XCircle size={12} />
+                          {cancellingId === sub._id ? 'Đang hủy...' : 'Hủy gói'}
+                        </button>
+                      )}
+                    </div>
                   </div>
-                )}
-              </div>
-            );
+
+                  <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5 border-t border-white/[0.03] pt-4">
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Chỗ đỗ cố định</p>
+                      <p className="mt-1 text-sm font-bold text-slate-200">
+                        {sub.slot ? (sub.slot.code ?? sub.slot) : 'Không cố định'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Ngày bắt đầu</p>
+                      <p className="mt-1 text-xs font-medium text-slate-300">{fmtDateOnly(sub.startDate)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Ngày kết thúc</p>
+                      <p className="mt-1 text-xs font-medium text-slate-300">{fmtDateOnly(sub.endDate)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Giá gói</p>
+                      <p className="mt-1 text-sm font-black text-emerald-400">{fmtMoney(sub.price ?? sub.package.price)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Mã gói</p>
+                      <p className="mt-1 text-xs font-semibold text-slate-300">{sub.package.code}</p>
+                    </div>
+                  </div>
+
+                  {sub.createdAt && (
+                    <div className="mt-3 flex items-center justify-between border-t border-white/[0.03] pt-3 text-[10px] text-slate-500">
+                      <div className="flex items-center gap-1">
+                        <Clock size={10} className="text-slate-600" />
+                        <span>Đăng ký lúc: {fmtTime(sub.createdAt)}</span>
+                      </div>
+                      {sub.updatedAt && sub.updatedAt !== sub.createdAt && (
+                        <span>Cập nhật: {fmtTime(sub.updatedAt)}</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            }
           })}
         </div>
       )}
@@ -1026,6 +1198,7 @@ export default function ReservationsPage() {
 
   const handleSlotClick = (code: string) => {
     if (unavailableSlotCodes.includes(code)) return;
+    if (unsupportedSlotCodes.includes(code)) return;
     setSelectedSlot(code);
     setBookingError(null);
     // Auto-select first available plate
