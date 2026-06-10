@@ -109,6 +109,8 @@ export interface LongTermSubscription {
   building?: Building | { _id: string; name: string } | string;
   /** Backend stores a single plate per subscription. */
   plateNumber?: string;
+  /** Dedicated parking slot assigned to this subscription. */
+  slot?: ParkingSlot | null;
   startDate: string;
   endDate: string;
   status: 'pending' | 'active' | 'expired' | 'cancelled';
@@ -272,8 +274,8 @@ export const userApi = {
     get: (id: string) =>
       api.get<Wrap<{ subscription: LongTermSubscription }>>(`/users/long-term/subscriptions/${id}`),
 
-    /** Subscribe to a long-term package (BE expects { packageId, plateNumber }). */
-    create: (body: { packageId: string; plateNumber: string }) =>
+    /** Subscribe to a long-term package (BE expects { packageId, plateNumber, slotId?, startDate? }). */
+    create: (body: { packageId: string; plateNumber: string; slotId?: string; startDate?: string }) =>
       api.post<Wrap<{ subscription: LongTermSubscription }>>(
         '/users/long-term/subscriptions',
         body

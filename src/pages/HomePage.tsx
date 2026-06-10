@@ -51,6 +51,7 @@ const moduleIcons: Record<string, LucideIcon> = {
   profile: CheckCircle2,
   wallet: Wallet,
   buildings: Building2,
+  packages: Ticket,
   reservations: CalendarClock,
   sessions: ScanLine,
   payments: CreditCard,
@@ -91,8 +92,8 @@ export default function HomePage({ modules, onOpenAuth, onViewProfile, onViewRes
     (!user.phone || user.phone.trim() === '' || !user.licensePlates || user.licensePlates.length === 0)
   );
 
-  const productModules = modules.slice(0, 4);
-  const serviceModules = modules.slice(4);
+  const productModules = useMemo(() => modules.filter((m) => m.available), [modules]);
+  const serviceModules = useMemo(() => modules.filter((m) => !m.available), [modules]);
   const [showPlateBanner, setShowPlateBanner] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -569,7 +570,7 @@ export default function HomePage({ modules, onOpenAuth, onViewProfile, onViewRes
             <p className="text-sm text-slate-400 font-semibold mt-2">Đáp ứng đầy đủ sự gia tăng lưu lượng và quy mô quản lý bãi đỗ trong tương lai.</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
             {serviceModules.map((module, index) => {
               const Icon = moduleIcons[module.id] || Ticket;
               return (

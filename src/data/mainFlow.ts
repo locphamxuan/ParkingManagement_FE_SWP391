@@ -36,6 +36,13 @@ export const mainFlowModules: LegacyModule[] = [
     available: true,
   },
   {
+    id: 'packages',
+    title: 'Gói dịch vụ',
+    description: 'Đăng ký các gói gửi xe dài hạn của cư dân theo tuần, tháng, năm với mức giá ưu đãi cực hấp dẫn.',
+    actionLabel: 'Xem gói ngay',
+    available: true,
+  },
+  {
     id: 'reservations',
     title: 'Đặt chỗ trước',
     description: 'Đặt trước chỗ đỗ theo nhu cầu của khách hàng.',
