@@ -212,15 +212,14 @@ function MiniCalendar({
               type="button"
               disabled={disabled}
               onClick={() => onSelect(cellDate)}
-              className={`relative aspect-square w-full rounded-xl text-xs font-bold transition-all duration-200 flex items-center justify-center ${
-                isSelected
-                  ? 'bg-orange-500 text-slate-950 font-black shadow-[0_4px_12px_rgba(249,115,22,0.4)] scale-105'
-                  : disabled
-                    ? 'text-slate-700 opacity-25 cursor-not-allowed'
-                    : isToday
-                      ? 'border border-orange-500/40 bg-orange-500/5 text-orange-400 hover:bg-orange-500/10'
-                      : 'text-slate-300 hover:bg-white/[0.08] hover:text-white'
-              }`}
+              className={`relative aspect-square w-full rounded-xl text-xs font-bold transition-all duration-200 flex items-center justify-center ${isSelected
+                ? 'bg-orange-500 text-slate-950 font-black shadow-[0_4px_12px_rgba(249,115,22,0.4)] scale-105'
+                : disabled
+                  ? 'text-slate-700 opacity-25 cursor-not-allowed'
+                  : isToday
+                    ? 'border border-orange-500/40 bg-orange-500/5 text-orange-400 hover:bg-orange-500/10'
+                    : 'text-slate-300 hover:bg-white/[0.08] hover:text-white'
+                }`}
             >
               {day}
               {isToday && !isSelected && (
@@ -311,11 +310,10 @@ function TimeScroller({ selected, onSelect }: { selected: string; onSelect: (t: 
                       key={t}
                       type="button"
                       onClick={() => onSelect(t)}
-                      className={`rounded-xl py-2.5 text-xs font-bold transition-all duration-200 ${
-                        isSelected
-                          ? 'bg-orange-500 text-slate-950 font-black shadow-[0_4px_12px_rgba(249,115,22,0.3)] scale-105'
-                          : 'border border-white/[0.06] bg-white/[0.02] text-slate-400 hover:border-orange-300/30 hover:text-white'
-                      }`}
+                      className={`rounded-xl py-2.5 text-xs font-bold transition-all duration-200 ${isSelected
+                        ? 'bg-orange-500 text-slate-950 font-black shadow-[0_4px_12px_rgba(249,115,22,0.3)] scale-105'
+                        : 'border border-white/[0.06] bg-white/[0.02] text-slate-400 hover:border-orange-300/30 hover:text-white'
+                        }`}
                     >
                       {t}
                     </button>
@@ -340,16 +338,136 @@ function DurationSelector({ hours, onSelect }: { hours: number; onSelect: (h: nu
           key={h}
           type="button"
           onClick={() => onSelect(h)}
-          className={`rounded-xl px-3 py-2 text-xs font-bold transition-all duration-150 ${
-            hours === h
-              ? 'bg-gradient-to-r from-orange-500 to-amber-400 text-slate-950 shadow-[0_0_10px_rgba(251,191,36,0.2)]'
-              : 'border border-white/[0.06] bg-white/[0.02] text-slate-400 hover:border-orange-300/25 hover:text-white'
-          }`}
+          className={`rounded-xl px-3 py-2 text-xs font-bold transition-all duration-150 ${hours === h
+            ? 'bg-gradient-to-r from-orange-500 to-amber-400 text-slate-950 shadow-[0_0_10px_rgba(251,191,36,0.2)]'
+            : 'border border-white/[0.06] bg-white/[0.02] text-slate-400 hover:border-orange-300/25 hover:text-white'
+            }`}
         >
           {h} giờ
         </button>
       ))}
     </div>
+  );
+}
+
+/* ─── Package Card with Glitter Hover Effect ───────────────────────────────── */
+
+function PackageCard({
+  pkg,
+  isSelected,
+  cat,
+  colors,
+  onClick,
+}: {
+  pkg: LongTermPackage;
+  isSelected: boolean;
+  cat: 'weekly' | 'monthly' | 'yearly';
+  colors: any;
+  onClick: () => void;
+}) {
+  const [isHovered, setIsHovered] = useState(false);
+
+  // Generate unique properties for each glitter particle once
+  const particles = useMemo(() => {
+    return Array.from({ length: 16 }).map((_, i) => {
+      const size = 3 + Math.random() * 4; // size in px
+      const left = Math.random() * 100; // left position in %
+      const delay = Math.random() * 1.5; // animation delay in seconds
+      const duration = 1.2 + Math.random() * 1.8; // animation duration in seconds
+      const type = i % 3 === 0 ? 'star' : i % 3 === 1 ? 'diamond' : 'circle';
+      return { id: i, size, left, delay, duration, type };
+    });
+  }, []);
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      className={`relative rounded-2xl border p-4 text-left transition-all duration-300 ${isSelected
+        ? cat === 'yearly'
+          ? 'border-purple-400 bg-purple-950/20 scale-[1.04] shadow-[0_0_40px_rgba(168,85,247,0.35)] ring-2 ring-purple-400/30'
+          : `${colors.border} ${colors.bg} scale-[1.02] shadow-[0_0_30px_rgba(${cat === 'weekly' ? '34,211,238' : '249,115,22'},0.25)]`
+        : cat === 'yearly'
+          ? 'border-purple-500/30 bg-purple-500/5 hover:border-purple-400/50 hover:scale-[1.02] hover:bg-purple-500/10 hover:shadow-[0_0_20px_rgba(168,85,247,0.1)]'
+          : 'border-white/[0.06] bg-white/[0.02] hover:border-white/15 hover:scale-[1.01] hover:bg-white/[0.04]'
+        }`}
+    >
+      {/* Glitter particles shown on hover */}
+      {isHovered && (
+        <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-2xl z-0">
+          {particles.map((p) => {
+            let color = 'bg-amber-400';
+            if (cat === 'weekly') {
+              color = p.id % 2 === 0 ? 'bg-cyan-300' : 'bg-sky-200';
+            } else if (cat === 'monthly') {
+              color = p.id % 2 === 0 ? 'bg-amber-300' : 'bg-orange-400';
+            } else {
+              color = p.id % 3 === 0 ? 'bg-purple-300' : p.id % 3 === 1 ? 'bg-pink-300' : 'bg-yellow-300';
+            }
+
+            const style: React.CSSProperties = {
+              left: `${p.left}%`,
+              width: `${p.size}px`,
+              height: `${p.size}px`,
+              animationDelay: `${p.delay}s`,
+              animationDuration: `${p.duration}s`,
+              top: '-10px',
+            };
+
+            // Custom clip-path for stars and diamonds
+            let shapeClass = 'rounded-full';
+            if (p.type === 'star') {
+              shapeClass = '';
+              style.clipPath = 'polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)';
+            } else if (p.type === 'diamond') {
+              shapeClass = '';
+              style.clipPath = 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)';
+            }
+
+            return (
+              <span
+                key={p.id}
+                className={`glitter-particle ${color} ${shapeClass}`}
+                style={style}
+              />
+            );
+          })}
+        </div>
+      )}
+
+      {/* Floating Ribbon / Badge */}
+      <span className={`absolute -top-2.5 right-4 rounded-full bg-gradient-to-r ${colors.accent} px-2.5 py-0.5 text-[8px] font-black uppercase tracking-wider text-slate-950 shadow-[0_0_12px_rgba(251,191,36,0.25)] animate-pulse z-10`}>
+        {cat === 'weekly' ? 'Tiết kiệm' : cat === 'monthly' ? 'Phổ biến' : '💎 VIP GIÁ TỐT'}
+      </span>
+      <span className={`text-[9px] font-black uppercase tracking-wider ${colors.text} relative z-10`}>
+        {categoryLabels[cat]}
+      </span>
+      <h4 className="mt-1 text-sm font-black text-white flex items-center gap-1.5 relative z-10">
+        {((typeof pkg.vehicleType === 'object' && pkg.vehicleType?.code === 'CAR') ||
+          (typeof pkg.vehicleType === 'string' && pkg.vehicleType.includes('CAR')) ||
+          pkg.code?.includes('CAR') ||
+          pkg.name?.includes('Ô tô')) ? (
+          <Car size={15} className={`${colors.text} shrink-0`} />
+        ) : (
+          <Bike size={15} className={`${colors.text} shrink-0`} />
+        )}
+        <span>{pkg.name}</span>
+      </h4>
+      <p className="mt-1 text-xs text-slate-400 relative z-10">{pkg.durationDays} ngày</p>
+      <p className={`mt-2 text-lg font-black ${colors.text} relative z-10`}>{fmtMoney(pkg.price)}</p>
+      {pkg.allowDedicatedSlot && (
+        <span className="mt-2 inline-flex items-center gap-1 rounded-full border border-emerald-400/20 bg-emerald-400/5 px-2 py-0.5 text-[9px] font-bold text-emerald-300 relative z-10">
+          <ShieldCheck size={10} /> Chỗ cố định
+        </span>
+      )}
+      {isSelected && (
+        <div className="absolute right-3 top-3 z-10">
+          <CheckCircle2 size={16} className={colors.text} />
+        </div>
+      )}
+    </button>
   );
 }
 
@@ -429,11 +547,10 @@ function ReservationHistoryTab() {
               key={tab.value}
               type="button"
               onClick={() => { setStatusFilter(tab.value); load(1, tab.value); }}
-              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
-                statusFilter === tab.value
-                  ? 'bg-orange-500 text-white shadow-sm'
-                  : 'border border-white/10 bg-white/5 text-slate-400 hover:text-white'
-              }`}
+              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${statusFilter === tab.value
+                ? 'bg-orange-500 text-white shadow-sm'
+                : 'border border-white/10 bg-white/5 text-slate-400 hover:text-white'
+                }`}
             >
               {tab.label}
             </button>
@@ -568,7 +685,7 @@ export default function ReservationsPage() {
         const preferred = state?.buildingId || buildingRows[0]?.building._id || '';
         setSelectedBuildingId((c) => c || preferred);
       })
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => { if (!ignore) setIsLoadingBuildings(false); });
     return () => { ignore = true; };
   }, [state?.buildingId]);
@@ -612,7 +729,7 @@ export default function ReservationsPage() {
         if (ignore) return;
         setPackages((res as any)?.data?.packages ?? []);
       })
-      .catch(() => {});
+      .catch(() => { });
     return () => { ignore = true; };
   }, [selectedBuildingId]);
 
@@ -642,7 +759,7 @@ export default function ReservationsPage() {
         setSlots(mapped);
         setSelectedSlot(null);
       })
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => { if (!ignore) setIsLoadingSlots(false); });
     return () => { ignore = true; };
   }, [selectedBuildingId, selectedFloorIdModal]);
@@ -805,18 +922,17 @@ export default function ReservationsPage() {
         {/* ── Tab Bar ── */}
         <div className="mb-6 flex items-center gap-1 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-1.5">
           {[
-            { key: 'hourly' as BookingMode, label: 'Đặt xe theo tiếng', icon: <Timer size={14} /> },
-            { key: 'package' as BookingMode, label: 'Đăng ký gói cư dân', icon: <Package size={14} /> },
+            { key: 'hourly' as BookingMode, label: 'Đặt chỗ đỗ theo tiếng', icon: <Timer size={14} /> },
+            { key: 'package' as BookingMode, label: 'Đăng ký gói dài hạn', icon: <Package size={14} /> },
           ].map((tab) => (
             <button
               key={tab.key}
               type="button"
               onClick={() => { setMode(tab.key); setBookingError(null); setBookingSuccess(null); }}
-              className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-3 text-xs font-black uppercase tracking-wider transition-all duration-200 ${
-                mode === tab.key
-                  ? 'bg-gradient-to-r from-orange-500 to-amber-400 text-slate-950 shadow-[0_0_16px_rgba(249,115,22,0.2)]'
-                  : 'text-slate-400 hover:text-white'
-              }`}
+              className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-3 text-xs font-black uppercase tracking-wider transition-all duration-200 ${mode === tab.key
+                ? 'bg-gradient-to-r from-orange-500 to-amber-400 text-slate-950 shadow-[0_0_16px_rgba(249,115,22,0.2)]'
+                : 'text-slate-400 hover:text-white'
+                }`}
             >
               {tab.icon} {tab.label}
             </button>
@@ -930,8 +1046,7 @@ export default function ReservationsPage() {
                   {/* Package Cards */}
                   <div className="rounded-3xl border border-white/[0.06] bg-white/[0.02] p-5">
                     <div className="flex items-center gap-2 mb-4">
-                      <Sparkles size={16} className="text-purple-300/70" />
-                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-purple-300/70">Chọn gói cư dân</span>
+                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-purple-300/70">Chọn gói dài hạn</span>
                     </div>
 
                     {packages.length === 0 ? (
@@ -945,54 +1060,17 @@ export default function ReservationsPage() {
                           const colors = categoryColors[cat];
                           const isSelected = selectedPkg?._id === pkg._id;
                           return (
-                            <button
+                            <PackageCard
                               key={pkg._id}
-                              type="button"
+                              pkg={pkg}
+                              isSelected={isSelected}
+                              cat={cat}
+                              colors={colors}
                               onClick={() => {
                                 setSelectedPkg(pkg);
                                 setPkgStartDate(null);
                               }}
-                              className={`relative rounded-2xl border p-4 text-left transition-all duration-300 ${
-                                isSelected
-                                  ? cat === 'yearly'
-                                    ? 'border-purple-400 bg-purple-950/20 scale-[1.04] shadow-[0_0_40px_rgba(168,85,247,0.35)] ring-2 ring-purple-400/30'
-                                    : `${colors.border} ${colors.bg} scale-[1.02] shadow-[0_0_30px_rgba(${cat === 'weekly' ? '34,211,238' : '249,115,22'},0.25)]`
-                                  : cat === 'yearly'
-                                    ? 'border-purple-500/30 bg-purple-500/5 hover:border-purple-400/50 hover:scale-[1.02] hover:bg-purple-500/10 hover:shadow-[0_0_20px_rgba(168,85,247,0.1)]'
-                                    : 'border-white/[0.06] bg-white/[0.02] hover:border-white/15 hover:scale-[1.01] hover:bg-white/[0.04]'
-                              }`}
-                            >
-                              {/* Floating Ribbon / Badge */}
-                              <span className={`absolute -top-2.5 right-4 rounded-full bg-gradient-to-r ${colors.accent} px-2.5 py-0.5 text-[8px] font-black uppercase tracking-wider text-slate-950 shadow-[0_0_12px_rgba(251,191,36,0.25)] animate-pulse`}>
-                                {cat === 'weekly' ? 'Tiết kiệm' : cat === 'monthly' ? 'Phổ biến' : '💎 VIP GIÁ TỐT'}
-                              </span>
-                              <span className={`text-[9px] font-black uppercase tracking-wider ${colors.text}`}>
-                                {categoryLabels[cat]}
-                              </span>
-                              <h4 className="mt-1 text-sm font-black text-white flex items-center gap-1.5">
-                                {((typeof pkg.vehicleType === 'object' && pkg.vehicleType?.code === 'CAR') ||
-                                  (typeof pkg.vehicleType === 'string' && pkg.vehicleType.includes('CAR')) ||
-                                  pkg.code?.includes('CAR') ||
-                                  pkg.name?.includes('Ô tô')) ? (
-                                  <Car size={15} className={`${colors.text} shrink-0`} />
-                                ) : (
-                                  <Bike size={15} className={`${colors.text} shrink-0`} />
-                                )}
-                                <span>{pkg.name}</span>
-                              </h4>
-                              <p className="mt-1 text-xs text-slate-400">{pkg.durationDays} ngày</p>
-                              <p className={`mt-2 text-lg font-black ${colors.text}`}>{fmtMoney(pkg.price)}</p>
-                              {pkg.allowDedicatedSlot && (
-                                <span className="mt-2 inline-flex items-center gap-1 rounded-full border border-emerald-400/20 bg-emerald-400/5 px-2 py-0.5 text-[9px] font-bold text-emerald-300">
-                                  <ShieldCheck size={10} /> Chỗ cố định
-                                </span>
-                              )}
-                              {isSelected && (
-                                <div className="absolute right-3 top-3">
-                                  <CheckCircle2 size={16} className={colors.text} />
-                                </div>
-                              )}
-                            </button>
+                            />
                           );
                         })}
                       </div>
@@ -1093,7 +1171,7 @@ export default function ReservationsPage() {
                 </div>
                 <div className="flex justify-between text-xs">
                   <span className="font-bold text-slate-400">Chế độ</span>
-                  <span className="font-black text-white">{mode === 'hourly' ? 'Theo giờ' : selectedPkg?.name || 'Gói cư dân'}</span>
+                  <span className="font-black text-white">{mode === 'hourly' ? 'Theo giờ' : selectedPkg?.name || 'Gói dài hạn'}</span>
                 </div>
                 <div className="flex justify-between text-xs">
                   <span className="font-bold text-slate-400">Loại xe</span>
