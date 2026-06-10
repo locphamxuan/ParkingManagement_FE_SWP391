@@ -12,6 +12,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock,
+  Lock,
   MapPin,
   Package,
   RefreshCw,
@@ -101,6 +102,21 @@ function normalizeVehicleTypeCode(raw?: string | null): VehicleKind | 'all' {
   if (code.includes('car') || code.includes('ô tô') || code.includes('oto') || code.includes('ôto')) return 'car';
   if (code.includes('motor') || code.includes('moto') || code.includes('xe') || code.includes('motorcycle')) return 'motorcycle';
   return 'all';
+}
+
+function isCarPackage(pkg: LongTermPackage): boolean {
+  const vt = pkg.vehicleType;
+  if (vt && typeof vt === 'object') {
+    const code = String(vt.code || vt.name || '').toLowerCase();
+    return code.includes('car') || code.includes('oto') || code.includes('ô tô') || code.includes('ôto');
+  }
+  if (typeof vt === 'string') {
+    const code = vt.toLowerCase();
+    return code.includes('car') || code.includes('oto') || code.includes('ô tô') || code.includes('ôto');
+  }
+  const name = String(pkg.name || '').toLowerCase();
+  const codeAttr = String(pkg.code || '').toLowerCase();
+  return name.includes('ô tô') || name.includes('oto') || name.includes('car') || codeAttr.includes('car');
 }
 
 function getMaxCalendarDate(mode: BookingMode, pkg?: LongTermPackage | null): Date {
@@ -391,12 +407,14 @@ function DurationSelector({ hours, onSelect }: { hours: number; onSelect: (h: nu
 function PackageCard({
   pkg,
   isSelected,
+  isLocked,
   cat,
   colors,
   onClick,
 }: {
   pkg: LongTermPackage;
   isSelected: boolean;
+  isLocked: boolean;
   cat: 'weekly' | 'monthly' | 'yearly';
   colors: any;
   onClick: () => void;
@@ -406,10 +424,10 @@ function PackageCard({
   // Generate unique properties for each glitter particle once
   const particles = useMemo(() => {
     return Array.from({ length: 16 }).map((_, i) => {
-      const size = 3 + Math.random() * 4; // size in px
-      const left = Math.random() * 100; // left position in %
-      const delay = Math.random() * 1.5; // animation delay in seconds
-      const duration = 1.2 + Math.random() * 1.8; // animation duration in seconds
+      const size = 3 + Math.random() * 4;
+      const left = Math.random() * 100;
+      const delay = Math.random() * 1.5;
+      const duration = 1.2 + Math.random() * 1.8;
       const type = i % 3 === 0 ? 'star' : i % 3 === 1 ? 'diamond' : 'circle';
       return { id: i, size, left, delay, duration, type };
     });
@@ -418,16 +436,27 @@ function PackageCard({
   return (
     <button
       type="button"
-      onClick={onClick}
+      onClick={isLocked ? undefined : onClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className={`relative rounded-2xl border p-4 text-left transition-all duration-300 ${isSelected
-        ? `${colors.borderSelected} ${colors.bgSelected} ${colors.shadowSelected} scale-[1.04]`
-        : `${colors.borderNormal} ${colors.bgNormal} ${colors.borderHover} ${colors.bgHover} ${colors.shadowHover} hover:scale-[1.02]`
-        }`}
+      className={`relative rounded-2xl border p-4 text-left transition-all duration-300 ${
+        isLocked
+          ? 'border-white/[0.04] bg-white/[0.01] opacity-40 cursor-not-allowed'
+          : isSelected
+            ? `${colors.borderSelected} ${colors.bgSelected} ${colors.shadowSelected} scale-[1.04]`
+            : `${colors.borderNormal} ${colors.bgNormal} ${colors.borderHover} ${colors.bgHover} ${colors.shadowHover} hover:scale-[1.02]`
+      }`}
     >
-      {/* Glitter particles shown on hover */}
-      {isHovered && (
+      {/* Lock overlay on hover when locked */}
+      {isLocked && isHovered && (
+        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center rounded-2xl bg-slate-950/70 backdrop-blur-[2px] pointer-events-none">
+          <Lock size={22} className="text-slate-400 mb-1" />
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Không phù hợp</span>
+        </div>
+      )}
+
+      {/* Glitter particles shown on hover (only if not locked) */}
+      {!isLocked && isHovered && (
         <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-2xl z-0">
           {particles.map((p) => {
             let color = 'bg-amber-400';
@@ -444,7 +473,6 @@ function PackageCard({
               top: '-10px',
             };
 
-            // Custom clip-path for stars and diamonds
             let shapeClass = 'rounded-full';
             if (p.type === 'star') {
               shapeClass = '';
@@ -473,10 +501,7 @@ function PackageCard({
         {categoryLabels[cat]}
       </span>
       <h4 className={`mt-1 text-sm font-black flex items-center gap-1.5 relative z-10 transition-colors ${isSelected ? 'text-white' : 'text-slate-200'}`}>
-        {((typeof pkg.vehicleType === 'object' && pkg.vehicleType?.code === 'CAR') ||
-          (typeof pkg.vehicleType === 'string' && pkg.vehicleType.includes('CAR')) ||
-          pkg.code?.includes('CAR') ||
-          pkg.name?.includes('Ô tô')) ? (
+        {isCarPackage(pkg) ? (
           <Car size={15} className={`${colors.text} shrink-0`} />
         ) : (
           <Bike size={15} className={`${colors.text} shrink-0`} />
@@ -494,8 +519,8 @@ function PackageCard({
       }`}>{fmtMoney(pkg.price)}</p>
       {pkg.allowDedicatedSlot && (
         <span className={`mt-2 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] font-bold relative z-10 ${
-          isSelected 
-            ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200' 
+          isSelected
+            ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200'
             : 'border-emerald-400/20 bg-emerald-400/5 text-emerald-300'
         }`}>
           <ShieldCheck size={10} /> Chỗ cố định
@@ -799,17 +824,17 @@ export default function ReservationsPage() {
   const [bookingError, setBookingError] = useState<string | null>(null);
   const [bookingSuccess, setBookingSuccess] = useState<string | null>(null);
 
-  // Auto-dismiss alerts after 5 seconds
+  // Auto-dismiss alerts after 10 seconds
   useEffect(() => {
     if (bookingSuccess) {
-      const timer = setTimeout(() => setBookingSuccess(null), 5000);
+      const timer = setTimeout(() => setBookingSuccess(null), 10000);
       return () => clearTimeout(timer);
     }
   }, [bookingSuccess]);
 
   useEffect(() => {
     if (bookingError) {
-      const timer = setTimeout(() => setBookingError(null), 5000);
+      const timer = setTimeout(() => setBookingError(null), 10000);
       return () => clearTimeout(timer);
     }
   }, [bookingError]);
@@ -943,6 +968,14 @@ export default function ReservationsPage() {
       : building.pricing.hourlyRate;
     return Math.ceil(rate * durationHours);
   }, [mode, selectedPkg, selectedBuilding, selectedVehicleType, durationHours]);
+
+  const filteredPackages = useMemo(() => {
+    if (!selectedVehicleType) return packages;
+    return packages.filter((pkg) => {
+      const isCar = isCarPackage(pkg);
+      return selectedVehicleType === 'car' ? isCar : !isCar;
+    });
+  }, [packages, selectedVehicleType]);
 
   const plateOptions = useMemo(() => {
     if (!user) return [];
@@ -1106,7 +1139,7 @@ export default function ReservationsPage() {
         <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
           {/* Left: Booking Form */}
           <div className="space-y-5">
-            {/* Building + Vehicle */}
+            {/* Building + Vehicle + Plate */}
             <div className="rounded-3xl border border-white/[0.06] bg-white/[0.02] p-5">
               <div className="flex items-center gap-2 mb-4">
                 <Building2 size={16} className="text-cyan-300/70" />
@@ -1134,6 +1167,7 @@ export default function ReservationsPage() {
                       setSelectedVehicleType(val as VehicleKind | '');
                       setSelectedSlot(null);
                       setSelectedPlate('');
+                      setSelectedPkg(null);
                     }}
                     options={[
                       { value: '', label: '-- Chọn loại xe --' },
@@ -1143,6 +1177,27 @@ export default function ReservationsPage() {
                     placeholder="-- Chọn loại xe --"
                   />
                 </div>
+              </div>
+
+              {/* Plate selection right below vehicle type */}
+              <div className="mt-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Zap size={14} className="text-amber-300/70" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Biển số xe</span>
+                </div>
+                <CustomSelect
+                  value={selectedPlate}
+                  onChange={setSelectedPlate}
+                  disabled={plateOptions.length === 0}
+                  options={[
+                    { value: '', label: '-- Chọn biển số --' },
+                    ...plateOptions.map((p) => ({
+                      value: p.plateNumber,
+                      label: `${p.plateNumber} — ${p.vehicleType === 'motorcycle' ? '🏍️ Xe máy' : '🚗 Ô tô'}`,
+                    })),
+                  ]}
+                  placeholder="-- Chọn biển số --"
+                />
               </div>
             </div>
 
@@ -1205,16 +1260,27 @@ export default function ReservationsPage() {
                           const cat = packageCategory(pkg);
                           const colors = categoryColors[cat];
                           const isSelected = selectedPkg?._id === pkg._id;
+                          const isCar = isCarPackage(pkg);
+                          // isLocked: only when a vehicle type IS selected and this package doesn't match
+                          const isLocked = !!selectedVehicleType && (selectedVehicleType === 'car' ? !isCar : isCar);
                           return (
                             <PackageCard
                               key={pkg._id}
                               pkg={pkg}
                               isSelected={isSelected}
+                              isLocked={isLocked}
                               cat={cat}
                               colors={colors}
                               onClick={() => {
+                                if (isLocked) return;
                                 setSelectedPkg(pkg);
                                 setPkgStartDate(null);
+                                const nextType = isCar ? 'car' : 'motorcycle';
+                                if (selectedVehicleType !== nextType) {
+                                  setSelectedVehicleType(nextType);
+                                  setSelectedSlot(null);
+                                  setSelectedPlate('');
+                                }
                               }}
                             />
                           );
@@ -1269,27 +1335,8 @@ export default function ReservationsPage() {
               </div>
             </div>
 
-            {/* ── Plate Selection ── */}
-            <div className="rounded-3xl border border-white/[0.06] bg-white/[0.02] p-5">
-              <div className="flex items-center gap-2 mb-3">
-                <Zap size={16} className="text-amber-300/70" />
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-300/70">Biển số xe</span>
-              </div>
-              <CustomSelect
-                value={selectedPlate}
-                onChange={setSelectedPlate}
-                disabled={plateOptions.length === 0}
-                options={[
-                  { value: '', label: '-- Chọn biển số --' },
-                  ...plateOptions.map((p) => ({
-                    value: p.plateNumber,
-                    label: `${p.plateNumber} — ${p.vehicleType === 'motorcycle' ? '🏍️ Xe máy' : '🚗 Ô tô'}`,
-                  })),
-                ]}
-                placeholder="-- Chọn biển số --"
-              />
-            </div>
           </div>
+
 
           {/* Right: Summary Sidebar */}
           <div className="lg:sticky lg:top-6 lg:self-start">
@@ -1507,51 +1554,76 @@ export default function ReservationsPage() {
         )}
       </AnimatePresence>
 
-      {/* ── Floating Notification Toast ── */}
+      {/* ── Center Notification Popup Modal ── */}
       <AnimatePresence>
         {(bookingSuccess || bookingError) && (
           <motion.div
-            initial={{ opacity: 0, y: -20, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -20, scale: 0.9 }}
-            transition={{ type: 'spring', duration: 0.4 }}
-            className="fixed top-6 left-4 right-4 sm:left-auto sm:right-6 sm:w-[420px] z-50 pointer-events-auto"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm pointer-events-auto"
+            onClick={() => {
+              setBookingSuccess(null);
+              setBookingError(null);
+            }}
           >
-            {bookingSuccess ? (
-              <div className="flex items-start gap-3 rounded-2xl border border-emerald-500/30 bg-slate-900/90 p-4 text-emerald-300 shadow-[0_10px_35px_rgba(0,0,0,0.6),0_0_20px_rgba(16,185,129,0.15)] backdrop-blur-xl">
-                <div className="rounded-full bg-emerald-500/10 p-1.5 border border-emerald-500/20 shrink-0">
-                  <CheckCircle2 size={18} className="text-emerald-400" />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              transition={{ type: 'spring', duration: 0.4 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-sm overflow-hidden rounded-3xl border p-6 text-left shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-xl bg-slate-900/95 pointer-events-auto"
+              style={{
+                borderColor: bookingSuccess ? 'rgba(16, 185, 129, 0.3)' : 'rgba(244, 63, 94, 0.3)',
+              }}
+            >
+              {bookingSuccess ? (
+                <div className="flex flex-col items-center text-center">
+                  <motion.div 
+                    initial={{ scale: 0 }}
+                    animate={{ scale: [0, 1.2, 1] }}
+                    transition={{ duration: 0.4 }}
+                    className="rounded-full bg-emerald-500/10 p-3.5 border border-emerald-500/20 mb-4 shrink-0"
+                  >
+                    <CheckCircle2 size={32} className="text-emerald-400" />
+                  </motion.div>
+                  <h3 className="text-lg font-black uppercase tracking-wider text-emerald-400">Thành công!</h3>
+                  <p className="mt-3 text-sm font-medium text-slate-300 leading-relaxed break-words">
+                    {bookingSuccess}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setBookingSuccess(null)}
+                    className="mt-6 w-full rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-400 px-4 py-3 text-xs font-black uppercase tracking-wider text-slate-950 transition hover:brightness-110 active:scale-95 shadow-[0_4px_15px_rgba(16,185,129,0.2)]"
+                  >
+                    Đồng ý
+                  </button>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-black uppercase tracking-wider text-emerald-400">Thành công</p>
-                  <p className="mt-1 text-xs font-medium text-slate-300 leading-relaxed break-words">{bookingSuccess}</p>
+              ) : (
+                <div className="flex flex-col items-center text-center">
+                  <motion.div 
+                    initial={{ x: 0 }}
+                    animate={{ x: [-10, 10, -10, 10, 0] }}
+                    transition={{ duration: 0.4 }}
+                    className="rounded-full bg-rose-500/10 p-3.5 border border-rose-500/20 mb-4 shrink-0"
+                  >
+                    <XCircle size={32} className="text-rose-400" />
+                  </motion.div>
+                  <h3 className="text-lg font-black uppercase tracking-wider text-rose-400">Đã xảy ra lỗi</h3>
+                  <p className="mt-3 text-sm font-medium text-slate-300 leading-relaxed break-words">
+                    {bookingError}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setBookingError(null)}
+                    className="mt-6 w-full rounded-2xl bg-gradient-to-r from-rose-500 to-pink-500 px-4 py-3 text-xs font-black uppercase tracking-wider text-slate-950 transition hover:brightness-110 active:scale-95 shadow-[0_4px_15px_rgba(244,63,94,0.2)]"
+                  >
+                    Đóng
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setBookingSuccess(null)}
-                  className="text-slate-400 hover:text-white hover:bg-white/5 rounded-lg p-1 transition shrink-0"
-                >
-                  <X size={14} />
-                </button>
-              </div>
-            ) : (
-              <div className="flex items-start gap-3 rounded-2xl border border-rose-500/30 bg-slate-900/90 p-4 text-rose-300 shadow-[0_10px_35px_rgba(0,0,0,0.6),0_0_20px_rgba(244,63,94,0.15)] backdrop-blur-xl">
-                <div className="rounded-full bg-rose-500/10 p-1.5 border border-rose-500/20 shrink-0">
-                  <XCircle size={18} className="text-rose-400" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-black uppercase tracking-wider text-rose-400">Thất bại</p>
-                  <p className="mt-1 text-xs font-medium text-slate-300 leading-relaxed break-words">{bookingError}</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setBookingError(null)}
-                  className="text-slate-400 hover:text-white hover:bg-white/5 rounded-lg p-1 transition shrink-0"
-                >
-                  <X size={14} />
-                </button>
-              </div>
-            )}
+              )}
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
