@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X } from 'lucide-react';
+import { X, Lock } from 'lucide-react';
 
 /* ─── Types ────────────────────────────────────────────────────────────────── */
 
@@ -87,8 +87,9 @@ function slotBg(status: SlotDetailedStatus): string {
       return 'bg-blue-500/80 border-blue-400/40 shadow-[0_0_15px_rgba(59,130,246,0.25)]';
     case 'occupied':
     case 'maintenance':
-    case 'unsupported':
       return 'bg-slate-800/40 border-dashed border-slate-700/50 text-slate-500 opacity-60';
+    case 'unsupported':
+      return 'bg-slate-950/90 border-solid border-slate-900/60 text-slate-700 cursor-not-allowed';
   }
 }
 
@@ -131,7 +132,7 @@ function SlotCell({
         ${is3D ? 'h-12 w-14 sm:h-14 sm:w-16' : 'h-14 w-14 sm:h-16 sm:w-16'}
         ${slotBg(status)}
         ${isClickable ? 'cursor-pointer' : isSelected ? 'cursor-pointer' : 'cursor-default'}
-        ${!isClickable && !isSelected ? 'opacity-55' : ''}
+        ${!isClickable && !isSelected ? (status === 'unsupported' ? 'opacity-20' : 'opacity-55') : ''}
       `}
       style={is3D ? { transform: 'translateZ(10px)', transformStyle: 'preserve-3d' } : undefined}
     >
@@ -158,6 +159,13 @@ function SlotCell({
             <MotorcycleSvg className="h-2.5 w-2.5 text-white/80" />
           )}
         </span>
+      )}
+
+      {/* Lock overlay for unsupported slots */}
+      {status === 'unsupported' && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-xl pointer-events-none">
+          <Lock size={16} className="text-slate-400" />
+        </div>
       )}
     </motion.button>
   );
@@ -368,12 +376,11 @@ export function ParkingMap2D({
     const dx = e.clientX - dragStartRef.current.x;
     const dy = e.clientY - dragStartRef.current.y;
 
-    if (Math.abs(dx) > 15 || Math.abs(dy) > 15) {
+    if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
       hasMovedRef.current = true;
+      setRotateZ(startRotateZRef.current + dx * 0.5);
+      setRotateX(Math.max(25, Math.min(75, startRotateXRef.current - dy * 0.5)));
     }
-
-    setRotateZ(startRotateZRef.current + dx * 0.5);
-    setRotateX(Math.max(25, Math.min(75, startRotateXRef.current - dy * 0.5)));
   };
 
   const handleMouseUp = () => {
