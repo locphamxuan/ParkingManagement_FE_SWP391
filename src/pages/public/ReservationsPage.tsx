@@ -628,7 +628,7 @@ function ReservationHistoryTab() {
                   </div>
                 </div>
 
-                <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 border-t border-white/[0.03] pt-4">
+                <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5 border-t border-white/[0.03] pt-4">
                   <div>
                     <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Vị trí đỗ</p>
                     <p className="mt-1 text-sm font-bold text-slate-200">{(r.slot as any)?.code ?? '—'}</p>
@@ -644,6 +644,12 @@ function ReservationHistoryTab() {
                   <div>
                     <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Tiền cọc</p>
                     <p className={`mt-1 text-sm font-black ${r.fee ? 'text-emerald-400' : 'text-slate-500'}`}>{fmtMoney(r.fee)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Còn lại phải trả</p>
+                    <p className="mt-1 text-sm font-black text-orange-400">
+                      {fmtMoney(r.parkingSession ? r.parkingSession.fee : (r.estimatedFee && r.fee ? r.estimatedFee - r.fee : 0))}
+                    </p>
                   </div>
                 </div>
 
@@ -899,8 +905,16 @@ export default function ReservationsPage() {
     return slots.filter((s) => {
       if (s.status !== 'available') return true;
       if (!s.reservable) return true;
-      if (selectedVehicleType && s.vehicleType !== 'all' && s.vehicleType !== selectedVehicleType) return true;
       return false;
+    }).map((s) => s.code);
+  }, [slots]);
+
+  const unsupportedSlotCodes = useMemo(() => {
+    if (!selectedVehicleType) return [];
+    return slots.filter((s) => {
+      if (s.status !== 'available') return false;
+      if (!s.reservable) return false;
+      return s.vehicleType !== 'all' && s.vehicleType !== selectedVehicleType;
     }).map((s) => s.code);
   }, [slots, selectedVehicleType]);
 
@@ -1016,7 +1030,12 @@ export default function ReservationsPage() {
             <button
               key={tab.key}
               type="button"
-              onClick={() => { setMode(tab.key); setBookingError(null); setBookingSuccess(null); }}
+              onClick={() => {
+                setMode(tab.key);
+                setSelectedSlot(null);
+                setBookingError(null);
+                setBookingSuccess(null);
+              }}
               className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-3 text-xs font-black uppercase tracking-wider transition-all duration-200 ${mode === tab.key
                 ? 'bg-gradient-to-r from-orange-500 to-amber-400 text-slate-950 shadow-[0_0_16px_rgba(249,115,22,0.2)]'
                 : 'text-slate-400 hover:text-white'
@@ -1348,6 +1367,7 @@ export default function ReservationsPage() {
                 })) : []}
                 selectedSlot={selectedSlot}
                 unavailableSlots={unavailableSlotCodes}
+                unsupportedSlots={unsupportedSlotCodes}
                 onSlotClick={handleSlotClick}
                 onConfirm={() => setShowSlotModal(false)}
                 onClose={() => setShowSlotModal(false)}
@@ -1366,21 +1386,31 @@ export default function ReservationsPage() {
                   ) : null
                 }
               >
-                {/* Floor selector */}
-                <div className="mb-6">
-                  <span className="mb-2 block text-[10px] font-bold uppercase tracking-widest text-slate-500">Khu vực / Tầng</span>
-                  <CustomSelect
-                    value={selectedFloorIdModal}
-                    onChange={(val) => {
-                      setSelectedFloorIdModal(String(val || ''));
-                      setSelectedSlot(null);
-                    }}
-                    options={[
-                      { value: '', label: '-- Chọn tầng --' },
-                      ...floorsData.map((f) => ({ value: f._id, label: `Tầng ${f.code || f.name || ''} (${f.availableSlots}/${f.totalSlots})` })),
-                    ]}
-                    placeholder="-- Chọn tầng --"
-                  />
+                {/* Floor selector & Guide note */}
+                <div className="mb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+                  <div className="flex-1">
+                    <span className="mb-2 block text-[10px] font-bold uppercase tracking-widest text-slate-500">Khu vực / Tầng</span>
+                    <CustomSelect
+                      value={selectedFloorIdModal}
+                      onChange={(val) => {
+                        setSelectedFloorIdModal(String(val || ''));
+                        setSelectedSlot(null);
+                      }}
+                      options={[
+                        { value: '', label: '-- Chọn tầng --' },
+                        ...floorsData.map((f) => ({ value: f._id, label: `Tầng ${f.code || f.name || ''} (${f.availableSlots}/${f.totalSlots})` })),
+                      ]}
+                      placeholder="-- Chọn tầng --"
+                    />
+                  </div>
+                  {selectedVehicleType && (
+                    <div className="rounded-xl border border-white/5 bg-white/[0.02] px-4 py-2.5 text-xs text-slate-400 flex items-center gap-2 max-w-md">
+                      <Sparkles size={14} className="text-amber-400 shrink-0 animate-pulse" />
+                      <span>
+                        Bản đồ đang lọc theo <strong>{selectedVehicleType === 'car' ? 'Ô tô' : 'Xe máy'}</strong>. Các ô đỗ không phù hợp sẽ tự động mờ đi.
+                      </span>
+                    </div>
+                  )}
                 </div>
               </ParkingMap2D>
             </motion.div>

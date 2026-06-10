@@ -59,6 +59,7 @@ export interface Reservation {
   startTime: string;
   endTime?: string | null;
   fee?: number;
+  estimatedFee?: number;
   createdAt?: string;
   updatedAt?: string;
   parkingSession?: {
