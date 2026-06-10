@@ -1,5 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { X } from 'lucide-react';
 
 /* ─── Types ────────────────────────────────────────────────────────────────── */
 
@@ -28,6 +29,11 @@ export interface ParkingMap2DProps {
   unsupportedSlots?: string[];
   onSlotClick?: (slotCode: string) => void;
   interactive?: boolean;
+  onConfirm?: () => void;
+  onClose?: () => void;
+  children?: React.ReactNode;
+  placeholder?: React.ReactNode;
+  className?: string;
 }
 
 /* ─── SVG Icons (inline, no lock icons on occupied) ────────────────────────── */
@@ -74,17 +80,15 @@ function getDetailedStatus(
 function slotBg(status: SlotDetailedStatus): string {
   switch (status) {
     case 'selected':
-      return 'bg-orange-400 border-orange-200 shadow-[0_0_20px_rgba(251,191,36,0.3)] ring-2 ring-orange-200/30';
+      return 'bg-orange-500 border-orange-300 shadow-[0_0_20px_rgba(249,115,22,0.4)] ring-2 ring-orange-300/30';
     case 'available':
-      return 'bg-emerald-500/90 border-emerald-300/50 hover:bg-emerald-400 hover:shadow-[0_0_18px_rgba(52,211,153,0.2)]';
+      return 'bg-emerald-500/90 border-emerald-400/40 hover:bg-emerald-400 hover:shadow-[0_0_18px_rgba(52,211,153,0.3)]';
     case 'reserved':
-      return 'bg-amber-500/80 border-amber-300/40';
+      return 'bg-blue-500/80 border-blue-400/40 shadow-[0_0_15px_rgba(59,130,246,0.25)]';
     case 'occupied':
-      return 'bg-slate-600/60 border-slate-500/30';
     case 'maintenance':
-      return 'bg-slate-700/60 border-slate-600/30';
     case 'unsupported':
-      return 'bg-slate-800/60 border-slate-700/30';
+      return 'bg-slate-800/40 border-dashed border-slate-700/50 text-slate-500 opacity-60';
   }
 }
 
@@ -119,16 +123,17 @@ function SlotCell({
       type="button"
       onClick={isClickable || isSelected ? onClick : undefined}
       disabled={!isClickable && !isSelected}
-      whileHover={isClickable ? { scale: 1.08, y: -3 } : {}}
-      whileTap={isClickable ? { scale: 0.95 } : {}}
+      whileHover={isClickable && !is3D ? { scale: 1.08, y: -3 } : {}}
+      whileTap={isClickable && !is3D ? { scale: 0.95 } : {}}
       title={`${slot.code} — ${status === 'available' ? 'Trống' : status === 'selected' ? 'Đang chọn' : status === 'occupied' ? 'Đang sử dụng' : status === 'reserved' ? 'Đã giữ' : status === 'maintenance' ? 'Bảo trì' : 'Không phù hợp'}`}
       className={`
         relative flex flex-col items-center justify-center rounded-xl border-2 transition-all duration-200
         ${is3D ? 'h-12 w-14 sm:h-14 sm:w-16' : 'h-14 w-14 sm:h-16 sm:w-16'}
         ${slotBg(status)}
-        ${isClickable ? 'cursor-pointer' : !isSelected ? 'cursor-default' : 'cursor-pointer'}
+        ${isClickable ? 'cursor-pointer' : isSelected ? 'cursor-pointer' : 'cursor-default'}
         ${!isClickable && !isSelected ? 'opacity-55' : ''}
       `}
+      style={is3D ? { transform: 'translateZ(10px)', transformStyle: 'preserve-3d' } : undefined}
     >
       {/* Vehicle Icon for occupied/reserved */}
       {showVehicleIcon ? (
@@ -244,23 +249,25 @@ function ParkingRow({
 
 /* ─── Legend ────────────────────────────────────────────────────────────────── */
 
-const LEGEND = [
-  { color: 'bg-emerald-500', label: 'Trống', ring: 'ring-emerald-300/25' },
-  { color: 'bg-orange-400', label: 'Đang chọn', ring: 'ring-orange-300/25' },
-  { color: 'bg-amber-500', label: 'Đã giữ', ring: 'ring-amber-300/25' },
-  { color: 'bg-slate-600', label: 'Đang sử dụng', ring: 'ring-slate-500/25' },
-  { color: 'bg-slate-700', label: 'Bảo trì', ring: 'ring-slate-600/25' },
-];
-
 function Legend() {
   return (
-    <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
-      {LEGEND.map(({ color, label, ring }) => (
-        <div key={label} className="flex items-center gap-1.5">
-          <div className={`h-2.5 w-2.5 rounded ${color} ring-2 ${ring}`} />
-          <span className="text-[10px] font-semibold text-slate-400">{label}</span>
-        </div>
-      ))}
+    <div className="flex flex-wrap justify-center gap-6 py-2 border-b border-white/5 mb-5">
+      <div className="flex items-center gap-2">
+        <div className="h-2.5 w-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
+        <span className="text-xs font-bold text-slate-400">Trống</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <div className="h-2.5 w-2.5 rounded-full bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.4)]" />
+        <span className="text-xs font-bold text-slate-400">Đang chọn</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <div className="h-2.5 w-2.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.4)]" />
+        <span className="text-xs font-bold text-slate-400">Đã giữ</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <div className="h-2.5 w-2.5 rounded-full border border-dashed border-slate-500/80 bg-transparent opacity-60" />
+        <span className="text-xs font-bold text-slate-400">Không khả dụng</span>
+      </div>
     </div>
   );
 }
@@ -282,7 +289,7 @@ function EntryExitMarkers() {
         <span className="text-[10px] font-black uppercase tracking-wider text-rose-400/70">Lối ra</span>
         <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-rose-500/15 text-rose-400">
           <svg viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5">
-            <path d="M15 8H3M7 4l-4 4 4 4" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M1 8h12M9 4l4 4-4 4" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </div>
       </div>
@@ -294,18 +301,19 @@ function EntryExitMarkers() {
 
 function ViewToggle({ view, onChange }: { view: '2D' | '3D'; onChange: (v: '2D' | '3D') => void }) {
   return (
-    <div className="inline-flex rounded-xl border border-white/10 bg-white/[0.03] p-1">
+    <div className="inline-flex rounded-full bg-slate-950 p-1 border border-white/5 shadow-inner">
       {(['2D', '3D'] as const).map((v) => (
         <button
           key={v}
           type="button"
           onClick={() => onChange(v)}
-          className={`relative rounded-lg px-4 py-1.5 text-xs font-black uppercase tracking-wider transition-all duration-200 ${view === v
-            ? 'bg-orange-400 text-slate-950 shadow-[0_0_12px_rgba(251,191,36,0.3)]'
-            : 'text-slate-400 hover:text-white'
-            }`}
+          className={`relative rounded-full px-5 py-2 text-xs font-black uppercase tracking-wider transition-all duration-300 ${
+            view === v
+              ? 'bg-orange-500 text-slate-950 font-black shadow-[0_0_12px_rgba(249,115,22,0.3)]'
+              : 'text-slate-400 hover:text-white'
+          }`}
         >
-          {v}
+          {v === '2D' ? '2D Grid' : '3D View'}
         </button>
       ))}
     </div>
@@ -323,16 +331,58 @@ export function ParkingMap2D({
   unsupportedSlots = [],
   onSlotClick,
   interactive = false,
+  onConfirm,
+  onClose,
+  children,
+  placeholder,
+  className = "w-full rounded-3xl border border-slate-800/80 bg-[#080d17] p-4 sm:p-5",
 }: ParkingMap2DProps) {
   const [view, setView] = useState<'2D' | '3D'>('2D');
   const [rotateX, setRotateX] = useState(45);
   const [rotateZ, setRotateZ] = useState(-10);
   const [zoom, setZoom] = useState(0.85);
 
+  const isDraggingRef = useRef(false);
+  const dragStartRef = useRef({ x: 0, y: 0 });
+  const hasMovedRef = useRef(false);
+  const startRotateXRef = useRef(45);
+  const startRotateZRef = useRef(-10);
+
   const reset3D = () => {
     setRotateX(45);
     setRotateZ(-10);
     setZoom(0.85);
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (view !== '3D' || e.button !== 0) return;
+    isDraggingRef.current = true;
+    dragStartRef.current = { x: e.clientX, y: e.clientY };
+    startRotateXRef.current = rotateX;
+    startRotateZRef.current = rotateZ;
+    hasMovedRef.current = false;
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDraggingRef.current || view !== '3D') return;
+    const dx = e.clientX - dragStartRef.current.x;
+    const dy = e.clientY - dragStartRef.current.y;
+
+    if (Math.abs(dx) > 15 || Math.abs(dy) > 15) {
+      hasMovedRef.current = true;
+    }
+
+    setRotateZ(startRotateZRef.current + dx * 0.5);
+    setRotateX(Math.max(25, Math.min(75, startRotateXRef.current - dy * 0.5)));
+  };
+
+  const handleMouseUp = () => {
+    isDraggingRef.current = false;
+  };
+
+  const handleSlotClick = (code: string) => {
+    if (hasMovedRef.current) return;
+    onSlotClick?.(code);
   };
 
   // Group slots by row letter
@@ -348,158 +398,123 @@ export function ParkingMap2D({
 
   const rows = useMemo(() => Object.keys(slotsByRow).sort(), [slotsByRow]);
 
-  const availableCount = useMemo(() => {
-    const unavSet = new Set([...unavailableSlots, ...maintenanceSlots, ...unsupportedSlots]);
-    const reservedSet = new Set(activeReservations.map((r) => r.slotCode));
-    return slots.filter((s) => !unavSet.has(s.code) && !reservedSet.has(s.code) && s.status !== 'unavailable').length;
-  }, [slots, unavailableSlots, maintenanceSlots, unsupportedSlots, activeReservations]);
-
   return (
-    <div className="w-full rounded-3xl border border-slate-800/80 bg-[#080d17] p-4 sm:p-5">
+    <div className={className}>
       {/* Header */}
-      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mb-6 flex items-start justify-between border-b border-white/5 pb-4">
         <div>
-          <h3 className="text-sm font-black uppercase tracking-widest text-white">Sơ đồ đỗ xe</h3>
-          <p className="mt-1 text-xs font-semibold text-slate-500">
-            {interactive ? 'Nhấn vào ô xanh để chọn' : 'Chế độ xem'}
-            {' · '}
-            <span className="text-emerald-400">{availableCount}</span>
-            <span className="text-slate-500">/{slots.length} trống</span>
-          </p>
+          <h2 className="text-xl font-extrabold uppercase tracking-wider text-white">BASEMENT PARKING MAP</h2>
+          <p className="mt-1 text-xs font-bold text-amber-500 uppercase tracking-widest">Floor Map</p>
         </div>
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full border border-white/10 bg-white/[0.03] p-2 text-slate-400 hover:text-white transition duration-200"
+          >
+            <X size={16} />
+          </button>
+        )}
+      </div>
+
+      {/* Nút Chuyển Đổi Chế Độ (Centered Pill Tab) */}
+      <div className="flex justify-center mb-6">
         <ViewToggle view={view} onChange={setView} />
       </div>
 
-      {/* Legend */}
-      <div className="mb-5">
-        <Legend />
-      </div>
+      {/* Children elements (like floor selection drop downs) */}
+      {children}
 
-      {/* 3D Interactive Controls */}
-      {view === '3D' && (
-        <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3 rounded-2xl border border-white/5 bg-slate-900/60 px-4 py-3.5 text-xs mb-5 shadow-inner">
-          <div className="flex items-center gap-2">
-            <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px]">Độ nghiêng (Tilt):</span>
-            <input
-              type="range"
-              min="20"
-              max="80"
-              value={rotateX}
-              onChange={(e) => setRotateX(Number(e.target.value))}
-              className="w-20 accent-orange-500 bg-slate-800 rounded-lg h-1 appearance-none cursor-pointer"
-            />
-            <span className="font-mono text-slate-300 w-8 text-right">{rotateX}°</span>
+      {placeholder ? (
+        placeholder
+      ) : (
+        <>
+          {/* Legend */}
+          <div className="mb-5">
+            <Legend />
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px]">Xoay (Rotate):</span>
-            <input
-              type="range"
-              min="-180"
-              max="180"
-              value={rotateZ}
-              onChange={(e) => setRotateZ(Number(e.target.value))}
-              className="w-24 accent-orange-500 bg-slate-800 rounded-lg h-1 appearance-none cursor-pointer"
-            />
-            <span className="font-mono text-slate-300 w-10 text-right">{rotateZ}°</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px]">Zoom:</span>
-            <button
-              type="button"
-              onClick={() => setZoom((z) => Math.max(0.4, Number((z - 0.05).toFixed(2))))}
-              className="h-6 w-6 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition text-xs font-black flex items-center justify-center"
-            >
-              -
-            </button>
-            <input
-              type="range"
-              min="0.4"
-              max="1.6"
-              step="0.05"
-              value={zoom}
-              onChange={(e) => setZoom(Number(e.target.value))}
-              className="w-20 accent-orange-500 bg-slate-800 rounded-lg h-1 appearance-none cursor-pointer"
-            />
-            <button
-              type="button"
-              onClick={() => setZoom((z) => Math.min(1.6, Number((z + 0.05).toFixed(2))))}
-              className="h-6 w-6 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition text-xs font-black flex items-center justify-center"
-            >
-              +
-            </button>
-            <span className="font-mono text-slate-300 w-12 text-right">{Math.round(zoom * 100)}%</span>
-          </div>
-          <button
-            type="button"
-            onClick={reset3D}
-            className="px-3 py-1.5 rounded-xl border border-white/10 hover:border-orange-500/30 text-[9px] font-black uppercase tracking-wider text-slate-300 hover:text-orange-200 transition duration-200"
-          >
-            Mặc định
-          </button>
-        </div>
-      )}
 
-      {/* Entry marker */}
-      <EntryExitMarkers />
-
-      {/* Parking Grid */}
-      <AnimatePresence mode="wait">
-        {view === '2D' ? (
-          <motion.div
-            key="view-2d"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="space-y-4 py-4"
-          >
-            {rows.map((row) => (
-              <ParkingRow
-                key={row}
-                rowLabel={row}
-                slots={slotsByRow[row]}
-                selectedSlot={selectedSlot}
-                maintenanceSlots={maintenanceSlots}
-                unsupportedSlots={unsupportedSlots}
-                activeReservations={activeReservations}
-                unavailableSlots={unavailableSlots}
-                interactive={interactive}
-                onSlotClick={onSlotClick}
-                is3D={false}
-              />
-            ))}
-          </motion.div>
-        ) : (
-          <motion.div
-            key="view-3d"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="overflow-x-auto py-4 select-none"
-            style={{
-              perspective: '1200px',
-            }}
-          >
-            <div
-              className="mx-auto space-y-3 origin-center transition-transform duration-150 ease-out"
-              style={{
-                transform: `rotateX(${rotateX}deg) rotateZ(${rotateZ}deg) scale(${zoom})`,
-                transformStyle: 'preserve-3d',
-              }}
-            >
-              {rows.map((row, idx) => (
-                <motion.div
-                  key={row}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: idx * 0.04, duration: 0.3 }}
-                  style={{
-                    transformStyle: 'preserve-3d',
-                    transform: `translateZ(${idx * 2}px)`,
-                  }}
+          {/* 3D Interactive Controls */}
+          {view === '3D' && (
+            <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3 rounded-2xl border border-white/5 bg-slate-900/60 px-4 py-3.5 text-xs mb-5 shadow-inner">
+              <div className="flex items-center gap-2">
+                <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px]">Độ nghiêng (Tilt):</span>
+                <input
+                  type="range"
+                  min="25"
+                  max="75"
+                  value={rotateX}
+                  onChange={(e) => setRotateX(Number(e.target.value))}
+                  className="w-20 accent-orange-500 bg-slate-800 rounded-lg h-1 appearance-none cursor-pointer"
+                />
+                <span className="font-mono text-slate-300 w-8 text-right">{rotateX}°</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px]">Xoay (Rotate):</span>
+                <input
+                  type="range"
+                  min="-180"
+                  max="180"
+                  value={rotateZ}
+                  onChange={(e) => setRotateZ(Number(e.target.value))}
+                  className="w-24 accent-orange-500 bg-slate-800 rounded-lg h-1 appearance-none cursor-pointer"
+                />
+                <span className="font-mono text-slate-300 w-10 text-right">{rotateZ}°</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px]">Zoom:</span>
+                <button
+                  type="button"
+                  onClick={() => setZoom((z) => Math.max(0.4, Number((z - 0.05).toFixed(2))))}
+                  className="h-6 w-6 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition text-xs font-black flex items-center justify-center"
                 >
+                  -
+                </button>
+                <input
+                  type="range"
+                  min="0.4"
+                  max="1.6"
+                  step="0.05"
+                  value={zoom}
+                  onChange={(e) => setZoom(Number(e.target.value))}
+                  className="w-20 accent-orange-500 bg-slate-800 rounded-lg h-1 appearance-none cursor-pointer"
+                />
+                <button
+                  type="button"
+                  onClick={() => setZoom((z) => Math.min(1.6, Number((z + 0.05).toFixed(2))))}
+                  className="h-6 w-6 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition text-xs font-black flex items-center justify-center"
+                >
+                  +
+                </button>
+                <span className="font-mono text-slate-300 w-12 text-right">{Math.round(zoom * 100)}%</span>
+              </div>
+              <button
+                type="button"
+                onClick={reset3D}
+                className="px-3 py-1.5 rounded-xl border border-white/10 hover:border-orange-500/30 text-[9px] font-black uppercase tracking-wider text-slate-300 hover:text-orange-200 transition duration-200"
+              >
+                Mặc định
+              </button>
+            </div>
+          )}
+
+          {/* Entry marker */}
+          <EntryExitMarkers />
+
+          {/* Parking Grid */}
+          <AnimatePresence mode="wait">
+            {view === '2D' ? (
+              <motion.div
+                key="view-2d"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="space-y-4 py-4"
+              >
+                {rows.map((row) => (
                   <ParkingRow
+                    key={row}
                     rowLabel={row}
                     slots={slotsByRow[row]}
                     selectedSlot={selectedSlot}
@@ -508,27 +523,83 @@ export function ParkingMap2D({
                     activeReservations={activeReservations}
                     unavailableSlots={unavailableSlots}
                     interactive={interactive}
-                    onSlotClick={onSlotClick}
-                    is3D={true}
+                    onSlotClick={handleSlotClick}
+                    is3D={false}
                   />
-                </motion.div>
-              ))}
+                ))}
+              </motion.div>
+            ) : (
+              <div
+                className="relative w-full h-[450px] overflow-hidden rounded-2xl bg-[#040810]/90 border border-white/5 cursor-grab active:cursor-grabbing flex items-center justify-center select-none"
+                style={{ perspective: '1200px' }}
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseUp}
+              >
+                <div
+                  className="origin-center transition-transform duration-75 ease-out"
+                  style={{
+                    transform: `rotateX(${rotateX}deg) rotateZ(${rotateZ}deg) scale(${zoom})`,
+                    transformStyle: 'preserve-3d',
+                  }}
+                >
+                  {rows.map((row, idx) => (
+                    <motion.div
+                      key={row}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: idx * 0.04, duration: 0.3 }}
+                      style={{
+                        transformStyle: 'preserve-3d',
+                        transform: `translateZ(${idx * 2}px)`,
+                      }}
+                    >
+                      <ParkingRow
+                        rowLabel={row}
+                        slots={slotsByRow[row]}
+                        selectedSlot={selectedSlot}
+                        maintenanceSlots={maintenanceSlots}
+                        unsupportedSlots={unsupportedSlots}
+                        activeReservations={activeReservations}
+                        unavailableSlots={unavailableSlots}
+                        interactive={interactive}
+                        onSlotClick={handleSlotClick}
+                        is3D={true}
+                      />
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </AnimatePresence>
+
+          {/* Exit marker */}
+          <EntryExitMarkers />
+
+          {/* Footer */}
+          <div className="mt-6 border-t border-slate-800/60 pt-5 flex items-center justify-between flex-wrap gap-4">
+            <div className="text-left">
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">SELECTED POSITION</p>
+              <p className="mt-1 font-mono text-xl font-black text-amber-500 uppercase tracking-wide">
+                {selectedSlot || 'None Selected'}
+              </p>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Exit marker */}
-      <EntryExitMarkers />
-
-      {/* Footer */}
-      <div className="mt-4 border-t border-slate-800/60 pt-4 text-center">
-        <p className="text-xs font-semibold text-slate-500">
-          Tổng số ô đỗ: <span className="font-black text-white">{slots.length}</span>
-          {' · '}
-          Đang xem: <span className="font-black text-orange-300">{view}</span>
-        </p>
-      </div>
+            <button
+              type="button"
+              disabled={!selectedSlot}
+              onClick={() => onConfirm?.()}
+              className={`px-8 py-3 text-xs font-black uppercase tracking-widest rounded-full transition-all duration-300 ${
+                selectedSlot
+                  ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-[0_4px_15px_rgba(16,185,129,0.35)] scale-102 cursor-pointer'
+                  : 'bg-slate-950/80 border border-white/5 text-slate-500 cursor-not-allowed'
+              }`}
+            >
+              Confirm Selection
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }

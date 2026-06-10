@@ -56,13 +56,7 @@ export const mainFlowModules: LegacyModule[] = [
     actionLabel: 'Sắp ra mắt',
     available: false,
   },
-  {
-    id: 'payments',
-    title: 'Thanh toán',
-    description: 'Thanh toán phí gửi xe và các gói dịch vụ.',
-    actionLabel: 'Đăng ký gói',
-    available: true,
-  },
+
   {
     id: 'notifications',
     title: 'Thông báo',
