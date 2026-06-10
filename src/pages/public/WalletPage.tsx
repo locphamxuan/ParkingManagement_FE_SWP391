@@ -442,11 +442,10 @@ export default function WalletPage() {
                       key={amount}
                       type="button"
                       onClick={() => setSelectedAmount(amount)}
-                      className={`relative overflow-hidden rounded-xl border py-3.5 text-sm font-bold transition-all duration-300 active:scale-95 ${
-                        isSelected
+                      className={`relative overflow-hidden rounded-xl border py-3.5 text-sm font-bold transition-all duration-300 active:scale-95 ${isSelected
                           ? 'border-orange-500 bg-gradient-to-br from-orange-500/15 to-amber-500/5 text-orange-200 shadow-[0_0_15px_rgba(249,115,22,0.15)] ring-1 ring-orange-500/20'
                           : 'border-white/[0.05] bg-white/[0.02] text-slate-300 hover:border-white/[0.15] hover:bg-white/[0.05] hover:text-white'
-                      }`}
+                        }`}
                     >
                       {fmtMoney(amount)}
                     </button>
@@ -498,16 +497,15 @@ export default function WalletPage() {
                 className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-orange-500 via-amber-500 to-amber-600 text-sm font-black uppercase tracking-wider text-slate-950 shadow-[0_4px_20px_rgba(249,115,22,0.2)] transition-all duration-300 hover:brightness-110 active:scale-98 disabled:opacity-50"
               >
                 <QrCode size={16} />
-                {isSubmitting ? 'Đang khởi tạo...' : `NẠP TIỀN VIA PAYOS (${fmtMoney(selectedAmount)})`}
+                {isSubmitting ? 'Đang khởi tạo...' : `NẠP TIỀN (${fmtMoney(selectedAmount)})`}
               </button>
 
               {message && (
                 <div
-                  className={`mt-4 flex items-center gap-2.5 rounded-2xl border p-4 text-xs font-semibold ${
-                    message.type === 'ok'
+                  className={`mt-4 flex items-center gap-2.5 rounded-2xl border p-4 text-xs font-semibold ${message.type === 'ok'
                       ? 'border-emerald-500/20 bg-emerald-500/5 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.05)]'
                       : 'border-rose-500/20 bg-rose-500/5 text-rose-400 shadow-[0_0_15px_rgba(244,63,94,0.05)]'
-                  }`}
+                    }`}
                 >
                   {message.type === 'ok' ? <CheckCircle2 size={15} className="shrink-0" /> : <AlertCircle size={15} className="shrink-0" />}
                   <span>{message.text}</span>
@@ -533,9 +531,8 @@ export default function WalletPage() {
                     key={f}
                     type="button"
                     onClick={() => setFilter(f)}
-                    className={`relative rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-wider transition-colors duration-300 ${
-                      isActive ? 'text-slate-950 font-black' : 'text-slate-400 hover:text-slate-200'
-                    }`}
+                    className={`relative rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-wider transition-colors duration-300 ${isActive ? 'text-slate-950 font-black' : 'text-slate-400 hover:text-slate-200'
+                      }`}
                   >
                     {isActive && (
                       <motion.div
@@ -575,11 +572,10 @@ export default function WalletPage() {
                   >
                     {/* Direction icon container */}
                     <div
-                      className={`grid h-11 w-11 place-items-center rounded-xl border transition-all duration-300 ${
-                        isCredit
+                      className={`grid h-11 w-11 place-items-center rounded-xl border transition-all duration-300 ${isCredit
                           ? 'border-emerald-500/20 bg-emerald-500/5 text-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.05)]'
                           : 'border-orange-500/20 bg-orange-500/5 text-orange-400 shadow-[0_0_10px_rgba(249,115,22,0.05)]'
-                      }`}
+                        }`}
                     >
                       <Icon size={18} />
                     </div>
