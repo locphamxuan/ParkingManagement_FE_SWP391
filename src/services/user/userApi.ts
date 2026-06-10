@@ -59,10 +59,9 @@ export interface Reservation {
   startTime: string;
   endTime?: string | null;
   fee?: number;
-  /** % hoàn tiền theo chính sách của tòa nhà (BE gắn vào danh sách). */
   refundPercent?: number;
-  /** Số tiền đã hoàn thực tế (với lượt đã hủy). */
   refundAmount?: number;
+  estimatedFee?: number;
   createdAt?: string;
   updatedAt?: string;
   parkingSession?: {
