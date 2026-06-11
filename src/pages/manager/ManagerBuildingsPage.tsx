@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Building2, Clock, DollarSign, Save } from 'lucide-react';
+import { Building2, Save } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,9 +12,6 @@ export function ManagerBuildingsPage() {
   const [name, setName] = useState('');
   const [totalFloors, setTotalFloors] = useState('');
   const [status, setStatus] = useState<ManagerBuilding['status']>('active');
-  const [openTime, setOpenTime] = useState('');
-  const [closeTime, setCloseTime] = useState('');
-  const [hourlyRate, setHourlyRate] = useState('');
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -24,17 +21,11 @@ export function ManagerBuildingsPage() {
       setName('');
       setTotalFloors('');
       setStatus('active');
-      setOpenTime('');
-      setCloseTime('');
-      setHourlyRate('');
       return;
     }
     setName(selectedBuilding.name || '');
     setTotalFloors(String(selectedBuilding.totalFloors ?? ''));
     setStatus(selectedBuilding.status || 'active');
-    setOpenTime(selectedBuilding.operatingHours?.open || '');
-    setCloseTime(selectedBuilding.operatingHours?.close || '');
-    setHourlyRate(String(selectedBuilding.pricing?.hourlyRate ?? ''));
   }, [selectedBuilding]);
 
   const buildingOptions = useMemo(
@@ -55,18 +46,6 @@ export function ManagerBuildingsPage() {
       if (name) payload.name = name;
       if (totalFloors) payload.totalFloors = Number(totalFloors);
       if (status) payload.status = status;
-      if (openTime || closeTime) {
-        payload.operatingHours = {
-          open: openTime || selectedBuilding?.operatingHours?.open || '00:00',
-          close: closeTime || selectedBuilding?.operatingHours?.close || '23:59',
-        };
-      }
-      if (hourlyRate) {
-        payload.pricing = {
-          ...(selectedBuilding?.pricing ?? { hourlyRate: 0 }),
-          hourlyRate: Number(hourlyRate),
-        };
-      }
       await managerApi.updateBuilding(selectedBuildingId, payload);
       await refreshBuildings();
       setSaveSuccess(true);
@@ -76,7 +55,7 @@ export function ManagerBuildingsPage() {
     } finally {
       setIsSaving(false);
     }
-  }, [name, totalFloors, status, openTime, closeTime, hourlyRate, selectedBuildingId, selectedBuilding, refreshBuildings]);
+  }, [name, totalFloors, status, selectedBuildingId, refreshBuildings]);
 
   return (
     <div className="space-y-6">
@@ -116,11 +95,6 @@ export function ManagerBuildingsPage() {
                         {b.status === 'active' ? 'Hoạt động' : b.status === 'maintenance' ? 'Bảo trì' : 'Tạm dừng'}
                       </p>
                     </div>
-                    {b.pricing?.hourlyRate != null && (
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {b.pricing.hourlyRate.toLocaleString('vi-VN')} ₫/giờ
-                      </p>
-                    )}
                   </button>
                 );
               })}
@@ -167,48 +141,6 @@ export function ManagerBuildingsPage() {
                   <option value="inactive">Tạm dừng (inactive)</option>
                   <option value="maintenance">Bảo trì (maintenance)</option>
                 </select>
-              </div>
-
-              {/* Giá theo giờ */}
-              <div className="grid gap-1.5">
-                <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                  <DollarSign size={13} className="text-primary" /> Giá gửi xe / giờ (VND)
-                </label>
-                <Input
-                  type="number"
-                  min={0}
-                  step={1000}
-                  value={hourlyRate}
-                  onChange={(e) => setHourlyRate(e.target.value)}
-                  placeholder="Ví dụ: 5000"
-                />
-              </div>
-            </div>
-
-            {/* Giờ hoạt động */}
-            <div className="grid gap-1.5">
-              <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                <Clock size={13} className="text-primary" /> Giờ hoạt động
-              </label>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="grid gap-1">
-                  <span className="text-xs text-muted-foreground">Mở cửa</span>
-                  <Input
-                    type="time"
-                    value={openTime}
-                    onChange={(e) => setOpenTime(e.target.value)}
-                    className="[color-scheme:light] dark:[color-scheme:dark]"
-                  />
-                </div>
-                <div className="grid gap-1">
-                  <span className="text-xs text-muted-foreground">Đóng cửa</span>
-                  <Input
-                    type="time"
-                    value={closeTime}
-                    onChange={(e) => setCloseTime(e.target.value)}
-                    className="[color-scheme:light] dark:[color-scheme:dark]"
-                  />
-                </div>
               </div>
             </div>
 

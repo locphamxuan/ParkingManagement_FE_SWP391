@@ -92,7 +92,7 @@ export default function HomePage({ modules, onOpenAuth, onViewProfile, onViewRes
     (!user.phone || user.phone.trim() === '' || !user.licensePlates || user.licensePlates.length === 0)
   );
 
-  const productModules = useMemo(() => modules.filter((m) => m.available), [modules]);
+  const productModules = useMemo(() => modules.filter((m) => m.available && !(m.id === 'auth' && user)), [modules, user]);
   const serviceModules = useMemo(() => modules.filter((m) => !m.available), [modules]);
   const [showPlateBanner, setShowPlateBanner] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);

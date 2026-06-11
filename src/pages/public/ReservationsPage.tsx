@@ -12,6 +12,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock,
+  Lock,
   MapPin,
   Package,
   RefreshCw,
@@ -33,6 +34,7 @@ import {
   type FloorAvailability,
   type LongTermPackage,
   type Reservation,
+  type LongTermSubscription,
 } from '@/services/user/userApi';
 
 /* ─── Types ────────────────────────────────────────────────────────────────── */
@@ -98,9 +100,28 @@ function isSameDay(a: Date, b: Date) {
 function normalizeVehicleTypeCode(raw?: string | null): VehicleKind | 'all' {
   if (!raw) return 'all';
   const code = String(raw).toLowerCase();
+  if (code.includes('motor') || code.includes('moto') || code.includes('xe') || code.includes('motorcycle') || code.includes('bike')) return 'motorcycle';
   if (code.includes('car') || code.includes('ô tô') || code.includes('oto') || code.includes('ôto')) return 'car';
-  if (code.includes('motor') || code.includes('moto') || code.includes('xe') || code.includes('motorcycle')) return 'motorcycle';
   return 'all';
+}
+
+function isCarPackage(pkg: LongTermPackage): boolean {
+  const vt = pkg.vehicleType;
+  if (vt && typeof vt === 'object') {
+    const code = String(vt.code || vt.name || '').toLowerCase();
+    if (code.includes('motor') || code.includes('moto') || code.includes('xe') || code.includes('bike')) return false;
+    if (code.includes('car') || code.includes('oto') || code.includes('ô tô') || code.includes('ôto')) return true;
+  }
+  if (typeof vt === 'string') {
+    const code = vt.toLowerCase();
+    if (code.includes('motor') || code.includes('moto') || code.includes('xe') || code.includes('bike')) return false;
+    if (code.includes('car') || code.includes('oto') || code.includes('ô tô') || code.includes('ôto')) return true;
+  }
+  const name = String(pkg.name || '').toLowerCase();
+  const codeAttr = String(pkg.code || '').toLowerCase();
+  if (name.includes('xe máy') || name.includes('motor') || name.includes('moto') || codeAttr.includes('moto') || codeAttr.includes('bike')) return false;
+  if (name.includes('ô tô') || name.includes('oto') || name.includes('car') || codeAttr.includes('car')) return true;
+  return false;
 }
 
 function getMaxCalendarDate(mode: BookingMode, pkg?: LongTermPackage | null): Date {
@@ -127,9 +148,45 @@ function packageCategory(pkg: LongTermPackage): 'weekly' | 'monthly' | 'yearly' 
 
 const categoryLabels = { weekly: 'Gói tuần', monthly: 'Gói tháng', yearly: 'Gói năm' };
 const categoryColors = {
-  weekly: { border: 'border-cyan-400/25', bg: 'bg-cyan-400/5', text: 'text-cyan-300', accent: 'from-cyan-500 to-blue-400' },
-  monthly: { border: 'border-orange-400/25', bg: 'bg-orange-400/5', text: 'text-orange-300', accent: 'from-orange-500 to-amber-400' },
-  yearly: { border: 'border-purple-400/25', bg: 'bg-purple-400/5', text: 'text-purple-300', accent: 'from-purple-500 to-pink-400' },
+  weekly: {
+    borderSelected: 'border-cyan-400 ring-2 ring-cyan-400/40',
+    bgSelected: 'bg-gradient-to-br from-cyan-950/40 via-slate-900/60 to-slate-950/80',
+    shadowSelected: 'shadow-[0_0_30px_rgba(34,211,238,0.35)]',
+    borderNormal: 'border-cyan-500/20',
+    bgNormal: 'bg-cyan-950/5',
+    borderHover: 'hover:border-cyan-400/50',
+    bgHover: 'hover:bg-cyan-950/15',
+    shadowHover: 'hover:shadow-[0_0_15px_rgba(34,211,238,0.15)]',
+    text: 'text-cyan-300',
+    accent: 'from-cyan-500 to-blue-400',
+    glitterColors: ['bg-cyan-300', 'bg-sky-200', 'bg-blue-300']
+  },
+  monthly: {
+    borderSelected: 'border-orange-400 ring-2 ring-orange-400/40',
+    bgSelected: 'bg-gradient-to-br from-orange-950/40 via-slate-900/60 to-slate-950/80',
+    shadowSelected: 'shadow-[0_0_30px_rgba(249,115,22,0.35)]',
+    borderNormal: 'border-orange-500/20',
+    bgNormal: 'bg-orange-950/5',
+    borderHover: 'hover:border-orange-400/50',
+    bgHover: 'hover:bg-orange-950/15',
+    shadowHover: 'hover:shadow-[0_0_15px_rgba(249,115,22,0.15)]',
+    text: 'text-orange-300',
+    accent: 'from-orange-500 to-amber-400',
+    glitterColors: ['bg-amber-300', 'bg-orange-400', 'bg-yellow-300']
+  },
+  yearly: {
+    borderSelected: 'border-purple-400 ring-2 ring-purple-400/40',
+    bgSelected: 'bg-gradient-to-br from-purple-950/40 via-slate-900/60 to-slate-950/80',
+    shadowSelected: 'shadow-[0_0_35px_rgba(168,85,247,0.35)]',
+    borderNormal: 'border-purple-500/25',
+    bgNormal: 'bg-purple-950/5',
+    borderHover: 'hover:border-purple-400/55',
+    bgHover: 'hover:bg-purple-950/15',
+    shadowHover: 'hover:shadow-[0_0_15px_rgba(168,85,247,0.15)]',
+    text: 'text-purple-300',
+    accent: 'from-yellow-400 via-pink-500 to-purple-600',
+    glitterColors: ['bg-purple-300', 'bg-pink-300', 'bg-yellow-300']
+  },
 };
 
 /* ─── Calendar Component ──────────────────────────────────────────────────── */
@@ -212,15 +269,14 @@ function MiniCalendar({
               type="button"
               disabled={disabled}
               onClick={() => onSelect(cellDate)}
-              className={`relative aspect-square w-full rounded-xl text-xs font-bold transition-all duration-200 flex items-center justify-center ${
-                isSelected
-                  ? 'bg-orange-500 text-slate-950 font-black shadow-[0_4px_12px_rgba(249,115,22,0.4)] scale-105'
-                  : disabled
-                    ? 'text-slate-700 opacity-25 cursor-not-allowed'
-                    : isToday
-                      ? 'border border-orange-500/40 bg-orange-500/5 text-orange-400 hover:bg-orange-500/10'
-                      : 'text-slate-300 hover:bg-white/[0.08] hover:text-white'
-              }`}
+              className={`relative aspect-square w-full rounded-xl text-xs font-bold transition-all duration-200 flex items-center justify-center ${isSelected
+                ? 'bg-orange-500 text-slate-950 font-black shadow-[0_4px_12px_rgba(249,115,22,0.4)] scale-105'
+                : disabled
+                  ? 'text-slate-700 opacity-25 cursor-not-allowed'
+                  : isToday
+                    ? 'border border-orange-500/40 bg-orange-500/5 text-orange-400 hover:bg-orange-500/10'
+                    : 'text-slate-300 hover:bg-white/[0.08] hover:text-white'
+                }`}
             >
               {day}
               {isToday && !isSelected && (
@@ -311,11 +367,10 @@ function TimeScroller({ selected, onSelect }: { selected: string; onSelect: (t: 
                       key={t}
                       type="button"
                       onClick={() => onSelect(t)}
-                      className={`rounded-xl py-2.5 text-xs font-bold transition-all duration-200 ${
-                        isSelected
-                          ? 'bg-orange-500 text-slate-950 font-black shadow-[0_4px_12px_rgba(249,115,22,0.3)] scale-105'
-                          : 'border border-white/[0.06] bg-white/[0.02] text-slate-400 hover:border-orange-300/30 hover:text-white'
-                      }`}
+                      className={`rounded-xl py-2.5 text-xs font-bold transition-all duration-200 ${isSelected
+                        ? 'bg-orange-500 text-slate-950 font-black shadow-[0_4px_12px_rgba(249,115,22,0.3)] scale-105'
+                        : 'border border-white/[0.06] bg-white/[0.02] text-slate-400 hover:border-orange-300/30 hover:text-white'
+                        }`}
                     >
                       {t}
                     </button>
@@ -340,16 +395,152 @@ function DurationSelector({ hours, onSelect }: { hours: number; onSelect: (h: nu
           key={h}
           type="button"
           onClick={() => onSelect(h)}
-          className={`rounded-xl px-3 py-2 text-xs font-bold transition-all duration-150 ${
-            hours === h
-              ? 'bg-gradient-to-r from-orange-500 to-amber-400 text-slate-950 shadow-[0_0_10px_rgba(251,191,36,0.2)]'
-              : 'border border-white/[0.06] bg-white/[0.02] text-slate-400 hover:border-orange-300/25 hover:text-white'
-          }`}
+          className={`rounded-xl px-3 py-2 text-xs font-bold transition-all duration-150 ${hours === h
+            ? 'bg-gradient-to-r from-orange-500 to-amber-400 text-slate-950 shadow-[0_0_10px_rgba(251,191,36,0.2)]'
+            : 'border border-white/[0.06] bg-white/[0.02] text-slate-400 hover:border-orange-300/25 hover:text-white'
+            }`}
         >
           {h} giờ
         </button>
       ))}
     </div>
+  );
+}
+
+/* ─── Package Card with Glitter Hover Effect ───────────────────────────────── */
+
+function PackageCard({
+  pkg,
+  isSelected,
+  isLocked,
+  cat,
+  colors,
+  onClick,
+}: {
+  pkg: LongTermPackage;
+  isSelected: boolean;
+  isLocked: boolean;
+  cat: 'weekly' | 'monthly' | 'yearly';
+  colors: any;
+  onClick: () => void;
+}) {
+  const [isHovered, setIsHovered] = useState(false);
+
+  // Generate unique properties for each glitter particle once
+  const particles = useMemo(() => {
+    return Array.from({ length: 16 }).map((_, i) => {
+      const size = 3 + Math.random() * 4;
+      const left = Math.random() * 100;
+      const delay = Math.random() * 1.5;
+      const duration = 1.2 + Math.random() * 1.8;
+      const type = i % 3 === 0 ? 'star' : i % 3 === 1 ? 'diamond' : 'circle';
+      return { id: i, size, left, delay, duration, type };
+    });
+  }, []);
+
+  return (
+    <button
+      type="button"
+      onClick={isLocked ? undefined : onClick}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      className={`relative rounded-2xl border p-4 text-left transition-all duration-300 ${
+        isLocked
+          ? 'border-white/[0.04] bg-white/[0.01] opacity-40 cursor-not-allowed'
+          : isSelected
+            ? `${colors.borderSelected} ${colors.bgSelected} ${colors.shadowSelected} scale-[1.04]`
+            : `${colors.borderNormal} ${colors.bgNormal} ${colors.borderHover} ${colors.bgHover} ${colors.shadowHover} hover:scale-[1.02]`
+      }`}
+    >
+      {/* Lock overlay on hover when locked */}
+      {isLocked && isHovered && (
+        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center rounded-2xl bg-slate-950/70 backdrop-blur-[2px] pointer-events-none">
+          <Lock size={22} className="text-slate-400 mb-1" />
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Không phù hợp</span>
+        </div>
+      )}
+
+      {/* Glitter particles shown on hover (only if not locked) */}
+      {!isLocked && isHovered && (
+        <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-2xl z-0">
+          {particles.map((p) => {
+            let color = 'bg-amber-400';
+            if (colors.glitterColors) {
+              color = colors.glitterColors[p.id % colors.glitterColors.length];
+            }
+
+            const style: React.CSSProperties = {
+              left: `${p.left}%`,
+              width: `${p.size}px`,
+              height: `${p.size}px`,
+              animationDelay: `${p.delay}s`,
+              animationDuration: `${p.duration}s`,
+              top: '-10px',
+            };
+
+            let shapeClass = 'rounded-full';
+            if (p.type === 'star') {
+              shapeClass = '';
+              style.clipPath = 'polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)';
+            } else if (p.type === 'diamond') {
+              shapeClass = '';
+              style.clipPath = 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)';
+            }
+
+            return (
+              <span
+                key={p.id}
+                className={`glitter-particle ${color} ${shapeClass}`}
+                style={style}
+              />
+            );
+          })}
+        </div>
+      )}
+
+      {/* Floating Ribbon / Badge */}
+      <span className={`absolute -top-2.5 right-4 rounded-full bg-gradient-to-r ${colors.accent} px-2.5 py-0.5 text-[8px] font-black uppercase tracking-wider text-slate-950 shadow-[0_0_12px_rgba(251,191,36,0.25)] animate-pulse z-10`}>
+        {cat === 'weekly' ? 'Tiết kiệm' : cat === 'monthly' ? 'Phổ biến' : '💎 VIP GIÁ TỐT'}
+      </span>
+      <span className={`text-[9px] font-black uppercase tracking-wider ${colors.text} relative z-10`}>
+        {categoryLabels[cat]}
+      </span>
+      <h4 className={`mt-1 text-sm font-black flex items-center gap-1.5 relative z-10 transition-colors ${isSelected ? 'text-white' : 'text-slate-200'}`}>
+        {isCarPackage(pkg) ? (
+          <Car size={15} className={`${colors.text} shrink-0`} />
+        ) : (
+          <Bike size={15} className={`${colors.text} shrink-0`} />
+        )}
+        <span>{pkg.name}</span>
+      </h4>
+      <p className="mt-1 text-xs text-slate-400 relative z-10">{pkg.durationDays} ngày</p>
+      {pkg.description && (
+        <p className="mt-1.5 text-[10px] leading-relaxed text-slate-400/80 italic relative z-10 border-t border-white/5 pt-1.5">
+          {pkg.description}
+        </p>
+      )}
+      <p className={`mt-2 text-lg font-black ${colors.text} relative z-10 transition-all duration-300 ${
+        isSelected ? 'drop-shadow-[0_0_10px_rgba(255,255,255,0.15)] scale-105 origin-left' : ''
+      }`}>{fmtMoney(pkg.price)}</p>
+      {pkg.allowDedicatedSlot && (
+        <span className={`mt-2 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] font-bold relative z-10 ${
+          isSelected
+            ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200'
+            : 'border-emerald-400/20 bg-emerald-400/5 text-emerald-300'
+        }`}>
+          <ShieldCheck size={10} /> Chỗ cố định
+        </span>
+      )}
+      {isSelected && (
+        <motion.div
+          initial={{ scale: 0, rotate: -45 }}
+          animate={{ scale: 1, rotate: 0 }}
+          className="absolute right-3 top-3 z-20"
+        >
+          <CheckCircle2 size={18} className={`${colors.text} drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]`} />
+        </motion.div>
+      )}
+    </button>
   );
 }
 
@@ -359,24 +550,27 @@ function StatusBadge({ status }: { status: string }) {
   const labels: Record<string, string> = {
     pending: 'Đang chờ', confirmed: 'Đã xác nhận', checked_in: 'Đã check-in',
     completed: 'Hoàn thành', expired: 'Hết hạn', cancelled: 'Đã hủy',
+    active: 'Đã đặt',
   };
   const colors: Record<string, string> = {
-    pending: 'border-amber-400/25 bg-amber-400/10 text-amber-300',
-    confirmed: 'border-emerald-400/25 bg-emerald-400/10 text-emerald-300',
-    checked_in: 'border-cyan-400/25 bg-cyan-400/10 text-cyan-300',
-    completed: 'border-slate-400/25 bg-slate-400/10 text-slate-300',
-    expired: 'border-slate-500/25 bg-slate-500/10 text-slate-400',
-    cancelled: 'border-rose-400/25 bg-rose-400/10 text-rose-300',
+    pending: 'border-amber-500/30 bg-amber-500/10 text-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.1)]',
+    confirmed: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.1)]',
+    checked_in: 'border-cyan-500/30 bg-cyan-500/10 text-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.1)]',
+    completed: 'border-blue-500/30 bg-blue-500/10 text-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.1)]',
+    expired: 'border-slate-500/30 bg-slate-500/10 text-slate-400',
+    cancelled: 'border-rose-500/30 bg-rose-500/10 text-rose-400 shadow-[0_0_10px_rgba(244,63,94,0.1)]',
+    active: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.1)]',
   };
   return (
-    <span className={`rounded-full border px-2 py-0.5 text-[9px] font-black uppercase tracking-wider ${colors[status] || 'border-slate-500/25 bg-slate-500/10 text-slate-400'}`}>
+    <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider ${colors[status] || 'border-slate-500/30 bg-slate-500/10 text-slate-400'}`}>
       {labels[status] || status}
     </span>
   );
 }
 
 function ReservationHistoryTab() {
-  const [items, setItems] = useState<Reservation[]>([]);
+  const [activeMode, setActiveMode] = useState<'hourly' | 'package'>('hourly');
+  const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
@@ -384,22 +578,35 @@ function ReservationHistoryTab() {
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
-  const load = useCallback((p = 1, status = statusFilter) => {
+  const load = useCallback((p = 1, mode = activeMode, status = statusFilter) => {
     setLoading(true);
     setError(null);
-    userApi.reservations
-      .list({ page: p, limit: 10, status: status === 'all' ? undefined : status })
-      .then((res) => {
-        const raw = (res as any)?.data;
-        setItems(raw?.items ?? []);
-        setTotalPages(raw?.pagination?.totalPages ?? 1);
-        setPage(p);
-      })
-      .catch((err) => setError(err instanceof Error ? err.message : 'Tải lịch sử thất bại'))
-      .finally(() => setLoading(false));
-  }, [statusFilter]);
+    if (mode === 'hourly') {
+      userApi.reservations
+        .list({ page: p, limit: 10, status: status === 'all' ? undefined : status })
+        .then((res) => {
+          const raw = (res as any)?.data;
+          setItems(raw?.items ?? []);
+          setTotalPages(raw?.pagination?.totalPages ?? 1);
+          setPage(p);
+        })
+        .catch((err) => setError(err instanceof Error ? err.message : 'Tải lịch sử thất bại'))
+        .finally(() => setLoading(false));
+    } else {
+      userApi.longTermSubscriptions
+        .list({ page: p, limit: 10, status: status === 'all' ? undefined : status })
+        .then((res) => {
+          const raw = (res as any)?.data;
+          setItems(raw?.items ?? []);
+          setTotalPages(raw?.pagination?.totalPages ?? 1);
+          setPage(p);
+        })
+        .catch((err) => setError(err instanceof Error ? err.message : 'Tải danh sách đăng ký gói thất bại'))
+        .finally(() => setLoading(false));
+    }
+  }, [activeMode, statusFilter]);
 
-  useEffect(() => { load(1); }, [load]);
+  useEffect(() => { load(1, activeMode, statusFilter); }, [load, activeMode, statusFilter]);
 
   const handleCancel = async (id: string) => {
     if (!window.confirm('Bạn có chắc muốn hủy đặt chỗ này?')) return;
@@ -414,26 +621,78 @@ function ReservationHistoryTab() {
     }
   };
 
-  const filterTabs = [
-    { value: 'all', label: 'Tất cả' }, { value: 'pending', label: 'Đang chờ' },
-    { value: 'confirmed', label: 'Đã xác nhận' }, { value: 'completed', label: 'Hoàn thành' },
-    { value: 'cancelled', label: 'Đã hủy' },
-  ];
+
+
+  const handleModeChange = (mode: 'hourly' | 'package') => {
+    setActiveMode(mode);
+    setStatusFilter('all');
+    setItems([]);
+    setPage(1);
+    setTotalPages(1);
+  };
+
+  const filterTabs = activeMode === 'hourly'
+    ? [
+        { value: 'all', label: 'Tất cả' },
+        { value: 'confirmed', label: 'Đã đặt chỗ' },
+        { value: 'completed', label: 'Hoàn thành' },
+        { value: 'cancelled', label: 'Đã hủy' },
+      ]
+    : [
+        { value: 'all', label: 'Tất cả' },
+        { value: 'active', label: 'Đã đặt' },
+        { value: 'cancelled', label: 'Đã hủy' },
+        { value: 'expired', label: 'Hết hạn' },
+      ];
+
+  const fmtDateOnly = (iso: string | undefined | null) => {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
+    return d.toLocaleDateString('vi-VN');
+  };
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap gap-1.5">
+      {/* Mode Switcher */}
+      <div className="flex justify-center border-b border-white/5 pb-4">
+        <div className="inline-flex rounded-xl bg-white/[0.02] p-1 border border-white/5 shadow-inner">
+          <button
+            type="button"
+            onClick={() => handleModeChange('hourly')}
+            className={`rounded-lg px-6 py-2 text-xs font-black uppercase tracking-wider transition-all duration-300 ${
+              activeMode === 'hourly'
+                ? 'bg-orange-500 text-slate-950 shadow-[0_0_12px_rgba(249,115,22,0.3)]'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            Đặt theo giờ
+          </button>
+          <button
+            type="button"
+            onClick={() => handleModeChange('package')}
+            className={`rounded-lg px-6 py-2 text-xs font-black uppercase tracking-wider transition-all duration-300 ${
+              activeMode === 'package'
+                ? 'bg-orange-500 text-slate-950 shadow-[0_0_12px_rgba(249,115,22,0.3)]'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            Đăng ký gói dài hạn
+          </button>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/5 pb-4">
+        <div className="flex items-center gap-1.5 rounded-xl bg-white/[0.02] border border-white/5 p-1">
           {filterTabs.map((tab) => (
             <button
               key={tab.value}
               type="button"
-              onClick={() => { setStatusFilter(tab.value); load(1, tab.value); }}
-              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
-                statusFilter === tab.value
-                  ? 'bg-orange-500 text-white shadow-sm'
-                  : 'border border-white/10 bg-white/5 text-slate-400 hover:text-white'
-              }`}
+              onClick={() => { setStatusFilter(tab.value); load(1, activeMode, tab.value); }}
+              className={`rounded-lg px-4 py-1.5 text-xs font-bold transition-all duration-200 ${statusFilter === tab.value
+                ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-lg shadow-orange-500/20'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.03]'
+                }`}
             >
               {tab.label}
             </button>
@@ -442,67 +701,229 @@ function ReservationHistoryTab() {
         <button
           type="button"
           onClick={() => load(page)}
-          className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-300 hover:text-white transition-colors"
+          className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold text-slate-300 hover:text-white transition-all hover:bg-white/10"
         >
-          <RefreshCw size={12} className={loading ? 'animate-spin' : ''} /> Làm mới
+          <RefreshCw size={13} className={loading ? 'animate-spin' : ''} /> Làm mới
         </button>
       </div>
 
       {error && <div className="rounded-xl border border-rose-500/25 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">{error}</div>}
 
       {loading ? (
-        <div className="py-12 text-center text-sm text-slate-400">Đang tải lịch sử đặt chỗ...</div>
+        <div className="py-12 text-center text-sm text-slate-400">Đang tải dữ liệu...</div>
       ) : items.length === 0 ? (
         <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-10 text-center">
-          <CalendarClock size={32} className="mx-auto mb-3 text-slate-600" />
-          <p className="text-sm font-semibold text-slate-400">Bạn chưa có lịch sử đặt chỗ nào.</p>
+          <CalendarClock size={32} className="mx-auto mb-3 text-slate-600 animate-pulse" />
+          <p className="text-sm font-semibold text-slate-400">
+            {activeMode === 'hourly' ? 'Bạn chưa có lịch sử đặt chỗ nào.' : 'Bạn chưa có đăng ký gói dài hạn nào.'}
+          </p>
         </div>
       ) : (
-        <div className="space-y-3">
-          {items.map((r) => (
-            <div key={r._id} className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 transition-all hover:border-orange-500/15">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-mono text-sm font-black text-orange-300">{r.code}</span>
-                    <span className="rounded border border-amber-500/25 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-bold text-amber-300">{r.plateNumber}</span>
+        <div className="space-y-4 max-h-[55vh] overflow-y-auto pr-1">
+          {items.map((item) => {
+            if (activeMode === 'hourly') {
+              const r = item as Reservation;
+              let statusColorClass = 'border-slate-500/20';
+              if (r.status === 'completed') statusColorClass = 'border-l-blue-500/80';
+              else if (r.status === 'cancelled') statusColorClass = 'border-l-rose-500/80';
+              else if (r.status === 'checked_in') statusColorClass = 'border-l-cyan-500/80';
+              else if (r.status === 'confirmed') statusColorClass = 'border-l-emerald-500/80';
+              else if (r.status === 'pending') statusColorClass = 'border-l-amber-500/80';
+
+              return (
+                <div 
+                  key={r._id} 
+                  className={`relative rounded-2xl border-l-[3px] border-y border-r border-white/[0.05] bg-white/[0.01] p-4 transition-all duration-300 hover:border-r-white/10 hover:border-y-white/10 hover:bg-white/[0.03] hover:shadow-[0_8px_30px_rgb(0,0,0,0.3)] group ${statusColorClass}`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-mono text-sm font-black text-orange-400 tracking-wider flex items-center gap-1">
+                          <span className="text-slate-500 text-[10px]">ID:</span>
+                          {r.code}
+                        </span>
+                        <span className="rounded-lg border border-amber-500/20 bg-amber-500/5 px-2 py-0.5 text-xs font-bold text-amber-400 tracking-wide flex items-center gap-1 shadow-sm">
+                          <Car size={12} className="opacity-80" />
+                          {r.plateNumber}
+                        </span>
+                      </div>
+                      <p className="mt-1.5 text-xs font-medium text-slate-400 flex items-center gap-1">
+                        <Building2 size={12} className="text-slate-500" />
+                        {(r.building as any)?.name ?? '—'}
+                      </p>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 shrink-0">
+                      <StatusBadge status={r.status} />
+                      {(r.status === 'pending' || r.status === 'confirmed') && (
+                        <button
+                          type="button"
+                          disabled={cancellingId === r._id}
+                          onClick={() => handleCancel(r._id)}
+                          className="flex items-center gap-1 rounded-lg border border-rose-500/30 bg-rose-500/10 px-2.5 py-1 text-xs font-bold text-rose-400 hover:bg-rose-500/20 hover:border-rose-500/50 transition-all disabled:opacity-50"
+                        >
+                          <XCircle size={12} />
+                          {cancellingId === r._id ? 'Đang hủy...' : 'Hủy'}
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <p className="mt-0.5 text-xs text-slate-400">{(r.building as any)?.name ?? '—'}</p>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <StatusBadge status={r.status} />
-                  {(r.status === 'pending' || r.status === 'confirmed') && (
-                    <button
-                      type="button"
-                      disabled={cancellingId === r._id}
-                      onClick={() => handleCancel(r._id)}
-                      className="flex items-center gap-1 rounded-lg border border-rose-500/30 bg-rose-500/10 px-2 py-1 text-[10px] font-bold text-rose-400 hover:bg-rose-500/20 transition-colors disabled:opacity-50"
-                    >
-                      <XCircle size={10} />
-                      {cancellingId === r._id ? 'Đang hủy...' : 'Hủy'}
-                    </button>
+
+                  <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5 border-t border-white/[0.03] pt-4">
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Vị trí đỗ</p>
+                      <p className="mt-1 text-sm font-bold text-slate-200">{(r.slot as any)?.code ?? '—'}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Bắt đầu</p>
+                      <p className="mt-1 text-xs font-medium text-slate-300">{fmtTime(r.startTime)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Kết thúc</p>
+                      <p className="mt-1 text-xs font-medium text-slate-300">{r.endTime ? fmtTime(r.endTime) : '—'}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Tiền cọc</p>
+                      <p className={`mt-1 text-sm font-black ${r.fee ? 'text-emerald-400' : 'text-slate-500'}`}>{fmtMoney(r.fee)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Còn lại phải trả</p>
+                      <p className="mt-1 text-sm font-black text-orange-400">
+                        {fmtMoney(r.parkingSession ? r.parkingSession.fee : (r.estimatedFee && r.fee ? r.estimatedFee - r.fee : 0))}
+                      </p>
+                    </div>
+                  </div>
+
+                  {r.parkingSession && (
+                    <div className="mt-4 rounded-xl border border-white/[0.04] bg-white/[0.01] p-3 shadow-inner">
+                      <div className="flex items-center gap-1.5 border-b border-white/[0.04] pb-2 mb-2">
+                        <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                        <h5 className="text-[10px] font-bold uppercase tracking-wider text-cyan-400">Phiên gửi xe thực tế</h5>
+                      </div>
+                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 text-xs">
+                        <div>
+                          <span className="text-slate-500 text-[10px] block">Giờ vào:</span>
+                          <span className="text-slate-300 font-medium">{fmtTime(r.parkingSession.entryTime)}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 text-[10px] block">Giờ ra:</span>
+                          <span className="text-slate-300 font-medium">
+                            {r.parkingSession.exitTime ? fmtTime(r.parkingSession.exitTime) : '—'}
+                          </span>
+                        </div>
+                        <div className="flex flex-col justify-center">
+                          <span className="text-slate-500 text-[10px] block">Thanh toán thêm:</span>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className={`font-black ${r.parkingSession.fee > 0 ? 'text-amber-400 font-extrabold' : 'text-emerald-400'}`}>
+                              {fmtMoney(r.parkingSession.fee)}
+                            </span>
+                            <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded uppercase ${
+                              r.parkingSession.paymentStatus === 'paid'
+                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                            }`}>
+                              {r.parkingSession.paymentStatus === 'paid' ? 'Đã trả' : 'Chưa trả'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {r.createdAt && (
+                    <div className="mt-3 flex items-center justify-between border-t border-white/[0.03] pt-3 text-[10px] text-slate-500">
+                      <div className="flex items-center gap-1">
+                        <Clock size={10} className="text-slate-600" />
+                        <span>Đặt lúc: {fmtTime(r.createdAt)}</span>
+                      </div>
+                      {r.updatedAt && r.updatedAt !== r.createdAt && (
+                        <span>Cập nhật: {fmtTime(r.updatedAt)}</span>
+                      )}
+                    </div>
                   )}
                 </div>
-              </div>
-              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                <div><p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Slot</p><p className="mt-1 text-xs text-slate-300">{(r.slot as any)?.code ?? '—'}</p></div>
-                <div><p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Bắt đầu</p><p className="mt-1 text-xs text-slate-300">{fmtTime(r.startTime)}</p></div>
-                <div><p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Kết thúc</p><p className="mt-1 text-xs text-slate-300">{fmtTime(r.endTime)}</p></div>
-                <div><p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Phí cọc</p><p className={`mt-1 text-xs font-bold ${r.fee ? 'text-emerald-400' : 'text-slate-500'}`}>{fmtMoney(r.fee)}</p></div>
-              </div>
-              {r.createdAt && (
-                <div className="mt-2 flex items-center gap-2 border-t border-white/5 pt-2">
-                  <Clock size={10} className="text-slate-600" />
-                  <span className="text-[10px] text-slate-500">Tạo lúc: {fmtTime(r.createdAt)}</span>
+              );
+            } else {
+              const sub = item as LongTermSubscription;
+              let statusColorClass = 'border-slate-500/20';
+              if (sub.status === 'active') statusColorClass = 'border-l-emerald-500/80';
+              else if (sub.status === 'cancelled') statusColorClass = 'border-l-rose-500/80';
+              else if (sub.status === 'expired') statusColorClass = 'border-l-slate-500/80';
+              else if (sub.status === 'pending') statusColorClass = 'border-l-amber-500/80';
+
+              return (
+                <div 
+                  key={sub._id} 
+                  className={`relative rounded-2xl border-l-[3px] border-y border-r border-white/[0.05] bg-white/[0.01] p-4 transition-all duration-300 hover:border-r-white/10 hover:border-y-white/10 hover:bg-white/[0.03] hover:shadow-[0_8px_30px_rgb(0,0,0,0.3)] group ${statusColorClass}`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-mono text-sm font-black text-orange-400 tracking-wider flex items-center gap-1">
+                          <span className="text-slate-500 text-[10px]">GÓI:</span>
+                          {sub.package?.name ?? 'Gói không xác định'}
+                        </span>
+                        <span className="rounded-lg border border-amber-500/20 bg-amber-500/5 px-2 py-0.5 text-xs font-bold text-amber-400 tracking-wide flex items-center gap-1 shadow-sm">
+                          <Car size={12} className="opacity-80" />
+                          {sub.plateNumber ?? sub.linkedPlates?.join(', ') ?? '—'}
+                        </span>
+                      </div>
+                      <p className="mt-1.5 text-xs font-medium text-slate-400 flex items-center gap-1">
+                        <Building2 size={12} className="text-slate-500" />
+                        {(sub.building as any)?.name ?? (sub.building as any) ?? '—'}
+                      </p>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 shrink-0">
+                      <StatusBadge status={sub.status} />
+                    </div>
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5 border-t border-white/[0.03] pt-4">
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Chỗ đỗ cố định</p>
+                      <p className="mt-1 text-sm font-bold text-slate-200">
+                        {sub.slot ? ((sub.slot as any).code ?? sub.slot) : 'Không cố định'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Ngày bắt đầu</p>
+                      <p className="mt-1 text-xs font-medium text-slate-300">{fmtDateOnly(sub.startDate)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Ngày kết thúc</p>
+                      <p className="mt-1 text-xs font-medium text-slate-300">{fmtDateOnly(sub.endDate)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Giá gói</p>
+                      <p className="mt-1 text-sm font-black text-emerald-400">{fmtMoney(sub.price ?? sub.package?.price)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Mã gói</p>
+                      <p className="mt-1 text-xs font-semibold text-slate-300">{sub.package?.code ?? '—'}</p>
+                    </div>
+                  </div>
+
+                  {sub.createdAt && (
+                    <div className="mt-3 flex items-center justify-between border-t border-white/[0.03] pt-3 text-[10px] text-slate-500">
+                      <div className="flex items-center gap-1">
+                        <Clock size={10} className="text-slate-600" />
+                        <span>Đăng ký lúc: {fmtTime(sub.createdAt)}</span>
+                      </div>
+                      {sub.updatedAt && sub.updatedAt !== sub.createdAt && (
+                        <span>Cập nhật: {fmtTime(sub.updatedAt)}</span>
+                      )}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          ))}
+              );
+            }
+          })}
         </div>
       )}
 
       {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 pt-2">
+        <div className="flex items-center justify-center gap-2 pt-2 border-t border-white/5 mt-2">
           <button type="button" disabled={page <= 1 || loading} onClick={() => load(page - 1)} className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-300 hover:text-white disabled:opacity-40">← Trước</button>
           <span className="text-xs text-slate-400">Trang {page} / {totalPages}</span>
           <button type="button" disabled={page >= totalPages || loading} onClick={() => load(page + 1)} className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-300 hover:text-white disabled:opacity-40">Sau →</button>
@@ -556,6 +977,51 @@ export default function ReservationsPage() {
   const [bookingError, setBookingError] = useState<string | null>(null);
   const [bookingSuccess, setBookingSuccess] = useState<string | null>(null);
 
+  // Auto-dismiss alerts after 10 seconds
+  useEffect(() => {
+    if (bookingSuccess) {
+      const timer = setTimeout(() => setBookingSuccess(null), 10000);
+      return () => clearTimeout(timer);
+    }
+  }, [bookingSuccess]);
+
+  useEffect(() => {
+    if (bookingError) {
+      const timer = setTimeout(() => setBookingError(null), 10000);
+      return () => clearTimeout(timer);
+    }
+  }, [bookingError]);
+
+  const [bookedPlates, setBookedPlates] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+    
+    // Fetch reservations
+    const p1 = userApi.reservations.list({ limit: 100 }).then(res => {
+      const items = (res as any)?.data?.items || [];
+      return items
+        .filter((r: any) => ['pending', 'confirmed', 'checked_in'].includes(r.status))
+        .map((r: any) => r.plateNumber);
+    }).catch(() => []);
+
+    // Fetch subscriptions
+    const p2 = userApi.longTermSubscriptions.list({ limit: 100 }).then(res => {
+      const items = (res as any)?.data?.items || [];
+      return items
+        .filter((s: any) => ['pending', 'active'].includes(s.status))
+        .map((s: any) => s.plateNumber || s.linkedPlates?.[0]);
+    }).catch(() => []);
+
+    Promise.all([p1, p2]).then(([resPlates, subPlates]) => {
+      const allBooked = Array.from(new Set([
+        ...resPlates.filter(Boolean),
+        ...subPlates.filter(Boolean)
+      ]));
+      setBookedPlates(allBooked);
+    });
+  }, [user, bookingSuccess]);
+
   /* ── Data Loading ── */
   useEffect(() => {
     let ignore = false;
@@ -568,7 +1034,7 @@ export default function ReservationsPage() {
         const preferred = state?.buildingId || buildingRows[0]?.building._id || '';
         setSelectedBuildingId((c) => c || preferred);
       })
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => { if (!ignore) setIsLoadingBuildings(false); });
     return () => { ignore = true; };
   }, [state?.buildingId]);
@@ -612,7 +1078,7 @@ export default function ReservationsPage() {
         if (ignore) return;
         setPackages((res as any)?.data?.packages ?? []);
       })
-      .catch(() => {});
+      .catch(() => { });
     return () => { ignore = true; };
   }, [selectedBuildingId]);
 
@@ -642,7 +1108,7 @@ export default function ReservationsPage() {
         setSlots(mapped);
         setSelectedSlot(null);
       })
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => { if (!ignore) setIsLoadingSlots(false); });
     return () => { ignore = true; };
   }, [selectedBuildingId, selectedFloorIdModal]);
@@ -656,14 +1122,12 @@ export default function ReservationsPage() {
   const maxCalDate = useMemo(() => getMaxCalendarDate(mode, selectedPkg), [mode, selectedPkg]);
 
   const startDateTime = useMemo(() => {
-    if (mode === 'hourly') {
-      if (!selectedDate) return null;
-      const [h, m] = selectedTime.split(':').map(Number);
-      const d = new Date(selectedDate);
-      d.setHours(h, m, 0, 0);
-      return d;
-    }
-    return pkgStartDate;
+    const baseDate = mode === 'hourly' ? selectedDate : pkgStartDate;
+    if (!baseDate) return null;
+    const [h, m] = selectedTime.split(':').map(Number);
+    const d = new Date(baseDate);
+    d.setHours(h, m, 0, 0);
+    return d;
   }, [mode, selectedDate, selectedTime, pkgStartDate]);
 
   const endDateTime = useMemo(() => {
@@ -688,22 +1152,40 @@ export default function ReservationsPage() {
     return Math.ceil(rate * durationHours);
   }, [mode, selectedPkg, selectedBuilding, selectedVehicleType, durationHours]);
 
+  const filteredPackages = useMemo(() => {
+    if (!selectedVehicleType) return packages;
+    return packages.filter((pkg) => {
+      const isCar = isCarPackage(pkg);
+      return selectedVehicleType === 'car' ? isCar : !isCar;
+    });
+  }, [packages, selectedVehicleType]);
+
   const plateOptions = useMemo(() => {
     if (!user) return [];
-    if (!selectedVehicleType) return user.licensePlates;
-    return user.licensePlates.filter((p) => {
-      const t = p.vehicleType?.toLowerCase();
-      if (selectedVehicleType === 'motorcycle') return t === 'motorcycle' || t === 'bike';
-      return t !== 'motorcycle' && t !== 'bike';
-    });
-  }, [user, selectedVehicleType]);
+    const base = selectedVehicleType
+      ? user.licensePlates.filter((p) => {
+          const t = p.vehicleType?.toLowerCase();
+          if (selectedVehicleType === 'motorcycle') return t === 'motorcycle' || t === 'bike';
+          return t !== 'motorcycle' && t !== 'bike';
+        })
+      : user.licensePlates;
+    return base.filter((p) => !bookedPlates.includes(p.plateNumber));
+  }, [user, selectedVehicleType, bookedPlates]);
 
   const unavailableSlotCodes = useMemo(() => {
     return slots.filter((s) => {
       if (s.status !== 'available') return true;
       if (!s.reservable) return true;
-      if (selectedVehicleType && s.vehicleType !== 'all' && s.vehicleType !== selectedVehicleType) return true;
       return false;
+    }).map((s) => s.code);
+  }, [slots]);
+
+  const unsupportedSlotCodes = useMemo(() => {
+    if (!selectedVehicleType) return [];
+    return slots.filter((s) => {
+      if (s.status !== 'available') return false;
+      if (!s.reservable) return false;
+      return s.vehicleType !== 'all' && s.vehicleType !== selectedVehicleType;
     }).map((s) => s.code);
   }, [slots, selectedVehicleType]);
 
@@ -725,6 +1207,7 @@ export default function ReservationsPage() {
 
   const handleSlotClick = (code: string) => {
     if (unavailableSlotCodes.includes(code)) return;
+    if (unsupportedSlotCodes.includes(code)) return;
     setSelectedSlot(code);
     setBookingError(null);
     // Auto-select first available plate
@@ -762,13 +1245,19 @@ export default function ReservationsPage() {
         });
         setBookingSuccess(`Đặt chỗ thành công! Ô ${selectedSlot} từ ${fmtShort(startDateTime)} đến ${fmtShort(endDateTime)}`);
       } else if (selectedPkg) {
-        await userApi.longTermSubscriptions.create({
+        const res = await userApi.longTermSubscriptions.create({
           packageId: selectedPkg._id,
           plateNumber: selectedPlate,
           slotId: slots.find((s) => s.code === selectedSlot)?._id,
           startDate: startDateTime.toISOString(),
         });
-        setBookingSuccess(`Đăng ký gói "${selectedPkg.name}" thành công!`);
+        const data = (res as any)?.data;
+        if (data?.checkoutUrl) {
+          setBookingSuccess('Chuyển hướng đến cổng thanh toán PayOS...');
+          window.location.href = data.checkoutUrl;
+        } else {
+          setBookingSuccess(`Đăng ký gói "${selectedPkg.name}" thành công!`);
+        }
       }
       setSelectedSlot(null);
       setShowSlotModal(false);
@@ -797,7 +1286,7 @@ export default function ReservationsPage() {
           </button>
           <div className="flex gap-2">
             <button type="button" onClick={() => setShowHistory(true)}
-              className="inline-flex items-center gap-2 rounded-xl border border-yellow-500/20 bg-yellow-500/5 px-4 py-2 text-xs font-black uppercase tracking-wider text-yellow-400 transition hover:border-yellow-400/40 hover:text-yellow-300 hover:bg-yellow-500/10"
+              className="inline-flex items-center gap-2 rounded-xl border border-yellow-500/20 bg-yellow-500/5 px-4 py-2 text-xs font-black uppercase tracking-wider text-yellow-400 transition hover:border-yellow-400/40 hover:bg-yellow-500/10 hover:text-yellow-300"
             >
               <CalendarClock size={14} /> Lịch sử
             </button>
@@ -807,46 +1296,36 @@ export default function ReservationsPage() {
         {/* ── Tab Bar ── */}
         <div className="mb-6 flex items-center gap-1 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-1.5">
           {[
-            { key: 'hourly' as BookingMode, label: 'Đặt xe theo tiếng', icon: <Timer size={14} /> },
-            { key: 'package' as BookingMode, label: 'Đăng ký gói cư dân', icon: <Package size={14} /> },
+            { key: 'hourly' as BookingMode, label: 'Đặt chỗ đỗ theo tiếng', icon: <Timer size={14} /> },
+            { key: 'package' as BookingMode, label: 'Đăng ký gói dài hạn', icon: <Package size={14} /> },
           ].map((tab) => (
             <button
               key={tab.key}
               type="button"
-              onClick={() => { setMode(tab.key); setBookingError(null); setBookingSuccess(null); }}
-              className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-3 text-xs font-black uppercase tracking-wider transition-all duration-200 ${
-                mode === tab.key
-                  ? 'bg-gradient-to-r from-orange-500 to-amber-400 text-slate-950 shadow-[0_0_16px_rgba(249,115,22,0.2)]'
-                  : 'text-slate-400 hover:text-white'
-              }`}
+              onClick={() => {
+                setMode(tab.key);
+                setSelectedSlot(null);
+                setBookingError(null);
+                setBookingSuccess(null);
+              }}
+              className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-3 text-xs font-black uppercase tracking-wider transition-all duration-200 ${mode === tab.key
+                ? 'bg-gradient-to-r from-orange-500 to-amber-400 text-slate-950 shadow-[0_0_16px_rgba(249,115,22,0.2)]'
+                : 'text-slate-400 hover:text-white'
+                }`}
             >
               {tab.icon} {tab.label}
             </button>
           ))}
         </div>
 
-        {/* ── Alerts ── */}
-        {bookingSuccess && (
-          <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
-            className="mb-4 flex items-center gap-2 rounded-2xl border border-emerald-400/25 bg-emerald-500/10 p-3 text-sm font-semibold text-emerald-300"
-          >
-            <CheckCircle2 size={16} /> {bookingSuccess}
-          </motion.div>
-        )}
-        {bookingError && (
-          <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
-            className="mb-4 flex items-center gap-2 rounded-2xl border border-rose-400/25 bg-rose-500/10 p-3 text-sm font-semibold text-rose-300"
-          >
-            <XCircle size={16} /> {bookingError}
-          </motion.div>
-        )}
+        {/* Alerts are now displayed as floating notification toasts */}
 
 
         {/* ── Main Wizard ── */}
         <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
           {/* Left: Booking Form */}
           <div className="space-y-5">
-            {/* Building + Vehicle */}
+            {/* Building + Vehicle + Plate */}
             <div className="rounded-3xl border border-white/[0.06] bg-white/[0.02] p-5">
               <div className="flex items-center gap-2 mb-4">
                 <Building2 size={16} className="text-cyan-300/70" />
@@ -874,6 +1353,7 @@ export default function ReservationsPage() {
                       setSelectedVehicleType(val as VehicleKind | '');
                       setSelectedSlot(null);
                       setSelectedPlate('');
+                      setSelectedPkg(null);
                     }}
                     options={[
                       { value: '', label: '-- Chọn loại xe --' },
@@ -883,6 +1363,27 @@ export default function ReservationsPage() {
                     placeholder="-- Chọn loại xe --"
                   />
                 </div>
+              </div>
+
+              {/* Plate selection right below vehicle type */}
+              <div className="mt-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Zap size={14} className="text-amber-300/70" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Biển số xe</span>
+                </div>
+                <CustomSelect
+                  value={selectedPlate}
+                  onChange={setSelectedPlate}
+                  disabled={plateOptions.length === 0}
+                  options={[
+                    { value: '', label: plateOptions.length === 0 ? '-- Tất cả biển số xe phù hợp đều đã đặt chỗ --' : '-- Chọn biển số --' },
+                    ...plateOptions.map((p) => ({
+                      value: p.plateNumber,
+                      label: `${p.plateNumber} — ${p.vehicleType === 'motorcycle' ? '🏍️ Xe máy' : '🚗 Ô tô'}`,
+                    })),
+                  ]}
+                  placeholder="-- Chọn biển số --"
+                />
               </div>
             </div>
 
@@ -932,8 +1433,7 @@ export default function ReservationsPage() {
                   {/* Package Cards */}
                   <div className="rounded-3xl border border-white/[0.06] bg-white/[0.02] p-5">
                     <div className="flex items-center gap-2 mb-4">
-                      <Sparkles size={16} className="text-purple-300/70" />
-                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-purple-300/70">Chọn gói cư dân</span>
+                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-purple-300/70">Chọn gói dài hạn</span>
                     </div>
 
                     {packages.length === 0 ? (
@@ -946,37 +1446,29 @@ export default function ReservationsPage() {
                           const cat = packageCategory(pkg);
                           const colors = categoryColors[cat];
                           const isSelected = selectedPkg?._id === pkg._id;
+                          const isCar = isCarPackage(pkg);
+                          // isLocked: only when a vehicle type IS selected and this package doesn't match
+                          const isLocked = !!selectedVehicleType && (selectedVehicleType === 'car' ? !isCar : isCar);
                           return (
-                            <button
+                            <PackageCard
                               key={pkg._id}
-                              type="button"
+                              pkg={pkg}
+                              isSelected={isSelected}
+                              isLocked={isLocked}
+                              cat={cat}
+                              colors={colors}
                               onClick={() => {
+                                if (isLocked) return;
                                 setSelectedPkg(pkg);
                                 setPkgStartDate(null);
+                                const nextType = isCar ? 'car' : 'motorcycle';
+                                if (selectedVehicleType !== nextType) {
+                                  setSelectedVehicleType(nextType);
+                                  setSelectedSlot(null);
+                                  setSelectedPlate('');
+                                }
                               }}
-                              className={`relative rounded-2xl border p-4 text-left transition-all duration-200 ${
-                                isSelected
-                                  ? `${colors.border} ${colors.bg} shadow-[0_0_24px_rgba(249,115,22,0.1)]`
-                                  : 'border-white/[0.06] bg-white/[0.02] hover:border-white/15'
-                              }`}
-                            >
-                              <span className={`text-[9px] font-black uppercase tracking-wider ${colors.text}`}>
-                                {categoryLabels[cat]}
-                              </span>
-                              <h4 className="mt-1 text-sm font-black text-white">{pkg.name}</h4>
-                              <p className="mt-1 text-xs text-slate-400">{pkg.durationDays} ngày</p>
-                              <p className={`mt-2 text-lg font-black ${colors.text}`}>{fmtMoney(pkg.price)}</p>
-                              {pkg.allowDedicatedSlot && (
-                                <span className="mt-2 inline-flex items-center gap-1 rounded-full border border-emerald-400/20 bg-emerald-400/5 px-2 py-0.5 text-[9px] font-bold text-emerald-300">
-                                  <ShieldCheck size={10} /> Chỗ cố định
-                                </span>
-                              )}
-                              {isSelected && (
-                                <div className="absolute right-3 top-3">
-                                  <CheckCircle2 size={16} className={colors.text} />
-                                </div>
-                              )}
-                            </button>
+                            />
                           );
                         })}
                       </div>
@@ -1029,27 +1521,8 @@ export default function ReservationsPage() {
               </div>
             </div>
 
-            {/* ── Plate Selection ── */}
-            <div className="rounded-3xl border border-white/[0.06] bg-white/[0.02] p-5">
-              <div className="flex items-center gap-2 mb-3">
-                <Zap size={16} className="text-amber-300/70" />
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-300/70">Biển số xe</span>
-              </div>
-              <CustomSelect
-                value={selectedPlate}
-                onChange={setSelectedPlate}
-                disabled={plateOptions.length === 0}
-                options={[
-                  { value: '', label: '-- Chọn biển số --' },
-                  ...plateOptions.map((p) => ({
-                    value: p.plateNumber,
-                    label: `${p.plateNumber} — ${p.vehicleType === 'motorcycle' ? '🏍️ Xe máy' : '🚗 Ô tô'}`,
-                  })),
-                ]}
-                placeholder="-- Chọn biển số --"
-              />
-            </div>
           </div>
+
 
           {/* Right: Summary Sidebar */}
           <div className="lg:sticky lg:top-6 lg:self-start">
@@ -1066,7 +1539,7 @@ export default function ReservationsPage() {
                 </div>
                 <div className="flex justify-between text-xs">
                   <span className="font-bold text-slate-400">Chế độ</span>
-                  <span className="font-black text-white">{mode === 'hourly' ? 'Theo giờ' : selectedPkg?.name || 'Gói cư dân'}</span>
+                  <span className="font-black text-white">{mode === 'hourly' ? 'Theo giờ' : selectedPkg?.name || 'Gói dài hạn'}</span>
                 </div>
                 <div className="flex justify-between text-xs">
                   <span className="font-bold text-slate-400">Loại xe</span>
@@ -1157,83 +1630,61 @@ export default function ReservationsPage() {
               onClick={(e) => e.stopPropagation()}
               className="relative max-h-[90vh] w-full max-w-5xl overflow-auto rounded-3xl border border-slate-700/60 bg-[#080d17] p-4 shadow-[0_30px_120px_rgba(0,0,0,0.55)] sm:p-6"
             >
-              {/* Modal Header */}
-              <div className="mb-5 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <MapPin size={18} className="text-cyan-300/70" />
-                  <h2 className="text-lg font-black text-white">Chọn chỗ đỗ</h2>
-                  <span className="text-xs font-bold text-slate-400">
-                    Khả dụng: <span className="text-emerald-300">{selectedFloorInfo ? selectedFloorInfo.availableSlots : '—'}</span>
-                    {selectedFloorInfo ? ` / ${selectedFloorInfo.totalSlots}` : ''}
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowSlotModal(false)}
-                  className="rounded-full border border-white/10 bg-white/[0.03] p-2 text-slate-400 hover:text-white transition"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-
-              {/* Floor selector */}
-              <div className="mb-4">
-                <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Chọn tầng</span>
-                <CustomSelect
-                  value={selectedFloorIdModal}
-                  onChange={(val) => {
-                    setSelectedFloorIdModal(String(val || ''));
-                    setSelectedSlot(null);
-                  }}
-                  options={[
-                    { value: '', label: '-- Chọn tầng --' },
-                    ...floorsData.map((f) => ({ value: f._id, label: `${f.name} (${f.availableSlots}/${f.totalSlots})` })),
-                  ]}
-                  placeholder="-- Chọn tầng --"
-                />
-              </div>
-
-              {/* Parking Map */}
-              {selectedFloorIdModal ? (
-                isLoadingSlots ? (
-                  <div className="flex items-center justify-center py-16 text-sm text-slate-400">Đang tải ô đỗ...</div>
-                ) : (
-                  <ParkingMap2D
-                    interactive
-                    slots={slots.map((s) => ({
-                      code: s.code,
-                      status: s.status === 'available' && s.reservable ? 'available' : 'unavailable',
-                      vehicleType: s.vehicleType === 'all' ? undefined : s.vehicleType,
-                    }))}
-                    selectedSlot={selectedSlot}
-                    unavailableSlots={unavailableSlotCodes}
-                    onSlotClick={handleSlotClick}
-                  />
-                )
-              ) : (
-                <div className="flex items-center justify-center py-16 text-sm text-slate-500">
-                  Chọn tầng để xem sơ đồ đỗ xe
-                </div>
-              )}
-
-              {/* Modal Footer */}
-              <div className="mt-4 flex items-center justify-between rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
-                <p className="text-sm font-semibold text-slate-400">
-                  {selectedSlot ? (
-                    <>Ô <span className="font-black text-orange-300">{selectedSlot}</span> đã chọn</>
-                  ) : (
-                    'Nhấn vào ô đỗ để chọn'
+              <ParkingMap2D
+                interactive
+                slots={selectedFloorIdModal ? slots.map((s) => ({
+                  code: s.code,
+                  status: s.status === 'available' && s.reservable ? 'available' : 'unavailable',
+                  vehicleType: s.vehicleType === 'all' ? undefined : s.vehicleType,
+                })) : []}
+                selectedSlot={selectedSlot}
+                unavailableSlots={unavailableSlotCodes}
+                unsupportedSlots={unsupportedSlotCodes}
+                onSlotClick={handleSlotClick}
+                onConfirm={() => setShowSlotModal(false)}
+                onClose={() => setShowSlotModal(false)}
+                className="w-full bg-transparent p-0 border-none rounded-none shadow-none"
+                placeholder={
+                  !selectedFloorIdModal ? (
+                    <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+                      <MapPin size={36} className="text-slate-600 mb-3 animate-pulse" />
+                      <span className="text-sm font-medium">Vui lòng chọn tầng để hiển thị sơ đồ ô đỗ</span>
+                    </div>
+                  ) : isLoadingSlots ? (
+                    <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+                      <div className="h-8 w-8 animate-spin rounded-full border-2 border-orange-500 border-t-transparent mb-3" />
+                      <span className="text-sm font-medium">Đang tải danh sách ô đỗ...</span>
+                    </div>
+                  ) : null
+                }
+              >
+                {/* Floor selector & Guide note */}
+                <div className="mb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+                  <div className="flex-1">
+                    <span className="mb-2 block text-[10px] font-bold uppercase tracking-widest text-slate-500">Khu vực / Tầng</span>
+                    <CustomSelect
+                      value={selectedFloorIdModal}
+                      onChange={(val) => {
+                        setSelectedFloorIdModal(String(val || ''));
+                        setSelectedSlot(null);
+                      }}
+                      options={[
+                        { value: '', label: '-- Chọn tầng --' },
+                        ...floorsData.map((f) => ({ value: f._id, label: `Tầng ${f.code || f.name || ''} (${f.availableSlots}/${f.totalSlots})` })),
+                      ]}
+                      placeholder="-- Chọn tầng --"
+                    />
+                  </div>
+                  {selectedVehicleType && (
+                    <div className="rounded-xl border border-white/5 bg-white/[0.02] px-4 py-2.5 text-xs text-slate-400 flex items-center gap-2 max-w-md">
+                      <Sparkles size={14} className="text-amber-400 shrink-0 animate-pulse" />
+                      <span>
+                        Bản đồ đang lọc theo <strong>{selectedVehicleType === 'car' ? 'Ô tô' : 'Xe máy'}</strong>. Các ô đỗ không phù hợp sẽ tự động mờ đi.
+                      </span>
+                    </div>
                   )}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setShowSlotModal(false)}
-                  disabled={!selectedSlot}
-                  className="rounded-2xl bg-orange-400 px-5 py-2.5 text-sm font-black uppercase tracking-wider text-slate-950 transition hover:bg-orange-300 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-500"
-                >
-                  Hoàn tất
-                </button>
-              </div>
+                </div>
+              </ParkingMap2D>
             </motion.div>
           </motion.div>
         )}
@@ -1246,33 +1697,118 @@ export default function ReservationsPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-md"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md"
             onClick={() => setShowHistory(false)}
           >
+            {/* Background glowing flare */}
+            <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[350px] h-[350px] rounded-full bg-orange-500/10 blur-[120px] pointer-events-none" />
+
             <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
+              initial={{ scale: 0.95, opacity: 0, y: 15 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 15 }}
+              transition={{ type: "spring", duration: 0.4 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative max-h-[90vh] w-full max-w-4xl overflow-auto rounded-3xl border border-slate-700/60 bg-[#080d17] p-5 shadow-[0_30px_120px_rgba(0,0,0,0.55)] sm:p-6"
+              className="relative max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-3xl border border-white/10 bg-slate-950/95 p-6 shadow-[0_0_80px_rgba(0,0,0,0.8),_inset_0_1px_1px_rgba(255,255,255,0.1)] flex flex-col"
             >
               {/* Modal Header */}
-              <div className="mb-5 flex items-center justify-between">
+              <div className="mb-6 flex items-center justify-between border-b border-white/5 pb-4">
                 <div className="flex items-center gap-3">
-                  <CalendarClock size={18} className="text-yellow-400" />
-                  <h2 className="text-lg font-black text-white">Lịch sử đặt chỗ</h2>
+                  <div className="rounded-xl bg-orange-500/10 p-2 border border-orange-500/20 shadow-[0_0_15px_rgba(249,115,22,0.15)]">
+                    <CalendarClock size={20} className="text-orange-400" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-black text-white tracking-wide">Lịch sử đặt chỗ</h2>
+                    <p className="text-[10px] text-slate-500 font-semibold tracking-wider uppercase mt-0.5">Theo dõi & Quản lý các lượt đỗ xe</p>
+                  </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => setShowHistory(false)}
-                  className="rounded-full border border-white/10 bg-white/[0.03] p-2 text-slate-400 hover:text-white transition"
+                  className="rounded-full border border-white/5 bg-white/[0.02] p-2 text-slate-400 hover:text-white hover:bg-white/10 hover:rotate-90 transition-all duration-300"
                 >
                   <X size={18} />
                 </button>
               </div>
 
               {/* Modal Body */}
-              <ReservationHistoryTab />
+              <div className="flex-1 overflow-auto pr-1">
+                <ReservationHistoryTab />
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Center Notification Popup Modal ── */}
+      <AnimatePresence>
+        {(bookingSuccess || bookingError) && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm pointer-events-auto"
+            onClick={() => {
+              setBookingSuccess(null);
+              setBookingError(null);
+            }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              transition={{ type: 'spring', duration: 0.4 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-sm overflow-hidden rounded-3xl border p-6 text-left shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-xl bg-slate-900/95 pointer-events-auto"
+              style={{
+                borderColor: bookingSuccess ? 'rgba(16, 185, 129, 0.3)' : 'rgba(244, 63, 94, 0.3)',
+              }}
+            >
+              {bookingSuccess ? (
+                <div className="flex flex-col items-center text-center">
+                  <motion.div 
+                    initial={{ scale: 0 }}
+                    animate={{ scale: [0, 1.2, 1] }}
+                    transition={{ duration: 0.4 }}
+                    className="rounded-full bg-emerald-500/10 p-3.5 border border-emerald-500/20 mb-4 shrink-0"
+                  >
+                    <CheckCircle2 size={32} className="text-emerald-400" />
+                  </motion.div>
+                  <h3 className="text-lg font-black uppercase tracking-wider text-emerald-400">Thành công!</h3>
+                  <p className="mt-3 text-sm font-medium text-slate-300 leading-relaxed break-words">
+                    {bookingSuccess}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setBookingSuccess(null)}
+                    className="mt-6 w-full rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-400 px-4 py-3 text-xs font-black uppercase tracking-wider text-slate-950 transition hover:brightness-110 active:scale-95 shadow-[0_4px_15px_rgba(16,185,129,0.2)]"
+                  >
+                    Đồng ý
+                  </button>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center text-center">
+                  <motion.div 
+                    initial={{ x: 0 }}
+                    animate={{ x: [-10, 10, -10, 10, 0] }}
+                    transition={{ duration: 0.4 }}
+                    className="rounded-full bg-rose-500/10 p-3.5 border border-rose-500/20 mb-4 shrink-0"
+                  >
+                    <XCircle size={32} className="text-rose-400" />
+                  </motion.div>
+                  <h3 className="text-lg font-black uppercase tracking-wider text-rose-400">Đã xảy ra lỗi</h3>
+                  <p className="mt-3 text-sm font-medium text-slate-300 leading-relaxed break-words">
+                    {bookingError}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setBookingError(null)}
+                    className="mt-6 w-full rounded-2xl bg-gradient-to-r from-rose-500 to-pink-500 px-4 py-3 text-xs font-black uppercase tracking-wider text-slate-950 transition hover:brightness-110 active:scale-95 shadow-[0_4px_15px_rgba(244,63,94,0.2)]"
+                  >
+                    Đóng
+                  </button>
+                </div>
+              )}
             </motion.div>
           </motion.div>
         )}

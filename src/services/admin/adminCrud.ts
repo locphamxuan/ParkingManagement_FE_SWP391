@@ -40,14 +40,18 @@ export interface UpdateBuildingInput {
 
 export async function createAdminUser(token: string, payload: CreateAdminUserInput): Promise<string> {
   const { buildingId, role, ...rest } = payload;
+  // staff / manager must be created as a plain user first, then promoted via the
+  // building assign endpoint (which sets the role + building). user / admin are
+  // set directly on creation.
+  const needsAssignment = role === 'staff' || role === 'manager';
   const res = await requestJson<ApiEnvelope<{ user: { _id: string } }>>({
     path: '/admin/users',
     method: 'POST',
     token,
-    body: { ...rest, role: 'user' },
+    body: { ...rest, role: needsAssignment ? 'user' : role },
   });
   const userId = res.data?.user?._id;
-  if (userId && buildingId && (role === 'staff' || role === 'manager')) {
+  if (userId && buildingId && needsAssignment) {
     const endpoint = role === 'staff' ? 'assign-staff' : 'assign-manager';
     await requestJson({
       path: `/admin/buildings/${buildingId}/${endpoint}`,

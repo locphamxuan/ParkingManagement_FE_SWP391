@@ -28,11 +28,20 @@ export function UsersPage() {
   const [pendingDeleteUser, setPendingDeleteUser] = useState<UserRecord | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<{
+    fullName: string;
+    email: string;
+    password: string;
+    phone: string;
+    role: 'user' | 'staff' | 'manager' | 'admin';
+    buildingId: string;
+  }>({
     fullName: '',
     email: '',
     password: '',
     phone: '',
+    role: 'user',
+    buildingId: '',
   });
 
   const filtered = useMemo(() => {
@@ -61,7 +70,7 @@ export function UsersPage() {
 
   const openCreateModal = () => {
     setActionError(null);
-    setForm({ fullName: '', email: '', password: '', phone: '' });
+    setForm({ fullName: '', email: '', password: '', phone: '', role: 'user', buildingId: '' });
     setIsCreating(true);
   };
 
@@ -72,6 +81,8 @@ export function UsersPage() {
       email: user.email,
       password: '',
       phone: user.phone || '',
+      role: user.role,
+      buildingId: '',
     });
     setSelectedUser(user);
   };
@@ -85,6 +96,11 @@ export function UsersPage() {
 
   const saveCreate = async () => {
     if (!token) return;
+    const needsBuilding = form.role === 'staff' || form.role === 'manager';
+    if (needsBuilding && !form.buildingId) {
+      setActionError('Vui lòng chọn tòa nhà cho nhân viên / quản lý.');
+      return;
+    }
     try {
       setIsSaving(true);
       setActionError(null);
@@ -93,7 +109,8 @@ export function UsersPage() {
         email: form.email,
         password: form.password,
         phone: form.phone,
-        role: 'user',
+        role: form.role,
+        buildingId: needsBuilding ? form.buildingId : undefined,
       });
       await refresh();
       closeModals();
@@ -312,7 +329,46 @@ export function UsersPage() {
             value={form.phone}
             onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))}
           />
+          <div className="grid gap-1.5">
+            <label className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Vai trò</label>
+            <select
+              value={form.role}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, role: e.target.value as typeof prev.role, buildingId: '' }))
+              }
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:ring-1 focus:ring-primary"
+            >
+              <option value="user">Người dùng</option>
+              <option value="staff">Nhân viên</option>
+              <option value="manager">Quản lý</option>
+            </select>
+          </div>
+          {(form.role === 'staff' || form.role === 'manager') && (
+            <div className="grid gap-1.5">
+              <label className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                Tòa nhà phụ trách <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={form.buildingId}
+                onChange={(e) => setForm((prev) => ({ ...prev, buildingId: e.target.value }))}
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:ring-1 focus:ring-primary"
+              >
+                <option value="">-- Chọn tòa nhà --</option>
+                {(data?.buildings ?? []).map((b) => (
+                  <option key={b.id} value={b.backendId || b.id}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
+        {(form.role === 'staff' || form.role === 'manager') && (
+          <p className="mt-2 text-[11px] text-muted-foreground">
+            {form.role === 'staff' ? 'Nhân viên' : 'Quản lý'} sẽ được gán vào tòa nhà đã chọn ngay khi tạo.
+            Tài khoản loại này không hiển thị ở danh sách “Người dùng”.
+          </p>
+        )}
         {isSaving ? <p className="text-xs text-muted-foreground">Đang tạo...</p> : null}
       </ModalForm>
 

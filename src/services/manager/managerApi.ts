@@ -58,15 +58,10 @@ export interface PricePolicy {
   building: string;
   vehicleType: VehicleType | string;
   name: string;
-  /** Rate type — regular (giờ thường), peak (cao điểm), holiday (ngày lễ). */
-  type: 'regular' | 'peak' | 'holiday';
+  /** Rate type — regular (giờ thường) hoặc peak (cao điểm). */
+  type: 'regular' | 'peak';
   hourlyRate: number;
-  dailyCap?: number | null;
-  minRate?: number;
-  maxRate?: number | null;
   timeWindow?: { from: string; to: string };
-  /** Only for type = 'holiday' — list of YYYY-MM-DD dates. */
-  holidayDates?: string[];
   effectiveFrom: string;
   effectiveTo?: string | null;
   isActive: boolean;
@@ -114,6 +109,8 @@ export interface ReservationPolicy {
   _id?: string;
   maxHoldMinutes: number;
   refundPercent: number;
+  /** % tổng phí thu làm cọc khi đặt; phần còn lại (100 - depositPercent) thu sau checkout. */
+  depositPercent: number;
   /** Returned by BE but not editable via the manager upsert (kept for display). */
   bookingFee?: number;
   isActive: boolean;
@@ -134,6 +131,8 @@ export interface StaffShift {
   building: string;
   shift: { _id: string; code: string; name: string; startTime: string; endTime: string };
   staff: { _id: string; fullName: string; email: string; phone?: string };
+  /** Gate the manager assigned this staff to for the shift (ra / vào). */
+  gate?: { _id: string; code: string; name?: string; direction: 'in' | 'out' | 'both'; status?: string } | null;
   workDate: string;
   status: 'scheduled' | 'active' | 'completed' | 'cancelled';
   note?: string;
@@ -152,18 +151,6 @@ export interface ShiftRevenue {
   reconciled: boolean;
 }
 
-export interface Feedback {
-  _id: string;
-  user: { _id: string; fullName: string; email: string; phone?: string };
-  rating?: number | null;
-  subject: string;
-  content: string;
-  response?: string;
-  respondedAt?: string | null;
-  status: 'open' | 'in_progress' | 'resolved' | 'closed';
-  createdAt: string;
-}
-
 export interface DashboardOverview {
   slots: {
     total: number;
@@ -177,7 +164,6 @@ export interface DashboardOverview {
   gates: number;
   sessions: { active: number; today: number };
   subscriptions: { active: number };
-  feedbacks: { pending: number };
   revenue: {
     today: number;
     byMethod: Record<string, { amount: number; count: number }>;
@@ -259,6 +245,9 @@ export const managerApi = {
     api.get<Wrap<ManagerBuilding[] | { items: ManagerBuilding[] }>>('/manager/buildings'),
   updateBuilding: (id: string, body: Partial<ManagerBuilding>) =>
     api.put<Wrap<{ building: ManagerBuilding }>>(`/manager/buildings/${id}`, body),
+  /** Update only the building open/close hours (dedicated tab). */
+  updateOperatingHours: (buildingId: string, body: { open: string; close: string }) =>
+    api.put<Wrap<{ building: ManagerBuilding }>>(path(buildingId, '/operating-hours'), body),
 
   getDashboard: (buildingId: string) =>
     api.get<Wrap<DashboardOverview>>(path(buildingId, '/dashboard')),
@@ -282,8 +271,13 @@ export const managerApi = {
   },
 
   gates: {
-    // Cổng ra/vào cố định do hệ thống cấu hình — manager chỉ xem + đổi trạng thái.
+    // Manager CRUD cổng và tự đặt thể loại (ra / vào / hai chiều).
     list: (b: string) => api.get<Wrap<{ items: Gate[] }>>(path(b, '/gates')),
+    create: (b: string, body: { code: string; name?: string; direction?: Gate['direction']; status?: Gate['status'] }) =>
+      api.post<Wrap<{ item: Gate }>>(path(b, '/gates'), body),
+    update: (b: string, id: string, body: { code?: string; name?: string; direction?: Gate['direction']; status?: Gate['status'] }) =>
+      api.put<Wrap<{ item: Gate }>>(path(b, `/gates/${id}`), body),
+    remove: (b: string, id: string) => api.delete(path(b, `/gates/${id}`)),
     updateStatus: (b: string, id: string, status: Gate['status']) =>
       api.patch<Wrap<{ item: Gate }>>(path(b, `/gates/${id}/status`), { status }),
   },
@@ -345,12 +339,12 @@ export const managerApi = {
       api.get<Wrap<{ items: StaffShift[] }>>(path(b, '/staff-shifts'), { query: q }),
     assignStaffShift: (
       b: string,
-      body: { staff: string; shift: string; workDate: string; note?: string }
+      body: { staff: string; shift: string; workDate: string; gate?: string | null; note?: string }
     ) => api.post<Wrap<{ item: StaffShift }>>(path(b, '/staff-shifts'), body),
     updateStaffShift: (
       b: string,
       id: string,
-      body: { staff?: string; shift?: string; workDate?: string; status?: StaffShift['status']; note?: string }
+      body: { staff?: string; shift?: string; workDate?: string; gate?: string | null; status?: StaffShift['status']; note?: string }
     ) => api.put<Wrap<{ item: StaffShift }>>(path(b, `/staff-shifts/${id}`), body),
     removeStaffShift: (b: string, id: string) =>
       api.delete(path(b, `/staff-shifts/${id}`)),
@@ -358,15 +352,6 @@ export const managerApi = {
       api.get<
         Wrap<{ items: ShiftRevenue[]; totals: { sessionCount: number; totalRevenue: number; cashAmount: number; walletAmount: number; qrAmount: number } }>
       >(path(b, '/shift-revenues'), { query: q }),
-  },
-
-  feedbacks: {
-    list: (b: string, q?: Record<string, string | undefined>) =>
-      api.get<Wrap<{ items: Feedback[]; pagination: unknown }>>(path(b, '/feedbacks'), {
-        query: q,
-      }),
-    respond: (b: string, id: string, body: { response?: string; status?: Feedback['status'] }) =>
-      api.patch<Wrap<{ item: Feedback }>>(path(b, `/feedbacks/${id}`), body),
   },
 
   wallet: {

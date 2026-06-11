@@ -18,12 +18,12 @@ import LongTermSubscriptionsPage from '@/pages/public/LongTermSubscriptionsPage'
 import WalletPage from '@/pages/public/WalletPage';
 import ParkingHistoryPage from '@/pages/public/ParkingHistoryPage';
 import UserDashboardPage from '@/pages/public/UserDashboardPage';
+import KioskCheckInPage from '@/pages/public/KioskCheckInPage';
 import { PublicLoginRoute, PublicRegisterRoute, PublicResetPasswordRoute } from '@/pages/public/AuthRoutes';
 import { ProtectedRoute } from '@/routes/ProtectedRoute';
 import { ManagerLayout } from '@/layouts/ManagerLayout';
 import { ManagerBuildingsPage } from '@/pages/manager/ManagerBuildingsPage';
 import { ManagerDashboardPage } from '@/pages/manager/ManagerDashboardPage';
-import { ManagerFeedbackPage } from '@/pages/manager/ManagerFeedbackPage';
 import { ManagerPlaceholderPage } from '@/pages/manager/ManagerPlaceholderPage';
 import { ManagerProfilePage } from '@/pages/manager/ManagerProfilePage';
 import { ManagerProtectedRoute } from '@/routes/ManagerProtectedRoute';
@@ -34,13 +34,14 @@ import { ManagerSlotsPage } from '@/pages/manager/ManagerSlotsPage';
 import { ManagerPricingPage } from '@/pages/manager/ManagerPricingPage';
 import { ManagerReservationPolicyPage } from '@/pages/manager/ManagerReservationPolicyPage';
 import { ManagerPackagesPage } from '@/pages/manager/ManagerPackagesPage';
-import { ManagerShiftsPage } from '@/pages/manager/ManagerShiftsPage';
-import { ManagerStaffShiftsPage } from '@/pages/manager/ManagerStaffShiftsPage';
+import { ManagerShiftManagementPage } from '@/pages/manager/ManagerShiftManagementPage';
+import { ManagerOperatingHoursPage } from '@/pages/manager/ManagerOperatingHoursPage';
 import { ManagerStaffPage } from '@/pages/manager/ManagerStaffPage';
 import { ManagerWalletPage } from '@/pages/manager/ManagerWalletPage';
 import { StaffLayout } from '@/layouts/StaffLayout';
 import { StaffDashboardPage } from '@/pages/staff/StaffDashboardPage';
 import { StaffOperationsPage } from '@/pages/staff/StaffOperationsPage';
+import { StaffParkedPage } from '@/pages/staff/StaffParkedPage';
 import { StaffReservationsPage } from '@/pages/staff/StaffReservationsPage';
 import { StaffSessionsPage } from '@/pages/staff/StaffSessionsPage';
 import { StaffShiftsPage } from '@/pages/staff/StaffShiftsPage';
@@ -66,6 +67,7 @@ export function AppRouter() {
       <Route path="/long-term-subscriptions" element={<LongTermSubscriptionsPage />} />
       <Route path="/parking-history" element={<ParkingHistoryPage />} />
       <Route path="/user-dashboard" element={<UserDashboardPage />} />
+      <Route path="/kiosk" element={<KioskCheckInPage />} />
 
       <Route path="/manager/login" element={<Navigate to="/auth/login" replace />} />
       <Route path="/manager" element={<Navigate to="/manager/dashboard" replace />} />
@@ -75,7 +77,6 @@ export function AppRouter() {
           <Route path="dashboard" element={<ManagerDashboardPage />} />
           <Route path="buildings" element={<ManagerBuildingsPage />} />
           <Route path="vehicle-types" element={<ManagerVehicleTypesPage />} />
-          <Route path="feedbacks" element={<ManagerFeedbackPage />} />
           <Route path="profile" element={<ManagerProfilePage />} />
           <Route path="floors" element={<ManagerFloorsPage />} />
           <Route path="gates" element={<ManagerGatesPage />} />
@@ -83,9 +84,10 @@ export function AppRouter() {
           <Route path="price-policies" element={<ManagerPricingPage />} />
           <Route path="reservation-policy" element={<ManagerReservationPolicyPage />} />
           <Route path="packages" element={<ManagerPackagesPage />} />
-          <Route path="shifts" element={<ManagerShiftsPage />} />
+          <Route path="shifts" element={<ManagerShiftManagementPage />} />
+          <Route path="staff-shifts" element={<Navigate to="/manager/shifts" replace />} />
+          <Route path="operating-hours" element={<ManagerOperatingHoursPage />} />
           <Route path="staff" element={<ManagerStaffPage />} />
-          <Route path="staff-shifts" element={<ManagerStaffShiftsPage />} />
           <Route path="wallet" element={<ManagerWalletPage />} />
           <Route
             path="settings"
@@ -106,6 +108,8 @@ export function AppRouter() {
           <Route index element={<StaffDashboardPage />} />
           <Route path="dashboard" element={<StaffDashboardPage />} />
           <Route path="operations" element={<StaffOperationsPage />} />
+          <Route path="checkout" element={<StaffParkedPage />} />
+          <Route path="parked" element={<StaffParkedPage readOnly />} />
           <Route path="reservations" element={<StaffReservationsPage />} />
           <Route path="my-shifts" element={<StaffShiftsPage />} />
           <Route path="sessions" element={<StaffSessionsPage />} />

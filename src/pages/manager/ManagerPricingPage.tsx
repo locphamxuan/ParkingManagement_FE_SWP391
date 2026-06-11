@@ -8,19 +8,15 @@ import { ModalForm } from '@/components/shared/ModalForm';
 import { useBuildingContext } from '@/hooks/useBuildingContext';
 import { managerApi, type PricePolicy, type VehicleType } from '@/services/manager/managerApi';
 
-type PricingType = 'regular' | 'peak' | 'holiday';
+type PricingType = 'regular' | 'peak';
 
 interface FormState {
   name: string;
   vehicleType: string;
   type: PricingType;
   hourlyRate: string;
-  dailyCap: string;
-  minRate: string;
-  maxRate: string;
   fromTime: string;
   toTime: string;
-  holidayDates: string;
   isActive: boolean;
 }
 
@@ -29,19 +25,14 @@ const empty: FormState = {
   vehicleType: '',
   type: 'regular',
   hourlyRate: '',
-  dailyCap: '',
-  minRate: '',
-  maxRate: '',
   fromTime: '00:00',
   toTime: '23:59',
-  holidayDates: '',
   isActive: true,
 };
 
 const TYPE_LABEL: Record<PricingType, string> = {
   regular: 'Giờ thường',
   peak: 'Cao điểm',
-  holiday: 'Ngày lễ',
 };
 
 export function ManagerPricingPage() {
@@ -86,17 +77,10 @@ export function ManagerPricingPage() {
     setForm({
       name: row.name,
       vehicleType: typeof row.vehicleType === 'string' ? row.vehicleType : row.vehicleType._id,
-      type: row.type ?? 'regular',
+      type: row.type === 'peak' ? 'peak' : 'regular',
       hourlyRate: String(row.hourlyRate),
-      dailyCap: row.dailyCap != null ? String(row.dailyCap) : '',
-      minRate: String(row.minRate ?? 0),
-      maxRate: row.maxRate != null ? String(row.maxRate) : '',
       fromTime: row.timeWindow?.from ?? '00:00',
       toTime: row.timeWindow?.to ?? '23:59',
-      holidayDates: (row.holidayDates ?? [])
-        .map((d) => (d ? new Date(d).toISOString().slice(0, 10) : ''))
-        .filter(Boolean)
-        .join(', '),
       isActive: row.isActive,
     });
     setModalOpen(true);
@@ -112,14 +96,7 @@ export function ManagerPricingPage() {
       vehicleType: form.vehicleType,
       type: form.type,
       hourlyRate: Number(form.hourlyRate),
-      dailyCap: form.dailyCap ? Number(form.dailyCap) : null,
-      minRate: form.minRate ? Number(form.minRate) : 0,
-      maxRate: form.maxRate ? Number(form.maxRate) : null,
       timeWindow: { from: form.fromTime, to: form.toTime },
-      holidayDates:
-        form.type === 'holiday'
-          ? form.holidayDates.split(',').map((s) => s.trim()).filter(Boolean)
-          : [],
       isActive: form.isActive,
     };
     try {
@@ -155,18 +132,12 @@ export function ManagerPricingPage() {
     {
       key: 'type',
       title: 'Loại giá',
-      render: (row) => TYPE_LABEL[row.type] ?? row.type,
+      render: (row) => TYPE_LABEL[(row.type === 'peak' ? 'peak' : 'regular') as PricingType],
     },
     {
       key: 'hourlyRate',
       title: 'Giá/giờ',
       render: (row) => `${row.hourlyRate.toLocaleString('vi-VN')} đ`,
-    },
-    {
-      key: 'dailyCap',
-      title: 'Tối đa/ngày',
-      render: (row) =>
-        row.dailyCap != null ? `${row.dailyCap.toLocaleString('vi-VN')} đ` : '—',
     },
     {
       key: 'timeWindow',
@@ -248,7 +219,6 @@ export function ManagerPricingPage() {
             >
               <option value="regular">Giờ thường</option>
               <option value="peak">Cao điểm</option>
-              <option value="holiday">Ngày lễ</option>
             </select>
           </div>
           <div className="grid gap-1.5">
@@ -258,33 +228,6 @@ export function ManagerPricingPage() {
               min={0}
               value={form.hourlyRate}
               onChange={(e) => setForm((f) => ({ ...f, hourlyRate: e.target.value }))}
-            />
-          </div>
-          <div className="grid gap-1.5">
-            <label className="text-xs uppercase text-muted-foreground">Tối đa/ngày (tùy chọn)</label>
-            <Input
-              type="number"
-              min={0}
-              value={form.dailyCap}
-              onChange={(e) => setForm((f) => ({ ...f, dailyCap: e.target.value }))}
-            />
-          </div>
-          <div className="grid gap-1.5">
-            <label className="text-xs uppercase text-muted-foreground">Giá sàn</label>
-            <Input
-              type="number"
-              min={0}
-              value={form.minRate}
-              onChange={(e) => setForm((f) => ({ ...f, minRate: e.target.value }))}
-            />
-          </div>
-          <div className="grid gap-1.5">
-            <label className="text-xs uppercase text-muted-foreground">Giá trần</label>
-            <Input
-              type="number"
-              min={0}
-              value={form.maxRate}
-              onChange={(e) => setForm((f) => ({ ...f, maxRate: e.target.value }))}
             />
           </div>
           <div className="grid gap-1.5">
@@ -303,18 +246,9 @@ export function ManagerPricingPage() {
               onChange={(e) => setForm((f) => ({ ...f, toTime: e.target.value }))}
             />
           </div>
-          {form.type === 'holiday' && (
-            <div className="grid gap-1.5 md:col-span-2">
-              <label className="text-xs uppercase text-muted-foreground">
-                Ngày lễ áp dụng (YYYY-MM-DD, cách nhau bằng dấu phẩy)
-              </label>
-              <Input
-                value={form.holidayDates}
-                onChange={(e) => setForm((f) => ({ ...f, holidayDates: e.target.value }))}
-                placeholder="VD: 2026-01-01, 2026-04-30"
-              />
-            </div>
-          )}
+          <p className="md:col-span-2 text-[11px] text-muted-foreground">
+            “Giờ thường” áp dụng mặc định; “Cao điểm” áp dụng trong khung giờ Từ–Đến. Phí = tổng giờ đỗ × giá/giờ theo khung.
+          </p>
           <label className="flex items-center gap-2 text-sm md:col-span-2">
             <input
               type="checkbox"

@@ -257,23 +257,13 @@ export function ManagerDashboardPage() {
             </Card>
           </motion.div>
 
-          {/* Yêu cầu & Đăng ký */}
+          {/* Đăng ký */}
           <motion.div variants={itemVariants}>
             <Card className="border border-white/5 bg-slate-900/40 shadow-2xl backdrop-blur-md overflow-hidden rounded-3xl">
               <CardHeader className="border-b border-white/5 bg-slate-950/30 p-5">
-                <CardTitle className="text-xs font-black uppercase tracking-wider text-slate-300 font-mono">Phản hồi & Gói đăng ký</CardTitle>
+                <CardTitle className="text-xs font-black uppercase tracking-wider text-slate-300 font-mono">Gói đăng ký</CardTitle>
               </CardHeader>
               <CardContent className="p-5 space-y-3">
-                <div className="rounded-2xl border border-white/5 bg-slate-950/40 p-4 flex items-center justify-between">
-                  <div>
-                    <p className="text-[9px] font-black uppercase tracking-wider text-slate-400 font-mono">Phản hồi cần xử lý</p>
-                    <p className="mt-1 text-xl font-black text-white font-mono">{overview?.feedbacks?.pending ?? 0}</p>
-                  </div>
-                  {(overview?.feedbacks?.pending ?? 0) > 0 && (
-                    <span className="flex h-2.5 w-2.5 rounded-full bg-rose-500 animate-pulse shadow-[0_0_8px_#f43f5e]" />
-                  )}
-                </div>
-
                 <div className="rounded-2xl border border-white/5 bg-slate-950/40 p-4">
                   <p className="text-[9px] font-black uppercase tracking-wider text-slate-400 font-mono">Gói đăng ký đang hoạt động</p>
                   <p className="mt-1.5 text-xl font-black text-white font-mono">

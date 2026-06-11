@@ -57,10 +57,10 @@ export const mainFlowModules: LegacyModule[] = [
     available: false,
   },
   {
-    id: 'payments',
-    title: 'Thanh toán',
-    description: 'Thanh toán phí gửi xe và các gói dịch vụ.',
-    actionLabel: 'Đăng ký gói',
+    id: 'feedback',
+    title: 'Đánh giá dịch vụ',
+    description: 'Gửi phản hồi và đánh giá trải nghiệm gửi xe của bạn để chúng tôi nâng cao chất lượng dịch vụ.',
+    actionLabel: 'Đánh giá ngay',
     available: true,
   },
   {
