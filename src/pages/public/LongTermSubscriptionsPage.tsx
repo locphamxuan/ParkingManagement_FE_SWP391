@@ -508,22 +508,7 @@ export default function LongTermSubscriptionsPage() {
                 </div>
               ) : null}
 
-              <button
-                type="submit"
-                disabled={isSubmitting || isLoadingPackages || isLoadingBuildings}
-                className="h-11 w-full rounded-xl bg-gradient-to-r from-orange-500 to-amber-400 text-sm font-black uppercase tracking-wider text-slate-950 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 size={14} className="inline animate-spin mr-2" />
-                    Đang xử lý...
-                  </>
-                ) : (
-                  'Đăng ký gói'
-                )}
-              </button>
             </div>
-          </form>
 
           <div className="space-y-6">
             <div className="rounded-3xl border border-white/10 bg-slate-900/55 p-6">
@@ -666,9 +651,10 @@ export default function LongTermSubscriptionsPage() {
                 </p>
               )}
             </div>
-          </>
-        )}
-      </div>
+          </div>
+        </>
+      )}
+    </div>
 
       {cancellingSub && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
