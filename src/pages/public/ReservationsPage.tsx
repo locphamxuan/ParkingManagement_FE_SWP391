@@ -649,14 +649,22 @@ function ReservationHistoryTab() {
     setTotalPages(1);
   };
 
-  const filterTabs = [
-    { value: 'all', label: 'Tất cả' },
-    { value: 'confirmed', label: 'Đã đặt' },
-    { value: 'checked_in', label: 'Đang sử dụng' },
-    { value: 'completed', label: 'Hoàn thành' },
-    { value: 'cancelled', label: 'Đã hủy' },
-    { value: 'expired', label: 'Hết hạn' },
-  ];
+  const filterTabs = activeMode === 'hourly'
+    ? [
+        { value: 'all', label: 'Tất cả' },
+        { value: 'confirmed', label: 'Đã đặt' },
+        { value: 'checked_in', label: 'Đang sử dụng' },
+        { value: 'completed', label: 'Hoàn thành' },
+        { value: 'cancelled', label: 'Đã hủy' },
+        { value: 'expired', label: 'Hết hạn' },
+      ]
+    : [
+        { value: 'all', label: 'Tất cả' },
+        { value: 'confirmed', label: 'Đã đặt' },
+        { value: 'checked_in', label: 'Đang sử dụng' },
+        { value: 'completed', label: 'Hoàn thành' },
+        { value: 'cancelled', label: 'Đã hủy' },
+      ];
 
   const fmtDateOnly = (iso: string | undefined | null) => {
     if (!iso) return '—';
