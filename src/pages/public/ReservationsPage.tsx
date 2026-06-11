@@ -1345,6 +1345,16 @@ export default function ReservationsPage() {
     return slots.filter((s) => {
       if (s.status !== 'available') return false;
       if (!s.reservable) return false;
+
+      // Prefix check: C for Car, M for Motorcycle
+      const firstChar = String(s.code).trim().charAt(0).toUpperCase();
+      if (selectedVehicleType === 'car' && firstChar === 'M') {
+        return true; // Motorcycle slot is unsupported for Cars
+      }
+      if (selectedVehicleType === 'motorcycle' && firstChar === 'C') {
+        return true; // Car slot is unsupported for Motorcycles
+      }
+
       return s.vehicleType !== 'all' && s.vehicleType !== selectedVehicleType;
     }).map((s) => s.code);
   }, [slots, selectedVehicleType]);
@@ -1381,9 +1391,11 @@ export default function ReservationsPage() {
     setBookingSuccess(null);
     if (!startDateTime || !endDateTime || !selectedPlate || !selectedBuildingId) return;
 
-    if (startDateTime.getTime() < Date.now() - 5 * 60 * 1000) {
-      setBookingError('Thời gian nhận bãi không được ở trong quá khứ. Vui lòng chọn thời gian khác.');
-      return;
+    if (mode === 'hourly') {
+      if (startDateTime.getTime() < Date.now() - 5 * 60 * 1000) {
+        setBookingError('Thời gian nhận bãi không được ở trong quá khứ. Vui lòng chọn thời gian khác.');
+        return;
+      }
     }
 
     setIsSubmitting(true);
