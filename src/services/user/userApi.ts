@@ -89,6 +89,8 @@ export interface ParkingHistory {
   paymentStatus: 'pending' | 'paid' | 'waived';
   status: 'active' | 'completed' | 'cancelled';
   createdAt?: string;
+  entryGate?: Gate | null;
+  exitGate?: Gate | null;
 }
 
 export interface LongTermPackage {
