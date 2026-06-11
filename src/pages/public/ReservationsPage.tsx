@@ -444,13 +444,12 @@ function PackageCard({
       onClick={isLocked ? undefined : onClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className={`relative rounded-2xl border p-4 text-left transition-all duration-300 ${
-        isLocked
+      className={`relative rounded-2xl border p-4 text-left transition-all duration-300 ${isLocked
           ? 'border-white/[0.04] bg-white/[0.01] opacity-40 cursor-not-allowed'
           : isSelected
             ? `${colors.borderSelected} ${colors.bgSelected} ${colors.shadowSelected} scale-[1.04]`
             : `${colors.borderNormal} ${colors.bgNormal} ${colors.borderHover} ${colors.bgHover} ${colors.shadowHover} hover:scale-[1.02]`
-      }`}
+        }`}
     >
       {/* Lock overlay on hover when locked */}
       {isLocked && isHovered && (
@@ -519,15 +518,13 @@ function PackageCard({
           {pkg.description}
         </p>
       )}
-      <p className={`mt-2 text-lg font-black ${colors.text} relative z-10 transition-all duration-300 ${
-        isSelected ? 'drop-shadow-[0_0_10px_rgba(255,255,255,0.15)] scale-105 origin-left' : ''
-      }`}>{fmtMoney(pkg.price)}</p>
+      <p className={`mt-2 text-lg font-black ${colors.text} relative z-10 transition-all duration-300 ${isSelected ? 'drop-shadow-[0_0_10px_rgba(255,255,255,0.15)] scale-105 origin-left' : ''
+        }`}>{fmtMoney(pkg.price)}</p>
       {pkg.allowDedicatedSlot && (
-        <span className={`mt-2 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] font-bold relative z-10 ${
-          isSelected
+        <span className={`mt-2 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] font-bold relative z-10 ${isSelected
             ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200'
             : 'border-emerald-400/20 bg-emerald-400/5 text-emerald-300'
-        }`}>
+          }`}>
           <ShieldCheck size={10} /> Chỗ cố định
         </span>
       )}
@@ -548,7 +545,7 @@ function PackageCard({
 
 function StatusBadge({ status }: { status: string }) {
   const labels: Record<string, string> = {
-    pending: 'Đang chờ', confirmed: 'Đã xác nhận', checked_in: 'Đã check-in',
+    pending: 'Chờ thanh toán', confirmed: 'Đã đặt', checked_in: 'Đang sử dụng',
     completed: 'Hoàn thành', expired: 'Hết hạn', cancelled: 'Đã hủy',
     active: 'Đã đặt',
   };
@@ -578,6 +575,20 @@ function ReservationHistoryTab() {
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
+  const [cancellingSub, setCancellingSub] = useState<LongTermSubscription | null>(null);
+  const [cancelReason, setCancelReason] = useState<string>('change_slot');
+  const [cancelNote, setCancelNote] = useState<string>('');
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (successMessage) {
+      const timer = setTimeout(() => setSuccessMessage(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [successMessage]);
+
   const load = useCallback((p = 1, mode = activeMode, status = statusFilter) => {
     setLoading(true);
     setError(null);
@@ -593,8 +604,17 @@ function ReservationHistoryTab() {
         .catch((err) => setError(err instanceof Error ? err.message : 'Tải lịch sử thất bại'))
         .finally(() => setLoading(false));
     } else {
+      let apiStatus: string | undefined = status;
+      if (status === 'all') {
+        apiStatus = undefined;
+      } else if (status === 'confirmed') {
+        apiStatus = 'active';
+      } else if (status === 'checked_in' || status === 'completed') {
+        apiStatus = 'none'; // Will return empty list because subscriptions don't have these statuses
+      }
+
       userApi.longTermSubscriptions
-        .list({ page: p, limit: 10, status: status === 'all' ? undefined : status })
+        .list({ page: p, limit: 10, status: apiStatus })
         .then((res) => {
           const raw = (res as any)?.data;
           setItems(raw?.items ?? []);
@@ -631,19 +651,14 @@ function ReservationHistoryTab() {
     setTotalPages(1);
   };
 
-  const filterTabs = activeMode === 'hourly'
-    ? [
-        { value: 'all', label: 'Tất cả' },
-        { value: 'confirmed', label: 'Đã đặt chỗ' },
-        { value: 'completed', label: 'Hoàn thành' },
-        { value: 'cancelled', label: 'Đã hủy' },
-      ]
-    : [
-        { value: 'all', label: 'Tất cả' },
-        { value: 'active', label: 'Đã đặt' },
-        { value: 'cancelled', label: 'Đã hủy' },
-        { value: 'expired', label: 'Hết hạn' },
-      ];
+  const filterTabs = [
+    { value: 'all', label: 'Tất cả' },
+    { value: 'confirmed', label: 'Đã đặt' },
+    { value: 'checked_in', label: 'Đang sử dụng' },
+    { value: 'completed', label: 'Hoàn thành' },
+    { value: 'cancelled', label: 'Đã hủy' },
+    { value: 'expired', label: 'Hết hạn' },
+  ];
 
   const fmtDateOnly = (iso: string | undefined | null) => {
     if (!iso) return '—';
@@ -660,22 +675,20 @@ function ReservationHistoryTab() {
           <button
             type="button"
             onClick={() => handleModeChange('hourly')}
-            className={`rounded-lg px-6 py-2 text-xs font-black uppercase tracking-wider transition-all duration-300 ${
-              activeMode === 'hourly'
+            className={`rounded-lg px-6 py-2 text-xs font-black uppercase tracking-wider transition-all duration-300 ${activeMode === 'hourly'
                 ? 'bg-orange-500 text-slate-950 shadow-[0_0_12px_rgba(249,115,22,0.3)]'
                 : 'text-slate-400 hover:text-slate-200'
-            }`}
+              }`}
           >
             Đặt theo giờ
           </button>
           <button
             type="button"
             onClick={() => handleModeChange('package')}
-            className={`rounded-lg px-6 py-2 text-xs font-black uppercase tracking-wider transition-all duration-300 ${
-              activeMode === 'package'
+            className={`rounded-lg px-6 py-2 text-xs font-black uppercase tracking-wider transition-all duration-300 ${activeMode === 'package'
                 ? 'bg-orange-500 text-slate-950 shadow-[0_0_12px_rgba(249,115,22,0.3)]'
                 : 'text-slate-400 hover:text-slate-200'
-            }`}
+              }`}
           >
             Đăng ký gói dài hạn
           </button>
@@ -708,6 +721,7 @@ function ReservationHistoryTab() {
       </div>
 
       {error && <div className="rounded-xl border border-rose-500/25 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">{error}</div>}
+      {successMessage && <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">{successMessage}</div>}
 
       {loading ? (
         <div className="py-12 text-center text-sm text-slate-400">Đang tải dữ liệu...</div>
@@ -731,8 +745,8 @@ function ReservationHistoryTab() {
               else if (r.status === 'pending') statusColorClass = 'border-l-amber-500/80';
 
               return (
-                <div 
-                  key={r._id} 
+                <div
+                  key={r._id}
                   className={`relative rounded-2xl border-l-[3px] border-y border-r border-white/[0.05] bg-white/[0.01] p-4 transition-all duration-300 hover:border-r-white/10 hover:border-y-white/10 hover:bg-white/[0.03] hover:shadow-[0_8px_30px_rgb(0,0,0,0.3)] group ${statusColorClass}`}
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -752,7 +766,7 @@ function ReservationHistoryTab() {
                         {(r.building as any)?.name ?? '—'}
                       </p>
                     </div>
-                    
+
                     <div className="flex items-center gap-2 shrink-0">
                       <StatusBadge status={r.status} />
                       {(r.status === 'pending' || r.status === 'confirmed') && (
@@ -817,11 +831,10 @@ function ReservationHistoryTab() {
                             <span className={`font-black ${r.parkingSession.fee > 0 ? 'text-amber-400 font-extrabold' : 'text-emerald-400'}`}>
                               {fmtMoney(r.parkingSession.fee)}
                             </span>
-                            <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded uppercase ${
-                              r.parkingSession.paymentStatus === 'paid'
+                            <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded uppercase ${r.parkingSession.paymentStatus === 'paid'
                                 ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
                                 : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                            }`}>
+                              }`}>
                               {r.parkingSession.paymentStatus === 'paid' ? 'Đã trả' : 'Chưa trả'}
                             </span>
                           </div>
@@ -852,8 +865,8 @@ function ReservationHistoryTab() {
               else if (sub.status === 'pending') statusColorClass = 'border-l-amber-500/80';
 
               return (
-                <div 
-                  key={sub._id} 
+                <div
+                  key={sub._id}
                   className={`relative rounded-2xl border-l-[3px] border-y border-r border-white/[0.05] bg-white/[0.01] p-4 transition-all duration-300 hover:border-r-white/10 hover:border-y-white/10 hover:bg-white/[0.03] hover:shadow-[0_8px_30px_rgb(0,0,0,0.3)] group ${statusColorClass}`}
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -873,9 +886,26 @@ function ReservationHistoryTab() {
                         {(sub.building as any)?.name ?? (sub.building as any) ?? '—'}
                       </p>
                     </div>
-                    
+
                     <div className="flex items-center gap-2 shrink-0">
                       <StatusBadge status={sub.status} />
+                      {(() => {
+                        const now = new Date();
+                        const startDate = new Date(sub.startDate);
+                        const diffMs = now.getTime() - startDate.getTime();
+                        const diffDays = diffMs / (1000 * 60 * 60 * 24);
+                        const isPendingOrActive = sub.status === 'active' || sub.status === 'pending';
+                        const canCancel = isPendingOrActive && (now <= startDate || diffDays <= 3);
+                        return canCancel ? (
+                          <button
+                            type="button"
+                            onClick={() => setCancellingSub(sub)}
+                            className="flex items-center gap-1 rounded-lg border border-rose-500/30 bg-rose-500/10 px-2.5 py-1 text-xs font-bold text-rose-400 hover:bg-rose-500/20 hover:border-rose-500/50 transition-all"
+                          >
+                            Hủy
+                          </button>
+                        ) : null;
+                      })()}
                     </div>
                   </div>
 
@@ -927,6 +957,130 @@ function ReservationHistoryTab() {
           <button type="button" disabled={page <= 1 || loading} onClick={() => load(page - 1)} className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-300 hover:text-white disabled:opacity-40">← Trước</button>
           <span className="text-xs text-slate-400">Trang {page} / {totalPages}</span>
           <button type="button" disabled={page >= totalPages || loading} onClick={() => load(page + 1)} className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-300 hover:text-white disabled:opacity-40">Sau →</button>
+        </div>
+      )}
+
+      {cancellingSub && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-3xl border border-white/10 bg-slate-900 p-6 shadow-2xl space-y-6 text-left">
+            <div>
+              <h3 className="text-lg font-black text-white">Xác nhận hủy gói dài hạn</h3>
+              <p className="text-xs text-slate-400 mt-1">Gói: {cancellingSub.package?.name ?? 'Gói không xác định'} ({cancellingSub.package?.code ?? '—'})</p>
+            </div>
+
+            <div className="rounded-2xl border border-rose-500/20 bg-rose-500/10 p-4 space-y-2 text-xs font-semibold text-rose-300">
+              <p>
+                Gói dài hạn này sẽ được hủy. Bạn sẽ được hoàn lại 95% giá gói (tương đương{' '}
+                <span className="font-black text-rose-400">
+                  {fmtMoney((cancellingSub.price ?? cancellingSub.package?.price ?? 0) * 0.95)}
+                </span>
+                ) vào ví cá nhân.
+              </p>
+              <p className="text-[10px] text-rose-300/80 italic">
+                (*) Hệ thống khấu trừ 5% phí hủy gói, bao gồm: phí dịch vụ tiện ích, phí quản lý hệ thống và chi phí vận hành bãi đỗ.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <span className="text-xs font-bold uppercase text-slate-400 block mb-2">Lý do hủy</span>
+                <div className="space-y-2">
+                  {[
+                    { value: 'change_slot', label: '🚗 Đổi sang chỗ đỗ khác' },
+                    { value: 'change_vehicle', label: '🔄 Thay đổi phương tiện / biển số xe' },
+                    { value: 'no_longer_needed', label: '🏢 Không còn nhu cầu đỗ xe ở đây' },
+                    { value: 'pricing_issue', label: '💸 Giá gói không còn phù hợp' },
+                    { value: 'other', label: '⚠️ Lý do khác' },
+                  ].map((opt) => (
+                    <label
+                      key={opt.value}
+                      className={`flex items-center gap-3 rounded-xl border p-3 cursor-pointer transition-all ${cancelReason === opt.value
+                          ? 'border-orange-500/50 bg-orange-500/5 text-orange-300 shadow-[0_0_15px_rgba(249,115,22,0.05)]'
+                          : 'border-white/5 bg-slate-950/40 text-slate-400 hover:bg-slate-950/60'
+                        }`}
+                    >
+                      <input
+                        type="radio"
+                        name="cancelReasonTab"
+                        value={opt.value}
+                        checked={cancelReason === opt.value}
+                        onChange={(e) => {
+                          setCancelReason(e.target.value);
+                          if (e.target.value !== 'other') {
+                            setCancelNote('');
+                          }
+                        }}
+                        className="accent-orange-500"
+                      />
+                      <span className="text-xs font-bold">{opt.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <span className="text-xs font-bold uppercase text-slate-400 block mb-1">
+                  Ghi chú chi tiết {cancelReason === 'other' && <span className="text-rose-400">*</span>}
+                </span>
+                <textarea
+                  value={cancelNote}
+                  onChange={(e) => setCancelNote(e.target.value)}
+                  placeholder={
+                    cancelReason === 'other'
+                      ? 'Vui lòng nhập lý do hủy chi tiết tại đây (bắt buộc)...'
+                      : 'Nhập ghi chú thêm nếu có...'
+                  }
+                  rows={3}
+                  className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2 text-xs font-semibold text-white outline-none focus:border-orange-400/60 placeholder-slate-600 resize-none"
+                />
+              </div>
+            </div>
+
+            {cancelError && (
+              <p className="text-xs font-bold text-rose-400 bg-rose-500/5 border border-rose-500/10 p-2.5 rounded-xl">
+                {cancelError}
+              </p>
+            )}
+
+            <div className="flex items-center gap-3 justify-end pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setCancellingSub(null);
+                  setCancelReason('change_slot');
+                  setCancelNote('');
+                  setCancelError(null);
+                }}
+                disabled={isCancelling}
+                className="px-4 py-2.5 rounded-xl border border-white/10 bg-slate-950 text-xs font-black uppercase tracking-wider text-slate-400 hover:text-white transition-all active:scale-95 disabled:opacity-50"
+              >
+                Quay lại
+              </button>
+              <button
+                type="button"
+                disabled={isCancelling || (cancelReason === 'other' && !cancelNote.trim())}
+                onClick={async () => {
+                  setCancelError(null);
+                  setIsCancelling(true);
+                  try {
+                    await userApi.longTermSubscriptions.cancel(cancellingSub._id, { cancelReason, cancelNote });
+                    setSuccessMessage('Hủy gói dài hạn thành công! Số tiền hoàn lại (95%) đã được cộng vào ví tài khoản.');
+                    load(page, activeMode, statusFilter);
+                    setCancellingSub(null);
+                    setCancelReason('change_slot');
+                    setCancelNote('');
+                  } catch (err) {
+                    setCancelError(err instanceof Error ? err.message : 'Lỗi khi hủy gói dài hạn.');
+                  } finally {
+                    setIsCancelling(false);
+                  }
+                }}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-xs font-black uppercase tracking-wider text-white transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isCancelling ? 'Đang xử lý...' : 'Xác nhận hủy'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -996,7 +1150,7 @@ export default function ReservationsPage() {
 
   useEffect(() => {
     if (!user) return;
-    
+
     // Fetch reservations
     const p1 = userApi.reservations.list({ limit: 100 }).then(res => {
       const items = (res as any)?.data?.items || [];
@@ -1164,10 +1318,10 @@ export default function ReservationsPage() {
     if (!user) return [];
     const base = selectedVehicleType
       ? user.licensePlates.filter((p) => {
-          const t = p.vehicleType?.toLowerCase();
-          if (selectedVehicleType === 'motorcycle') return t === 'motorcycle' || t === 'bike';
-          return t !== 'motorcycle' && t !== 'bike';
-        })
+        const t = p.vehicleType?.toLowerCase();
+        if (selectedVehicleType === 'motorcycle') return t === 'motorcycle' || t === 'bike';
+        return t !== 'motorcycle' && t !== 'bike';
+      })
       : user.licensePlates;
     return base.filter((p) => !bookedPlates.includes(p.plateNumber));
   }, [user, selectedVehicleType, bookedPlates]);
@@ -1296,7 +1450,7 @@ export default function ReservationsPage() {
         {/* ── Tab Bar ── */}
         <div className="mb-6 flex items-center gap-1 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-1.5">
           {[
-            { key: 'hourly' as BookingMode, label: 'Đặt chỗ đỗ theo tiếng', icon: <Timer size={14} /> },
+            { key: 'hourly' as BookingMode, label: 'Đặt theo giờ', icon: <Timer size={14} /> },
             { key: 'package' as BookingMode, label: 'Đăng ký gói dài hạn', icon: <Package size={14} /> },
           ].map((tab) => (
             <button
@@ -1766,7 +1920,7 @@ export default function ReservationsPage() {
             >
               {bookingSuccess ? (
                 <div className="flex flex-col items-center text-center">
-                  <motion.div 
+                  <motion.div
                     initial={{ scale: 0 }}
                     animate={{ scale: [0, 1.2, 1] }}
                     transition={{ duration: 0.4 }}
@@ -1788,7 +1942,7 @@ export default function ReservationsPage() {
                 </div>
               ) : (
                 <div className="flex flex-col items-center text-center">
-                  <motion.div 
+                  <motion.div
                     initial={{ x: 0 }}
                     animate={{ x: [-10, 10, -10, 10, 0] }}
                     transition={{ duration: 0.4 }}
