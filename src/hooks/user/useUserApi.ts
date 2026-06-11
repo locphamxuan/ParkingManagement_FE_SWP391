@@ -515,11 +515,14 @@ export function useCancelSubscription() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  const cancel = useCallback(async (id: string) => {
+  const cancel = useCallback(async (id: string, cancelReason?: string, cancelNote?: string) => {
     setIsLoading(true);
     setError(null);
     try {
-      const result = await userApi.longTermSubscriptions.cancel(id);
+      const result = await userApi.longTermSubscriptions.cancel(id, {
+        cancelReason: cancelReason || 'change_slot',
+        cancelNote,
+      });
       return result.data.subscription;
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Unknown error');

@@ -127,6 +127,8 @@ export interface LongTermSubscription {
   startDate: string;
   endDate: string;
   status: 'pending' | 'active' | 'expired' | 'cancelled';
+  cancelReason?: 'change_slot' | 'change_vehicle' | 'no_longer_needed' | 'pricing_issue' | 'other' | null;
+  cancelNote?: string | null;
   // ── Legacy/optional FE-only fields ──
   code?: string;
   linkedPlates?: string[];
@@ -330,9 +332,10 @@ export const userApi = {
       ),
 
     /** Cancel subscription */
-    cancel: (id: string) =>
-      api.delete<Wrap<{ subscription: LongTermSubscription }>>(
-        `/users/long-term/subscriptions/${id}`
+    cancel: (id: string, body: { cancelReason: string; cancelNote?: string }) =>
+      api.post<Wrap<{ subscription: LongTermSubscription }>>(
+        `/users/long-term/subscriptions/${id}/cancel`,
+        body
       ),
   },
 
