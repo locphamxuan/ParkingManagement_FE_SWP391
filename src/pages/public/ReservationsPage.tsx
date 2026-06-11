@@ -520,14 +520,12 @@ function PackageCard({
       )}
       <p className={`mt-2 text-lg font-black ${colors.text} relative z-10 transition-all duration-300 ${isSelected ? 'drop-shadow-[0_0_10px_rgba(255,255,255,0.15)] scale-105 origin-left' : ''
         }`}>{fmtMoney(pkg.price)}</p>
-      {pkg.allowDedicatedSlot && (
-        <span className={`mt-2 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] font-bold relative z-10 ${isSelected
-            ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200'
-            : 'border-emerald-400/20 bg-emerald-400/5 text-emerald-300'
-          }`}>
-          <ShieldCheck size={10} /> Chỗ cố định
-        </span>
-      )}
+      <span className={`mt-2 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] font-bold relative z-10 ${isSelected
+          ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200'
+          : 'border-emerald-400/20 bg-emerald-400/5 text-emerald-300'
+        }`}>
+        <ShieldCheck size={10} /> Chỗ cố định
+      </span>
       {isSelected && (
         <motion.div
           initial={{ scale: 0, rotate: -45 }}
@@ -1375,6 +1373,11 @@ export default function ReservationsPage() {
     setBookingSuccess(null);
     if (!startDateTime || !endDateTime || !selectedPlate || !selectedBuildingId) return;
 
+    if (startDateTime.getTime() < Date.now() - 5 * 60 * 1000) {
+      setBookingError('Thời gian nhận bãi không được ở trong quá khứ. Vui lòng chọn thời gian khác.');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       if (mode === 'hourly') {
@@ -1831,7 +1834,6 @@ export default function ReservationsPage() {
                   </div>
                   {selectedVehicleType && (
                     <div className="rounded-xl border border-white/5 bg-white/[0.02] px-4 py-2.5 text-xs text-slate-400 flex items-center gap-2 max-w-md">
-                      <Sparkles size={14} className="text-amber-400 shrink-0 animate-pulse" />
                       <span>
                         Bản đồ đang lọc theo <strong>{selectedVehicleType === 'car' ? 'Ô tô' : 'Xe máy'}</strong>. Các ô đỗ không phù hợp sẽ tự động mờ đi.
                       </span>

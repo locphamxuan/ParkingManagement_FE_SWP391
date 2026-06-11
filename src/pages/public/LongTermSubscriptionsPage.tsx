@@ -455,11 +455,9 @@ export default function LongTermSubscriptionsPage() {
                   {selectedPackage.description && (
                     <p className="text-xs text-slate-400 mt-2">{selectedPackage.description}</p>
                   )}
-                  {selectedPackage.allowDedicatedSlot && (
-                    <p className="mt-2 inline-flex items-center gap-1 rounded-full border border-cyan-400/30 bg-cyan-500/10 px-2 py-0.5 text-[11px] font-bold text-cyan-300">
-                      <CheckCircle2 size={11} /> Có chỗ đỗ dành riêng
-                    </p>
-                  )}
+                  <p className="mt-2 inline-flex items-center gap-1 rounded-full border border-cyan-400/30 bg-cyan-500/10 px-2 py-0.5 text-[11px] font-bold text-cyan-300">
+                    <CheckCircle2 size={11} /> Có chỗ đỗ dành riêng
+                  </p>
                   {(selectedPackage.benefits?.length ?? 0) > 0 && (
                     <div className="mt-2 border-t border-white/10 pt-2">
                       <p className="mb-1 text-[10px] font-black uppercase tracking-wider text-emerald-300">Ưu đãi</p>
