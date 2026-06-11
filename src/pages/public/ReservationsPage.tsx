@@ -550,7 +550,7 @@ function StatusBadge({ status }: { status: string }) {
   const labels: Record<string, string> = {
     pending: 'Đang chờ', confirmed: 'Đã xác nhận', checked_in: 'Đã check-in',
     completed: 'Hoàn thành', expired: 'Hết hạn', cancelled: 'Đã hủy',
-    active: 'Đã đặt',
+    active: 'Đã mua',
   };
   const colors: Record<string, string> = {
     pending: 'border-amber-500/30 bg-amber-500/10 text-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.1)]',
