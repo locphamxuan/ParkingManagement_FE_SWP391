@@ -1282,11 +1282,17 @@ export default function ReservationsPage() {
   const maxCalDate = useMemo(() => getMaxCalendarDate(mode, selectedPkg), [mode, selectedPkg]);
 
   const startDateTime = useMemo(() => {
-    const baseDate = mode === 'hourly' ? selectedDate : pkgStartDate;
-    if (!baseDate) return null;
-    const [h, m] = selectedTime.split(':').map(Number);
-    const d = new Date(baseDate);
-    d.setHours(h, m, 0, 0);
+    if (mode === 'hourly') {
+      if (!selectedDate) return null;
+      const [h, m] = selectedTime.split(':').map(Number);
+      const d = new Date(selectedDate);
+      d.setHours(h, m, 0, 0);
+      return d;
+    }
+    // Package mode: use start of day (00:00) — no specific time needed
+    if (!pkgStartDate) return null;
+    const d = new Date(pkgStartDate);
+    d.setHours(0, 0, 0, 0);
     return d;
   }, [mode, selectedDate, selectedTime, pkgStartDate]);
 
