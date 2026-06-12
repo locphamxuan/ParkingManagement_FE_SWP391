@@ -265,7 +265,6 @@ export function ManagerSlotsPage() {
     const payload = {
       code: form.code.trim().toUpperCase(),
       floor: form.floor,
-      vehicleType: form.vehicleType || null,
       status: form.status,
       reservable: form.reservable,
       note: form.note.trim(),
@@ -315,13 +314,14 @@ export function ManagerSlotsPage() {
     },
     {
       key: 'vehicleType',
-      title: 'Loại xe',
-      render: (row) =>
-        !row.vehicleType
-          ? '—'
-          : typeof row.vehicleType === 'string'
-            ? row.vehicleType
-            : row.vehicleType.code,
+      title: 'Loại xe (theo tầng)',
+      render: (row) => {
+        const id = typeof row.floor === 'string' ? row.floor : row.floor._id;
+        const fl = floorMap.get(id);
+        const types = (fl?.allowedVehicleTypes ?? []) as Array<{ code?: string } | string>;
+        if (!types.length) return 'Mọi loại';
+        return types.map((t) => (typeof t === 'object' ? t.code : t)).filter(Boolean).join(', ');
+      },
     },
     {
       key: 'status',
@@ -647,20 +647,10 @@ export function ManagerSlotsPage() {
               ))}
             </select>
           </div>
-          <div className="grid gap-1.5">
-            <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono">Loại xe (tùy chọn)</label>
-            <select
-              className="h-10 rounded-xl border border-white/10 bg-slate-950 text-white px-3 text-sm focus:border-orange-500/40"
-              value={form.vehicleType}
-              onChange={(e) => setForm((f) => ({ ...f, vehicleType: e.target.value }))}
-            >
-              <option value="">— Không cố định —</option>
-              {vehicleTypes.map((vt) => (
-                <option key={vt._id} value={vt._id}>
-                  {vt.code} - {vt.name}
-                </option>
-              ))}
-            </select>
+          <div className="grid gap-1.5 sm:col-span-2">
+            <p className="rounded-xl border border-sky-500/20 bg-sky-500/5 px-3 py-2 text-[11px] text-sky-300">
+              Loại xe của ô đỗ <strong>tự lấy theo loại xe cho phép của tầng</strong> (cấu hình ở tab Tầng), không cần set ở đây.
+            </p>
           </div>
           <div className="grid gap-1.5">
             <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono">Trạng thái</label>

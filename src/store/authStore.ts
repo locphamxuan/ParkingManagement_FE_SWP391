@@ -11,7 +11,7 @@ interface AuthState {
   error: string | null;
   login: (email: string, password: string) => Promise<AuthSession>;
   logout: () => void;
-  updateProfile: (profile: { fullName: string; phone: string; licensePlates: Array<{ _id?: string; plateNumber: string; vehicleType: 'car' | 'motorcycle'; isDefault?: boolean }> }) => void;
+  updateProfile: (profile: { fullName: string; phone: string; licensePlates: Array<{ _id?: string; plateNumber: string; vehicleType: 'car' | 'motorcycle'; brand?: string | null; isDefault?: boolean }> }) => void;
   setDefaultLicensePlate: (plateId: string) => Promise<void>;
 }
 
@@ -48,11 +48,11 @@ function mapLegacySession(): AuthSession | null {
       : [],
     phone: finalPhone,
     licensePlates: (rawPlates as unknown[])
-      .map((item): { _id?: string; plateNumber: string; vehicleType: 'car' | 'motorcycle'; isDefault?: boolean } | null => {
+      .map((item): { _id?: string; plateNumber: string; vehicleType: 'car' | 'motorcycle'; brand?: string | null; isDefault?: boolean } | null => {
         if (!item) return null;
         if (typeof item === 'string') {
           const plate = item.toUpperCase().trim();
-          return plate ? { plateNumber: plate, vehicleType: 'car', isDefault: false } : null;
+          return plate ? { plateNumber: plate, vehicleType: 'car', brand: null, isDefault: false } : null;
         }
         if (typeof item === 'object') {
           const p = item as Record<string, unknown>;
@@ -62,13 +62,14 @@ function mapLegacySession(): AuthSession | null {
                 _id: p._id ? String(p._id) : undefined,
                 plateNumber: plate,
                 vehicleType: p.vehicleType === 'motorcycle' ? 'motorcycle' : 'car',
+                brand: typeof p.brand === 'string' && p.brand.trim() ? p.brand.trim() : null,
                 isDefault: p.isDefault === true || p.isDefault === 'true',
               }
             : null;
         }
         return null;
       })
-      .filter((p): p is { _id?: string; plateNumber: string; vehicleType: 'car' | 'motorcycle'; isDefault?: boolean } => Boolean(p && p.plateNumber)),
+      .filter((p): p is { _id?: string; plateNumber: string; vehicleType: 'car' | 'motorcycle'; brand?: string | null; isDefault?: boolean } => Boolean(p && p.plateNumber)),
   };
 }
 
@@ -92,11 +93,12 @@ export const useAuthStore = create<AuthState>()(
 
           if (localData) {
             // Merge local profile data on top of fresh backend session
-            const localPlates: Array<{ _id?: string; plateNumber: string; vehicleType: 'car' | 'motorcycle'; isDefault?: boolean }> =
+            const localPlates: Array<{ _id?: string; plateNumber: string; vehicleType: 'car' | 'motorcycle'; brand?: string | null; isDefault?: boolean }> =
               (localData.licensePlates || []).map((p: any) => ({
                 _id: p?._id ? String(p._id) : undefined,
                 plateNumber: String(p?.plateNumber || p || '').toUpperCase().trim(),
                 vehicleType: p?.vehicleType === 'motorcycle' ? ('motorcycle' as const) : ('car' as const),
+                brand: typeof p?.brand === 'string' && p.brand.trim() ? p.brand.trim() : null,
                 isDefault: p?.isDefault === true || p?.isDefault === 'true',
               })).filter((p: any) => p.plateNumber);
 
@@ -234,3 +236,10 @@ export const useAuthStore = create<AuthState>()(
     }
   )
 );
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('auth-unauthorized', () => {
+    useAuthStore.getState().logout();
+  });
+}
+

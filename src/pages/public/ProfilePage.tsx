@@ -3,23 +3,16 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import { ArrowLeft, LogOut, User, Edit, Save, X, ShieldAlert, Plus, AlertCircle, CheckCircle2, Car, Bike, Loader2, Star, QrCode, KeyRound } from 'lucide-react';
-import { syncPlates } from '@/services/licensePlateService';
+import { syncPlates, listPlates, type PlateRecord } from '@/services/licensePlateService';
 import { UserQRModal } from '@/components/shared/UserQRModal';
+import { PlateQRModal } from '@/components/shared/PlateQRModal';
 import { userApi } from '@/services/user/userApi';
+import { notificationApi, type AppNotification } from '@/services/notificationApi';
+import { normalizePlate, isValidVietnamPlate, brandsForVehicleType } from '@/utils/plate';
 
-// ─── Vietnamese license plate 4-step strict validation ───────────────────────
-// Step 1: Not empty
-// Step 2: Uppercase, trim, normalize separators (dấu cách → dấu gạch ngang)
-// Step 3: Must match pattern: 2-digits + 1-letter + optional 1-letter + dash + 3-to-5 digits
-//         e.g. 29A-12345 | 30AB-1234 | 51F-99999
-//         Pattern: /^\d{2}[A-Z]{1,2}-\d{3,5}$/
-// Step 4: Must not already exist in the list
-const PLATE_REGEX = /^\d{2}[A-Z]{1,2}-\d{3,5}$/;
-
-function normalizePlate(raw: string): string {
-  return raw.trim().toUpperCase().replace(/\s+/g, '-').replace(/[.]/g, '-');
-}
-
+// ─── Vietnamese license plate validation (shared util — canonical 59G2-038.80) ─
+// Series must be letter+digit (59G2) or two letters (30LD); a bare single letter
+// like `59G` is rejected. Number group is 4–5 digits (5-digit → NNN.NN).
 interface PlateValidationResult {
   ok: boolean;
   error?: string;
@@ -31,22 +24,16 @@ function validatePlate(raw: string, existingPlates: Array<{ plateNumber: string;
     return { ok: false, error: 'Vui lòng nhập biển số xe.' };
   }
 
+  // Step 2: normalize to canonical VN form + format check
   const plate = normalizePlate(raw);
-
-  // Step 2: format check (regex)
-  if (!PLATE_REGEX.test(plate)) {
+  if (!isValidVietnamPlate(plate)) {
     return {
       ok: false,
-      error: 'Biển số không đúng định dạng. Ví dụ hợp lệ: 29A-12345, 30AB-1234, 51F-99999.',
+      error: 'Biển số không đúng định dạng. Ví dụ hợp lệ: 59G2-03880 hoặc 59G2-038.80.',
     };
   }
 
-  // Step 3: max length sanity (already covered by regex, but extra guard)
-  if (plate.length > 10) {
-    return { ok: false, error: 'Biển số không được vượt quá 10 ký tự.' };
-  }
-
-  // Step 4: duplicate check
+  // Step 3: duplicate check
   if (existingPlates.some((p) => p.plateNumber.toUpperCase() === plate)) {
     return { ok: false, error: `Biển số "${plate}" đã được thêm.` };
   }
@@ -66,8 +53,10 @@ export default function ProfilePage() {
     phone: '',
   });
   // License plate tag state (while editing)
-  const [editPlates, setEditPlates] = useState<Array<{ _id?: string; plateNumber: string; vehicleType: 'car' | 'motorcycle'; isDefault?: boolean }>>([]);
+  const [editPlates, setEditPlates] = useState<Array<{ _id?: string; plateNumber: string; vehicleType: 'car' | 'motorcycle'; brand?: string | null; isDefault?: boolean }>>([]);
   const [vehicleType, setVehicleType] = useState<'car' | 'motorcycle'>('car');
+  const [vehicleBrand, setVehicleBrand] = useState<string>('');
+  const [customBrand, setCustomBrand] = useState<string>('');
   const [plateInput, setPlateInput] = useState('');
   const [plateError, setPlateError] = useState<string | null>(null);
   const [plateSuccess, setPlateSuccess] = useState<string | null>(null);
@@ -79,6 +68,11 @@ export default function ProfilePage() {
   const [isSettingDefaultId, setIsSettingDefaultId] = useState<string | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
   const [showQRModal, setShowQRModal] = useState(false);
+  // Server plates carry the per-plate QR token (PLT-...) used by the plate-QR modal.
+  const [serverPlates, setServerPlates] = useState<PlateRecord[]>([]);
+  const [plateQrTarget, setPlateQrTarget] = useState<{ qrToken: string; plateNumber: string; brand?: string | null } | null>(null);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [pwForm, setPwForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [pwError, setPwError] = useState<string | null>(null);
   const [pwSuccess, setPwSuccess] = useState<string | null>(null);
@@ -102,6 +96,33 @@ export default function ProfilePage() {
     }
   }, []);
 
+  // Fetch plates (with their PLT- QR tokens) so each plate can show its scannable QR.
+  useEffect(() => {
+    listPlates().then(setServerPlates).catch(() => undefined);
+  }, []);
+
+  // Fetch in-app notifications (e.g. staff rejected a check-in/out).
+  useEffect(() => {
+    notificationApi.list()
+      .then((res) => {
+        const d = (res as { data?: { items?: AppNotification[]; unread?: number } })?.data;
+        setNotifications(d?.items ?? []);
+        setUnreadCount(d?.unread ?? 0);
+      })
+      .catch(() => undefined);
+  }, []);
+
+  const handleMarkAllNotificationsRead = async () => {
+    try {
+      await notificationApi.markAllRead();
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      setUnreadCount(0);
+    } catch { /* ignore */ }
+  };
+
+  const plateQrToken = (plateNumber: string): string | null =>
+    serverPlates.find((p) => p.plateNumber.toUpperCase() === plateNumber.toUpperCase())?.qrCode ?? null;
+
   if (!session || !user) {
     return <Navigate to="/auth/login" replace />;
   }
@@ -118,6 +139,8 @@ export default function ProfilePage() {
     });
     setEditPlates([...user.licensePlates]);
     setVehicleType('car');
+    setVehicleBrand('');
+    setCustomBrand('');
     setPlateInput('');
     setPlateError(null);
     setPlateSuccess(null);
@@ -151,9 +174,12 @@ export default function ProfilePage() {
     }
 
     const normalized = normalizePlate(plateInput);
-    setEditPlates((prev) => [...prev, { plateNumber: normalized, vehicleType }]);
+    const brand = (vehicleBrand === 'Khác' ? customBrand.trim() : vehicleBrand.trim()) || null;
+    setEditPlates((prev) => [...prev, { plateNumber: normalized, vehicleType, brand }]);
     setPlateInput('');
-    setPlateSuccess(`Đã thêm biển số "${normalized}" (${vehicleType === 'car' ? 'Ô tô' : 'Xe máy'}) thành công!`);
+    setVehicleBrand('');
+    setCustomBrand('');
+    setPlateSuccess(`Đã thêm "${normalized}" (${vehicleType === 'car' ? 'Ô tô' : 'Xe máy'}${brand ? ` · ${brand}` : ''}) — nhấn LƯU THAY ĐỔI để lưu vào hệ thống.`);
     setTimeout(() => setPlateSuccess(null), 2500);
     plateInputRef.current?.focus();
   };
@@ -238,13 +264,17 @@ export default function ProfilePage() {
         _id: (p as any)._id as string | undefined,
         plateNumber: p.plateNumber,
         vehicleType: p.vehicleType,
+        brand: (p as any).brand ?? null,
       }));
+
+      // Sync license plates FIRST so a profile-update failure can't block them.
+      // syncPlates now throws if any add/remove fails (instead of silently swallowing),
+      // so a plate that "looks added" but didn't persist surfaces a clear error here.
+      const freshPlates = await syncPlates(currentServerPlates, editPlates);
+      setServerPlates(freshPlates); // refresh per-plate QR tokens
 
       // Persist fullName / phone to the backend (PUT /users/profile).
       await userApi.profile.update({ fullName: form.fullName.trim(), phone: newPhone });
-
-      // syncPlates handles add/remove API calls and returns the fresh plate list from server
-      const freshPlates = await syncPlates(currentServerPlates, editPlates);
 
       // Tìm kiếm biển số xe có isDefault === true từ danh sách đã chỉnh sửa
       const defaultPlateInEdit = editPlates.find((ep) => ep.isDefault === true);
@@ -268,6 +298,7 @@ export default function ProfilePage() {
           _id: p._id,
           plateNumber: p.plateNumber,
           vehicleType: (p.vehicleType === 'motorcycle' ? 'motorcycle' : 'car') as 'car' | 'motorcycle',
+          brand: (p.brand ?? matchingEdit?.brand) ?? null,
           isDefault: matchingEdit?.isDefault === true,
         };
       });
@@ -408,6 +439,39 @@ export default function ProfilePage() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Notifications */}
+        {notifications.length > 0 && (
+          <section className="mb-6 rounded-3xl border border-white/10 bg-slate-900/40 p-5">
+            <div className="mb-3 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-orange-400 font-mono">Thông báo</p>
+                {unreadCount > 0 && (
+                  <span className="rounded-full bg-rose-500 px-2 py-0.5 text-[10px] font-bold text-white">{unreadCount} mới</span>
+                )}
+              </div>
+              {unreadCount > 0 && (
+                <button onClick={handleMarkAllNotificationsRead} className="text-[11px] font-semibold text-orange-400 hover:text-orange-300">
+                  Đánh dấu đã đọc tất cả
+                </button>
+              )}
+            </div>
+            <div className="space-y-2 max-h-72 overflow-y-auto">
+              {notifications.map((n) => (
+                <div
+                  key={n._id}
+                  className={`rounded-xl border p-3 ${n.isRead ? 'border-white/5 bg-slate-950/40' : 'border-rose-500/30 bg-rose-500/5'}`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-semibold text-slate-100">{n.title}</p>
+                    <span className="shrink-0 text-[10px] text-slate-500">{new Date(n.createdAt).toLocaleString('vi-VN')}</span>
+                  </div>
+                  <p className="mt-1 text-xs text-slate-400 leading-relaxed">{n.message}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Content Section layout */}
         <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">
@@ -561,6 +625,11 @@ export default function ProfilePage() {
                             }`}>
                               {item.isDefault ? 'Mặc định' : item.vehicleType === 'car' ? 'Ô tô' : 'Xe máy'}
                             </span>
+                            {item.brand && (
+                              <span className="text-[8px] px-1.5 py-0.5 rounded font-sans font-extrabold tracking-normal uppercase bg-slate-700/50 text-slate-300">
+                                {item.brand}
+                              </span>
+                            )}
                             {!item.isDefault && (
                               <motion.button
                                 type="button"
@@ -605,7 +674,7 @@ export default function ProfilePage() {
                               type="button"
                               whileHover={{ scale: 1.02 }}
                               whileTap={{ scale: 0.98 }}
-                              onClick={() => setVehicleType('car')}
+                              onClick={() => { setVehicleType('car'); setVehicleBrand(''); setCustomBrand(''); }}
                               className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all duration-300 flex items-center gap-1.5 ${
                                 vehicleType === 'car'
                                   ? 'bg-blue-600 text-white shadow-[0_0_12px_rgba(59,130,246,0.3)]'
@@ -619,7 +688,7 @@ export default function ProfilePage() {
                               type="button"
                               whileHover={{ scale: 1.02 }}
                               whileTap={{ scale: 0.98 }}
-                              onClick={() => setVehicleType('motorcycle')}
+                              onClick={() => { setVehicleType('motorcycle'); setVehicleBrand(''); setCustomBrand(''); }}
                               className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all duration-300 flex items-center gap-1.5 ${
                                 vehicleType === 'motorcycle'
                                   ? 'bg-purple-600 text-white shadow-[0_0_12px_rgba(168,85,247,0.3)]'
@@ -631,6 +700,39 @@ export default function ProfilePage() {
                             </motion.button>
                           </div>
                         </div>
+
+                        <div className="flex items-center gap-3">
+                          <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono shrink-0">Hãng xe:</span>
+                          <select
+                            value={vehicleBrand}
+                            onChange={(e) => {
+                              setVehicleBrand(e.target.value);
+                              if (e.target.value !== 'Khác') setCustomBrand('');
+                            }}
+                            className="flex-1 rounded-xl border border-white/10 bg-slate-950/80 text-white text-sm h-10 px-3 outline-none transition-all duration-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20"
+                          >
+                            <option value="">— Chọn hãng xe (tuỳ chọn) —</option>
+                            {brandsForVehicleType(vehicleType).map((b) => (
+                              <option key={b} value={b}>{b}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* Custom brand input — shown when user picks "Khác" */}
+                        {vehicleBrand === 'Khác' && (
+                          <div className="flex items-center gap-3">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono shrink-0">Nhập hãng:</span>
+                            <input
+                              type="text"
+                              value={customBrand}
+                              onChange={(e) => setCustomBrand(e.target.value)}
+                              maxLength={50}
+                              placeholder="Nhập tên hãng xe của bạn"
+                              className="flex-1 rounded-xl border border-white/10 bg-slate-950/80 text-white placeholder-slate-600 text-sm h-10 px-3 outline-none transition-all duration-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20"
+                              autoComplete="off"
+                            />
+                          </div>
+                        )}
 
                         <div className="flex gap-2">
                           <input
@@ -647,7 +749,7 @@ export default function ProfilePage() {
                                 ? 'focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 focus:shadow-[0_0_15px_rgba(59,130,246,0.15)]'
                                 : 'focus:border-purple-500 focus:ring-1 focus:ring-purple-500/20 focus:shadow-[0_0_15px_rgba(168,85,247,0.15)]'
                             }`}
-                            placeholder="Ví dụ: 29A-12345"
+                            placeholder="Ví dụ: 59G2-038.80"
                             maxLength={12}
                             autoComplete="off"
                             spellCheck={false}
@@ -708,7 +810,7 @@ export default function ProfilePage() {
                     </AnimatePresence>
 
                     <p className="text-[9px] text-slate-500 font-semibold leading-relaxed">
-                      * Định dạng hợp lệ: 2 số + 1-2 chữ cái + dấu gạch ngang + 3-5 số. Ví dụ: <span className="font-mono text-slate-400">29A-12345</span>, <span className="font-mono text-slate-400">30AB-1234</span>. Nhấn <kbd className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-mono text-[8px]">Enter</kbd> hoặc nút Thêm để xác nhận.
+                      * Định dạng: 2 số + seri (1 chữ + 1 số như <span className="font-mono text-slate-400">G2</span>, hoặc 2 chữ như <span className="font-mono text-slate-400">LD</span>) + dấu gạch ngang + 4-5 số. Ví dụ: <span className="font-mono text-slate-400">59G2-03880</span>, <span className="font-mono text-slate-400">59G2-038.80</span>. Nhấn <kbd className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-mono text-[8px]">Enter</kbd> hoặc nút Thêm để xác nhận.
                     </p>
                   </div>
                 )}
@@ -778,6 +880,20 @@ export default function ProfilePage() {
                                     ? 'Ô tô'
                                     : 'Xe máy'}
                               </span>
+                              {plateQrToken(item.plateNumber) && (
+                                <button
+                                  type="button"
+                                  onClick={() => setPlateQrTarget({
+                                    qrToken: plateQrToken(item.plateNumber)!,
+                                    plateNumber: item.plateNumber,
+                                    brand: (item as { brand?: string | null }).brand ?? null,
+                                  })}
+                                  className="ml-1 rounded p-0.5 text-slate-400 hover:text-purple-300 hover:bg-purple-500/10 transition-colors"
+                                  title="Xem mã QR phương tiện"
+                                >
+                                  <QrCode size={12} className="stroke-[2.5]" />
+                                </button>
+                              )}
                             </div>
                           ))}
                         </div>
@@ -966,6 +1082,14 @@ export default function ProfilePage() {
         onClose={() => setShowQRModal(false)}
         userId={session?.userId || ''}
         fullName={user?.fullName}
+      />
+
+      <PlateQRModal
+        isOpen={!!plateQrTarget}
+        onClose={() => setPlateQrTarget(null)}
+        qrToken={plateQrTarget?.qrToken || ''}
+        plateNumber={plateQrTarget?.plateNumber || ''}
+        brand={plateQrTarget?.brand}
       />
     </main>
   );

@@ -31,7 +31,9 @@ export function HomeRoute() {
 
   const onViewReservationHistory = useCallback(() => {
     if (!session) { onOpenAuth('login'); return; }
-    navigate('/parking-history');
+    // Lịch sử ĐẶT CHỖ → mở chế độ xem lịch sử đặt chỗ trong trang đặt chỗ
+    // (KHÔNG phải trang lịch sử gửi xe).
+    navigate('/reservations', { state: { openHistory: true } });
   }, [navigate, onOpenAuth, session]);
 
   const onAction = useCallback(
@@ -40,8 +42,10 @@ export function HomeRoute() {
       if (module.id === 'profile') return onViewProfile();
       if (module.id === 'wallet') return session ? navigate('/wallet') : onOpenAuth('login');
       if (module.id === 'buildings') return navigate('/buildings');
+      if (module.id === 'packages') return navigate('/reservations', { state: { mode: 'package' } });
       if (module.id === 'reservations') return navigate('/reservations');
       if (module.id === 'payments') return navigate('/long-term-subscriptions');
+      if (module.id === 'feedback') return session ? navigate('/parking-history', { state: { openFeedback: true } }) : onOpenAuth('login');
     },
     [navigate, onOpenAuth, onViewProfile, session],
   );

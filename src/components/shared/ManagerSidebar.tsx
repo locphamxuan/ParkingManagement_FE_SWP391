@@ -6,7 +6,6 @@ import {
   Flag,
   LayoutDashboard,
   MapPin,
-  MessageSquare,
   Package,
   SlidersHorizontal,
   Square,
@@ -32,13 +31,12 @@ const modules = [
   { to: 'floors', label: 'Tầng', icon: ClipboardList },
   { to: 'gates', label: 'Cổng', icon: Flag },
   { to: 'slots', label: 'Chỗ đỗ', icon: Square },
+  { to: 'operating-hours', label: 'Giờ hoạt động', icon: Clock },
   { to: 'price-policies', label: 'Giá', icon: SlidersHorizontal },
   { to: 'reservation-policy', label: 'Đặt chỗ', icon: MapPin },
   { to: 'packages', label: 'Gói', icon: Package },
-  { to: 'shifts', label: 'Ca trực', icon: Users },
+  { to: 'shifts', label: 'Ca trực & Gán ca', icon: Users },
   { to: 'staff', label: 'Nhân viên', icon: User },
-  { to: 'staff-shifts', label: 'Gán ca', icon: Clock },
-  { to: 'feedbacks', label: 'Phản hồi', icon: MessageSquare },
   { to: 'wallet', label: 'Ví tòa nhà', icon: Wallet },
 ] as const;
 

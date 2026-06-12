@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation, useMatch, useNavigate } from 'react-route
 import {
   CalendarClock,
   CalendarCheck2,
+  Car,
   ChevronLeft,
   LayoutDashboard,
   LogOut,
@@ -14,22 +15,16 @@ import {
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
+import { useAssignedGates } from '@/hooks/staff/useAssignedGates';
 import { staffApi, extractBuildings, type StaffBuilding } from '@/services/staff/staffApi';
 import { cn } from '@/utils/cn';
-
-const navItems = [
-  { to: '', label: 'Tổng quan', icon: LayoutDashboard, end: true },
-  { to: 'operations', label: 'Check-in / Out', icon: ScanLine },
-  { to: 'reservations', label: 'Đặt chỗ trước', icon: CalendarCheck2 },
-  { to: 'my-shifts', label: 'Ca làm việc', icon: CalendarClock },
-  { to: 'sessions', label: 'Thanh toán', icon: Wallet },
-  { to: 'incidents', label: 'Sự cố', icon: ShieldAlert },
-];
 
 const pageTitle: Record<string, string> = {
   '': 'Tổng quan',
   dashboard: 'Tổng quan',
-  operations: 'Check-in / Check-out',
+  operations: 'Check-in xe vào',
+  checkout: 'Check-out xe ra',
+  parked: 'Xe đang đỗ',
   reservations: 'Đặt chỗ trước',
   'my-shifts': 'Ca làm việc của tôi',
   sessions: 'Theo dõi thanh toán',
@@ -40,10 +35,27 @@ export function StaffLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
+  const { showCheckIn, showCheckOut } = useAssignedGates();
   const [buildings, setBuildings] = useState<StaffBuilding[]>([]);
   const [selectedBuildingId, setSelectedBuildingId] = useState<string | null>(null);
   const [bootstrapping, setBootstrapping] = useState(true);
   const [collapsed, setCollapsed] = useState(false);
+
+  // Cổng vào → check-in (cổng vào mới hiện tab này). Trang "Xe đang đỗ" hiện cho
+  // cả hai loại nhân viên, nhưng chỉ nhân viên cổng ra mới thao tác thanh toán.
+  const navItems = useMemo(
+    () => [
+      { to: '', label: 'Tổng quan', icon: LayoutDashboard, end: true },
+      ...(showCheckIn ? [{ to: 'operations', label: 'Check-in xe vào', icon: ScanLine }] : []),
+      ...(showCheckOut ? [{ to: 'checkout', label: 'Check-out xe ra', icon: LogOut }] : []),
+      { to: 'parked', label: 'Xe đang đỗ', icon: Car },
+      { to: 'reservations', label: 'Đặt chỗ trước', icon: CalendarCheck2 },
+      { to: 'my-shifts', label: 'Ca làm việc', icon: CalendarClock },
+      { to: 'sessions', label: 'Thanh toán', icon: Wallet },
+      { to: 'incidents', label: 'Sự cố', icon: ShieldAlert },
+    ],
+    [showCheckIn, showCheckOut],
+  );
 
   useEffect(() => {
     staffApi

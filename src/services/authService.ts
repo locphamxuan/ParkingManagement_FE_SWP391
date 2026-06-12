@@ -30,7 +30,7 @@ export interface AuthSession {
   displayName: string;
   assignedBuildingIds: string[];
   phone?: string;
-  licensePlates?: Array<{ _id?: string; plateNumber: string; vehicleType: 'car' | 'motorcycle'; isDefault?: boolean }>;
+  licensePlates?: Array<{ _id?: string; plateNumber: string; vehicleType: 'car' | 'motorcycle'; brand?: string | null; isDefault?: boolean }>;
 }
 
 export interface RegisterInput {
@@ -67,12 +67,13 @@ function mapAuthSession(payload: ApiAuthResponse): AuthSession {
     ? user.licensePlates
         .map((item) => {
           if (typeof item === 'string') {
-            return { plateNumber: item, vehicleType: 'car' as const, isDefault: false };
+            return { plateNumber: item, vehicleType: 'car' as const, brand: null, isDefault: false };
           }
           return {
             _id: (item as any)?._id ? String((item as any)._id) : undefined,
             plateNumber: item?.plateNumber || '',
             vehicleType: (item as any)?.vehicleType === 'motorcycle' ? ('motorcycle' as const) : ('car' as const),
+            brand: (item as any)?.brand ?? null,
             isDefault: Boolean((item as any)?.isDefault),
           };
         })

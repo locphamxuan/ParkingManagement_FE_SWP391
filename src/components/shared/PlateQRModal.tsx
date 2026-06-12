@@ -3,51 +3,48 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Download, Copy, Check } from 'lucide-react';
 import QRCode from 'qrcode';
 
-interface UserQRModalProps {
+interface PlateQRModalProps {
   isOpen: boolean;
   onClose: () => void;
-  userId: string;
-  fullName?: string;
+  /** The plate's opaque QR token (PLT-...). Camera 2 resolves it to the plate + owner. */
+  qrToken: string;
+  plateNumber: string;
+  brand?: string | null;
 }
 
-export function UserQRModal({ isOpen, onClose, userId, fullName }: UserQRModalProps) {
+export function PlateQRModal({ isOpen, onClose, qrToken, plateNumber, brand }: PlateQRModalProps) {
   const [copied, setCopied] = useState(false);
   const qrCanvasRef = useRef<HTMLCanvasElement>(null);
-  const qrContainerRef = useRef<HTMLDivElement>(null);
 
-  // Generate QR code
   useEffect(() => {
-    if (isOpen && qrCanvasRef.current && userId) {
+    if (isOpen && qrCanvasRef.current && qrToken) {
       QRCode.toCanvas(
         qrCanvasRef.current,
-        userId,
+        qrToken,
         {
           errorCorrectionLevel: 'H',
           margin: 2,
           width: 280,
-          color: {
-            dark: '#0f172a',
-            light: '#ffffff',
-          },
+          // Standard dark-on-white so any scanner (and inverted-unaware decoders) read it.
+          color: { dark: '#0f172a', light: '#ffffff' },
         },
         (error: Error | null | undefined) => {
-          if (error) console.error('QR Code generation error:', error);
+          if (error) console.error('Plate QR generation error:', error);
         }
       );
     }
-  }, [isOpen, userId]);
+  }, [isOpen, qrToken]);
 
   const handleDownload = () => {
     if (!qrCanvasRef.current) return;
-
     const link = document.createElement('a');
     link.href = qrCanvasRef.current.toDataURL('image/png');
-    link.download = `${fullName || 'user'}-qr-code.png`;
+    link.download = `${plateNumber.replace(/[^A-Z0-9]/gi, '')}-qr.png`;
     link.click();
   };
 
-  const handleCopyUserId = () => {
-    navigator.clipboard.writeText(userId);
+  const handleCopy = () => {
+    navigator.clipboard.writeText(qrToken);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -56,7 +53,6 @@ export function UserQRModal({ isOpen, onClose, userId, fullName }: UserQRModalPr
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop */}
           <motion.div
             key="backdrop"
             initial={{ opacity: 0 }}
@@ -65,8 +61,6 @@ export function UserQRModal({ isOpen, onClose, userId, fullName }: UserQRModalPr
             onClick={onClose}
             className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
           />
-
-          {/* Modal */}
           <motion.div
             key="modal"
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -77,66 +71,52 @@ export function UserQRModal({ isOpen, onClose, userId, fullName }: UserQRModalPr
           >
             <div className="w-full max-w-md rounded-3xl bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 border border-white/10 shadow-2xl overflow-hidden">
               {/* Header */}
-              <div className="relative bg-gradient-to-r from-orange-500/10 to-amber-500/10 border-b border-white/5 p-6 flex items-center justify-between">
+              <div className="relative bg-gradient-to-r from-purple-500/10 to-fuchsia-500/10 border-b border-white/5 p-6 flex items-center justify-between">
                 <div className="space-y-1">
-                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-orange-400 font-mono">Mã QR của bạn</p>
-                  <h2 className="text-xl font-black text-white">Check-In / Check-Out</h2>
+                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-purple-400 font-mono">Mã QR phương tiện</p>
+                  <h2 className="text-xl font-black text-white font-mono">{plateNumber}</h2>
                 </div>
-                <button
-                  onClick={onClose}
-                  className="p-2 hover:bg-white/10 rounded-lg transition-colors duration-200"
-                >
+                <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-lg transition-colors duration-200">
                   <X size={20} className="text-slate-400 hover:text-white transition-colors" />
                 </button>
               </div>
 
               {/* Content */}
               <div className="p-8 space-y-6">
-              {/* QR Code Display */}
-              <div
-                ref={qrContainerRef}
-                className="flex justify-center p-6 bg-white/5 rounded-2xl border border-white/10 backdrop-blur-sm"
-              >
-                <canvas ref={qrCanvasRef} />
-              </div>
+                <div className="flex justify-center p-6 bg-white/5 rounded-2xl border border-white/10 backdrop-blur-sm">
+                  <canvas ref={qrCanvasRef} />
+                </div>
 
-                {/* User Info */}
                 <div className="space-y-3 rounded-2xl bg-slate-950/60 border border-white/5 p-4">
                   <div>
-                    <p className="text-[9px] font-black uppercase tracking-wider text-slate-500 font-mono mb-1">Tên người dùng</p>
-                    <p className="text-sm font-semibold text-white">{fullName || 'Người dùng'}</p>
+                    <p className="text-[9px] font-black uppercase tracking-wider text-slate-500 font-mono mb-1">Biển số {brand ? `· ${brand}` : ''}</p>
+                    <p className="text-sm font-semibold text-white font-mono">{plateNumber}</p>
                   </div>
                   <div>
-                    <p className="text-[9px] font-black uppercase tracking-wider text-slate-500 font-mono mb-1">User ID</p>
+                    <p className="text-[9px] font-black uppercase tracking-wider text-slate-500 font-mono mb-1">Mã QR (token)</p>
                     <div className="flex items-center gap-2">
-                      <p className="text-xs font-mono text-slate-300 break-all">{userId}</p>
+                      <p className="text-xs font-mono text-slate-300 break-all">{qrToken}</p>
                       <button
-                        onClick={handleCopyUserId}
+                        onClick={handleCopy}
                         className="p-1.5 hover:bg-white/10 rounded-lg transition-colors duration-200 flex-shrink-0"
-                        title="Copy ID"
+                        title="Copy mã"
                       >
-                        {copied ? (
-                          <Check size={16} className="text-emerald-400" />
-                        ) : (
-                          <Copy size={16} className="text-slate-400 hover:text-white" />
-                        )}
+                        {copied ? <Check size={16} className="text-emerald-400" /> : <Copy size={16} className="text-slate-400 hover:text-white" />}
                       </button>
                     </div>
                   </div>
                 </div>
 
-                {/* Info Box */}
-                <div className="rounded-2xl bg-blue-500/5 border border-blue-500/20 p-4">
-                  <p className="text-xs text-blue-200 leading-relaxed font-semibold">
-                    📱 <strong>Hướng dẫn:</strong> Nhân viên sẽ quét mã QR này khi bạn check-in hoặc check-out xe. Đảm bảo hiển thị rõ ràng để quét nhanh nhất.
+                <div className="rounded-2xl bg-purple-500/5 border border-purple-500/20 p-4">
+                  <p className="text-xs text-purple-200 leading-relaxed font-semibold">
+                    🛵 <strong>Hướng dẫn:</strong> Nhân viên dùng <strong>Camera 2 (Quét QR)</strong> quét mã này để nhận diện phương tiện khi không đọc được biển số.
                   </p>
                 </div>
 
-                {/* Action Buttons */}
                 <div className="flex gap-3">
                   <button
                     onClick={handleDownload}
-                    className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider transition-all duration-300 hover:scale-105 hover:shadow-[0_0_20px_rgba(249,115,22,0.35)] inline-flex items-center justify-center gap-2"
+                    className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-purple-500 to-fuchsia-500 text-white font-black text-xs uppercase tracking-wider transition-all duration-300 hover:scale-105 inline-flex items-center justify-center gap-2"
                   >
                     <Download size={14} className="stroke-[2.5]" />
                     Tải xuống

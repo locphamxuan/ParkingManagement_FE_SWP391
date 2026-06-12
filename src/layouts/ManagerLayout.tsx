@@ -8,7 +8,7 @@ import { useManagerBuildings } from '@/hooks/useManagerBuildings';
 import { useSubscriptionStatus } from '@/hooks/useSubscriptionStatus';
 
 // Pages a manager can reach WITHOUT an active subscription (so they can pay).
-const UNGATED_PATHS = ['/manager/wallet', '/manager/profile'];
+const UNGATED_PATHS = ['/manager/wallet', '/manager/profile', '/manager/operating-hours'];
 
 const titles: Record<string, string> = {
   '/manager': 'Bảng điều khiển Manager',
@@ -18,12 +18,11 @@ const titles: Record<string, string> = {
   '/manager/floors': 'Tầng',
   '/manager/gates': 'Cổng',
   '/manager/slots': 'Chỗ đỗ',
+  '/manager/operating-hours': 'Giờ hoạt động',
   '/manager/price-policies': 'Chính sách giá',
   '/manager/reservation-policy': 'Chính sách đặt chỗ',
   '/manager/packages': 'Gói đăng ký',
-  '/manager/shifts': 'Ca trực',
-  '/manager/staff-shifts': 'Gán Staff Vào Ca',
-  '/manager/feedbacks': 'Phản hồi',
+  '/manager/shifts': 'Ca trực & Gán ca',
   '/manager/wallet': 'Ví tòa nhà',
   '/manager/profile': 'Xem hồ sơ',
   '/manager/settings': 'Cài đặt',

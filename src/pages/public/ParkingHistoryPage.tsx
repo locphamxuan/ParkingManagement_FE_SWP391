@@ -34,16 +34,22 @@ export default function ParkingHistoryPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  if (!session) return <Navigate to="/auth/login" replace />;
-
+  // Load all hooks BEFORE any conditional return (Rules of Hooks)
   const load = useCallback((p = 1) => {
     setLoading(true);
     setError(null);
     userApi.parkingHistory
       .list({ page: p, limit: 20 })
       .then((res) => {
+        // Backend returns { data: { items, pagination } }
         const raw = (res as { data?: { items?: ParkingHistory[]; pagination?: { totalPages?: number } } })?.data;
-        setItems(raw?.items ?? []);
+        // Normalize: backend ParkingSession uses entryTime/exitTime; map to checkIn/checkOut
+        const normalized: ParkingHistory[] = (raw?.items ?? []).map((item: any) => ({
+          ...item,
+          checkIn: item.checkIn ?? item.entryTime ?? null,
+          checkOut: item.checkOut ?? item.exitTime ?? null,
+        }));
+        setItems(normalized);
         setTotalPages(raw?.pagination?.totalPages ?? 1);
         setPage(p);
       })
@@ -52,8 +58,9 @@ export default function ParkingHistoryPage() {
   }, []);
 
   useEffect(() => {
+    if (!session) return;
     load(1);
-  }, [load]);
+  }, [load, session]);
 
   const filtered = useMemo(() => {
     if (statusFilter === 'all') return items;
@@ -71,6 +78,9 @@ export default function ParkingHistoryPage() {
     { value: 'completed', label: `Đã xong (${items.filter((s) => s.status === 'completed').length})` },
   ];
 
+  // Guard: redirect after all hooks have been declared
+  if (!session) return <Navigate to="/auth/login" replace />;
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
       {/* Header */}
@@ -83,9 +93,12 @@ export default function ParkingHistoryPage() {
           >
             <ArrowLeft size={15} />
           </button>
-          <div className="flex items-center gap-2">
-            <History size={16} className="text-orange-400" />
-            <h1 className="text-sm font-bold text-white">Lịch sử gửi xe</h1>
+          <div className="flex flex-col">
+            <div className="flex items-center gap-2">
+              <History size={16} className="text-orange-400" />
+              <h1 className="text-sm font-bold text-white">Lịch sử gửi xe</h1>
+            </div>
+            <p className="text-[11px] text-slate-500">Phiên gửi xe trực tiếp (không qua đặt chỗ)</p>
           </div>
           <button
             type="button"
@@ -207,10 +220,16 @@ export default function ParkingHistoryPage() {
                     <div>
                       <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Vào</p>
                       <p className="mt-1 text-xs text-slate-300">{fmtTime(session.checkIn)}</p>
+                      {session.entryGate?.name && (
+                        <p className="mt-0.5 text-[10px] text-slate-500">Cổng: {session.entryGate.name}</p>
+                      )}
                     </div>
                     <div>
                       <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Ra</p>
                       <p className="mt-1 text-xs text-slate-300">{fmtTime(session.checkOut)}</p>
+                      {session.exitGate?.name && (
+                        <p className="mt-0.5 text-[10px] text-slate-500">Cổng: {session.exitGate.name}</p>
+                      )}
                     </div>
 
                     {/* Fee */}
