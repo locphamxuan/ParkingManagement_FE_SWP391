@@ -1,370 +1,181 @@
-# Architecture Overview
+# PBMS Frontend — System Design
 
-## Data Flow
+Parking Building Management System (PBMS) — giao diện web cho 4 vai trò:
+**user** (khách gửi xe), **staff** (nhân viên cổng), **manager** (quản lý tòa nhà),
+**admin** (quản trị nền tảng).
+
+Stack: **React 18 + TypeScript + Vite**, **React Router 6**, **Zustand** (state),
+**Tailwind CSS** + Radix primitives, **Recharts** (biểu đồ), **framer-motion** (animation),
+**@zxing / jsqr / qrcode** (QR & camera quét biển số).
+
+---
+
+## 1. Tổng quan kiến trúc
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                     React Components                        │
-│  (ReservationsPage, ParkingHistoryPage, etc.)              │
-└────────────────────────┬────────────────────────────────────┘
-                         │
-                         ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    React Hooks                              │
-│  (useReservations, useParkingHistory, etc.)                │
-│  - State management (isLoading, error, data)               │
-│  - Auto-refresh capability                                 │
-│  - Error handling                                          │
-└────────────────────────┬────────────────────────────────────┘
-                         │
-                         ▼
-┌─────────────────────────────────────────────────────────────┐
-│                 User API Service                            │
-│  (userApi.reservations.list(), etc.)                       │
-│  - Method definitions                                      │
-│  - Request/response typing                                 │
-│  - Endpoint mapping                                        │
-└────────────────────────┬────────────────────────────────────┘
-                         │
-                         ▼
-┌─────────────────────────────────────────────────────────────┐
-│                  API Client                                 │
-│  (apiRequest, api.get(), api.post(), etc.)                │
-│  - HTTP requests                                           │
-│  - Auth token injection                                    │
-│  - Error handling                                          │
-└────────────────────────┬────────────────────────────────────┘
-                         │
-                         ▼
-┌─────────────────────────────────────────────────────────────┐
-│                  Backend API                                │
-│  (/users/reservations, /users/parking-history, etc.)      │
-│  - Database queries                                        │
-│  - Business logic                                          │
-│  - Data persistence                                        │
-└─────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│  Pages (theo vai trò)                                         │
+│  public · user · staff · manager · admin                     │
+│  - Bố cục UI, gọi hooks/services, hiển thị state             │
+└───────────────┬──────────────────────────────────────────────┘
+                │ dùng
+                ▼
+┌──────────────────────────────────────────────────────────────┐
+│  Components            │  Hooks                │ Stores        │
+│  ui / layout / modals  │  useAuth, useUserApi, │ authStore     │
+│  charts / map / common │  useBuildingContext…  │ managerStore  │
+└───────────────┬────────┴───────────┬───────────┴───────┬──────┘
+                │                     │                   │
+                ▼                     ▼                   ▼
+┌──────────────────────────────────────────────────────────────┐
+│  Services (API layer)                                         │
+│  client/ (apiClient, pbmsApi, storage)  ← HTTP + token        │
+│  admin/ manager/ staff/ user/           ← API theo vai trò    │
+│  authService, notificationApi, kioskApi, licensePlateService  │
+└───────────────┬──────────────────────────────────────────────┘
+                │ HTTP (Bearer token)
+                ▼
+        Backend REST API  (VITE_API_BASE, mặc định :5000/api)
 ```
 
-## Module Structure
+Nguyên tắc: **Page không gọi `fetch` trực tiếp**. Mọi I/O đi qua tầng `services`,
+state dùng chung đặt ở `store` (Zustand), logic tái sử dụng đặt ở `hooks`.
+
+---
+
+## 2. Cấu trúc thư mục `src/`
 
 ```
 src/
+├── main.tsx, App.tsx              điểm vào + provider gốc
 │
-├── components/          (UI Components)
-│   └── pages/user/
-│       ├── ReservationsPage.tsx
-│       ├── ParkingHistoryPage.tsx
-│       └── PackagesPage.tsx
+├── pages/                         màn hình theo vai trò (1 route → 1 page)
+│   ├── public/   Home, Auth, Kiosk, Reviews          (không cần đăng nhập)
+│   ├── user/     Dashboard, Reservations, Wallet,    (khách đã đăng nhập)
+│   │             Profile, ParkingHistory, Buildings,
+│   │             LongTermSubscriptions, Notifications
+│   ├── staff/    Dashboard, Operations, Parked, …
+│   ├── manager/  Dashboard, Buildings, Pricing, …
+│   └── admin/    DashboardOverview, Users, Revenue, …
 │
-├── pages/user/          (Page Components)
-│   ├── BuildingsPage.tsx
-│   └── MIGRATION_GUIDE.md
+├── components/
+│   ├── ui/        primitives (button, card, input, modal, select, badge)
+│   ├── layout/    Header, Footer, Navbar, Sidebar, ManagerSidebar, …
+│   ├── modals/    ConfirmModal, ModalForm, PlateQRModal, UserQRModal
+│   ├── charts/    RevenueChart, AnalyticsCard, ActivityTimeline
+│   ├── map/       AnimatedParkingMap3D, ParkingMap2D, CartoonCar3D
+│   ├── common/    DataTable, StatusBadge, SearchFilterBar, ScrollToTop
+│   ├── staff/     Live cameras (plate / portrait / QR), QR scanner
+│   └── manager/   AssignStaffModal
 │
-├── hooks/               (React Hooks)
-│   ├── user/
-│   │   ├── useUserApi.ts           ← 12 Custom Hooks
-│   │   ├── USAGE_EXAMPLES.tsx
-│   │   └── index.ts
-│   └── useAuth.ts
+├── hooks/                         logic tái sử dụng (theo vai trò khi cần)
+│   ├── useAuth, useBuildingContext, useManagerBuildings, useSubscriptionStatus
+│   ├── user/   useUserApi (list/detail/mutation hooks)
+│   ├── staff/  useAssignedGates
+│   └── admin/  useAdminDataset
 │
-├── services/            (API Services)
-│   ├── user/
-│   │   ├── userApi.ts              ← 12 API Methods
-│   │   ├── types.ts
-│   │   ├── index.ts
-│   │   ├── README.md
-│   │   └── CHANGELOG.md
-│   ├── apiClient.ts                ← Generic HTTP Client
-│   ├── authService.ts
-│   └── admin/, staff/, manager/
+├── services/                      tầng API
+│   ├── client/   apiClient (api.get/post…), pbmsApi (requestJson), storage
+│   ├── admin/ manager/ staff/ user/   API + types theo vai trò
+│   └── authService, notificationApi, kioskApi, licensePlateService
 │
-└── types/               (Type Definitions)
-    └── index.ts
+├── store/                         Zustand: authStore, managerStore (persist)
+├── routes/                        AppRouter + *ProtectedRoute
+├── layouts/                       AdminLayout, ManagerLayout, StaffLayout
+├── types/, utils/, data/, styles/, assets/
 ```
 
-## Hook Architecture
+---
+
+## 3. Tầng Services
+
+### 3.1 HTTP client (`services/client/`)
+- **`apiClient.ts`** — client chính: `api.get/post/put/patch/delete`, tự gắn
+  `Authorization: Bearer <token>` từ `localStorage`, ném `ApiError { status, payload }`,
+  build query string. Hầu hết service vai trò (admin/manager/staff/user) dùng cái này.
+- **`pbmsApi.ts`** — client thứ hai (`requestJson`) dựa trên `fetch`, dùng bởi
+  `authService` và một phần `admin`. ⚠️ **Nợ kỹ thuật:** đang tồn tại song song 2 HTTP
+  client. Nên hợp nhất dần về `apiClient` (giữ một nguồn xử lý lỗi/token duy nhất).
+- **`storage.ts`** — đọc/ghi session vào `localStorage`.
+
+### 3.2 API theo vai trò
+`admin/`, `manager/`, `staff/`, `user/` — mỗi thư mục gom endpoint + type của vai trò
+đó (vd `managerApi.packages.list(buildingId)`, `userApi.reservations.create(body)`).
+
+### 3.3 Service dùng chung
+`authService` (login/forgot/reset), `notificationApi`, `kioskApi`, `licensePlateService`.
+
+---
+
+## 4. Quản lý state
+
+| Loại state | Công cụ | Ví dụ |
+|-----------|---------|-------|
+| Phiên đăng nhập (toàn cục, persist) | `store/authStore` (Zustand + persist) | `session`, `login`, `logout` |
+| Tòa nhà đang chọn của manager (persist) | `store/managerStore` | `buildings`, `selectedBuildingId` |
+| Dữ liệu màn hình (list/detail) | hooks trong component | `useUserApi`, `useAdminDataset` |
+| Form/UI cục bộ | `useState` trong page | filter, modal mở/đóng |
+
+`useAuth()` là facade mỏng bọc `authStore`, cung cấp `session/token/user`,
+`login/logout/updateProfile`.
+
+### Hook pattern (`hooks/user/useUserApi.ts`)
+- **List hook** → `{ items, isLoading, error, pagination?, refresh() }`
+- **Detail hook** → `{ data, isLoading, error, refresh() }`
+- **Mutation hook** → `{ action(), isLoading, error }`
+
+---
+
+## 5. Routing & phân quyền (`routes/`)
+
+- **`AppRouter.tsx`** khai báo toàn bộ route.
+- Khu vực nội bộ bọc bởi guard + layout:
+  - `ProtectedRoute role="admin"` → `AdminLayout` (`/admin/dashboard/*`)
+  - `ManagerProtectedRoute` → `ManagerLayout` (`/manager/*`)
+  - `StaffProtectedRoute` → `StaffLayout` (`/staff/*`)
+- Trang user (`/profile`, `/wallet`, …) hiện **tự guard** bên trong (kiểm tra
+  `session` rồi `Navigate` về `/auth/login`).
+
+> Quy tắc hooks: guard `if (!session) return <Navigate/>` phải đặt **sau** khi đã gọi
+> hết các hook (tránh `react-hooks/rules-of-hooks`).
+
+---
+
+## 6. Luồng request/response tiêu biểu
 
 ```
-┌────────────────────────────────────────────────────────────┐
-│                    List Hooks                              │
-│  useReservations, useParkingHistory, etc.                 │
-├────────────────────────────────────────────────────────────┤
-│ Returns:                                                   │
-│  ├─ items: T[]                                             │
-│  ├─ isLoading: boolean                                     │
-│  ├─ error: Error | null                                   │
-│  ├─ pagination?: {...}                                    │
-│  └─ refresh(): Promise<void>                              │
-└────────────────────────────────────────────────────────────┘
-
-┌────────────────────────────────────────────────────────────┐
-│                   Detail Hooks                             │
-│  useReservation, useParkingHistoryItem, etc.              │
-├────────────────────────────────────────────────────────────┤
-│ Returns:                                                   │
-│  ├─ data: T | null                                         │
-│  ├─ isLoading: boolean                                     │
-│  ├─ error: Error | null                                   │
-│  └─ refresh(): Promise<void>                              │
-└────────────────────────────────────────────────────────────┘
-
-┌────────────────────────────────────────────────────────────┐
-│                  Mutation Hooks                            │
-│  useCreateReservation, useCancelReservation, etc.         │
-├────────────────────────────────────────────────────────────┤
-│ Returns:                                                   │
-│  ├─ [action](): Promise<T>                                │
-│  ├─ isLoading: boolean                                     │
-│  └─ error: Error | null                                   │
-└────────────────────────────────────────────────────────────┘
+Page → hook (useReservations) → userApi.reservations.list({page,limit})
+     → apiClient.api.get('/users/reservations', {query})
+     → fetch  (Authorization: Bearer <token>)
+     → BE → 200 { data: { items, pagination } }  |  4xx/5xx → ApiError
+hook: setState({items|error, isLoading:false}) → component re-render
 ```
 
-## API Methods Organization
+Lỗi 401 → xóa token, điều hướng về đăng nhập. Lỗi 4xx/5xx → hiển thị thông báo + nút thử lại.
 
-```
-userApi
-├── reservations
-│   ├── list(query?: {...})
-│   ├── get(id: string)
-│   ├── create(body: {...})
-│   └── cancel(id: string)
-│
-├── parkingHistory
-│   ├── list(query?: {...})
-│   └── get(id: string)
-│
-├── longTermPackages
-│   ├── list(query?: {...})
-│   └── get(id: string)
-│
-└── longTermSubscriptions
-    ├── list(query?: {...})
-    ├── get(id: string)
-    ├── create(body: {...})
-    └── cancel(id: string)
-```
+---
 
-## Type Hierarchy
+## 7. Chất lượng mã & build
 
-```
-┌─────────────────────────────────┐
-│         Wrap<T>                 │
-│  { data: T }                    │
-└──────────────┬──────────────────┘
-               │
-    ┌──────────┴──────────┐
-    │                     │
-    ▼                     ▼
-┌─────────────┐  ┌──────────────────┐
-│  Reservation │  │ ListResult<T>    │
-│  Buildings   │  │ {                │
-│  etc.       │  │   items: T[],    │
-└─────────────┘  │   pagination: {...}
-                 │ }
-                 └──────────────────┘
-```
+- **TypeScript strict** (`tsconfig.json`), alias `@/* → src/*`.
+- **ESLint** (`.eslintrc.cjs`): `eslint:recommended` + `@typescript-eslint` +
+  `react-hooks`. **Prettier** (`.prettierrc.json`) cho format.
+- Scripts:
+  - `npm run dev` — Vite dev server
+  - `npm run build` — `tsc --noEmit && vite build` (typecheck trước khi đóng gói)
+  - `npm run typecheck` · `npm run lint` · `npm run lint:fix` · `npm run format`
+- **Chỉ phụ thuộc frontend** trong `package.json` — đã loại bỏ deps backend
+  (mongoose/express/@payos) để bundle gọn.
 
-## State Management Flow
+---
 
-```
-User Action
-    │
-    ▼
-Hook Called (useReservations)
-    │
-    ├─ Set isLoading = true
-    ├─ Set error = null
-    │
-    ▼
-API Call (userApi.reservations.list)
-    │
-    ├─ Success ──┐
-    │            ▼
-    │         Set items = data
-    │         Set isLoading = false
-    │
-    └─ Error ───┐
-               ▼
-            Set error = Error
-            Set isLoading = false
+## 8. Nợ kỹ thuật / hướng cải thiện tiếp
 
-Updated Component
-    │
-    ▼
-Re-render with new state
-```
-
-## Request/Response Cycle
-
-```
-Frontend Component
-    │
-    ▼
-Hook: useReservations()
-    │
-    ▼
-API: userApi.reservations.list({ page: 1, limit: 10 })
-    │
-    ▼
-HTTP: GET /users/reservations?page=1&limit=10
-    ├─ Headers: Authorization: Bearer {token}
-    ├─ Content-Type: application/json
-    │
-    ▼
-Backend API
-    │
-    ├─ Success (200) ──┐
-    │                  ▼
-    │              Response: {
-    │                data: {
-    │                  items: [...],
-    │                  pagination: {...}
-    │                }
-    │              }
-    │
-    └─ Error ─────┐
-                  ▼
-              Response: {
-                message: "Error message",
-                status: 400/401/500
-              }
-
-Parse Response
-    │
-    ├─ Success ──┐
-    │            ▼
-    │         Return { data: {...} }
-    │
-    └─ Error ───┐
-               ▼
-            Throw ApiError {
-              message,
-              status,
-              payload
-            }
-
-Hook Catches
-    │
-    ├─ Success ──┐
-    │            ▼
-    │         setState({ items, pagination, isLoading: false })
-    │
-    └─ Error ───┐
-               ▼
-            setState({ error, isLoading: false })
-
-Component Re-renders
-    │
-    ▼
-Display data or error
-```
-
-## Error Flow
-
-```
-API Call Fails
-    │
-    ▼
-apiRequest throws ApiError
-    │
-    ├─ 401 Unauthorized
-    │  └─ Clear token → Redirect to login
-    │
-    ├─ 400 Bad Request
-    │  └─ Show validation error
-    │
-    ├─ 404 Not Found
-    │  └─ Show not found message
-    │
-    ├─ 500 Server Error
-    │  └─ Show server error message
-    │
-    └─ Network Error
-       └─ Show connection error
-
-Hook Catches Error
-    │
-    ▼
-setState({ error, isLoading: false })
-    │
-    ▼
-Component Renders Error Message
-    │
-    ▼
-User Sees: "Failed to load. Please try again."
-           [Retry Button]
-```
-
-## Cache & Refresh Strategy
-
-```
-Initial Load
-    │
-    ▼
-Hook fetches data + caches in component state
-    │
-    ▼
-Data displayed
-
-User Action (create, update, delete)
-    │
-    ├─ Mutation Hook executes
-    │  │
-    │  ▼
-    │  API call sent
-    │  │
-    │  ├─ Success: Optionally call refresh()
-    │  │           to update cached list
-    │  │
-    │  └─ Error: Show error to user
-    │
-    ▼
-[Optional] Call listHook.refresh()
-    │
-    ▼
-Fresh data fetched from server
-    │
-    ▼
-Component re-renders with new data
-```
-
-## Features Map
-
-```
-Feature                │ List Hooks │ Detail Hooks │ Mutation Hooks
-───────────────────────┼────────────┼─────────────┼───────────────
-isLoading tracking     │     ✅     │      ✅     │       ✅
-Error handling         │     ✅     │      ✅     │       ✅
-Pagination support     │     ✅     │      ❌     │       ❌
-refresh() capability   │     ✅     │      ✅     │       ❌
-Auto-cleanup           │     ✅     │      ✅     │       ❌
-Dependency tracking    │     ✅     │      ✅     │       ❌
-```
-
-## Integration Checkpoints
-
-```
-1. Setup ✅
-   └─ Files created and exported
-
-2. API Testing
-   └─ Test each endpoint with backend
-
-3. Hook Integration
-   └─ Use hooks in components
-
-4. Error Handling
-   └─ Test error scenarios
-
-5. State Management
-   └─ Verify loading/error states
-
-6. Pagination
-   └─ Test list pagination
-
-7. Performance
-   └─ Check re-render frequency
-
-8. Production Build
-   └─ Verify no TypeScript errors
+1. **Hợp nhất 2 HTTP client** (`apiClient` ⟷ `pbmsApi`) về một.
+2. **Bỏ lưu state nhạy cảm ở localStorage** còn sót (vd danh sách tài khoản kèm mật
+   khẩu ở màn đăng nhập — `pbms_saved_accounts`).
+3. **Trang user tự-guard** → cân nhắc gom vào một `UserProtectedRoute` cho nhất quán.
+4. **94 ESLint warnings** còn lại (chủ yếu `no-explicit-any`, `exhaustive-deps`,
+   biến không dùng) — dọn dần theo từng PR.
+5. **Code-splitting**: bundle còn lớn → cân nhắc `React.lazy` cho khu admin/manager.
 ```
