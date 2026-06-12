@@ -15,6 +15,7 @@ import {
   Clock,
   Wallet,
   Fingerprint,
+  MessageSquare,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/utils/cn';
@@ -38,6 +39,7 @@ const modules = [
   { to: 'subscriptions', label: 'Gói của khách', icon: Fingerprint },
   { to: 'shifts', label: 'Ca trực & Gán ca', icon: Users },
   { to: 'staff', label: 'Nhân viên', icon: User },
+  { to: 'reviews', label: 'Xem đánh giá', icon: MessageSquare },
   { to: 'wallet', label: 'Ví tòa nhà', icon: Wallet },
 ] as const;
 
