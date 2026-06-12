@@ -1,4 +1,4 @@
-import { requestJson } from '@/services/client/pbmsApi';
+import { requestJson } from '@/services/client/apiClient';
 
 interface ApiEnvelope<T> {
   success: boolean;

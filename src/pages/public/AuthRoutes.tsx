@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import AuthPage, { AuthMode } from '@/pages/AuthPage';
-import { requestJson } from '@/services/client/pbmsApi';
+import { requestJson } from '@/services/client/apiClient';
 import { useAuth } from '@/hooks/useAuth';
 
 interface AuthApiResponse {

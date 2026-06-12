@@ -1,6 +1,11 @@
 const STORAGE_TOKEN = 'pbms.token';
 
-const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined) || 'http://localhost:5000/api';
+// Hỗ trợ cả hai tên biến môi trường từng dùng (VITE_API_BASE và VITE_API_BASE_URL)
+// để giữ tương thích sau khi hợp nhất 2 HTTP client về một.
+const API_BASE =
+  (import.meta.env.VITE_API_BASE as string | undefined) ||
+  (import.meta.env.VITE_API_BASE_URL as string | undefined) ||
+  'http://localhost:5000/api';
 
 export function setStoredToken(token: string | null): void {
   if (token) localStorage.setItem(STORAGE_TOKEN, token);
@@ -17,6 +22,8 @@ interface ApiOptions {
   body?: unknown;
   query?: Record<string, string | number | boolean | undefined | null>;
   signal?: AbortSignal;
+  /** Ghi đè token (nếu không truyền sẽ lấy từ localStorage). */
+  token?: string;
 }
 
 function buildQuery(query?: ApiOptions['query']): string {
@@ -45,7 +52,7 @@ export async function apiRequest<T = unknown>(
   path: string,
   options: ApiOptions = {}
 ): Promise<T> {
-  const token = getStoredToken();
+  const token = options.token ?? getStoredToken();
   const url = `${API_BASE}${path}${buildQuery(options.query)}`;
 
   const res = await fetch(url, {
@@ -96,3 +103,30 @@ export const api = {
 };
 
 export const API_BASE_URL = API_BASE;
+
+// ── Adapter tương thích (thay cho services/client/pbmsApi cũ) ────────────────
+// Giữ nguyên chữ ký `requestJson` để các caller (auth, admin) không phải đổi,
+// nhưng nội bộ dùng chung `apiRequest` → chỉ còn MỘT triển khai HTTP.
+export const DEFAULT_API_BASE = API_BASE;
+
+export function normalizeApiBase(value: string = DEFAULT_API_BASE): string {
+  return String(value).trim().replace(/\/$/, '');
+}
+
+interface RequestJsonOptions {
+  /** Không còn dùng (mọi call đi qua API_BASE chung); giữ để tương thích chữ ký. */
+  apiBase?: string;
+  path: string;
+  method?: Method;
+  token?: string;
+  body?: unknown;
+}
+
+export function requestJson<T = unknown>({
+  path,
+  method = 'GET',
+  token,
+  body,
+}: RequestJsonOptions): Promise<T> {
+  return apiRequest<T>(method, path, { body, token });
+}
