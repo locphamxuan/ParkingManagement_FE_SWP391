@@ -90,13 +90,13 @@ src/
 ## 3. Tầng Services
 
 ### 3.1 HTTP client (`services/client/`)
-- **`apiClient.ts`** — client chính: `api.get/post/put/patch/delete`, tự gắn
-  `Authorization: Bearer <token>` từ `localStorage`, ném `ApiError { status, payload }`,
-  build query string. Hầu hết service vai trò (admin/manager/staff/user) dùng cái này.
-- **`pbmsApi.ts`** — client thứ hai (`requestJson`) dựa trên `fetch`, dùng bởi
-  `authService` và một phần `admin`. ⚠️ **Nợ kỹ thuật:** đang tồn tại song song 2 HTTP
-  client. Nên hợp nhất dần về `apiClient` (giữ một nguồn xử lý lỗi/token duy nhất).
-- **`storage.ts`** — đọc/ghi session vào `localStorage`.
+- **`apiClient.ts`** — **client HTTP duy nhất**: `api.get/post/put/patch/delete`, tự gắn
+  `Authorization: Bearer <token>` từ `localStorage` (hoặc token override), ném
+  `ApiError { status, payload }`, build query string, dispatch `auth-unauthorized` khi 401.
+  Cũng export `requestJson(...)` — adapter tương thích (chữ ký cũ của pbmsApi) cho
+  `authService` và `admin`, nội bộ vẫn gọi `apiRequest` → một triển khai duy nhất.
+  Base URL đọc từ `VITE_API_BASE` hoặc `VITE_API_BASE_URL`.
+- **`storage.ts`** — đọc/ghi session vào `localStorage` (key token `pbms.token`).
 
 ### 3.2 API theo vai trò
 `admin/`, `manager/`, `staff/`, `user/` — mỗi thư mục gom endpoint + type của vai trò
@@ -171,11 +171,14 @@ Lỗi 401 → xóa token, điều hướng về đăng nhập. Lỗi 4xx/5xx →
 
 ## 8. Nợ kỹ thuật / hướng cải thiện tiếp
 
-1. **Hợp nhất 2 HTTP client** (`apiClient` ⟷ `pbmsApi`) về một.
-2. **Bỏ lưu state nhạy cảm ở localStorage** còn sót (vd danh sách tài khoản kèm mật
-   khẩu ở màn đăng nhập — `pbms_saved_accounts`).
-3. **Trang user tự-guard** → cân nhắc gom vào một `UserProtectedRoute` cho nhất quán.
-4. **94 ESLint warnings** còn lại (chủ yếu `no-explicit-any`, `exhaustive-deps`,
-   biến không dùng) — dọn dần theo từng PR.
-5. **Code-splitting**: bundle còn lớn → cân nhắc `React.lazy` cho khu admin/manager.
+- ✅ ~~Hợp nhất 2 HTTP client~~ — đã gộp `pbmsApi` vào `apiClient`.
+- ✅ ~~Mật khẩu plaintext trong `pbms_saved_accounts`~~ — chỉ còn lưu email.
+- ✅ ~~Code-splitting~~ — đã `React.lazy` toàn bộ page (chunk chính ~334 kB).
+
+Còn lại:
+1. **Trang user tự-guard** → cân nhắc gom vào một `UserProtectedRoute` cho nhất quán.
+2. **94 ESLint warnings** (chủ yếu `no-explicit-any`, `exhaustive-deps`, biến không
+   dùng) — dọn dần theo từng PR.
+3. **`requestJson` adapter** chỉ để tương thích — có thể migrate dần `auth`/`admin`
+   sang `api.*` rồi bỏ adapter.
 ```
