@@ -45,7 +45,7 @@ export function HomeRoute() {
       if (module.id === 'packages') return navigate('/reservations', { state: { mode: 'package' } });
       if (module.id === 'reservations') return navigate('/reservations');
       if (module.id === 'payments') return navigate('/long-term-subscriptions');
-      if (module.id === 'feedback') return session ? navigate('/parking-history', { state: { openFeedback: true } }) : onOpenAuth('login');
+      if (module.id === 'feedback') return navigate('/reviews');
     },
     [navigate, onOpenAuth, onViewProfile, session],
   );

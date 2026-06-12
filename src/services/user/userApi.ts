@@ -203,7 +203,7 @@ export interface UserWalletTransaction {
 
 export interface Feedback {
   _id: string;
-  user: { _id: string; fullName: string; email: string };
+  user: { _id: string; fullName: string; email: string; avatar?: string | null };
   building: { _id: string; name: string; code: string };
   parkingSession: { _id: string; plateNumber: string; entryTime: string; exitTime: string; fee: number; status: string };
   rating: number;
@@ -424,6 +424,9 @@ export const userApi = {
 
     list: (query?: { status?: 'pending' | 'resolved'; rating?: number; limit?: number; page?: number }) =>
       api.get<Wrap<ListResult<Feedback>>>('/users/feedbacks/me', { query }),
+
+    listAll: (query?: { buildingId?: string; rating?: number; limit?: number; page?: number; status?: string }) =>
+      api.get<Wrap<ListResult<Feedback>>>('/users/feedbacks', { query }),
   },
 
   // ========== NOTIFICATIONS ==========
