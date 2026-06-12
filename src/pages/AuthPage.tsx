@@ -46,7 +46,8 @@ export default function AuthPage({ mode, notice, onModeChange, onBackHome, onSub
   const [form, setForm] = useState(initialForm);
   const [forgotEmail, setForgotEmail] = useState('');
   const [resetPasswordForm, setResetPasswordForm] = useState({ newPassword: '', confirmPassword: '' });
-  const [savedAccounts, setSavedAccounts] = useState<{ email: string; password?: string }[]>([]);
+  // Chỉ ghi nhớ EMAIL để gợi ý đăng nhập — KHÔNG bao giờ lưu mật khẩu ở client.
+  const [savedAccounts, setSavedAccounts] = useState<{ email: string }[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [lockTimeLeft, setLockTimeLeft] = useState<number>(0);
   const [resetToken, setResetToken] = useState<string | null>(null);
@@ -98,12 +99,18 @@ export default function AuthPage({ mode, notice, onModeChange, onBackHome, onSub
   const dropdownRef = useRef<HTMLDivElement | null>(null);
   const emailInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Load saved accounts from localStorage on mount and initialize phones
+  // Load saved emails from localStorage on mount and initialize phones
   useEffect(() => {
     try {
       const stored = localStorage.getItem('pbms_saved_accounts');
       if (stored) {
-        setSavedAccounts(JSON.parse(stored));
+        // Chỉ giữ email; loại bỏ mọi mật khẩu plaintext có thể còn sót từ bản cũ.
+        const parsed: { email?: string }[] = JSON.parse(stored);
+        const emailsOnly = parsed
+          .filter((acc) => acc?.email)
+          .map((acc) => ({ email: acc.email as string }));
+        setSavedAccounts(emailsOnly);
+        localStorage.setItem('pbms_saved_accounts', JSON.stringify(emailsOnly));
       }
     } catch (e) {
       console.error('Failed to load saved accounts', e);
@@ -115,22 +122,18 @@ export default function AuthPage({ mode, notice, onModeChange, onBackHome, onSub
     }
   }, []);
 
-  // Save account helper
-  const saveAccount = (email: string, password?: string) => {
+  // Save email helper (no password persisted)
+  const saveAccount = (email: string) => {
     if (!email) return;
     try {
       const stored = localStorage.getItem('pbms_saved_accounts');
-      let current: { email: string; password?: string }[] = stored ? JSON.parse(stored) : [];
-      
-      // Remove duplicates
-      current = current.filter(acc => acc.email !== email);
-      
-      // Add to start of list
-      current.unshift({ email, password });
-      
-      // Keep max 5 saved accounts
+      let current: { email: string }[] = stored ? JSON.parse(stored) : [];
+
+      // Remove duplicates, add to front, keep max 5
+      current = current.filter((acc) => acc.email !== email);
+      current.unshift({ email });
       current = current.slice(0, 5);
-      
+
       localStorage.setItem('pbms_saved_accounts', JSON.stringify(current));
       setSavedAccounts(current);
     } catch (e) {
@@ -151,13 +154,9 @@ export default function AuthPage({ mode, notice, onModeChange, onBackHome, onSub
     }
   };
 
-  const handleSelectAccount = (e: React.MouseEvent, acc: { email: string; password?: string }) => {
-    e.preventDefault(); // Keep focus or let it blur, but keeping focus on input with filled details is great!
-    setForm(s => ({
-      ...s,
-      email: acc.email,
-      password: acc.password || '',
-    }));
+  const handleSelectAccount = (e: React.MouseEvent, acc: { email: string }) => {
+    e.preventDefault(); // Điền sẵn email, người dùng tự nhập mật khẩu.
+    setForm((s) => ({ ...s, email: acc.email }));
     setShowDropdown(false);
   };
 
@@ -267,7 +266,7 @@ export default function AuthPage({ mode, notice, onModeChange, onBackHome, onSub
         // Login success: clear wrong attempts counters & lock periods
         localStorage.removeItem(`pbms.failedAttempts.${email}`);
         localStorage.removeItem(`pbms.lockUntil.${email}`);
-        saveAccount(form.email.trim(), form.password);
+        saveAccount(form.email.trim());
       } catch (err) {
         // Login failure: increment fail counters & lock for 5 mins if attempts >= 5
         const attempts = Number(localStorage.getItem(`pbms.failedAttempts.${email}`) || '0') + 1;
