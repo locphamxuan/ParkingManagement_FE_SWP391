@@ -4,8 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import { ArrowLeft, LogOut, User, Edit, Save, X, ShieldAlert, Plus, AlertCircle, CheckCircle2, Car, Bike, Loader2, Star, QrCode, KeyRound } from 'lucide-react';
 import { syncPlates, listPlates, type PlateRecord } from '@/services/licensePlateService';
-import { UserQRModal } from '@/components/shared/UserQRModal';
-import { PlateQRModal } from '@/components/shared/PlateQRModal';
+import { UserQRModal } from '@/components/modals/UserQRModal';
+import { PlateQRModal } from '@/components/modals/PlateQRModal';
 import { userApi, type LongTermSubscription } from '@/services/user/userApi';
 import { normalizePlate, isValidVietnamPlate, brandsForVehicleType } from '@/utils/plate';
 

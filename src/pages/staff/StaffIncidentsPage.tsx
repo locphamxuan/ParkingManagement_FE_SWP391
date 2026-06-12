@@ -3,7 +3,7 @@ import { AlertTriangle, ArrowRight, CheckCircle2, Clock3, Plus, RefreshCcw, Shie
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { StatusBadge } from '@/components/shared/StatusBadge';
+import { StatusBadge } from '@/components/common/StatusBadge';
 import { useBuildingContext } from '@/hooks/useBuildingContext';
 import { extractIncidents, staffApi, type StaffIncident } from '@/services/staff/staffApi';
 

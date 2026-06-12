@@ -15,7 +15,7 @@ import {
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { ScanLine } from 'lucide-react';
-import { StatusBadge } from '@/components/shared/StatusBadge';
+import { StatusBadge } from '@/components/common/StatusBadge';
 import { useBuildingContext } from '@/hooks/useBuildingContext';
 import {
   staffApi,

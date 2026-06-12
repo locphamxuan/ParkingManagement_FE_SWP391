@@ -26,7 +26,7 @@ import {
   X,
 } from 'lucide-react';
 import type { LegacyModule } from '../data/mainFlow';
-import { AnimatedParkingMap3D } from '@/components/shared/AnimatedParkingMap3D';
+import { AnimatedParkingMap3D } from '@/components/map/AnimatedParkingMap3D';
 import { notificationApi } from '@/services/notificationApi';
 
 interface HomePageProps {

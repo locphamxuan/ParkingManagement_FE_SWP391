@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { DataTable, type DataColumn } from '@/components/shared/DataTable';
-import { StatusBadge } from '@/components/shared/StatusBadge';
+import { DataTable, type DataColumn } from '@/components/common/DataTable';
+import { StatusBadge } from '@/components/common/StatusBadge';
 import { staffApi, extractShifts, type MyShift } from '@/services/staff/staffApi';
 
 export function StaffShiftsPage() {

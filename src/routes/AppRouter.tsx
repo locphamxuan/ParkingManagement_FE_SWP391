@@ -1,5 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
-import { ScrollToTop } from '@/components/shared/ScrollToTop';
+import { ScrollToTop } from '@/components/common/ScrollToTop';
 import { AdminLayout } from '@/layouts/AdminLayout';
 import { DashboardOverviewPage } from '@/pages/admin/DashboardOverviewPage';
 import { BuildingsPage } from '@/pages/admin/BuildingsPage';

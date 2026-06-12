@@ -20,8 +20,8 @@ import {
   type UserWallet,
   type ParkingHistory,
 } from '@/services/user/userApi';
-import { StatusBadge } from '@/components/shared/StatusBadge';
-import { UserNotificationBell } from '@/components/shared/UserNotificationBell';
+import { StatusBadge } from '@/components/common/StatusBadge';
+import { UserNotificationBell } from '@/components/layout/UserNotificationBell';
 
 const fmtVnd = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 });
 const fmtTime = (s?: string | null) =>

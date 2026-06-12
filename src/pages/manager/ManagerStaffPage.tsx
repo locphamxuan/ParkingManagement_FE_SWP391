@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { RefreshCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { DataTable, type DataColumn } from '@/components/shared/DataTable';
-import { StatusBadge } from '@/components/shared/StatusBadge';
+import { DataTable, type DataColumn } from '@/components/common/DataTable';
+import { StatusBadge } from '@/components/common/StatusBadge';
 import { useBuildingContext } from '@/hooks/useBuildingContext';
 import { managerApi } from '@/services/manager/managerApi';
 

@@ -3,7 +3,7 @@ import type { FormEvent } from 'react';
 import { Home, X, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
 import { useSearchParams } from 'react-router-dom';
-import { CartoonCar3D } from '@/components/shared/CartoonCar3D';
+import { CartoonCar3D } from '@/components/map/CartoonCar3D';
 import { forgotPassword, resetPassword } from '@/services/authService';
 
 const initialForm = {

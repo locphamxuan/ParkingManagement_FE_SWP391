@@ -3,7 +3,7 @@ import { RefreshCw, Wallet, AlertTriangle, Plus, Send } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ModalForm } from '@/components/shared/ModalForm';
+import { ModalForm } from '@/components/modals/ModalForm';
 import {
   adminApi,
   type SystemWallet,

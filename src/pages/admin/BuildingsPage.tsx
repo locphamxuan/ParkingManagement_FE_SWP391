@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react';
 import { Users } from 'lucide-react';
-import { ConfirmModal } from '@/components/shared/ConfirmModal';
-import { DataTable, type DataColumn } from '@/components/shared/DataTable';
-import { ModalForm } from '@/components/shared/ModalForm';
-import { SearchFilterBar } from '@/components/shared/SearchFilterBar';
-import { StatusBadge } from '@/components/shared/StatusBadge';
+import { ConfirmModal } from '@/components/modals/ConfirmModal';
+import { DataTable, type DataColumn } from '@/components/common/DataTable';
+import { ModalForm } from '@/components/modals/ModalForm';
+import { SearchFilterBar } from '@/components/common/SearchFilterBar';
+import { StatusBadge } from '@/components/common/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAdminDataset } from '@/hooks/admin/useAdminDataset';

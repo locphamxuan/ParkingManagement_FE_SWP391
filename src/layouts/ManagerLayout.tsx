@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Navigate, Outlet, useLocation, useNavigate, useMatch } from 'react-router-dom';
-import { Navbar } from '@/components/shared/Navbar';
-import { ManagerSidebar } from '@/components/shared/ManagerSidebar';
+import { Navbar } from '@/components/layout/Navbar';
+import { ManagerSidebar } from '@/components/layout/ManagerSidebar';
 import { useAuth } from '@/hooks/useAuth';
 import { ADMIN_EMAIL_FALLBACK } from '@/utils/constants';
 import { useManagerBuildings } from '@/hooks/useManagerBuildings';

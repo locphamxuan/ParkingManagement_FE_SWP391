@@ -15,7 +15,7 @@ import {
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { adminApi, type AdminUser } from '@/services/admin/adminApi';
-import { StatusBadge } from '@/components/shared/StatusBadge';
+import { StatusBadge } from '@/components/common/StatusBadge';
 import { Button } from '@/components/ui/button';
 
 const ROLE_TABS = [
