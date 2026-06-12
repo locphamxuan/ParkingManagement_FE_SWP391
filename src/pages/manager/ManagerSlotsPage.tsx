@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { DataTable, type DataColumn } from '@/components/shared/DataTable';
 import { ModalForm } from '@/components/shared/ModalForm';
+import { MultiSlotForm, type SlotFormRow } from '@/components/shared/MultiSlotForm';
 import { useBuildingContext } from '@/hooks/useBuildingContext';
 import {
   managerApi,
@@ -175,6 +176,7 @@ export function ManagerSlotsPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<ParkingSlot | null>(null);
   const [form, setForm] = useState<FormState>(empty);
+  const [multiSlotModalOpen, setMultiSlotModalOpen] = useState(false);
 
   // High-fidelity View mode toggle
   const [viewMode, setViewMode] = useState<'list' | '3d'>('3d');
@@ -233,9 +235,7 @@ export function ManagerSlotsPage() {
   }, [items, floors]);
 
   const openCreate = () => {
-    setEditing(null);
-    setForm({ ...empty, floor: floors[0]?._id ?? '' });
-    setModalOpen(true);
+    setMultiSlotModalOpen(true);
   };
 
   const openEdit = (row: ParkingSlot) => {
@@ -289,6 +289,24 @@ export function ManagerSlotsPage() {
       refresh();
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Xóa thất bại');
+    }
+  };
+
+  const onMultiSlotSubmit = async (rows: SlotFormRow[]) => {
+    try {
+      for (const row of rows) {
+        const payload = {
+          code: row.code.trim().toUpperCase(),
+          floor: row.floor,
+          status: row.status,
+          reservable: row.reservable,
+          note: row.note.trim(),
+        };
+        await managerApi.slots.create(buildingId, payload as Partial<ParkingSlot> & { floor: string });
+      }
+      refresh();
+    } catch (err) {
+      throw err;
     }
   };
 
@@ -687,6 +705,14 @@ export function ManagerSlotsPage() {
           </div>
         </div>
       </ModalForm>
+
+      {/* Multi-slot form for batch creation */}
+      <MultiSlotForm
+        isOpen={multiSlotModalOpen}
+        onClose={() => setMultiSlotModalOpen(false)}
+        onSubmit={onMultiSlotSubmit}
+        floors={floors}
+      />
     </div>
   );
 }

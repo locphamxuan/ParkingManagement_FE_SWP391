@@ -39,6 +39,7 @@ import { ManagerShiftManagementPage } from '@/pages/manager/ManagerShiftManageme
 import { ManagerOperatingHoursPage } from '@/pages/manager/ManagerOperatingHoursPage';
 import { ManagerStaffPage } from '@/pages/manager/ManagerStaffPage';
 import { ManagerWalletPage } from '@/pages/manager/ManagerWalletPage';
+import { ManagerReviewsPage } from '@/pages/manager/ManagerReviewsPage';
 import { StaffLayout } from '@/layouts/StaffLayout';
 import { StaffDashboardPage } from '@/pages/staff/StaffDashboardPage';
 import { StaffOperationsPage } from '@/pages/staff/StaffOperationsPage';
@@ -90,6 +91,7 @@ export function AppRouter() {
           <Route path="staff-shifts" element={<Navigate to="/manager/shifts" replace />} />
           <Route path="operating-hours" element={<ManagerOperatingHoursPage />} />
           <Route path="staff" element={<ManagerStaffPage />} />
+          <Route path="reviews" element={<ManagerReviewsPage />} />
           <Route path="wallet" element={<ManagerWalletPage />} />
           <Route
             path="settings"
