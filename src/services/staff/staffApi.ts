@@ -1,4 +1,4 @@
-import { api } from '@/services/apiClient';
+import { api } from '@/services/client/apiClient';
 
 // ========== INTERFACES ==========
 

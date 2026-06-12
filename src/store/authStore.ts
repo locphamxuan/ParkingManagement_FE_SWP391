@@ -1,9 +1,9 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { loginWithBackend, type AuthSession } from '@/services/authService';
-import { saveSession, clearSession, loadSession } from '@/services/storage';
+import { saveSession, clearSession, loadSession } from '@/services/client/storage';
 import { AUTH_STORAGE_KEY } from '@/utils/constants';
-import { api } from '@/services/apiClient';
+import { api } from '@/services/client/apiClient';
 
 interface AuthState {
   session: AuthSession | null;

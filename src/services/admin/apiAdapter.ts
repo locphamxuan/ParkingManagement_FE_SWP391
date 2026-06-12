@@ -1,4 +1,4 @@
-import { requestJson } from '@/services/pbmsApi';
+import { requestJson } from '@/services/client/pbmsApi';
 import type { AdminDataset } from '@/services/admin/types';
 import type {
   AuditLog,

@@ -1,4 +1,4 @@
-import { api } from '@/services/apiClient';
+import { api } from '@/services/client/apiClient';
 
 // Public gate-kiosk API — a reservation driver self-admits by scanning the
 // vehicle QR, without going through a staff member.

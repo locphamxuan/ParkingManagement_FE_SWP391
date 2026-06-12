@@ -1,4 +1,4 @@
-import { requestJson } from '@/services/pbmsApi';
+import { requestJson } from '@/services/client/pbmsApi';
 
 export interface LoginInput {
   email: string;

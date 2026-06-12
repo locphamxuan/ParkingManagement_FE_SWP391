@@ -1,4 +1,4 @@
-import { api } from './apiClient';
+import { api } from '@/services/client/apiClient';
 
 export type AppNotificationType =
   | 'checkin_rejected'
