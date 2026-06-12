@@ -17,6 +17,7 @@ import ReservationsPage from '@/pages/public/ReservationsPage';
 import LongTermSubscriptionsPage from '@/pages/public/LongTermSubscriptionsPage';
 import WalletPage from '@/pages/public/WalletPage';
 import ParkingHistoryPage from '@/pages/public/ParkingHistoryPage';
+import ReviewsPage from '@/pages/public/ReviewsPage';
 import UserDashboardPage from '@/pages/public/UserDashboardPage';
 import KioskCheckInPage from '@/pages/public/KioskCheckInPage';
 import { PublicLoginRoute, PublicRegisterRoute, PublicResetPasswordRoute } from '@/pages/public/AuthRoutes';
@@ -66,6 +67,7 @@ export function AppRouter() {
       <Route path="/reservations" element={<ReservationsPage />} />
       <Route path="/long-term-subscriptions" element={<LongTermSubscriptionsPage />} />
       <Route path="/parking-history" element={<ParkingHistoryPage />} />
+      <Route path="/reviews" element={<ReviewsPage />} />
       <Route path="/user-dashboard" element={<UserDashboardPage />} />
       <Route path="/kiosk" element={<KioskCheckInPage />} />
 
