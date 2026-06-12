@@ -4,10 +4,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import { ArrowLeft, LogOut, User, Edit, Save, X, ShieldAlert, Plus, AlertCircle, CheckCircle2, Car, Bike, Loader2, Star, QrCode, KeyRound } from 'lucide-react';
 import { syncPlates, listPlates, type PlateRecord } from '@/services/licensePlateService';
-import { UserQRModal } from '@/components/shared/UserQRModal';
-import { PlateQRModal } from '@/components/shared/PlateQRModal';
-import { userApi } from '@/services/user/userApi';
-import { notificationApi, type AppNotification } from '@/services/notificationApi';
+import { UserQRModal } from '@/components/modals/UserQRModal';
+import { PlateQRModal } from '@/components/modals/PlateQRModal';
+import { userApi, type LongTermSubscription } from '@/services/user/userApi';
 import { normalizePlate, isValidVietnamPlate, brandsForVehicleType } from '@/utils/plate';
 
 // ─── Vietnamese license plate validation (shared util — canonical 59G2-038.80) ─
@@ -71,8 +70,7 @@ export default function ProfilePage() {
   // Server plates carry the per-plate QR token (PLT-...) used by the plate-QR modal.
   const [serverPlates, setServerPlates] = useState<PlateRecord[]>([]);
   const [plateQrTarget, setPlateQrTarget] = useState<{ qrToken: string; plateNumber: string; brand?: string | null } | null>(null);
-  const [notifications, setNotifications] = useState<AppNotification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [subscriptions, setSubscriptions] = useState<LongTermSubscription[]>([]);
   const [pwForm, setPwForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [pwError, setPwError] = useState<string | null>(null);
   const [pwSuccess, setPwSuccess] = useState<string | null>(null);
@@ -101,24 +99,13 @@ export default function ProfilePage() {
     listPlates().then(setServerPlates).catch(() => undefined);
   }, []);
 
-  // Fetch in-app notifications (e.g. staff rejected a check-in/out).
+  // Fetch user's long-term subscriptions (gói dài hạn đã mua) để hiển thị trong hồ sơ.
   useEffect(() => {
-    notificationApi.list()
-      .then((res) => {
-        const d = (res as { data?: { items?: AppNotification[]; unread?: number } })?.data;
-        setNotifications(d?.items ?? []);
-        setUnreadCount(d?.unread ?? 0);
-      })
+    userApi.longTermSubscriptions
+      .list()
+      .then((res) => setSubscriptions(res.data?.items ?? []))
       .catch(() => undefined);
   }, []);
-
-  const handleMarkAllNotificationsRead = async () => {
-    try {
-      await notificationApi.markAllRead();
-      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-      setUnreadCount(0);
-    } catch { /* ignore */ }
-  };
 
   const plateQrToken = (plateNumber: string): string | null =>
     serverPlates.find((p) => p.plateNumber.toUpperCase() === plateNumber.toUpperCase())?.qrCode ?? null;
@@ -440,36 +427,55 @@ export default function ProfilePage() {
           )}
         </AnimatePresence>
 
-        {/* Notifications */}
-        {notifications.length > 0 && (
+        {/* Gói dài hạn đã mua */}
+        {subscriptions.length > 0 && (
           <section className="mb-6 rounded-3xl border border-white/10 bg-slate-900/40 p-5">
-            <div className="mb-3 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-orange-400 font-mono">Thông báo</p>
-                {unreadCount > 0 && (
-                  <span className="rounded-full bg-rose-500 px-2 py-0.5 text-[10px] font-bold text-white">{unreadCount} mới</span>
-                )}
-              </div>
-              {unreadCount > 0 && (
-                <button onClick={handleMarkAllNotificationsRead} className="text-[11px] font-semibold text-orange-400 hover:text-orange-300">
-                  Đánh dấu đã đọc tất cả
-                </button>
-              )}
+            <div className="mb-3 flex items-center gap-2">
+              <p className="text-[10px] font-black uppercase tracking-[0.24em] text-orange-400 font-mono">Gói dài hạn của tôi</p>
+              <span className="rounded-full bg-orange-500/15 px-2 py-0.5 text-[10px] font-bold text-orange-300">{subscriptions.length}</span>
             </div>
-            <div className="space-y-2 max-h-72 overflow-y-auto">
-              {notifications.map((n) => (
-                <div
-                  key={n._id}
-                  className={`rounded-xl border p-3 ${n.isRead ? 'border-white/5 bg-slate-950/40' : 'border-rose-500/30 bg-rose-500/5'}`}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-semibold text-slate-100">{n.title}</p>
-                    <span className="shrink-0 text-[10px] text-slate-500">{new Date(n.createdAt).toLocaleString('vi-VN')}</span>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {subscriptions.map((s) => {
+                const statusMap: Record<string, { label: string; cls: string }> = {
+                  active: { label: 'Đang hoạt động', cls: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
+                  pending: { label: 'Chờ kích hoạt', cls: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
+                  expired: { label: 'Hết hạn', cls: 'bg-slate-500/10 text-slate-400 border-slate-500/20' },
+                  cancelled: { label: 'Đã hủy', cls: 'bg-rose-500/10 text-rose-400 border-rose-500/20' },
+                };
+                const st = statusMap[s.status] ?? statusMap.expired;
+                return (
+                  <div key={s._id} className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm font-black text-orange-300">{s.package?.name ?? 'Gói dài hạn'}</p>
+                      <span className={`rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase ${st.cls}`}>{st.label}</span>
+                    </div>
+                    <p className="mt-1 font-mono text-xs font-semibold text-slate-200">{s.plateNumber ?? '—'}</p>
+                    <p className="mt-1 text-[11px] text-slate-400">
+                      {new Date(s.startDate).toLocaleDateString('vi-VN')} → {new Date(s.endDate).toLocaleDateString('vi-VN')}
+                    </p>
+                    {s.slot?.code && (
+                      <p className="mt-1 text-[11px] text-slate-400">
+                        Chỗ đỗ: <span className="font-bold text-slate-200">{s.slot.code}</span>
+                        {s.slot.floor && typeof s.slot.floor === 'object' && (s.slot.floor.name || s.slot.floor.code) ? (
+                          <span> · {s.slot.floor.name || s.slot.floor.code}</span>
+                        ) : null}
+                        {s.slotReleased ? <span className="text-rose-300"> (đã thu hồi)</span> : null}
+                      </p>
+                    )}
+                    {typeof s.package?.maxHoursPerDay === 'number' && s.package.maxHoursPerDay > 0 && (
+                      <p className="mt-1 text-[11px] text-slate-400">Giờ miễn phí: {s.package.maxHoursPerDay}h/ngày</p>
+                    )}
                   </div>
-                  <p className="mt-1 text-xs text-slate-400 leading-relaxed">{n.message}</p>
-                </div>
-              ))}
+                );
+              })}
             </div>
+            <button
+              type="button"
+              onClick={() => navigate('/long-term-subscriptions')}
+              className="mt-3 text-[11px] font-semibold text-orange-400 hover:text-orange-300"
+            >
+              Quản lý / gia hạn gói →
+            </button>
           </section>
         )}
 

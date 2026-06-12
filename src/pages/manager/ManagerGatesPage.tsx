@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ArrowRightLeft, LogIn, LogOut, Plus, Pencil, Trash2, X, Loader } from 'lucide-react';
-import { DataTable, type DataColumn } from '@/components/shared/DataTable';
+import { DataTable, type DataColumn } from '@/components/common/DataTable';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';

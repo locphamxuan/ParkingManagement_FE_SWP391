@@ -1,4 +1,4 @@
-import { api } from '@/services/apiClient';
+import { api } from '@/services/client/apiClient';
 
 // ========== INTERFACES ==========
 
@@ -174,7 +174,16 @@ export const staffApi = {
   checkIn: (payload: { plateNumber: string; vehicleType?: string; gate?: string; building?: string; vehicleBrand?: string; plateImage?: string | null; portraitImage?: string | null }) =>
     api.post<Wrap<{ item: ParkingSession }>>('/staff/parking-sessions/check-in', payload),
 
-  checkOut: (sessionId: string, body?: { paymentMethod?: string }) =>
+  checkOut: (
+    sessionId: string,
+    body?: {
+      paymentMethod?: string;
+      bypassMismatch?: boolean;
+      /** Ảnh lúc xe RA để lưu bằng chứng / đối chiếu. */
+      exitPlateImage?: string | null;
+      exitPortraitImage?: string | null;
+    },
+  ) =>
     api.patch<Wrap<{ item: ParkingSession }>>(`/staff/parking-sessions/${sessionId}/check-out`, body ?? {}),
 
   initiateSessionPayment: (sessionId: string) =>

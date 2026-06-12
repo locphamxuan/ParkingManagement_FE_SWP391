@@ -3,7 +3,7 @@ import { useNavigate, Navigate } from 'react-router-dom';
 import { ArrowLeft, Car, Clock, History, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { userApi, type ParkingHistory } from '@/services/user/userApi';
-import { StatusBadge } from '@/components/shared/StatusBadge';
+import { StatusBadge } from '@/components/common/StatusBadge';
 
 const fmtVnd = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 });
 const fmtTime = (s?: string | null) =>

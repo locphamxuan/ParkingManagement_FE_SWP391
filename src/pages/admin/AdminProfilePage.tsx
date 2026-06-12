@@ -15,7 +15,7 @@ import {
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { adminApi, type AdminUser } from '@/services/admin/adminApi';
-import { StatusBadge } from '@/components/shared/StatusBadge';
+import { StatusBadge } from '@/components/common/StatusBadge';
 import { Button } from '@/components/ui/button';
 
 const ROLE_TABS = [
@@ -47,10 +47,6 @@ export function AdminProfilePage() {
   const [usersError, setUsersError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
 
-  if (!session?.token || session?.role !== 'admin') {
-    return <Navigate to="/admin/login" replace />;
-  }
-
   const loadUsers = useCallback(async (role: string) => {
     setUsersLoading(true);
     setUsersError(null);
@@ -71,6 +67,11 @@ export function AdminProfilePage() {
   useEffect(() => {
     void loadUsers(activeRole);
   }, [activeRole, loadUsers]);
+
+  // Guard sau khi đã gọi hết hooks (rules-of-hooks: không return sớm trước hook).
+  if (!session?.token || session?.role !== 'admin') {
+    return <Navigate to="/admin/login" replace />;
+  }
 
   const handleStartEdit = () => {
     setFullName(session.displayName || '');

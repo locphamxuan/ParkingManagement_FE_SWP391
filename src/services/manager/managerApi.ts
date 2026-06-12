@@ -1,4 +1,4 @@
-import { api } from '@/services/apiClient';
+import { api } from '@/services/client/apiClient';
 
 export interface ManagerBuilding {
   _id: string;
@@ -92,6 +92,10 @@ export interface LongTermPackage {
   benefits?: string[];
   /** When true, subscribers get a dedicated reserved slot. */
   allowDedicatedSlot?: boolean;
+  /** Số giờ đỗ miễn phí tối đa/ngày của gói (0 = không giới hạn). */
+  maxHoursPerDay?: number;
+  /** Số ngày giữ slot cố định sau khi gói hết hạn (grace) trước khi thu hồi. */
+  graceDays?: number;
   isActive: boolean;
 }
 
@@ -103,6 +107,10 @@ export interface Subscription {
   startDate: string;
   endDate: string;
   status: 'pending' | 'active' | 'expired' | 'cancelled';
+  /** Slot cố định nếu có (populate kèm tầng); null nếu gói không kèm slot. */
+  slot?: { _id: string; code: string; floor?: { _id: string; name?: string; code?: string } | string | null } | string | null;
+  /** Đã thu hồi slot (sau grace hoặc do manager) hay chưa. */
+  slotReleased?: boolean;
 }
 
 export interface ReservationPolicy {
@@ -111,8 +119,12 @@ export interface ReservationPolicy {
   refundPercent: number;
   /** % tổng phí thu làm cọc khi đặt; phần còn lại (100 - depositPercent) thu sau checkout. */
   depositPercent: number;
-  /** Returned by BE but not editable via the manager upsert (kept for display). */
-  bookingFee?: number;
+  /** Số ngày được đặt trước tối đa. */
+  maxAdvanceDays: number;
+  /** Số giờ tối đa cho mỗi lượt đặt. */
+  maxDurationHours: number;
+  /** % phụ phí phạt áp lên phần đỗ quá giờ đặt (overstay). 0 = không phạt. */
+  overstayPenaltyPercent: number;
   isActive: boolean;
 }
 
@@ -313,8 +325,11 @@ export const managerApi = {
     update: (b: string, id: string, body: Partial<LongTermPackage>) =>
       api.put<Wrap<{ item: LongTermPackage }>>(path(b, `/packages/${id}`), body),
     remove: (b: string, id: string) => api.delete(path(b, `/packages/${id}`)),
-    subscriptions: (b: string) =>
-      api.get<Wrap<{ items: Subscription[]; pagination: unknown }>>(path(b, '/subscriptions')),
+    subscriptions: (b: string, q?: Record<string, string | undefined>) =>
+      api.get<Wrap<{ items: Subscription[]; pagination: unknown }>>(path(b, '/subscriptions'), { query: q }),
+    /** Manager chủ động thu hồi slot cố định của một subscription. */
+    releaseSlot: (b: string, subscriptionId: string) =>
+      api.post<Wrap<{ item: Subscription }>>(path(b, `/subscriptions/${subscriptionId}/release-slot`), {}),
   },
 
   reservationPolicy: {

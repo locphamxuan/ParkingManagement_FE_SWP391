@@ -2,8 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { MessageSquare, Star, AlertCircle, CheckCircle, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { DataTable, type DataColumn } from '@/components/shared/DataTable';
-import { StatusBadge } from '@/components/shared/StatusBadge';
+import { DataTable, type DataColumn } from '@/components/common/DataTable';
 import { useBuildingContext } from '@/hooks/useBuildingContext';
 import { userApi } from '@/services/user/userApi';
 import type { Feedback } from '@/services/user/userApi';
@@ -147,14 +146,22 @@ export function ManagerReviewsPage() {
     {
       key: 'status',
       title: 'Trạng thái',
-      render: (item) => (
-        <StatusBadge
-          status={item.status}
-          variant={item.status === 'resolved' ? 'success' : 'warning'}
-          icon={item.status === 'resolved' ? CheckCircle : Clock}
-          label={item.status === 'resolved' ? 'Đã trả lời' : 'Chờ trả lời'}
-        />
-      ),
+      render: (item) => {
+        const resolved = item.status === 'resolved';
+        const Icon = resolved ? CheckCircle : Clock;
+        return (
+          <span
+            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold border ${
+              resolved
+                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25'
+                : 'bg-amber-500/10 text-amber-400 border-amber-500/25'
+            }`}
+          >
+            <Icon size={12} />
+            {resolved ? 'Đã trả lời' : 'Chờ trả lời'}
+          </span>
+        );
+      },
     },
     {
       key: 'createdAt',

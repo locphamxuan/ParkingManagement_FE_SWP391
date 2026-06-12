@@ -4,8 +4,8 @@ import jsQR from 'jsqr';
 import type { LiveCameraHandle } from '@/components/staff/LivePlateCamera';
 
 interface LiveQRCameraProps {
-  /** Fired when a QR is decoded. `portraitImage` is the captured frame (data-URL). */
-  onResult: (code: string, portraitImage: string) => void;
+  /** Fired when a QR is decoded (account ID or vehicle PLT- token). */
+  onResult: (code: string) => void;
   /** Pause detection (e.g. while a result modal is open). */
   paused?: boolean;
 }
@@ -75,10 +75,9 @@ export const LiveQRCamera = forwardRef<LiveCameraHandle, LiveQRCameraProps>(func
       // Debounce so the same QR doesn't fire repeatedly.
       if (code?.data && !pausedRef.current && Date.now() - lastHitRef.current > 2500) {
         lastHitRef.current = Date.now();
-        const portrait = canvas.toDataURL('image/jpeg', 0.8);
         setFlash(true);
         setTimeout(() => setFlash(false), 600);
-        onResult(code.data, portrait);
+        onResult(code.data);
       }
       rafRef.current = requestAnimationFrame(scan);
     };
@@ -118,7 +117,7 @@ export const LiveQRCamera = forwardRef<LiveCameraHandle, LiveQRCameraProps>(func
     <div className="rounded-xl border border-border bg-card/40 p-3 space-y-2.5">
       <div className="flex items-center gap-2">
         <QrCode size={15} className="text-sky-400" />
-        <p className="text-sm font-semibold text-foreground">Camera 2 · Quét QR (tài khoản / phương tiện)</p>
+        <p className="text-sm font-semibold text-foreground">Camera 3 · Quét QR (tài khoản / phương tiện)</p>
       </div>
 
       <div className="relative aspect-[4/3] overflow-hidden rounded-lg border border-white/10 bg-black/60">

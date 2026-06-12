@@ -26,7 +26,8 @@ import {
   X,
 } from 'lucide-react';
 import type { LegacyModule } from '../data/mainFlow';
-import { AnimatedParkingMap3D } from '@/components/shared/AnimatedParkingMap3D';
+import { AnimatedParkingMap3D } from '@/components/map/AnimatedParkingMap3D';
+import { notificationApi } from '@/services/notificationApi';
 
 interface HomePageProps {
   modules: LegacyModule[];
@@ -97,6 +98,19 @@ export default function HomePage({ modules, onOpenAuth, onViewProfile, onViewRes
   const [showPlateBanner, setShowPlateBanner] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
+
+  // Số thông báo chưa đọc — hiện badge trên nút tài khoản (chỉ khi đã đăng nhập là user).
+  const [unreadNotif, setUnreadNotif] = useState(0);
+  useEffect(() => {
+    if (!user || user.role !== 'user') return;
+    notificationApi
+      .list()
+      .then((res) => {
+        const d = (res as { data?: { unread?: number } })?.data;
+        setUnreadNotif(d?.unread ?? 0);
+      })
+      .catch(() => undefined);
+  }, [user]);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [isMobile, setIsMobile] = useState(false);
@@ -208,6 +222,12 @@ export default function HomePage({ modules, onOpenAuth, onViewProfile, onViewRes
                   <ChevronDown size={12} className="text-slate-400" />
                 </button>
 
+                {unreadNotif > 0 && (
+                  <span className="absolute -top-1 -left-1 z-30 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[8px] font-black text-white shadow-[0_0_8px_rgba(244,63,94,0.6)]">
+                    {unreadNotif > 9 ? '9+' : unreadNotif}
+                  </span>
+                )}
+
                 {hasMissingInfo && (
                   <span className="absolute -top-1 -right-1 flex h-4 w-4 z-30 pointer-events-none">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
@@ -232,6 +252,18 @@ export default function HomePage({ modules, onOpenAuth, onViewProfile, onViewRes
                         <span className="flex h-2 w-2 rounded-full bg-rose-500 animate-pulse shadow-[0_0_6px_#f43f5e]" />
                       )}
                     </button>
+                    <a
+                      href="/notifications"
+                      onClick={() => setMenuOpen(false)}
+                      className="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-between"
+                    >
+                      <span className="flex items-center"><BellRing size={12} className="mr-2" /> Thông báo</span>
+                      {unreadNotif > 0 && (
+                        <span className="rounded-full bg-rose-500 px-1.5 text-[9px] font-bold text-white">
+                          {unreadNotif > 9 ? '9+' : unreadNotif}
+                        </span>
+                      )}
+                    </a>
                     <button
                       className="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-slate-800 text-slate-300 hover:text-white"
                       onClick={() => { setMenuOpen(false); onViewWallet(); }}

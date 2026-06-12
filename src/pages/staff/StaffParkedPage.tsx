@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { RefreshCcw, CheckCircle2, Car } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -6,8 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useBuildingContext } from '@/hooks/useBuildingContext';
 import { useAuth } from '@/hooks/useAuth';
 import { staffApi, type ParkingSession } from '@/services/staff/staffApi';
-import { LivePlateCamera, type PlateScanResult } from '@/components/staff/LivePlateCamera';
+import { LivePlateCamera, type PlateScanResult, type LiveCameraHandle } from '@/components/staff/LivePlateCamera';
 import { LiveQRCamera } from '@/components/staff/LiveQRCamera';
+import { LivePortraitCamera } from '@/components/staff/LivePortraitCamera';
 import { normalizePlate } from '@/utils/plate';
 
 type PaymentKind = 'cash' | 'bank_transfer' | 'wallet';
@@ -79,6 +80,7 @@ export function StaffParkedPage({ readOnly = false }: { readOnly?: boolean }) {
   // check-in (plate + portrait) so staff can verify it's the right vehicle/person.
   const [capturedPlateImage, setCapturedPlateImage] = useState<string | null>(null);
   const [capturedPortraitImage, setCapturedPortraitImage] = useState<string | null>(null);
+  const portraitCamRef = useRef<LiveCameraHandle>(null);
 
   const refreshSessions = useCallback(() => {
     setLoading(true);
@@ -130,10 +132,10 @@ export function StaffParkedPage({ readOnly = false }: { readOnly?: boolean }) {
     openCheckoutByPlate(plateNumber);
   };
 
-  // Camera 2 — QR (token biển số PLT- / ID tài khoản). Reservation/khách chỉ cần
-  // quét QR phương tiện là đủ để nhận diện và cho xe ra. Lưu ảnh chân dung để đối chiếu.
-  const handleResolveIdQr = async (code: string, portrait: string) => {
-    setCapturedPortraitImage(portrait);
+  // Camera 3 — QR (token biển số PLT- / ID tài khoản). Reservation/khách chỉ cần
+  // quét QR phương tiện là đủ để nhận diện và cho xe ra. Ảnh chân dung do camera
+  // chân dung (Camera 1) chụp riêng lúc cho xe ra.
+  const handleResolveIdQr = async (code: string) => {
     try {
       const res = await staffApi.resolveQr(code);
       const data = (res as {
@@ -174,7 +176,13 @@ export function StaffParkedPage({ readOnly = false }: { readOnly?: boolean }) {
         }
         return;
       }
-      await staffApi.checkOut(target._id, { paymentMethod });
+      // Ảnh chân dung lúc ra: ưu tiên ảnh đã chụp, nếu chưa thì chụp 1 khung từ camera chân dung.
+      const exitPortrait = capturedPortraitImage ?? portraitCamRef.current?.capture() ?? null;
+      await staffApi.checkOut(target._id, {
+        paymentMethod,
+        exitPlateImage: capturedPlateImage,
+        exitPortraitImage: exitPortrait,
+      });
       setOpMessage({ type: 'ok', text: `Đã thu phí & cho ra xe ${target.plateNumber}.` });
       setPaymentMethod('cash');
       setCheckoutTarget(null);
@@ -275,11 +283,12 @@ export function StaffParkedPage({ readOnly = false }: { readOnly?: boolean }) {
         </Card>
       </section>
 
-      {/* Two always-on identification cameras — scan to check-out (same as check-in).
+      {/* 3 camera riêng biệt — quét để cho xe ra (chân dung · biển số · QR).
           Chỉ hiện cho nhân viên cổng ra. */}
       {canCheckout && (
         <>
-          <section className="grid gap-4 lg:grid-cols-2">
+          <section className="grid gap-4 lg:grid-cols-3">
+            <LivePortraitCamera ref={portraitCamRef} paused={!!checkoutTarget || !!bankTransfer || rejectOpen} />
             <LivePlateCamera onDetected={handlePlateDetected} busy={loading} />
             <LiveQRCamera onResult={handleResolveIdQr} paused={!!checkoutTarget || !!bankTransfer || rejectOpen} />
           </section>

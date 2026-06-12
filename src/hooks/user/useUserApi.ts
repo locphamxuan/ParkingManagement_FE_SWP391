@@ -487,7 +487,7 @@ export function useSubscribeToPackage() {
   const [error, setError] = useState<Error | null>(null);
 
   const subscribe = useCallback(
-    async (body: { packageId: string; linkedPlates: string[]; paymentMethod?: string }) => {
+    async (body: { packageId: string; linkedPlates: string[]; slotId?: string; startDate?: string; paymentMethod?: string }) => {
       setIsLoading(true);
       setError(null);
       try {
@@ -495,6 +495,8 @@ export function useSubscribeToPackage() {
         const result = await userApi.longTermSubscriptions.create({
           packageId: body.packageId,
           plateNumber: body.linkedPlates[0],
+          ...(body.slotId ? { slotId: body.slotId } : {}),
+          ...(body.startDate ? { startDate: body.startDate } : {}),
         });
         return result.data.subscription;
       } catch (err) {
@@ -509,6 +511,28 @@ export function useSubscribeToPackage() {
   );
 
   return { subscribe, isLoading, error };
+}
+
+export function useRenewSubscription() {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  const renew = useCallback(async (id: string) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await userApi.longTermSubscriptions.renew(id);
+      return result.data.subscription;
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error('Unknown error');
+      setError(error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  return { renew, isLoading, error };
 }
 
 export function useCancelSubscription() {

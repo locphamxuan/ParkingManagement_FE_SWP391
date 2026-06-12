@@ -1,8 +1,8 @@
 import { Pie, PieChart, ResponsiveContainer, Tooltip, Cell } from 'recharts';
 import { motion } from 'framer-motion';
-import { AnalyticsCard } from '@/components/shared/AnalyticsCard';
-import { ActivityTimeline } from '@/components/shared/ActivityTimeline';
-import { RevenueChart } from '@/components/shared/RevenueChart';
+import { AnalyticsCard } from '@/components/charts/AnalyticsCard';
+import { ActivityTimeline } from '@/components/charts/ActivityTimeline';
+import { RevenueChart } from '@/components/charts/RevenueChart';
 import { useAdminDataset } from '@/hooks/admin/useAdminDataset';
 import { Activity, CreditCard, ShieldCheck, TrendingUp } from 'lucide-react';
 

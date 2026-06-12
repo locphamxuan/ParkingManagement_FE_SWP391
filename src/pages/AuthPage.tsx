@@ -1,9 +1,9 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
 import type { FormEvent } from 'react';
-import { Home, X, AlertCircle } from 'lucide-react';
+import { Home, X, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
 import { useSearchParams } from 'react-router-dom';
-import { CartoonCar3D } from '@/components/shared/CartoonCar3D';
+import { CartoonCar3D } from '@/components/map/CartoonCar3D';
 import { forgotPassword, resetPassword } from '@/services/authService';
 
 const initialForm = {
@@ -46,10 +46,24 @@ export default function AuthPage({ mode, notice, onModeChange, onBackHome, onSub
   const [form, setForm] = useState(initialForm);
   const [forgotEmail, setForgotEmail] = useState('');
   const [resetPasswordForm, setResetPasswordForm] = useState({ newPassword: '', confirmPassword: '' });
-  const [savedAccounts, setSavedAccounts] = useState<{ email: string; password?: string }[]>([]);
+  // Chỉ ghi nhớ EMAIL để gợi ý đăng nhập — KHÔNG bao giờ lưu mật khẩu ở client.
+  const [savedAccounts, setSavedAccounts] = useState<{ email: string }[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [lockTimeLeft, setLockTimeLeft] = useState<number>(0);
   const [resetToken, setResetToken] = useState<string | null>(null);
+  // Modal thông báo (thành công/thất bại) cho luồng quên & đặt lại mật khẩu.
+  const [modal, setModal] = useState<{
+    title: string;
+    message: string;
+    type: 'success' | 'error';
+    next?: () => void;
+  } | null>(null);
+
+  const closeModal = () => {
+    const next = modal?.next;
+    setModal(null);
+    next?.();
+  };
 
   // Auto-detect reset-password mode from URL token
   useEffect(() => {
@@ -85,12 +99,18 @@ export default function AuthPage({ mode, notice, onModeChange, onBackHome, onSub
   const dropdownRef = useRef<HTMLDivElement | null>(null);
   const emailInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Load saved accounts from localStorage on mount and initialize phones
+  // Load saved emails from localStorage on mount and initialize phones
   useEffect(() => {
     try {
       const stored = localStorage.getItem('pbms_saved_accounts');
       if (stored) {
-        setSavedAccounts(JSON.parse(stored));
+        // Chỉ giữ email; loại bỏ mọi mật khẩu plaintext có thể còn sót từ bản cũ.
+        const parsed: { email?: string }[] = JSON.parse(stored);
+        const emailsOnly = parsed
+          .filter((acc) => acc?.email)
+          .map((acc) => ({ email: acc.email as string }));
+        setSavedAccounts(emailsOnly);
+        localStorage.setItem('pbms_saved_accounts', JSON.stringify(emailsOnly));
       }
     } catch (e) {
       console.error('Failed to load saved accounts', e);
@@ -102,22 +122,18 @@ export default function AuthPage({ mode, notice, onModeChange, onBackHome, onSub
     }
   }, []);
 
-  // Save account helper
-  const saveAccount = (email: string, password?: string) => {
+  // Save email helper (no password persisted)
+  const saveAccount = (email: string) => {
     if (!email) return;
     try {
       const stored = localStorage.getItem('pbms_saved_accounts');
-      let current: { email: string; password?: string }[] = stored ? JSON.parse(stored) : [];
-      
-      // Remove duplicates
-      current = current.filter(acc => acc.email !== email);
-      
-      // Add to start of list
-      current.unshift({ email, password });
-      
-      // Keep max 5 saved accounts
+      let current: { email: string }[] = stored ? JSON.parse(stored) : [];
+
+      // Remove duplicates, add to front, keep max 5
+      current = current.filter((acc) => acc.email !== email);
+      current.unshift({ email });
       current = current.slice(0, 5);
-      
+
       localStorage.setItem('pbms_saved_accounts', JSON.stringify(current));
       setSavedAccounts(current);
     } catch (e) {
@@ -138,13 +154,9 @@ export default function AuthPage({ mode, notice, onModeChange, onBackHome, onSub
     }
   };
 
-  const handleSelectAccount = (e: React.MouseEvent, acc: { email: string; password?: string }) => {
-    e.preventDefault(); // Keep focus or let it blur, but keeping focus on input with filled details is great!
-    setForm(s => ({
-      ...s,
-      email: acc.email,
-      password: acc.password || '',
-    }));
+  const handleSelectAccount = (e: React.MouseEvent, acc: { email: string }) => {
+    e.preventDefault(); // Điền sẵn email, người dùng tự nhập mật khẩu.
+    setForm((s) => ({ ...s, email: acc.email }));
     setShowDropdown(false);
   };
 
@@ -254,7 +266,7 @@ export default function AuthPage({ mode, notice, onModeChange, onBackHome, onSub
         // Login success: clear wrong attempts counters & lock periods
         localStorage.removeItem(`pbms.failedAttempts.${email}`);
         localStorage.removeItem(`pbms.lockUntil.${email}`);
-        saveAccount(form.email.trim(), form.password);
+        saveAccount(form.email.trim());
       } catch (err) {
         // Login failure: increment fail counters & lock for 5 mins if attempts >= 5
         const attempts = Number(localStorage.getItem(`pbms.failedAttempts.${email}`) || '0') + 1;
@@ -297,19 +309,20 @@ export default function AuthPage({ mode, notice, onModeChange, onBackHome, onSub
 
     try {
       await forgotPassword(email);
-      setLocalNotice({
-        message: 'Email đặt lại mật khẩu đã được gửi. Vui lòng kiểm tra email của bạn (có thể nằm trong thư mục spam).',
+      setModal({
+        title: 'Đã gửi email khôi phục',
+        message:
+          'Nếu email này có trong hệ thống, chúng tôi đã gửi link đặt lại mật khẩu. Vui lòng kiểm tra hộp thư (kể cả thư mục spam). Link có hiệu lực trong 15 phút.',
         type: 'success',
+        next: () => {
+          setForgotEmail('');
+          setLocalNotice(null);
+          onModeChange('login');
+        },
       });
-
-      // Reset form after short delay
-      setTimeout(() => {
-        setForgotEmail('');
-        setLocalNotice(null);
-        onModeChange('login');
-      }, 1500);
     } catch (error) {
-      setLocalNotice({
+      setModal({
+        title: 'Gửi email thất bại',
         message: error instanceof Error ? error.message : 'Gửi email thất bại. Vui lòng thử lại.',
         type: 'error',
       });
@@ -348,41 +361,29 @@ export default function AuthPage({ mode, notice, onModeChange, onBackHome, onSub
 
     try {
       await resetPassword(resetToken, newPassword);
-      
-      // Retrieve email from localStorage for local fallback storage
-      const emailToUse = localStorage.getItem('pbms.forgotEmail_pending') || '';
 
-      // Store locally for fallback reference
-      if (emailToUse) {
-        const locallyReset = JSON.parse(localStorage.getItem('pbms.locallyResetPasswords') || '{}');
-        locallyReset[emailToUse.toLowerCase()] = newPassword;
-        localStorage.setItem('pbms.locallyResetPasswords', JSON.stringify(locallyReset));
+      // Mật khẩu là dữ liệu nhạy cảm — không lưu plaintext ở client. Nguồn chính
+      // thống là backend; chỉ dọn email pending còn sót lại.
+      localStorage.removeItem('pbms.forgotEmail_pending');
 
-        // Update saved accounts if they exist
-        const savedAccountsData = JSON.parse(localStorage.getItem('pbms.savedAccounts') || '[]');
-        const updated = savedAccountsData.map((acc: { email: string; password?: string }) => {
-          if (acc.email.toLowerCase() === emailToUse.toLowerCase()) {
-            return { ...acc, password: newPassword };
-          }
-          return acc;
-        });
-        localStorage.setItem('pbms.savedAccounts', JSON.stringify(updated));
-      }
-
-      setLocalNotice({
-        message: 'Mật khẩu đã được đặt lại thành công. Vui lòng đăng nhập với mật khẩu mới.',
+      setModal({
+        title: 'Đặt lại mật khẩu thành công',
+        message: 'Mật khẩu của bạn đã được cập nhật. Vui lòng đăng nhập bằng mật khẩu mới.',
         type: 'success',
+        next: () => {
+          setResetPasswordForm({ newPassword: '', confirmPassword: '' });
+          setResetToken(null);
+          setLocalNotice(null);
+          onModeChange('login');
+        },
       });
-
-      setTimeout(() => {
-        setResetPasswordForm({ newPassword: '', confirmPassword: '' });
-        setResetToken(null);
-        setLocalNotice(null);
-        onModeChange('login');
-      }, 1500);
     } catch (error) {
-      setLocalNotice({
-        message: error instanceof Error ? error.message : 'Đặt lại mật khẩu thất bại. Vui lòng thử lại hoặc yêu cầu link mới.',
+      setModal({
+        title: 'Đặt lại mật khẩu thất bại',
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Đặt lại mật khẩu thất bại. Vui lòng thử lại hoặc yêu cầu link mới.',
         type: 'error',
       });
     }
@@ -944,6 +945,60 @@ export default function AuthPage({ mode, notice, onModeChange, onBackHome, onSub
           )}
         </div>
       </motion.div>
+
+      {/* Modal thông báo (quên/đặt lại mật khẩu) */}
+      {modal ? (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/70 backdrop-blur-md px-4"
+          onClick={closeModal}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.92, y: 12 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ type: 'spring', stiffness: 260, damping: 22 }}
+            onClick={(e) => e.stopPropagation()}
+            className="relative w-full max-w-sm rounded-3xl border border-white/10 bg-slate-900 p-6 text-center shadow-2xl"
+          >
+            <button
+              type="button"
+              onClick={closeModal}
+              className="absolute right-3.5 top-3.5 rounded-full p-1.5 text-slate-400 hover:bg-white/10 hover:text-white transition-colors"
+              aria-label="Đóng"
+            >
+              <X size={16} />
+            </button>
+
+            <div
+              className={`mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl ${
+                modal.type === 'success'
+                  ? 'bg-emerald-500/15 text-emerald-400'
+                  : 'bg-rose-500/15 text-rose-400'
+              }`}
+            >
+              {modal.type === 'success' ? (
+                <CheckCircle2 size={30} className="stroke-[2.2]" />
+              ) : (
+                <AlertCircle size={30} className="stroke-[2.2]" />
+              )}
+            </div>
+
+            <h3 className="text-base font-black tracking-tight text-white">{modal.title}</h3>
+            <p className="mt-2 text-sm leading-relaxed text-slate-400">{modal.message}</p>
+
+            <button
+              type="button"
+              onClick={closeModal}
+              className={`mt-5 h-11 w-full rounded-xl font-black text-xs uppercase tracking-wider transition-all ${
+                modal.type === 'success'
+                  ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 hover:shadow-[0_0_25px_rgba(249,115,22,0.45)]'
+                  : 'border border-white/10 text-white hover:bg-slate-800'
+              }`}
+            >
+              Đã hiểu
+            </button>
+          </motion.div>
+        </div>
+      ) : null}
     </main>
   );
 }

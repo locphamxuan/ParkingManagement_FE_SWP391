@@ -14,8 +14,8 @@ export function ModalForm({ open, onOpenChange, title, children, onSubmit }: Mod
   return (
     <Modal open={open} onOpenChange={onOpenChange} title={title}>
       <div className="grid gap-5">
-        <div className="text-stone-700 text-sm leading-relaxed">{children}</div>
-        <div className="flex justify-end gap-2.5 border-t border-stone-100 pt-4 mt-2">
+        <div className="text-slate-200 text-sm leading-relaxed">{children}</div>
+        <div className="flex justify-end gap-2.5 border-t border-white/10 pt-4 mt-2">
           <Button 
             variant="secondary" 
             onClick={() => onOpenChange(false)}

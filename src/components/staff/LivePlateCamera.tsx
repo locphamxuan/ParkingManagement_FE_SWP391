@@ -117,7 +117,7 @@ export const LivePlateCamera = forwardRef<LiveCameraHandle, LivePlateCameraProps
     <div className="rounded-xl border border-border bg-card/40 p-3 space-y-2.5">
       <div className="flex items-center gap-2">
         <ScanLine size={15} className="text-primary" />
-        <p className="text-sm font-semibold text-foreground">Camera 1 · Quét biển số</p>
+        <p className="text-sm font-semibold text-foreground">Camera 2 · Quét biển số</p>
       </div>
 
       <div className="relative aspect-[4/3] overflow-hidden rounded-lg border border-white/10 bg-black/60">

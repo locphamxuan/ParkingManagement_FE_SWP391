@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
-import { DataTable, type DataColumn } from '@/components/shared/DataTable';
-import { SearchFilterBar } from '@/components/shared/SearchFilterBar';
-import { StatusBadge } from '@/components/shared/StatusBadge';
+import { DataTable, type DataColumn } from '@/components/common/DataTable';
+import { SearchFilterBar } from '@/components/common/SearchFilterBar';
+import { StatusBadge } from '@/components/common/StatusBadge';
 import { useAdminDataset } from '@/hooks/admin/useAdminDataset';
 import type { AuditLog } from '@/types';
 

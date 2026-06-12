@@ -23,7 +23,7 @@ import {
   XCircle,
   Zap,
 } from 'lucide-react';
-import { ParkingMap2D } from '@/components/shared/ParkingMap2D';
+import { ParkingMap2D } from '@/components/map/ParkingMap2D';
 import { useAuth } from '@/hooks/useAuth';
 import { CustomSelect } from '@/components/ui/select';
 import {

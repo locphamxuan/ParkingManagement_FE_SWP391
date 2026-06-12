@@ -2,9 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { DataTable, type DataColumn } from '@/components/shared/DataTable';
-import { StatusBadge } from '@/components/shared/StatusBadge';
-import { ModalForm } from '@/components/shared/ModalForm';
+import { DataTable, type DataColumn } from '@/components/common/DataTable';
+import { StatusBadge } from '@/components/common/StatusBadge';
+import { ModalForm } from '@/components/modals/ModalForm';
 import { useBuildingContext } from '@/hooks/useBuildingContext';
 import { managerApi, type Floor, type VehicleType } from '@/services/manager/managerApi';
 

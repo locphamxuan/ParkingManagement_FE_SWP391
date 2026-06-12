@@ -22,6 +22,7 @@ import { useBuildingContext } from '@/hooks/useBuildingContext';
 import { staffApi, type PlateInfo } from '@/services/staff/staffApi';
 import { LivePlateCamera, type PlateScanResult, type LiveCameraHandle } from '@/components/staff/LivePlateCamera';
 import { LiveQRCamera } from '@/components/staff/LiveQRCamera';
+import { LivePortraitCamera } from '@/components/staff/LivePortraitCamera';
 import { QRCodeScannerModal } from '@/components/staff/QRCodeScannerModal';
 import { normalizePlate } from '@/utils/plate';
 
@@ -51,6 +52,7 @@ export function StaffOperationsPage() {
   // moment of check-in — guaranteeing BOTH plate + portrait images are saved.
   const plateCamRef = useRef<LiveCameraHandle>(null);
   const qrCamRef = useRef<LiveCameraHandle>(null);
+  const portraitCamRef = useRef<LiveCameraHandle>(null);
 
   // Plate → account info (chỉ để hiển thị; khách vãng lai khi không có tài khoản)
   const [plateAccountInfo, setPlateAccountInfo] = useState<{ hasAccount: boolean; registeredVehicleType?: 'car' | 'motorcycle' | null; user: { id: string; fullName: string; email: string } | null } | null>(null);
@@ -151,9 +153,9 @@ export function StaffOperationsPage() {
     }
   };
 
-  // Camera 2: quét QR (token biển số PLT- hoặc ID tài khoản) → lưu ảnh chân dung + mở popup.
-  const handleResolveIdQr = async (code: string, portrait: string) => {
-    setPortraitImage(portrait);
+  // Camera 3: quét QR (token biển số PLT- hoặc ID tài khoản) → mở popup. Ảnh chân
+  // dung do camera chân dung (Camera 1) chụp riêng lúc check-in.
+  const handleResolveIdQr = async (code: string) => {
     try {
       const res = await staffApi.resolveQr(code);
       const data = (res as {
@@ -197,7 +199,8 @@ export function StaffOperationsPage() {
     // if present, otherwise grab a fresh frame from the live camera. This way the
     // checkout staff always sees a full plate + portrait set.
     const plateImg = plateImage ?? plateCamRef.current?.capture() ?? null;
-    const portraitImg = portraitImage ?? qrCamRef.current?.capture() ?? null;
+    // Ảnh chân dung lấy từ camera chân dung riêng (Camera 1).
+    const portraitImg = portraitImage ?? portraitCamRef.current?.capture() ?? null;
     try {
       await staffApi.checkIn({
         plateNumber: currentPlate,
@@ -278,8 +281,9 @@ export function StaffOperationsPage() {
         </div>
       </section>
 
-      {/* Two always-on identification cameras */}
-      <section className="grid gap-4 lg:grid-cols-2">
+      {/* 3 camera riêng biệt: Chân dung · Biển số · QR */}
+      <section className="grid gap-4 lg:grid-cols-3">
+        <LivePortraitCamera ref={portraitCamRef} paused={isPlateInfoModalOpen} />
         <LivePlateCamera ref={plateCamRef} onDetected={handlePlateDetected} busy={loading || isPlateInfoLoading} />
         <LiveQRCamera ref={qrCamRef} onResult={handleResolveIdQr} paused={isPlateInfoModalOpen} />
       </section>

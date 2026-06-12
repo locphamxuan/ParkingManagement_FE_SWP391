@@ -3,9 +3,9 @@ import { Pencil, Plus, Trash2, Layers, RotateCcw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { DataTable, type DataColumn } from '@/components/shared/DataTable';
-import { ModalForm } from '@/components/shared/ModalForm';
-import { MultiSlotForm, type SlotFormRow } from '@/components/shared/MultiSlotForm';
+import { DataTable, type DataColumn } from '@/components/common/DataTable';
+import { ModalForm } from '@/components/modals/ModalForm';
+import { MultiSlotForm, type SlotFormRow } from '@/components/manager/MultiSlotForm';
 import { useBuildingContext } from '@/hooks/useBuildingContext';
 import {
   managerApi,

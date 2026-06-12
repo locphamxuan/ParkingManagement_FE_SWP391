@@ -2,9 +2,9 @@ import { useCallback, useEffect, useState } from 'react';
 import { Crown, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { DataTable, type DataColumn } from '@/components/shared/DataTable';
-import { StatusBadge } from '@/components/shared/StatusBadge';
-import { ModalForm } from '@/components/shared/ModalForm';
+import { DataTable, type DataColumn } from '@/components/common/DataTable';
+import { StatusBadge } from '@/components/common/StatusBadge';
+import { ModalForm } from '@/components/modals/ModalForm';
 import { adminApi, type AdminSubscriptionPackage } from '@/services/admin/adminApi';
 
 interface FormState {
