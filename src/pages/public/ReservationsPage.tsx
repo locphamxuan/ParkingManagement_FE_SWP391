@@ -1113,6 +1113,7 @@ export default function ReservationsPage() {
   const [vehicleTypesForBuilding, setVehicleTypesForBuilding] = useState<VehicleType[]>([]);
   const [selectedVehicleType, setSelectedVehicleType] = useState<VehicleKind | ''>('');
   const [floorsData, setFloorsData] = useState<FloorAvailability[]>([]);
+  const [floorsError, setFloorsError] = useState<string>('');
   const [slots, setSlots] = useState<MappedSlot[]>([]);
   const [selectedFloorIdModal, setSelectedFloorIdModal] = useState('');
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
@@ -1212,10 +1213,11 @@ export default function ReservationsPage() {
   // Load vehicle types + floors for selected building
   useEffect(() => {
     let ignore = false;
-    if (!selectedBuildingId) { setFloorsData([]); setVehicleTypesForBuilding([]); return; }
+    if (!selectedBuildingId) { setFloorsData([]); setVehicleTypesForBuilding([]); setFloorsError(''); return; }
 
     const load = async () => {
       try {
+        setFloorsError('');
         const vtRes = await userApi.buildings.vehicleTypes(selectedBuildingId);
         if (ignore) return;
         setVehicleTypesForBuilding(vtRes.data.items || []);
@@ -1223,7 +1225,14 @@ export default function ReservationsPage() {
         const floorsRes = await userApi.buildings.floors(selectedBuildingId);
         if (ignore) return;
         setFloorsData(floorsRes.data.floors || []);
-      } catch { /* ok */ }
+      } catch (err) {
+        if (!ignore) {
+          const errorMsg = err instanceof Error ? err.message : String(err);
+          console.error('Error loading floors:', errorMsg, err);
+          setFloorsError(`Lỗi tải tầng: ${errorMsg}`);
+          setFloorsData([]);
+        }
+      }
     };
     load();
     return () => { ignore = true; };
@@ -1845,18 +1854,24 @@ export default function ReservationsPage() {
                 <div className="mb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
                   <div className="flex-1">
                     <span className="mb-2 block text-[10px] font-bold uppercase tracking-widest text-slate-500">Khu vực / Tầng</span>
-                    <CustomSelect
-                      value={selectedFloorIdModal}
-                      onChange={(val) => {
-                        setSelectedFloorIdModal(String(val || ''));
-                        setSelectedSlot(null);
-                      }}
-                      options={[
-                        { value: '', label: '-- Chọn tầng --' },
-                        ...floorsData.map((f) => ({ value: f._id, label: `Tầng ${f.code || f.name || ''} (${f.availableSlots}/${f.totalSlots})` })),
-                      ]}
-                      placeholder="-- Chọn tầng --"
-                    />
+                    {floorsError ? (
+                      <div className="p-3 bg-red-50 border border-red-200 rounded-md text-red-700 text-sm">
+                        {floorsError}
+                      </div>
+                    ) : (
+                      <CustomSelect
+                        value={selectedFloorIdModal}
+                        onChange={(val) => {
+                          setSelectedFloorIdModal(String(val || ''));
+                          setSelectedSlot(null);
+                        }}
+                        options={[
+                          { value: '', label: '-- Chọn tầng --' },
+                          ...floorsData.map((f) => ({ value: f._id, label: `Tầng ${f.code || f.name || ''} (${f.availableSlots}/${f.totalSlots})` })),
+                        ]}
+                        placeholder="-- Chọn tầng --"
+                      />
+                    )}
                   </div>
                   {selectedVehicleType && (
                     <div className="rounded-xl border border-white/5 bg-white/[0.02] px-4 py-2.5 text-xs text-slate-400 flex items-center gap-2 max-w-md">
