@@ -17,6 +17,8 @@ interface FormState {
   hourlyRate: string;
   fromTime: string;
   toTime: string;
+  effectiveFrom: string;
+  effectiveTo: string;
   isActive: boolean;
 }
 
@@ -27,8 +29,12 @@ const empty: FormState = {
   hourlyRate: '',
   fromTime: '00:00',
   toTime: '23:59',
+  effectiveFrom: '',
+  effectiveTo: '',
   isActive: true,
 };
+
+const toDateInput = (v?: string | null) => (v ? new Date(v).toISOString().slice(0, 10) : '');
 
 const TYPE_LABEL: Record<PricingType, string> = {
   regular: 'Giờ thường',
@@ -81,6 +87,8 @@ export function ManagerPricingPage() {
       hourlyRate: String(row.hourlyRate),
       fromTime: row.timeWindow?.from ?? '00:00',
       toTime: row.timeWindow?.to ?? '23:59',
+      effectiveFrom: toDateInput(row.effectiveFrom),
+      effectiveTo: toDateInput(row.effectiveTo),
       isActive: row.isActive,
     });
     setModalOpen(true);
@@ -97,6 +105,8 @@ export function ManagerPricingPage() {
       type: form.type,
       hourlyRate: Number(form.hourlyRate),
       timeWindow: { from: form.fromTime, to: form.toTime },
+      ...(form.effectiveFrom ? { effectiveFrom: form.effectiveFrom } : {}),
+      effectiveTo: form.effectiveTo ? form.effectiveTo : null,
       isActive: form.isActive,
     };
     try {
@@ -249,6 +259,24 @@ export function ManagerPricingPage() {
           <p className="md:col-span-2 text-[11px] text-muted-foreground">
             “Giờ thường” áp dụng mặc định; “Cao điểm” áp dụng trong khung giờ Từ–Đến. Phí = tổng giờ đỗ × giá/giờ theo khung.
           </p>
+          <div className="grid gap-1.5">
+            <label className="text-xs uppercase text-muted-foreground">Hiệu lực từ</label>
+            <Input
+              type="date"
+              value={form.effectiveFrom}
+              onChange={(e) => setForm((f) => ({ ...f, effectiveFrom: e.target.value }))}
+            />
+            <p className="text-[11px] text-muted-foreground">Để trống = áp dụng ngay.</p>
+          </div>
+          <div className="grid gap-1.5">
+            <label className="text-xs uppercase text-muted-foreground">Hiệu lực đến</label>
+            <Input
+              type="date"
+              value={form.effectiveTo}
+              onChange={(e) => setForm((f) => ({ ...f, effectiveTo: e.target.value }))}
+            />
+            <p className="text-[11px] text-muted-foreground">Để trống = không giới hạn.</p>
+          </div>
           <label className="flex items-center gap-2 text-sm md:col-span-2">
             <input
               type="checkbox"

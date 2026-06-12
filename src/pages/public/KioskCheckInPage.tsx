@@ -42,8 +42,8 @@ export default function KioskCheckInPage() {
     }
   };
 
-  const handleQr = (code: string, portrait: string) => {
-    void submit({ qrCode: code, portraitImage: portrait });
+  const handleQr = (code: string) => {
+    void submit({ qrCode: code });
   };
 
   const handleManual = () => {

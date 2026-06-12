@@ -3,14 +3,18 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   ArrowLeft,
+  Building2,
   Check,
   CheckCircle2,
   Loader2,
+  ReceiptText,
+  RefreshCw,
   X,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { useBuildings, useLongTermPackages, useLongTermSubscriptions, useSubscribeToPackage, useCancelSubscription } from '@/hooks/user';
-import type { LongTermPackage, LongTermPaymentMethod, LongTermSubscription } from '@/services/user/userApi';
+import { useBuildings, useLongTermPackages, useLongTermSubscriptions, useSubscribeToPackage, useCancelSubscription, useRenewSubscription } from '@/hooks/user';
+import type { LongTermPackage, LongTermPaymentMethod, LongTermSubscription, ParkingSlot, FloorAvailability } from '@/services/user/userApi';
+import { userApi } from '@/services/user/userApi';
 import { CustomSelect } from '@/components/ui/select';
 
 const currency = new Intl.NumberFormat('vi-VN', {
@@ -48,6 +52,7 @@ interface PackageSelectModalProps {
     buildingId: string;
     plateNumber: string;
     startDate: string;
+    slotId?: string;
     paymentMethod: LongTermPaymentMethod;
   }) => Promise<void>;
   isSubmitting: boolean;
@@ -68,6 +73,16 @@ function PackageSelectModal({
   const [paymentMethod, setPaymentMethod] = useState<LongTermPaymentMethod>('wallet');
   const [error, setError] = useState<string | null>(null);
 
+  // ── Chọn slot cố định (chỉ khi gói cho phép) ──────────────────────────────
+  const pkgBuildingId = pkg
+    ? (typeof pkg.building === 'object' ? pkg.building._id : pkg.building)
+    : '';
+  const [floors, setFloors] = useState<FloorAvailability[]>([]);
+  const [selectedFloorId, setSelectedFloorId] = useState('');
+  const [slots, setSlots] = useState<ParkingSlot[]>([]);
+  const [selectedSlotId, setSelectedSlotId] = useState('');
+  const [loadingSlots, setLoadingSlots] = useState(false);
+
   useEffect(() => {
     if (isOpen && buildings.length > 0 && !selectedBuildingId) {
       setSelectedBuildingId(buildings[0]._id);
@@ -79,6 +94,42 @@ function PackageSelectModal({
       setSelectedPlate(userPlates[0].plateNumber);
     }
   }, [isOpen, userPlates]);
+
+  // Tải danh sách tầng của tòa nhà thuộc gói (khi mở modal & gói cho slot cố định).
+  useEffect(() => {
+    if (!isOpen || !pkg?.allowDedicatedSlot || !pkgBuildingId) return;
+    let cancelled = false;
+    userApi.buildings
+      .floors(pkgBuildingId)
+      .then((res) => {
+        if (cancelled) return;
+        const fl = res.data?.floors ?? [];
+        setFloors(fl);
+        setSelectedFloorId((cur) => cur || (fl[0]?._id ?? ''));
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, pkg?.allowDedicatedSlot, pkgBuildingId]);
+
+  // Tải ô đỗ theo tầng đã chọn (kèm owner/selectable từ BE).
+  useEffect(() => {
+    if (!isOpen || !pkg?.allowDedicatedSlot || !pkgBuildingId || !selectedFloorId) return;
+    let cancelled = false;
+    setLoadingSlots(true);
+    setSelectedSlotId('');
+    userApi.buildings
+      .slots(pkgBuildingId, selectedFloorId)
+      .then((res) => {
+        if (!cancelled) setSlots(res.data?.slots ?? []);
+      })
+      .catch(() => undefined)
+      .finally(() => !cancelled && setLoadingSlots(false));
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, pkg?.allowDedicatedSlot, pkgBuildingId, selectedFloorId]);
 
   const handleSubmit = async () => {
     setError(null);
@@ -97,6 +148,7 @@ function PackageSelectModal({
         buildingId: selectedBuildingId,
         plateNumber: selectedPlate,
         startDate,
+        slotId: selectedSlotId || undefined,
         paymentMethod,
       });
       onClose();
@@ -180,6 +232,66 @@ function PackageSelectModal({
             />
           </div>
 
+          {/* Chọn chỗ đỗ cố định (chỉ với gói cho phép) */}
+          {pkg?.allowDedicatedSlot && (
+            <div className="rounded-xl border border-cyan-400/20 bg-cyan-500/5 p-3 space-y-2.5">
+              <p className="text-xs font-black uppercase tracking-wider text-cyan-300">Chọn chỗ đỗ cố định</p>
+              <div>
+                <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Tầng</label>
+                <CustomSelect
+                  value={selectedFloorId}
+                  onChange={setSelectedFloorId}
+                  options={floors.map((f) => ({ value: f._id, label: f.name || f.code }))}
+                  placeholder="Chọn tầng"
+                />
+              </div>
+              {loadingSlots ? (
+                <p className="text-[11px] text-slate-400">Đang tải chỗ đỗ...</p>
+              ) : slots.length === 0 ? (
+                <p className="text-[11px] text-slate-500">Tầng này chưa có chỗ đỗ.</p>
+              ) : (
+                <div className="grid grid-cols-4 gap-1.5 max-h-44 overflow-y-auto pr-1">
+                  {slots.map((s) => {
+                    const taken = s.selectable === false;
+                    const picked = selectedSlotId === s._id;
+                    return (
+                      <button
+                        key={s._id}
+                        type="button"
+                        disabled={taken}
+                        title={s.owner ? `Đã có chủ: ${s.owner.plateNumber}${s.owner.accountName ? ` · ${s.owner.accountName}` : ''}` : undefined}
+                        onClick={() => setSelectedSlotId(picked ? '' : s._id)}
+                        className={`rounded-lg border px-1 py-1.5 text-[11px] font-bold transition-all ${
+                          picked
+                            ? 'border-orange-400 bg-orange-500/20 text-orange-200'
+                            : taken
+                            ? 'cursor-not-allowed border-rose-500/20 bg-rose-500/5 text-rose-300/70'
+                            : 'border-white/10 bg-slate-950 text-slate-200 hover:border-cyan-400/40'
+                        }`}
+                      >
+                        <span className="block truncate">{s.code}</span>
+                        {taken && s.owner ? (
+                          <span className="block truncate text-[9px] font-semibold text-rose-300/70">{s.owner.plateNumber}</span>
+                        ) : null}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              {selectedSlotId && (
+                <p className="text-[11px] font-bold text-orange-300">
+                  Đã chọn ô: {slots.find((x) => x._id === selectedSlotId)?.code}
+                  {floors.find((f) => f._id === selectedFloorId)?.name
+                    ? ` · ${floors.find((f) => f._id === selectedFloorId)?.name}`
+                    : ''}
+                </p>
+              )}
+              <p className="text-[10px] text-slate-500">
+                Ô đỏ = đã có chủ (không chọn được). Bỏ trống = không giữ chỗ cố định.
+              </p>
+            </div>
+          )}
+
           <div>
             <label className="block text-xs font-bold uppercase text-slate-400 mb-1">
               Phương thức thanh toán
@@ -187,12 +299,10 @@ function PackageSelectModal({
             <CustomSelect
               value={paymentMethod}
               onChange={(val) => setPaymentMethod(val as LongTermPaymentMethod)}
-              options={[
-                { value: 'wallet', label: 'Ví PBMS' },
-                { value: 'qr', label: 'QR Banking (PayOS)' },
-              ]}
+              options={[{ value: 'wallet', label: 'Ví PBMS' }]}
               placeholder="Chọn phương thức"
             />
+            <p className="mt-1 text-[10px] text-slate-500">Phí gói được trừ trực tiếp từ ví PBMS.</p>
           </div>
 
           <div className="flex gap-3">
@@ -265,6 +375,11 @@ function PackageCard({ package: pkg, onSelect, isLoading }: PackageCardProps) {
         <p className="text-xs text-slate-400 mt-1">
           {pkg.durationDays} ngày
         </p>
+        {typeof pkg.maxHoursPerDay === 'number' && pkg.maxHoursPerDay > 0 && (
+          <p className="mt-1 text-[11px] font-semibold text-cyan-300">
+            Miễn phí {pkg.maxHoursPerDay}h/ngày · vượt tính theo giờ
+          </p>
+        )}
       </div>
 
       {/* Benefits */}
@@ -324,11 +439,28 @@ export default function LongTermSubscriptionsPage() {
   const {
     items: subscriptions,
     isLoading: isLoadingSubscriptions,
+    error: subscriptionsError,
     refresh: refreshSubscriptions,
   } = useLongTermSubscriptions();
 
-  const { subscribe, isLoading: isSubmitting, error: subscribeError } = useSubscribeToPackage();
+  const { subscribe, isLoading: isSubmitting } = useSubscribeToPackage();
   const { cancel: cancelSub, isLoading: isCancelling } = useCancelSubscription();
+  const { renew, isLoading: isRenewing } = useRenewSubscription();
+
+  // Gói đang được chọn để xem chi tiết ở panel "Thông tin gói" (= gói mở modal).
+  const selectedPackage = selectedPackageForModal;
+
+  const handleRenew = async (item: LongTermSubscription) => {
+    if (!window.confirm(`Gia hạn gói "${item.package.name}" cho biển ${item.plateNumber}? Phí sẽ trừ từ ví.`)) return;
+    setMessage(null);
+    try {
+      await renew(item._id);
+      await refreshSubscriptions();
+      setMessage({ type: 'success', text: 'Gia hạn thành công.' });
+    } catch (err) {
+      setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Gia hạn thất bại' });
+    }
+  };
 
   const [cancellingSub, setCancellingSub] = useState<LongTermSubscription | null>(null);
   const [cancelReason, setCancelReason] = useState<string>('change_slot');
@@ -364,6 +496,7 @@ export default function LongTermSubscriptionsPage() {
     buildingId: string;
     plateNumber: string;
     startDate: string;
+    slotId?: string;
     paymentMethod: LongTermPaymentMethod;
   }) => {
     setMessage(null);
@@ -374,23 +507,19 @@ export default function LongTermSubscriptionsPage() {
     }
 
     try {
-      const result = await subscribe({
+      await subscribe({
         packageId: selectedPackageForModal._id,
         linkedPlates: [data.plateNumber],
-        paymentMethod: data.paymentMethod,
+        slotId: data.slotId,
+        startDate: data.startDate,
       });
 
-      // If result has checkoutUrl and paymentMethod is 'qr', redirect to PayOS
-      if (data.paymentMethod === 'qr' && result && (result as any).checkoutUrl) {
-        window.location.href = (result as any).checkoutUrl;
-      } else {
-        await refreshSubscriptions();
-        setMessage({
-          type: 'success',
-          text: `Đăng ký thành công ${selectedPackageForModal.name} cho biển số ${data.plateNumber}.`,
-        });
-        setSelectedPackageForModal(null);
-      }
+      await refreshSubscriptions();
+      setMessage({
+        type: 'success',
+        text: `Đăng ký thành công ${selectedPackageForModal.name} cho biển số ${data.plateNumber}${data.slotId ? ' (kèm chỗ đỗ cố định)' : ''}.`,
+      });
+      setSelectedPackageForModal(null);
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Lỗi khi đăng ký gói';
       setMessage({ type: 'error', text: errorMsg });
@@ -570,15 +699,41 @@ export default function LongTermSubscriptionsPage() {
                         {/* Dedicated Slot info if exists */}
                         {item.slot && (
                           <p className="mt-1 text-[10px] text-slate-400">
-                            Ô đỗ: <span className="font-bold text-slate-200">{item.slot.code}</span> (Tầng {item.slot.floor})
+                            Ô đỗ: <span className="font-bold text-slate-200">{item.slot.code}</span>
+                            {item.slot.floor && typeof item.slot.floor === 'object' && (item.slot.floor.name || item.slot.floor.code) ? (
+                              <span> · {item.slot.floor.name || item.slot.floor.code}</span>
+                            ) : null}
+                            {item.slotReleased ? <span className="text-rose-300"> (đã thu hồi)</span> : null}
                           </p>
+                        )}
+                        {typeof item.package.maxHoursPerDay === 'number' && item.package.maxHoursPerDay > 0 && (
+                          <p className="mt-1 text-[10px] text-slate-400">
+                            Giờ miễn phí: <span className="font-bold text-slate-200">{item.package.maxHoursPerDay}h/ngày</span>
+                          </p>
+                        )}
+                        {item.status === 'expired' && (
+                          <p className="mt-2 text-[10px] text-amber-400/90 leading-relaxed border-t border-white/5 pt-1.5">
+                            Gói đã hết hạn — đang tính phí theo giờ. Gia hạn để giữ chỗ cố định.
+                          </p>
+                        )}
+
+                        {/* Gia hạn: cho gói đang hoạt động, hoặc vừa hết hạn còn giữ slot (grace). */}
+                        {(item.status === 'active' || (item.status === 'expired' && item.slot && !item.slotReleased)) && (
+                          <button
+                            type="button"
+                            disabled={isRenewing}
+                            onClick={() => handleRenew(item)}
+                            className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl border border-emerald-500/20 bg-emerald-500/10 hover:bg-emerald-500/20 px-3 py-1.5 text-xs font-black uppercase tracking-wider text-emerald-300 transition-all active:scale-95 disabled:opacity-60"
+                          >
+                            <RefreshCw size={12} /> {isRenewing ? 'Đang gia hạn...' : 'Gia hạn'}
+                          </button>
                         )}
 
                         {canCancel && (
                           <button
                             type="button"
                             onClick={() => setCancellingSub(item)}
-                            className="mt-3 w-full rounded-xl border border-rose-500/20 bg-rose-500/10 hover:bg-rose-500/20 px-3 py-1.5 text-xs font-black uppercase tracking-wider text-rose-400 transition-all active:scale-95"
+                            className="mt-2 w-full rounded-xl border border-rose-500/20 bg-rose-500/10 hover:bg-rose-500/20 px-3 py-1.5 text-xs font-black uppercase tracking-wider text-rose-400 transition-all active:scale-95"
                           >
                             Hủy gói
                           </button>
@@ -787,6 +942,16 @@ export default function LongTermSubscriptionsPage() {
           </div>
         </div>
       )}
+
+      <PackageSelectModal
+        isOpen={!!selectedPackageForModal}
+        onClose={() => setSelectedPackageForModal(null)}
+        package={selectedPackageForModal}
+        buildings={buildings}
+        userPlates={user.licensePlates}
+        onSubmit={handleModalSubmit}
+        isSubmitting={isSubmitting}
+      />
     </main>
   );
 }

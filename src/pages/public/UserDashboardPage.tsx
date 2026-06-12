@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import {
+  Bell,
   Building2,
   CalendarClock,
   Car,
@@ -20,6 +21,7 @@ import {
   type ParkingHistory,
 } from '@/services/user/userApi';
 import { StatusBadge } from '@/components/shared/StatusBadge';
+import { UserNotificationBell } from '@/components/shared/UserNotificationBell';
 
 const fmtVnd = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 });
 const fmtTime = (s?: string | null) =>
@@ -81,6 +83,7 @@ export default function UserDashboardPage() {
     { icon: CalendarClock, label: 'Đặt chỗ', desc: 'Đặt vị trí trước', href: '/reservations', color: 'text-orange-400 border-orange-500/20 bg-orange-500/5' },
     { icon: History, label: 'Lịch sử gửi xe', desc: 'Xem các phiên gửi xe trước', href: '/parking-history', color: 'text-violet-400 border-violet-500/20 bg-violet-500/5' },
     { icon: Package, label: 'Gói dài hạn', desc: 'Đăng ký gói tháng', href: '/long-term-subscriptions', color: 'text-amber-400 border-amber-500/20 bg-amber-500/5' },
+    { icon: Bell, label: 'Thông báo', desc: 'Xem tất cả thông báo', href: '/notifications', color: 'text-rose-400 border-rose-500/20 bg-rose-500/5' },
     { icon: User, label: 'Hồ sơ', desc: 'Cập nhật thông tin cá nhân', href: '/profile', color: 'text-slate-400 border-slate-500/20 bg-slate-500/5' },
   ];
 
@@ -100,6 +103,7 @@ export default function UserDashboardPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <UserNotificationBell />
             <button
               type="button"
               onClick={() => navigate('/profile')}

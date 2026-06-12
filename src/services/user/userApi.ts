@@ -23,10 +23,15 @@ export interface VehicleType {
 export interface ParkingSlot {
   _id: string;
   code: string;
-  floor?: number;
+  /** Số tầng (legacy) hoặc object tầng đã populate (name/code). */
+  floor?: number | { _id: string; name?: string; code?: string } | null;
   status?: 'available' | 'occupied' | 'reserved' | 'maintenance';
   vehicleType?: { _id: string; name: string; code: string } | null;
   reservable?: boolean;
+  /** Chỉ chọn được slot khi selectable = true (available & không bị gói nào giữ). */
+  selectable?: boolean;
+  /** Chủ slot nếu đang bị một gói dài hạn giữ (biển số + tên tài khoản). */
+  owner?: { plateNumber: string; accountName: string | null } | null;
 }
 
 export interface FloorAvailability {
@@ -104,6 +109,8 @@ export interface LongTermPackage {
   price: number;
   reservedSlots?: number;
   allowDedicatedSlot?: boolean;
+  /** Số giờ đỗ miễn phí tối đa/ngày (vượt sẽ tính phí theo giờ). 0 = không giới hạn. */
+  maxHoursPerDay?: number;
   benefits?: string[];
   isActive?: boolean;
   // ── Legacy/optional FE-only fields (not returned by the backend) ──
@@ -127,6 +134,8 @@ export interface LongTermSubscription {
   startDate: string;
   endDate: string;
   status: 'pending' | 'active' | 'expired' | 'cancelled';
+  /** Đã thu hồi slot cố định sau grace (hoặc do manager) hay chưa. */
+  slotReleased?: boolean;
   cancelReason?: 'change_slot' | 'change_vehicle' | 'no_longer_needed' | 'pricing_issue' | 'other' | null;
   cancelNote?: string | null;
   // ── Legacy/optional FE-only fields ──
@@ -220,7 +229,17 @@ export interface Feedback {
 export interface Notification {
   _id: string;
   user: string;
-  type: 'checkin_rejected' | 'checkout_rejected' | 'general';
+  type:
+    | 'checkin_rejected'
+    | 'checkout_rejected'
+    | 'subscription_expiring'
+    | 'subscription_expired'
+    | 'subscription_slot_released'
+    | 'subscription_overage'
+    | 'reservation_expired'
+    | 'reservation_overstay'
+    | 'feedback_reply'
+    | 'general';
   title: string;
   message: string;
   plateNumber?: string | null;
@@ -329,6 +348,13 @@ export const userApi = {
       api.post<Wrap<{ subscription: LongTermSubscription }>>(
         '/users/long-term/subscriptions',
         body
+      ),
+
+    /** Renew (gia hạn) — cộng dồn endDate, trừ ví, giữ slot (POST /subscriptions/:id/renew). */
+    renew: (id: string) =>
+      api.post<Wrap<{ subscription: LongTermSubscription }>>(
+        `/users/long-term/subscriptions/${id}/renew`,
+        {}
       ),
 
     /** Cancel subscription */

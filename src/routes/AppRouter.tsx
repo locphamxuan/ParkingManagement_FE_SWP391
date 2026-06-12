@@ -15,6 +15,7 @@ import BuildingsUserPage from '@/pages/User/BuildingsPage';
 import ProfilePage from '@/pages/public/ProfilePage';
 import ReservationsPage from '@/pages/public/ReservationsPage';
 import LongTermSubscriptionsPage from '@/pages/public/LongTermSubscriptionsPage';
+import UserNotificationsPage from '@/pages/public/UserNotificationsPage';
 import WalletPage from '@/pages/public/WalletPage';
 import ParkingHistoryPage from '@/pages/public/ParkingHistoryPage';
 import ReviewsPage from '@/pages/public/ReviewsPage';
@@ -35,6 +36,7 @@ import { ManagerSlotsPage } from '@/pages/manager/ManagerSlotsPage';
 import { ManagerPricingPage } from '@/pages/manager/ManagerPricingPage';
 import { ManagerReservationPolicyPage } from '@/pages/manager/ManagerReservationPolicyPage';
 import { ManagerPackagesPage } from '@/pages/manager/ManagerPackagesPage';
+import { ManagerSubscriptionsPage } from '@/pages/manager/ManagerSubscriptionsPage';
 import { ManagerShiftManagementPage } from '@/pages/manager/ManagerShiftManagementPage';
 import { ManagerOperatingHoursPage } from '@/pages/manager/ManagerOperatingHoursPage';
 import { ManagerStaffPage } from '@/pages/manager/ManagerStaffPage';
@@ -66,6 +68,7 @@ export function AppRouter() {
       <Route path="/wallet" element={<WalletPage />} />
       <Route path="/reservations" element={<ReservationsPage />} />
       <Route path="/long-term-subscriptions" element={<LongTermSubscriptionsPage />} />
+      <Route path="/notifications" element={<UserNotificationsPage />} />
       <Route path="/parking-history" element={<ParkingHistoryPage />} />
       <Route path="/reviews" element={<ReviewsPage />} />
       <Route path="/user-dashboard" element={<UserDashboardPage />} />
@@ -86,6 +89,7 @@ export function AppRouter() {
           <Route path="price-policies" element={<ManagerPricingPage />} />
           <Route path="reservation-policy" element={<ManagerReservationPolicyPage />} />
           <Route path="packages" element={<ManagerPackagesPage />} />
+          <Route path="subscriptions" element={<ManagerSubscriptionsPage />} />
           <Route path="shifts" element={<ManagerShiftManagementPage />} />
           <Route path="staff-shifts" element={<Navigate to="/manager/shifts" replace />} />
           <Route path="operating-hours" element={<ManagerOperatingHoursPage />} />

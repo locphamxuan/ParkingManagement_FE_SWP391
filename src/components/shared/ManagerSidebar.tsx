@@ -35,6 +35,7 @@ const modules = [
   { to: 'price-policies', label: 'Giá', icon: SlidersHorizontal },
   { to: 'reservation-policy', label: 'Đặt chỗ', icon: MapPin },
   { to: 'packages', label: 'Gói', icon: Package },
+  { to: 'subscriptions', label: 'Gói của khách', icon: Fingerprint },
   { to: 'shifts', label: 'Ca trực & Gán ca', icon: Users },
   { to: 'staff', label: 'Nhân viên', icon: User },
   { to: 'wallet', label: 'Ví tòa nhà', icon: Wallet },
