@@ -484,10 +484,6 @@ export default function LongTermSubscriptionsPage() {
     }
   }, [message]);
 
-  if (!session || !user) {
-    return <Navigate to="/auth/login" replace />;
-  }
-
   const handleSelectPackage = (pkg: LongTermPackage) => {
     setSelectedPackageForModal(pkg);
   };
@@ -547,6 +543,11 @@ export default function LongTermSubscriptionsPage() {
     // Fallback: return first 3 packages
     return sortedPackages.slice(0, 3);
   }, [sortedPackages]);
+
+  // Guard sau khi đã gọi hết hooks (rules-of-hooks: không return sớm trước hook).
+  if (!session || !user) {
+    return <Navigate to="/auth/login" replace />;
+  }
 
   return (
     <main className="min-h-screen bg-slate-950 text-slate-100">
