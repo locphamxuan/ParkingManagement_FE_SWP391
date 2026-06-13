@@ -42,13 +42,13 @@ export function CustomSelect({
   }, []);
 
   return (
-    <div ref={containerRef} className={cn('relative w-full', className)}>
+    <div ref={containerRef} className={cn('relative w-full h-12', className)}>
       <button
         type="button"
         disabled={disabled}
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          "flex h-12 w-full items-center justify-between rounded-2xl border border-slate-700/80 bg-[#070b12] px-4 text-sm font-semibold text-white outline-none transition-all duration-300 hover:border-slate-500",
+          "flex h-full w-full items-center justify-between rounded-xl border border-slate-700/80 bg-[#070b12] px-4 text-sm font-semibold text-white outline-none transition-all duration-300 hover:border-slate-500",
           isOpen && "border-orange-300/60 ring-4 ring-orange-300/10",
           disabled && "cursor-not-allowed opacity-50"
         )}

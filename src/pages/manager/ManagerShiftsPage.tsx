@@ -6,6 +6,7 @@ import { DataTable, type DataColumn } from '@/components/common/DataTable';
 import { StatusBadge } from '@/components/common/StatusBadge';
 import { ModalForm } from '@/components/modals/ModalForm';
 import { useBuildingContext } from '@/hooks/useBuildingContext';
+import { TimePicker } from '@/components/ui/time-picker';
 import { managerApi, type Shift } from '@/services/manager/managerApi';
 
 interface FormState {
@@ -159,18 +160,16 @@ export function ManagerShiftsPage() {
           </div>
           <div className="grid gap-1.5">
             <label className="text-xs uppercase text-muted-foreground">Bắt đầu</label>
-            <Input
-              type="time"
+            <TimePicker
               value={form.startTime}
-              onChange={(e) => setForm((f) => ({ ...f, startTime: e.target.value }))}
+              onChange={(val) => setForm((f) => ({ ...f, startTime: val }))}
             />
           </div>
           <div className="grid gap-1.5">
             <label className="text-xs uppercase text-muted-foreground">Kết thúc</label>
-            <Input
-              type="time"
+            <TimePicker
               value={form.endTime}
-              onChange={(e) => setForm((f) => ({ ...f, endTime: e.target.value }))}
+              onChange={(val) => setForm((f) => ({ ...f, endTime: val }))}
             />
           </div>
           <label className="flex items-center gap-2 text-sm md:col-span-2">

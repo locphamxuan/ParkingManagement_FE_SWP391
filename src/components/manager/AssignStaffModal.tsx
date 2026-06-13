@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
 import { managerApi, type StaffShift, type Gate } from '@/services/manager/managerApi';
+import { CustomSelect } from '@/components/ui/select';
+import { DatePicker } from '@/components/ui/date-picker';
 
 interface AssignStaffModalProps {
   isOpen: boolean;
@@ -170,19 +172,20 @@ export function AssignStaffModal({
               <label className="text-sm font-medium text-foreground">
                 Nhân Viên <span className="text-red-500">*</span>
               </label>
-              <select
+              <CustomSelect
                 value={selectedStaff}
-                onChange={(e) => setSelectedStaff(e.target.value)}
+                onChange={setSelectedStaff}
                 disabled={isSubmitting}
-                className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground"
-              >
-                <option value="">-- Chọn nhân viên --</option>
-                {staffList.map((staff) => (
-                  <option key={staff._id} value={staff._id}>
-                    {staff.fullName} ({staff.email})
-                  </option>
-                ))}
-              </select>
+                options={[
+                  { value: '', label: '-- Chọn nhân viên --' },
+                  ...staffList.map((staff) => ({
+                    value: staff._id,
+                    label: `${staff.fullName} (${staff.email})`,
+                  })),
+                ]}
+                placeholder="-- Chọn nhân viên --"
+                className="h-10 text-sm font-semibold"
+              />
             </div>
 
             {/* Shift Selection */}
@@ -190,19 +193,20 @@ export function AssignStaffModal({
               <label className="text-sm font-medium text-foreground">
                 Ca Trực <span className="text-red-500">*</span>
               </label>
-              <select
+              <CustomSelect
                 value={selectedShift}
-                onChange={(e) => setSelectedShift(e.target.value)}
+                onChange={setSelectedShift}
                 disabled={isSubmitting}
-                className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground"
-              >
-                <option value="">-- Chọn ca --</option>
-                {shiftList.map((shift) => (
-                  <option key={shift._id} value={shift._id}>
-                    {shift.code} — {shift.name} ({shift.startTime}–{shift.endTime})
-                  </option>
-                ))}
-              </select>
+                options={[
+                  { value: '', label: '-- Chọn ca --' },
+                  ...shiftList.map((shift) => ({
+                    value: shift._id,
+                    label: `${shift.code} — ${shift.name} (${shift.startTime}–${shift.endTime})`,
+                  })),
+                ]}
+                placeholder="-- Chọn ca --"
+                className="h-10 text-sm font-semibold"
+              />
             </div>
 
             {/* Gate Selection */}
@@ -210,19 +214,20 @@ export function AssignStaffModal({
               <label className="text-sm font-medium text-foreground">
                 Cổng phụ trách
               </label>
-              <select
-                value={selectedGate}
-                onChange={(e) => setSelectedGate(e.target.value)}
+              <CustomSelect
+                value={selectedGate || ''}
+                onChange={setSelectedGate}
                 disabled={isSubmitting}
-                className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground"
-              >
-                <option value="">-- Không phân công cổng --</option>
-                {gateList.map((gate) => (
-                  <option key={gate._id} value={gate._id}>
-                    {gate.code}{gate.name ? ` — ${gate.name}` : ''} ({directionLabel[gate.direction]})
-                  </option>
-                ))}
-              </select>
+                options={[
+                  { value: '', label: '-- Không phân công cổng --' },
+                  ...gateList.map((gate) => ({
+                    value: gate._id,
+                    label: `${gate.code}${gate.name ? ` — ${gate.name}` : ''} (${directionLabel[gate.direction]})`,
+                  })),
+                ]}
+                placeholder="-- Không phân công cổng --"
+                className="h-10 text-sm font-semibold"
+              />
             </div>
 
             {/* Work Date */}
@@ -230,11 +235,11 @@ export function AssignStaffModal({
               <label className="text-sm font-medium text-foreground">
                 Ngày Làm Việc <span className="text-red-500">*</span>
               </label>
-              <Input
-                type="date"
+              <DatePicker
                 value={workDate}
-                onChange={(e) => setWorkDate(e.target.value)}
+                onChange={setWorkDate}
                 disabled={isSubmitting}
+                className="h-10 text-sm font-semibold"
               />
             </div>
 

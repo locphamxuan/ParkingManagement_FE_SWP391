@@ -346,17 +346,15 @@ export function ManagerSlotsPage() {
       key: 'status',
       title: 'Trạng thái',
       render: (row) => (
-        <select
-          className="h-8 rounded-lg border border-white/10 bg-slate-900 text-white px-2 text-xs"
+        <CustomSelect
           value={row.status}
-          onChange={(e) => onStatusChange(row, e.target.value as ParkingSlot['status'])}
-        >
-          {SLOT_STATUSES.map((s) => (
-            <option key={s} value={s}>
-              {s === 'available' ? 'Trống' : s === 'occupied' ? 'Đầy' : s === 'reserved' ? 'Đặt chỗ' : 'Bảo trì'}
-            </option>
-          ))}
-        </select>
+          onChange={(val) => onStatusChange(row, val as ParkingSlot['status'])}
+          options={SLOT_STATUSES.map((s) => ({
+            value: s,
+            label: s === 'available' ? 'Trống' : s === 'occupied' ? 'Đầy' : s === 'reserved' ? 'Đặt chỗ' : 'Bảo trì',
+          }))}
+          className="h-8 w-28 text-xs font-semibold"
+        />
       ),
     },
     {
@@ -384,7 +382,7 @@ export function ManagerSlotsPage() {
     <div className="grid gap-6 animate-fadeIn">
       
       {/* Sci-fi Controller & Toggle Row */}
-      <div className="flex flex-wrap items-center justify-between gap-4 glass-panel-dark p-4 rounded-3xl border border-white/5">
+      <div className="relative z-30 flex flex-wrap items-center justify-between gap-4 glass-panel-dark p-4 rounded-3xl border border-white/5">
         <div className="flex flex-wrap items-center gap-3">
           <CustomSelect
             value={floorFilter}

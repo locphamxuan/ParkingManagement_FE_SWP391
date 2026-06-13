@@ -6,6 +6,8 @@ import { DataTable, type DataColumn } from '@/components/common/DataTable';
 import { StatusBadge } from '@/components/common/StatusBadge';
 import { ModalForm } from '@/components/modals/ModalForm';
 import { CustomSelect } from '@/components/ui/select';
+import { TimePicker } from '@/components/ui/time-picker';
+import { DatePicker } from '@/components/ui/date-picker';
 import { useBuildingContext } from '@/hooks/useBuildingContext';
 import { managerApi, type PricePolicy, type VehicleType } from '@/services/manager/managerApi';
 
@@ -243,18 +245,16 @@ export function ManagerPricingPage() {
           </div>
           <div className="grid gap-1.5">
             <label className="text-xs uppercase text-muted-foreground">Từ</label>
-            <Input
-              type="time"
+            <TimePicker
               value={form.fromTime}
-              onChange={(e) => setForm((f) => ({ ...f, fromTime: e.target.value }))}
+              onChange={(val) => setForm((f) => ({ ...f, fromTime: val }))}
             />
           </div>
           <div className="grid gap-1.5">
             <label className="text-xs uppercase text-muted-foreground">Đến</label>
-            <Input
-              type="time"
+            <TimePicker
               value={form.toTime}
-              onChange={(e) => setForm((f) => ({ ...f, toTime: e.target.value }))}
+              onChange={(val) => setForm((f) => ({ ...f, toTime: val }))}
             />
           </div>
           <p className="md:col-span-2 text-[11px] text-muted-foreground">
@@ -262,19 +262,17 @@ export function ManagerPricingPage() {
           </p>
           <div className="grid gap-1.5">
             <label className="text-xs uppercase text-muted-foreground">Hiệu lực từ</label>
-            <Input
-              type="date"
+            <DatePicker
               value={form.effectiveFrom}
-              onChange={(e) => setForm((f) => ({ ...f, effectiveFrom: e.target.value }))}
+              onChange={(val) => setForm((f) => ({ ...f, effectiveFrom: val }))}
             />
             <p className="text-[11px] text-muted-foreground">Để trống = áp dụng ngay.</p>
           </div>
           <div className="grid gap-1.5">
             <label className="text-xs uppercase text-muted-foreground">Hiệu lực đến</label>
-            <Input
-              type="date"
+            <DatePicker
               value={form.effectiveTo}
-              onChange={(e) => setForm((f) => ({ ...f, effectiveTo: e.target.value }))}
+              onChange={(val) => setForm((f) => ({ ...f, effectiveTo: val }))}
             />
             <p className="text-[11px] text-muted-foreground">Để trống = không giới hạn.</p>
           </div>
