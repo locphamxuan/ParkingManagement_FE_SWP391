@@ -149,18 +149,16 @@ export function ManagerGatesPage() {
       key: 'status',
       title: 'Trạng thái',
       render: (row) => (
-        <select
-          className="h-8 rounded-lg border border-white/10 bg-slate-900 text-white px-2 text-xs disabled:opacity-50"
+        <CustomSelect
           value={row.status}
           disabled={savingId === row._id}
-          onChange={(e) => onStatusChange(row, e.target.value as Gate['status'])}
-        >
-          {GATE_STATUSES.map((s) => (
-            <option key={s} value={s}>
-              {statusLabel[s]}
-            </option>
-          ))}
-        </select>
+          onChange={(val) => onStatusChange(row, val as Gate['status'])}
+          options={GATE_STATUSES.map((s) => ({
+            value: s,
+            label: statusLabel[s],
+          }))}
+          className="h-8 w-28 text-xs font-semibold"
+        />
       ),
     },
     {

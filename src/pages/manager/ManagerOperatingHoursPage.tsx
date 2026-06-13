@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Clock, Save, Loader2, DoorOpen, DoorClosed } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { TimePicker } from '@/components/ui/time-picker';
 import { useBuildingContext } from '@/hooks/useBuildingContext';
 import { managerApi } from '@/services/manager/managerApi';
 
@@ -88,11 +88,11 @@ export function ManagerOperatingHoursPage() {
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="grid gap-1.5">
               <label className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Giờ mở cửa</label>
-              <Input type="time" value={open} onChange={(e) => setOpen(e.target.value)} />
+              <TimePicker value={open} onChange={setOpen} />
             </div>
             <div className="grid gap-1.5">
               <label className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Giờ đóng cửa</label>
-              <Input type="time" value={close} onChange={(e) => setClose(e.target.value)} />
+              <TimePicker value={close} onChange={setClose} />
             </div>
           </div>
 
