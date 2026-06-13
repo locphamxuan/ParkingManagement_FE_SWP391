@@ -835,6 +835,17 @@ export default function AuthPage({ mode, notice, onModeChange, onBackHome, onSub
 
             <div className="space-y-1.5 relative">
               <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono">Email</label>
+              {/* Hidden input to hold username for browser password manager association */}
+              <input 
+                type="text" 
+                name="username" 
+                autoComplete="username" 
+                value={form.email} 
+                readOnly 
+                tabIndex={-1}
+                aria-hidden="true"
+                style={{ position: 'absolute', opacity: 0, height: 0, width: 0, zIndex: -1, pointerEvents: 'none' }}
+              />
               <input 
                 ref={emailInputRef}
                 name="email" 
