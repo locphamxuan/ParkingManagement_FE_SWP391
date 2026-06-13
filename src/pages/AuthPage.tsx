@@ -736,6 +736,8 @@ export default function AuthPage({ mode, notice, onModeChange, onBackHome, onSub
             </form>
           ) : mode === 'reset-password' ? (
             <form onSubmit={handleResetPassword} className="space-y-4">
+              {/* Hidden email field: helps browser associate the new password with the right account */}
+              <input type="hidden" autoComplete="username" value={forgotEmail || ''} />
               <div className="space-y-2 mb-4">
                 <h3 className="text-sm font-bold text-foreground">Nhập mật khẩu mới</h3>
                 <p className="text-xs text-slate-400">
@@ -749,6 +751,7 @@ export default function AuthPage({ mode, notice, onModeChange, onBackHome, onSub
                 </label>
                 <input 
                   type="password"
+                  autoComplete="new-password"
                   value={resetPasswordForm.newPassword}
                   onChange={(e) => setResetPasswordForm(s => ({ ...s, newPassword: e.target.value }))}
                   required
@@ -763,6 +766,7 @@ export default function AuthPage({ mode, notice, onModeChange, onBackHome, onSub
                 </label>
                 <input 
                   type="password"
+                  autoComplete="new-password"
                   value={resetPasswordForm.confirmPassword}
                   onChange={(e) => setResetPasswordForm(s => ({ ...s, confirmPassword: e.target.value }))}
                   required
@@ -833,7 +837,7 @@ export default function AuthPage({ mode, notice, onModeChange, onBackHome, onSub
                 onChange={handleChange} 
                 type="email" 
                 required 
-                autoComplete="new-email"
+                autoComplete="username"
                 onFocus={() => setShowDropdown(true)}
                 onBlur={() => setShowDropdown(false)}
                 className="block w-full rounded-xl border border-white/10 bg-slate-950/60 text-white placeholder-slate-600 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 text-sm h-11 px-4 transition-all duration-300 outline-none shadow-[inset_0_1px_2px_rgba(0,0,0,0.4)] focus:shadow-[0_0_15px_rgba(249,115,22,0.15)] input-scan-focus"
@@ -878,6 +882,7 @@ export default function AuthPage({ mode, notice, onModeChange, onBackHome, onSub
                 onChange={handleChange} 
                 type="password" 
                 required 
+                autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
                 className="block w-full rounded-xl border border-white/10 bg-slate-950/60 text-white placeholder-slate-600 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 text-sm h-11 px-4 transition-all duration-300 outline-none shadow-[inset_0_1px_2px_rgba(0,0,0,0.4)] focus:shadow-[0_0_15px_rgba(249,115,22,0.15)] input-scan-focus"
                 placeholder="Ít nhất 6 ký tự" 
               />
