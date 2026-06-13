@@ -98,6 +98,7 @@ export default function AuthPage({ mode, notice, onModeChange, onBackHome, onSub
   }, [form.email]);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
   const emailInputRef = useRef<HTMLInputElement | null>(null);
+  const passwordInputRef = useRef<HTMLInputElement | null>(null);
 
   // Load saved emails from localStorage on mount and initialize phones
   useEffect(() => {
@@ -158,6 +159,10 @@ export default function AuthPage({ mode, notice, onModeChange, onBackHome, onSub
     e.preventDefault(); // Điền sẵn email, người dùng tự nhập mật khẩu.
     setForm((s) => ({ ...s, email: acc.email }));
     setShowDropdown(false);
+    // Tự động focus vào ô mật khẩu sau khi điền email, giúp trình duyệt gợi ý mật khẩu tương ứng đã lưu
+    setTimeout(() => {
+      passwordInputRef.current?.focus();
+    }, 50);
   };
 
   // 3D Mouse Tracking Tilt Motion Values
@@ -877,6 +882,7 @@ export default function AuthPage({ mode, notice, onModeChange, onBackHome, onSub
             <div className="space-y-1.5">
               <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono">Mật khẩu</label>
               <input 
+                ref={passwordInputRef}
                 name="password" 
                 value={form.password} 
                 onChange={handleChange} 
