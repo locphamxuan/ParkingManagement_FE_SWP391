@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { CustomSelect } from '@/components/ui/select';
-import { StatusBadge } from '@/components/shared/StatusBadge';
+import { StatusBadge } from '@/components/common/StatusBadge';
 import { useBuildingContext } from '@/hooks/useBuildingContext';
 import { managerApi, type Subscription } from '@/services/manager/managerApi';
 
