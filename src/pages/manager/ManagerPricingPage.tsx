@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { DataTable, type DataColumn } from '@/components/shared/DataTable';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { ModalForm } from '@/components/shared/ModalForm';
+import { CustomSelect } from '@/components/ui/select';
 import { useBuildingContext } from '@/hooks/useBuildingContext';
 import { managerApi, type PricePolicy, type VehicleType } from '@/services/manager/managerApi';
 
@@ -197,29 +198,29 @@ export function ManagerPricingPage() {
           </div>
           <div className="grid gap-1.5">
             <label className="text-xs uppercase text-muted-foreground">Loại xe</label>
-            <select
-              className="h-10 rounded-md border border-border bg-card px-3 text-sm"
+            <CustomSelect
               value={form.vehicleType}
-              onChange={(e) => setForm((f) => ({ ...f, vehicleType: e.target.value }))}
-            >
-              <option value="">Chọn loại xe</option>
-              {vts.map((vt) => (
-                <option key={vt._id} value={vt._id}>
-                  {vt.code} - {vt.name}
-                </option>
-              ))}
-            </select>
+              onChange={(val) => setForm((f) => ({ ...f, vehicleType: val }))}
+              options={[
+                { value: '', label: 'Chọn loại xe' },
+                ...vts.map((vt) => ({
+                  value: vt._id,
+                  label: `${vt.code} - ${vt.name}`,
+                })),
+              ]}
+              placeholder="Chọn loại xe..."
+            />
           </div>
           <div className="grid gap-1.5">
             <label className="text-xs uppercase text-muted-foreground">Loại giá</label>
-            <select
-              className="h-10 rounded-md border border-border bg-card px-3 text-sm"
+            <CustomSelect
               value={form.type}
-              onChange={(e) => setForm((f) => ({ ...f, type: e.target.value as PricingType }))}
-            >
-              <option value="regular">Giờ thường</option>
-              <option value="peak">Cao điểm</option>
-            </select>
+              onChange={(val) => setForm((f) => ({ ...f, type: val as PricingType }))}
+              options={[
+                { value: 'regular', label: 'Giờ thường' },
+                { value: 'peak', label: 'Cao điểm' },
+              ]}
+            />
           </div>
           <div className="grid gap-1.5">
             <label className="text-xs uppercase text-muted-foreground">Giá/giờ (VND)</label>

@@ -103,6 +103,12 @@ export interface Subscription {
   startDate: string;
   endDate: string;
   status: 'pending' | 'active' | 'expired' | 'cancelled';
+  slot?: {
+    _id: string;
+    code: string;
+    floor?: string | { _id: string; code?: string; name?: string };
+  };
+  slotReleased?: boolean;
 }
 
 export interface ReservationPolicy {
@@ -313,8 +319,10 @@ export const managerApi = {
     update: (b: string, id: string, body: Partial<LongTermPackage>) =>
       api.put<Wrap<{ item: LongTermPackage }>>(path(b, `/packages/${id}`), body),
     remove: (b: string, id: string) => api.delete(path(b, `/packages/${id}`)),
-    subscriptions: (b: string) =>
-      api.get<Wrap<{ items: Subscription[]; pagination: unknown }>>(path(b, '/subscriptions')),
+    subscriptions: (b: string, q?: Record<string, string | undefined>) =>
+      api.get<Wrap<{ items: Subscription[]; pagination: unknown }>>(path(b, '/subscriptions'), { query: q }),
+    releaseSlot: (b: string, id: string) =>
+      api.post(path(b, `/subscriptions/${id}/release-slot`)),
   },
 
   reservationPolicy: {

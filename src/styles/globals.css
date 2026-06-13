@@ -470,4 +470,49 @@ button[aria-expanded="true"] .chev {
   z-index: 1;
 }
 
+/* ============================================================ */
+/* PREMIUM FUTURISTIC SELECT DROPDOWN STYLING                  */
+/* ============================================================ */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23f97316'%3e%3cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2.5' d='M19 9l-7 7-7-7'/%3e%3c/svg%3e") !important;
+  background-position: right 14px center !important;
+  background-size: 16px !important;
+  background-repeat: no-repeat !important;
+  padding-right: 40px !important;
+  cursor: pointer;
+  background-color: #070b12 !important;
+  color: #f8fafc !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 12px !important;
+  transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+}
+
+select:hover:not(:disabled) {
+  border-color: rgba(249, 115, 22, 0.4) !important;
+  box-shadow: 0 0 12px rgba(249, 115, 22, 0.1) !important;
+}
+
+select:focus {
+  outline: none !important;
+  border-color: #f97316 !important;
+  box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.18) !important;
+}
+
+select option {
+  background-color: #070b12 !important;
+  color: #f8fafc !important;
+  padding: 12px !important;
+  font-weight: 500 !important;
+}
+
+select:disabled {
+  opacity: 0.5 !important;
+  cursor: not-allowed !important;
+  background-color: rgba(15, 23, 42, 0.6) !important;
+}
+
+
 

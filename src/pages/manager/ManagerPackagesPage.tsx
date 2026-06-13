@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { DataTable, type DataColumn } from '@/components/shared/DataTable';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { ModalForm } from '@/components/shared/ModalForm';
+import { CustomSelect } from '@/components/ui/select';
 import { useBuildingContext } from '@/hooks/useBuildingContext';
 import { managerApi, type LongTermPackage, type VehicleType } from '@/services/manager/managerApi';
 
@@ -217,18 +218,18 @@ export function ManagerPackagesPage() {
           </div>
           <div className="grid gap-1.5">
             <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono">Loại xe</label>
-            <select
-              className="h-10 rounded-xl border border-white/10 bg-slate-950 text-white px-3 text-sm focus:border-orange-500/40"
+            <CustomSelect
               value={form.vehicleType}
-              onChange={(e) => setForm((f) => ({ ...f, vehicleType: e.target.value }))}
-            >
-              <option value="">Chọn</option>
-              {vts.map((vt) => (
-                <option key={vt._id} value={vt._id}>
-                  {vt.code} - {vt.name}
-                </option>
-              ))}
-            </select>
+              onChange={(val) => setForm((f) => ({ ...f, vehicleType: val }))}
+              options={[
+                { value: '', label: 'Chọn' },
+                ...vts.map((vt) => ({
+                  value: vt._id,
+                  label: `${vt.code} - ${vt.name}`,
+                })),
+              ]}
+              placeholder="Chọn loại xe..."
+            />
           </div>
           <div className="grid gap-1.5">
             <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono">Thời hạn (ngày)</label>
