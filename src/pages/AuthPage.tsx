@@ -842,7 +842,7 @@ export default function AuthPage({ mode, notice, onModeChange, onBackHome, onSub
                 onChange={handleChange} 
                 type="email" 
                 required 
-                autoComplete="username"
+                autoComplete="new-username"
                 onFocus={() => setShowDropdown(true)}
                 onBlur={() => setShowDropdown(false)}
                 className="block w-full rounded-xl border border-white/10 bg-slate-950/60 text-white placeholder-slate-600 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 text-sm h-11 px-4 transition-all duration-300 outline-none shadow-[inset_0_1px_2px_rgba(0,0,0,0.4)] focus:shadow-[0_0_15px_rgba(249,115,22,0.15)] input-scan-focus"
