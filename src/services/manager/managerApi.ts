@@ -107,9 +107,11 @@ export interface Subscription {
   startDate: string;
   endDate: string;
   status: 'pending' | 'active' | 'expired' | 'cancelled';
-  /** Slot cố định nếu có (populate kèm tầng); null nếu gói không kèm slot. */
-  slot?: { _id: string; code: string; floor?: { _id: string; name?: string; code?: string } | string | null } | string | null;
-  /** Đã thu hồi slot (sau grace hoặc do manager) hay chưa. */
+  slot?: {
+    _id: string;
+    code: string;
+    floor?: string | { _id: string; code?: string; name?: string } | null;
+  } | string | null;
   slotReleased?: boolean;
 }
 

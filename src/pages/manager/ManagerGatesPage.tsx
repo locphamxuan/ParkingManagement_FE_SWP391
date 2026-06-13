@@ -4,6 +4,7 @@ import { DataTable, type DataColumn } from '@/components/common/DataTable';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
+import { CustomSelect } from '@/components/ui/select';
 import { useBuildingContext } from '@/hooks/useBuildingContext';
 import { managerApi, type Gate } from '@/services/manager/managerApi';
 
@@ -234,30 +235,29 @@ export function ManagerGatesPage() {
 
             <div className="grid gap-2">
               <label className="text-sm font-medium text-foreground">Thể loại cổng <span className="text-red-500">*</span></label>
-              <select
+              <CustomSelect
                 value={form.direction}
-                onChange={(e) => setForm((f) => ({ ...f, direction: e.target.value as Gate['direction'] }))}
+                onChange={(val) => setForm((f) => ({ ...f, direction: val as Gate['direction'] }))}
+                options={[
+                  { value: 'in', label: 'Cổng vào' },
+                  { value: 'out', label: 'Cổng ra' },
+                  { value: 'both', label: 'Hai chiều' },
+                ]}
                 disabled={submitting}
-                className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground"
-              >
-                <option value="in">Cổng vào</option>
-                <option value="out">Cổng ra</option>
-                <option value="both">Hai chiều</option>
-              </select>
+              />
             </div>
 
             <div className="grid gap-2">
               <label className="text-sm font-medium text-foreground">Trạng thái</label>
-              <select
+              <CustomSelect
                 value={form.status}
-                onChange={(e) => setForm((f) => ({ ...f, status: e.target.value as Gate['status'] }))}
+                onChange={(val) => setForm((f) => ({ ...f, status: val as Gate['status'] }))}
+                options={GATE_STATUSES.map((s) => ({
+                  value: s,
+                  label: statusLabel[s],
+                }))}
                 disabled={submitting}
-                className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground"
-              >
-                {GATE_STATUSES.map((s) => (
-                  <option key={s} value={s}>{statusLabel[s]}</option>
-                ))}
-              </select>
+              />
             </div>
 
             {formError && (

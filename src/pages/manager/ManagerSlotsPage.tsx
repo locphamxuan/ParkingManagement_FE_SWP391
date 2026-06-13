@@ -3,8 +3,9 @@ import { Pencil, Plus, Trash2, Layers, RotateCcw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { DataTable, type DataColumn } from '@/components/common/DataTable';
-import { ModalForm } from '@/components/modals/ModalForm';
+import { DataTable, type DataColumn } from '@/components/shared/DataTable';
+import { ModalForm } from '@/components/shared/ModalForm';
+import { CustomSelect } from '@/components/ui/select';
 import { MultiSlotForm, type SlotFormRow } from '@/components/manager/MultiSlotForm';
 import { useBuildingContext } from '@/hooks/useBuildingContext';
 import {
@@ -385,31 +386,31 @@ export function ManagerSlotsPage() {
       {/* Sci-fi Controller & Toggle Row */}
       <div className="flex flex-wrap items-center justify-between gap-4 glass-panel-dark p-4 rounded-3xl border border-white/5">
         <div className="flex flex-wrap items-center gap-3">
-          <select
-            className="h-9 rounded-xl border border-white/10 bg-slate-900 text-slate-300 px-3 text-xs font-black uppercase tracking-wider font-mono focus:border-orange-500/40"
+          <CustomSelect
             value={floorFilter}
-            onChange={(e) => setFloorFilter(e.target.value)}
-          >
-            <option value="">Tất cả tầng</option>
-            {floors.map((f) => (
-              <option key={f._id} value={f._id}>
-                {f.code}
-              </option>
-            ))}
-          </select>
+            onChange={setFloorFilter}
+            options={[
+              { value: '', label: 'Tất cả tầng' },
+              ...floors.map((f) => ({
+                value: f._id,
+                label: f.code,
+              })),
+            ]}
+            className="w-40"
+          />
           
-          <select
-            className="h-9 rounded-xl border border-white/10 bg-slate-900 text-slate-300 px-3 text-xs font-black uppercase tracking-wider font-mono focus:border-orange-500/40"
+          <CustomSelect
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="">Tất cả trạng thái</option>
-            {SLOT_STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {s === 'available' ? 'Trống (Green)' : s === 'occupied' ? 'Đầy (Orange)' : s === 'reserved' ? 'Đặt chỗ (Blue)' : 'Bảo trì (Amber)'}
-              </option>
-            ))}
-          </select>
+            onChange={setStatusFilter}
+            options={[
+              { value: '', label: 'Tất cả trạng thái' },
+              ...SLOT_STATUSES.map((s) => ({
+                value: s,
+                label: s === 'available' ? 'Trống (Green)' : s === 'occupied' ? 'Đầy (Orange)' : s === 'reserved' ? 'Đặt chỗ (Blue)' : 'Bảo trì (Amber)',
+              })),
+            ]}
+            className="w-48"
+          />
         </div>
 
         {/* View Toggle */}
@@ -652,18 +653,18 @@ export function ManagerSlotsPage() {
           </div>
           <div className="grid gap-1.5">
             <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono">Tầng</label>
-            <select
-              className="h-10 rounded-xl border border-white/10 bg-slate-950 text-white px-3 text-sm focus:border-orange-500/40"
+            <CustomSelect
               value={form.floor}
-              onChange={(e) => setForm((f) => ({ ...f, floor: e.target.value }))}
-            >
-              <option value="">Chọn tầng</option>
-              {floors.map((fl) => (
-                <option key={fl._id} value={fl._id}>
-                  {fl.code}
-                </option>
-              ))}
-            </select>
+              onChange={(val) => setForm((f) => ({ ...f, floor: val }))}
+              options={[
+                { value: '', label: 'Chọn tầng' },
+                ...floors.map((fl) => ({
+                  value: fl._id,
+                  label: fl.code,
+                })),
+              ]}
+              placeholder="Chọn tầng..."
+            />
           </div>
           <div className="grid gap-1.5 sm:col-span-2">
             <p className="rounded-xl border border-sky-500/20 bg-sky-500/5 px-3 py-2 text-[11px] text-sky-300">
@@ -672,19 +673,14 @@ export function ManagerSlotsPage() {
           </div>
           <div className="grid gap-1.5">
             <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono">Trạng thái</label>
-            <select
-              className="h-10 rounded-xl border border-white/10 bg-slate-950 text-white px-3 text-sm focus:border-orange-500/40"
+            <CustomSelect
               value={form.status}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, status: e.target.value as ParkingSlot['status'] }))
-              }
-            >
-              {SLOT_STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {s === 'available' ? 'Trống' : s === 'occupied' ? 'Đầy' : s === 'reserved' ? 'Đặt chỗ' : 'Bảo trì'}
-                </option>
-              ))}
-            </select>
+              onChange={(val) => setForm((f) => ({ ...f, status: val as ParkingSlot['status'] }))}
+              options={SLOT_STATUSES.map((s) => ({
+                value: s,
+                label: s === 'available' ? 'Trống' : s === 'occupied' ? 'Đầy' : s === 'reserved' ? 'Đặt chỗ' : 'Bảo trì',
+              }))}
+            />
           </div>
           <label className="flex items-center gap-3 text-xs font-bold text-slate-300 md:col-span-2 select-none">
             <input

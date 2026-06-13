@@ -3,6 +3,7 @@ import { Plus, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
+import { CustomSelect } from '@/components/ui/select';
 import type { Floor, VehicleType } from '@/services/manager/managerApi';
 
 export interface SlotFormRow {
@@ -155,49 +156,49 @@ export function MultiSlotForm({ isOpen, onClose, onSubmit, floors, loading = fal
                   {/* Tầng */}
                   <div className="space-y-1.5">
                     <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wide">Tầng *</label>
-                    <select
+                    <CustomSelect
                       value={row.floor}
-                      onChange={(e) => handleRowChange(row.id, 'floor', e.target.value)}
+                      onChange={(val) => handleRowChange(row.id, 'floor', val)}
+                      options={[
+                        { value: '', label: '-- Chọn tầng --' },
+                        ...floors.map((f) => ({
+                          value: f._id,
+                          label: f.code,
+                        })),
+                      ]}
                       disabled={submitting || floors.length === 0}
-                      className="w-full rounded-lg border border-white/10 bg-slate-900/50 text-slate-100 px-3 py-2 text-sm focus:border-orange-500/50 focus:outline-none focus:ring-1 focus:ring-orange-500/20 disabled:opacity-50"
-                    >
-                      <option value="">-- Chọn tầng --</option>
-                      {floors.map((f) => (
-                        <option key={f._id} value={f._id}>
-                          {f.code}
-                        </option>
-                      ))}
-                    </select>
+                      placeholder="-- Chọn tầng --"
+                    />
                   </div>
 
                   {/* Trạng Thái */}
                   <div className="space-y-1.5">
                     <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wide">Trạng Thái</label>
-                    <select
+                    <CustomSelect
                       value={row.status}
-                      onChange={(e) => handleRowChange(row.id, 'status', e.target.value)}
+                      onChange={(val) => handleRowChange(row.id, 'status', val)}
+                      options={[
+                        { value: 'available', label: 'Trống' },
+                        { value: 'occupied', label: 'Đầy' },
+                        { value: 'reserved', label: 'Đặt chỗ' },
+                        { value: 'maintenance', label: 'Bảo trì' },
+                      ]}
                       disabled={submitting}
-                      className="w-full rounded-lg border border-white/10 bg-slate-900/50 text-slate-100 px-3 py-2 text-sm focus:border-orange-500/50 focus:outline-none focus:ring-1 focus:ring-orange-500/20"
-                    >
-                      <option value="available">Trống</option>
-                      <option value="occupied">Đầy</option>
-                      <option value="reserved">Đặt chỗ</option>
-                      <option value="maintenance">Bảo trì</option>
-                    </select>
+                    />
                   </div>
 
                   {/* Cho Đặt Chỗ */}
                   <div className="space-y-1.5">
                     <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wide">Cho Đặt Chỗ</label>
-                    <select
+                    <CustomSelect
                       value={row.reservable ? 'yes' : 'no'}
-                      onChange={(e) => handleRowChange(row.id, 'reservable', e.target.value === 'yes')}
+                      onChange={(val) => handleRowChange(row.id, 'reservable', val === 'yes')}
+                      options={[
+                        { value: 'yes', label: 'Có' },
+                        { value: 'no', label: 'Không' },
+                      ]}
                       disabled={submitting}
-                      className="w-full rounded-lg border border-white/10 bg-slate-900/50 text-slate-100 px-3 py-2 text-sm focus:border-orange-500/50 focus:outline-none focus:ring-1 focus:ring-orange-500/20"
-                    >
-                      <option value="yes">Có</option>
-                      <option value="no">Không</option>
-                    </select>
+                    />
                   </div>
                 </div>
 

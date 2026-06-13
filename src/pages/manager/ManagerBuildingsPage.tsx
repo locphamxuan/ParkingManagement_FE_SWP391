@@ -3,6 +3,7 @@ import { Building2, Save } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { CustomSelect } from '@/components/ui/select';
 import { managerApi, type ManagerBuilding } from '@/services/manager/managerApi';
 import { useManagerBuildings } from '@/hooks/useManagerBuildings';
 
@@ -132,15 +133,15 @@ export function ManagerBuildingsPage() {
               {/* Trạng thái — dropdown */}
               <div className="grid gap-1.5">
                 <label className="text-sm font-medium text-foreground">Trạng thái</label>
-                <select
+                <CustomSelect
                   value={status}
-                  onChange={(e) => setStatus(e.target.value as ManagerBuilding['status'])}
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:ring-1 focus:ring-primary"
-                >
-                  <option value="active">Hoạt động (active)</option>
-                  <option value="inactive">Tạm dừng (inactive)</option>
-                  <option value="maintenance">Bảo trì (maintenance)</option>
-                </select>
+                  onChange={(val) => setStatus(val as ManagerBuilding['status'])}
+                  options={[
+                    { value: 'active', label: 'Hoạt động (active)' },
+                    { value: 'inactive', label: 'Tạm dừng (inactive)' },
+                    { value: 'maintenance', label: 'Bảo trì (maintenance)' },
+                  ]}
+                />
               </div>
             </div>
 

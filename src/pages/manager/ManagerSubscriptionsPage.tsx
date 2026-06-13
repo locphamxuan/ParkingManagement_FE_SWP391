@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { StatusBadge } from '@/components/common/StatusBadge';
+import { CustomSelect } from '@/components/ui/select';
+import { StatusBadge } from '@/components/shared/StatusBadge';
 import { useBuildingContext } from '@/hooks/useBuildingContext';
 import { managerApi, type Subscription } from '@/services/manager/managerApi';
 
@@ -64,15 +65,15 @@ export function ManagerSubscriptionsPage() {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between gap-3">
         <CardTitle>Gói dài hạn của khách</CardTitle>
-        <select
+        <CustomSelect
           value={status}
-          onChange={(e) => setStatus(e.target.value)}
-          className="rounded-lg border border-input bg-background px-2.5 py-1.5 text-sm"
-        >
-          {STATUS_FILTERS.map((s) => (
-            <option key={s.value} value={s.value}>{s.label}</option>
-          ))}
-        </select>
+          onChange={setStatus}
+          options={STATUS_FILTERS.map((s) => ({
+            value: s.value,
+            label: s.label,
+          }))}
+          className="w-48"
+        />
       </CardHeader>
       <CardContent>
         {error ? <p className="text-sm text-red-600">{error}</p> : null}
