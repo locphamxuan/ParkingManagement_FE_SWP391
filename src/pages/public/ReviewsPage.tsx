@@ -185,13 +185,7 @@ export default function ReviewsPage() {
             </div>
             <p className="text-xs text-slate-400">Xem ý kiến và đóng góp từ khách hàng của hệ thống</p>
           </div>
-          <button
-            type="button"
-            onClick={handleOpenWriteReview}
-            className="ml-auto flex items-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 px-4 py-2.5 text-xs font-bold text-white shadow-lg shadow-orange-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
-          >
-            <Plus size={14} /> Viết đánh giá
-          </button>
+          
         </div>
       </header>
 
