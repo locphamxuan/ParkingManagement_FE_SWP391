@@ -7,6 +7,8 @@ import {
   CheckCircle2,
   Loader2,
   X,
+  Building2,
+  ReceiptText,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useBuildings, useLongTermPackages, useLongTermSubscriptions, useSubscribeToPackage, useCancelSubscription } from '@/hooks/user';
@@ -324,8 +326,19 @@ export default function LongTermSubscriptionsPage() {
   const {
     items: subscriptions,
     isLoading: isLoadingSubscriptions,
+    error: subscriptionsError,
     refresh: refreshSubscriptions,
   } = useLongTermSubscriptions();
+
+  const activeSubscription = useMemo(() => {
+    return subscriptions.find((sub) => sub.status === 'active');
+  }, [subscriptions]);
+
+  const selectedPackage = useMemo(() => {
+    if (!activeSubscription) return null;
+    const pkgId = activeSubscription.package?._id;
+    return packages.find((p) => p._id === pkgId) || activeSubscription.package;
+  }, [activeSubscription, packages]);
 
   const { subscribe, isLoading: isSubmitting, error: subscribeError } = useSubscribeToPackage();
   const { cancel: cancelSub, isLoading: isCancelling } = useCancelSubscription();
