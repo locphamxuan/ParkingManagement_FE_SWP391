@@ -84,8 +84,8 @@ const moduleStyles: Record<
     badgeBg: 'bg-emerald-500/10 border-emerald-500/20',
     badgeText: 'text-emerald-400',
     badgeDot: 'bg-emerald-500 shadow-[0_0_8px_#10b981]',
-    hoverBorder: 'group-hover:border-emerald-500/35 group-hover:bg-slate-900/60',
-    hoverShadow: 'hover:shadow-[0_12px_40px_rgba(16,185,129,0.15)]',
+    hoverBorder: 'group-hover:border-emerald-500/60 group-hover:bg-slate-950/75',
+    hoverShadow: 'hover:shadow-[0_12px_40px_rgba(16,185,129,0.25),0_0_18px_rgba(16,185,129,0.18)]',
     buttonGradient: 'from-emerald-500 to-teal-500',
     buttonText: 'text-white font-black',
     buttonGlow: 'hover:shadow-[0_0_20px_rgba(16,185,129,0.35)]',
@@ -97,8 +97,8 @@ const moduleStyles: Record<
     badgeBg: 'bg-amber-500/10 border-amber-500/20',
     badgeText: 'text-amber-400',
     badgeDot: 'bg-amber-500 shadow-[0_0_8px_#f59e0b]',
-    hoverBorder: 'group-hover:border-amber-500/35 group-hover:bg-slate-900/60',
-    hoverShadow: 'hover:shadow-[0_12px_40px_rgba(245,158,11,0.15)]',
+    hoverBorder: 'group-hover:border-amber-500/60 group-hover:bg-slate-950/75',
+    hoverShadow: 'hover:shadow-[0_12px_40px_rgba(245,158,11,0.25),0_0_18px_rgba(245,158,11,0.18)]',
     buttonGradient: 'from-amber-500 to-orange-500',
     buttonText: 'text-slate-950 font-black',
     buttonGlow: 'hover:shadow-[0_0_20px_rgba(245,158,11,0.35)]',
@@ -110,8 +110,8 @@ const moduleStyles: Record<
     badgeBg: 'bg-sky-500/10 border-sky-500/20',
     badgeText: 'text-sky-400',
     badgeDot: 'bg-sky-500 shadow-[0_0_8px_#38bdf8]',
-    hoverBorder: 'group-hover:border-sky-500/35 group-hover:bg-slate-900/60',
-    hoverShadow: 'hover:shadow-[0_12px_40px_rgba(56,189,248,0.15)]',
+    hoverBorder: 'group-hover:border-sky-500/60 group-hover:bg-slate-950/75',
+    hoverShadow: 'hover:shadow-[0_12px_40px_rgba(56,189,248,0.25),0_0_18px_rgba(56,189,248,0.18)]',
     buttonGradient: 'from-sky-500 to-blue-500',
     buttonText: 'text-white font-black',
     buttonGlow: 'hover:shadow-[0_0_20px_rgba(56,189,248,0.35)]',
@@ -123,8 +123,8 @@ const moduleStyles: Record<
     badgeBg: 'bg-indigo-500/10 border-indigo-500/20',
     badgeText: 'text-indigo-400',
     badgeDot: 'bg-indigo-500 shadow-[0_0_8px_#6366f1]',
-    hoverBorder: 'group-hover:border-indigo-500/35 group-hover:bg-slate-900/60',
-    hoverShadow: 'hover:shadow-[0_12px_40px_rgba(99,102,241,0.15)]',
+    hoverBorder: 'group-hover:border-indigo-500/60 group-hover:bg-slate-950/75',
+    hoverShadow: 'hover:shadow-[0_12px_40px_rgba(99,102,241,0.25),0_0_18px_rgba(99,102,241,0.18)]',
     buttonGradient: 'from-violet-500 to-indigo-500',
     buttonText: 'text-white font-black',
     buttonGlow: 'hover:shadow-[0_0_20px_rgba(99,102,241,0.35)]',
@@ -136,8 +136,8 @@ const moduleStyles: Record<
     badgeBg: 'bg-orange-500/10 border-orange-500/20',
     badgeText: 'text-orange-400',
     badgeDot: 'bg-orange-500 shadow-[0_0_8px_#f97316]',
-    hoverBorder: 'group-hover:border-orange-500/35 group-hover:bg-slate-900/60',
-    hoverShadow: 'hover:shadow-[0_12px_40px_rgba(249,115,22,0.15)]',
+    hoverBorder: 'group-hover:border-orange-500/60 group-hover:bg-slate-950/75',
+    hoverShadow: 'hover:shadow-[0_12px_40px_rgba(249,115,22,0.25),0_0_18px_rgba(249,115,22,0.18)]',
     buttonGradient: 'from-orange-500 to-red-500',
     buttonText: 'text-white font-black',
     buttonGlow: 'hover:shadow-[0_0_20px_rgba(249,115,22,0.35)]',
@@ -149,8 +149,8 @@ const moduleStyles: Record<
     badgeBg: 'bg-rose-500/10 border-rose-500/20',
     badgeText: 'text-rose-400',
     badgeDot: 'bg-rose-500 shadow-[0_0_8px_#f43f5e]',
-    hoverBorder: 'group-hover:border-rose-500/35 group-hover:bg-slate-900/60',
-    hoverShadow: 'hover:shadow-[0_12px_40px_rgba(244,63,94,0.15)]',
+    hoverBorder: 'group-hover:border-rose-500/60 group-hover:bg-slate-950/75',
+    hoverShadow: 'hover:shadow-[0_12px_40px_rgba(244,63,94,0.25),0_0_18px_rgba(244,63,94,0.18)]',
     buttonGradient: 'from-rose-500 to-pink-500',
     buttonText: 'text-white font-black',
     buttonGlow: 'hover:shadow-[0_0_20px_rgba(244,63,94,0.35)]',
@@ -668,6 +668,17 @@ export default function HomePage({ modules, onOpenAuth, onViewProfile, onViewRes
 
                   {/* Diagonal Glass Reflection Shimmer Effect */}
                   <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/5 to-transparent pointer-events-none" />
+
+                  {/* Glitter falling particles on hover */}
+                  {module.available && (
+                    <div className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500 overflow-hidden">
+                      <span className={cn("glitter-particle w-1 h-1", style.badgeDot)} style={{ top: '-10px', left: '15%', animationDuration: '2.2s', animationDelay: '0s' }} />
+                      <span className={cn("glitter-particle w-1.5 h-1.5", style.badgeDot)} style={{ top: '-10px', left: '35%', animationDuration: '2.8s', animationDelay: '0.4s' }} />
+                      <span className={cn("glitter-particle w-1 h-1", style.badgeDot)} style={{ top: '-10px', left: '55%', animationDuration: '2.4s', animationDelay: '0.2s' }} />
+                      <span className={cn("glitter-particle w-1.5 h-1.5", style.badgeDot)} style={{ top: '-10px', left: '75%', animationDuration: '3.0s', animationDelay: '0.6s' }} />
+                      <span className={cn("glitter-particle w-1 h-1", style.badgeDot)} style={{ top: '-10px', left: '90%', animationDuration: '2.6s', animationDelay: '0.8s' }} />
+                    </div>
+                  )}
 
                   <div className="relative z-10">
                     <div className="flex items-center gap-3.5">
