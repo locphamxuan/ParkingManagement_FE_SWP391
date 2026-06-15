@@ -4,6 +4,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ModalForm } from '@/components/modals/ModalForm';
+import { CustomSelect } from '@/components/ui/select';
+import { DatePicker } from '@/components/ui/date-picker';
 import {
   adminApi,
   type SystemWallet,
@@ -210,16 +212,19 @@ export function SystemWalletPage() {
         <div className="grid gap-3 md:grid-cols-2">
           <div className="grid gap-1.5 md:col-span-2">
             <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono">Tòa nhà</label>
-            <select
-              className="h-10 rounded-md border border-border bg-secondary px-3 text-sm text-foreground outline-none"
+            <CustomSelect
+              className="h-10"
               value={distForm.buildingId}
-              onChange={(e) => setDistForm((f) => ({ ...f, buildingId: e.target.value }))}
-            >
-              <option value="">-- Chọn tòa nhà --</option>
-              {buildings.map((b) => (
-                <option key={b._id} value={b._id}>{b.code} · {b.name}</option>
-              ))}
-            </select>
+              onChange={(val) => setDistForm((f) => ({ ...f, buildingId: val }))}
+              placeholder="-- Chọn tòa nhà --"
+              options={[
+                { value: '', label: '-- Chọn tòa nhà --' },
+                ...buildings.map((b) => ({
+                  value: b._id,
+                  label: `${b.code} · ${b.name}`
+                }))
+              ]}
+            />
           </div>
           <div className="grid gap-1.5">
             <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono">Số tiền (VND)</label>
@@ -240,18 +245,16 @@ export function SystemWalletPage() {
           </div>
           <div className="grid gap-1.5">
             <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono">Từ ngày</label>
-            <Input
-              type="date"
+            <DatePicker
               value={distForm.periodStart}
-              onChange={(e) => setDistForm((f) => ({ ...f, periodStart: e.target.value }))}
+              onChange={(val) => setDistForm((f) => ({ ...f, periodStart: val }))}
             />
           </div>
           <div className="grid gap-1.5">
             <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono">Đến ngày</label>
-            <Input
-              type="date"
+            <DatePicker
               value={distForm.periodEnd}
-              onChange={(e) => setDistForm((f) => ({ ...f, periodEnd: e.target.value }))}
+              onChange={(val) => setDistForm((f) => ({ ...f, periodEnd: val }))}
             />
           </div>
         </div>

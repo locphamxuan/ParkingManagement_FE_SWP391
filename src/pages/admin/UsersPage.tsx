@@ -6,6 +6,7 @@ import { SearchFilterBar } from '@/components/common/SearchFilterBar';
 import { StatusBadge } from '@/components/common/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { CustomSelect } from '@/components/ui/select';
 import { useAdminDataset } from '@/hooks/admin/useAdminDataset';
 import {
   createAdminUser,
@@ -331,35 +332,37 @@ export function UsersPage() {
           />
           <div className="grid gap-1.5">
             <label className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Vai trò</label>
-            <select
+            <CustomSelect
+              className="h-10"
               value={form.role}
-              onChange={(e) =>
-                setForm((prev) => ({ ...prev, role: e.target.value as typeof prev.role, buildingId: '' }))
+              onChange={(val) =>
+                setForm((prev) => ({ ...prev, role: val as typeof prev.role, buildingId: '' }))
               }
-              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:ring-1 focus:ring-primary"
-            >
-              <option value="user">Người dùng</option>
-              <option value="staff">Nhân viên</option>
-              <option value="manager">Quản lý</option>
-            </select>
+              options={[
+                { value: 'user', label: 'Người dùng' },
+                { value: 'staff', label: 'Nhân viên' },
+                { value: 'manager', label: 'Quản lý' }
+              ]}
+            />
           </div>
           {(form.role === 'staff' || form.role === 'manager') && (
             <div className="grid gap-1.5">
               <label className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
                 Tòa nhà phụ trách <span className="text-red-500">*</span>
               </label>
-              <select
+              <CustomSelect
+                className="h-10"
                 value={form.buildingId}
-                onChange={(e) => setForm((prev) => ({ ...prev, buildingId: e.target.value }))}
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:ring-1 focus:ring-primary"
-              >
-                <option value="">-- Chọn tòa nhà --</option>
-                {(data?.buildings ?? []).map((b) => (
-                  <option key={b.id} value={b.backendId || b.id}>
-                    {b.name}
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => setForm((prev) => ({ ...prev, buildingId: val }))}
+                placeholder="-- Chọn tòa nhà --"
+                options={[
+                  { value: '', label: '-- Chọn tòa nhà --' },
+                  ...(data?.buildings ?? []).map((b) => ({
+                    value: b.backendId || b.id,
+                    label: b.name
+                  }))
+                ]}
+              />
             </div>
           )}
         </div>
