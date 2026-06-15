@@ -101,21 +101,12 @@ export function StaffProfilePage() {
           {!isEditing && (
             <Button 
               variant="secondary" 
-              size="sm" 
               onClick={handleStartEdit} 
-              className="gap-1.5 rounded-xl border border-white/10 bg-slate-800/80 hover:bg-slate-700/80 text-slate-200 hover:text-white px-4 h-9.5 text-xs font-bold transition-all duration-300 hover:scale-[1.02] cursor-pointer"
+              className="gap-2 rounded-xl border border-white/10 bg-slate-800/80 hover:bg-slate-700/80 text-slate-200 hover:text-white px-6 h-11 text-xs font-black uppercase tracking-wider transition-all duration-300 hover:scale-[1.02] cursor-pointer"
             >
-              <Edit size={13} className="text-emerald-400" /> Chỉnh sửa
+              <Edit size={14} className="text-emerald-400" /> Chỉnh sửa
             </Button>
           )}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => { logout(); navigate('/auth/login', { replace: true }); }}
-            className="gap-1.5 rounded-xl text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 px-4 h-9.5 text-xs font-bold transition-all duration-200 cursor-pointer"
-          >
-            <LogOut size={13} /> Đăng xuất
-          </Button>
         </div>
       </div>
 
@@ -196,19 +187,17 @@ export function StaffProfilePage() {
               <div className="flex items-end gap-3 pt-3 md:col-span-2">
                 <Button 
                   type="submit" 
-                  size="sm" 
-                  className="gap-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold text-xs uppercase tracking-wider px-5 h-10.5 hover:shadow-[0_0_20px_rgba(16,185,129,0.35)] transition-all duration-300 hover:scale-[1.01]"
+                  className="gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-black text-xs uppercase tracking-wider px-6 h-11 hover:shadow-[0_0_20px_rgba(16,185,129,0.35)] transition-all duration-300 hover:scale-[1.01] cursor-pointer"
                 >
-                  <Save size={13} /> Lưu thay đổi
+                  <Save size={14} className="text-white" /> Lưu thay đổi
                 </Button>
                 <Button 
                   type="button" 
                   variant="secondary" 
-                  size="sm" 
                   onClick={handleCancel} 
-                  className="gap-1.5 rounded-xl border border-white/10 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white px-5 h-10.5 font-bold text-xs uppercase tracking-wider transition-all duration-200"
+                  className="gap-2 rounded-xl border border-white/10 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white px-6 h-11 font-black text-xs uppercase tracking-wider transition-all duration-200 cursor-pointer"
                 >
-                  <X size={13} /> Hủy
+                  <X size={14} className="text-slate-400" /> Hủy
                 </Button>
               </div>
             </form>
