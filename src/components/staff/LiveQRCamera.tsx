@@ -121,6 +121,23 @@ export const LiveQRCamera = forwardRef<LiveCameraHandle, LiveQRCameraProps>(func
       </div>
 
       <div className="relative aspect-[4/3] overflow-hidden rounded-lg border border-white/10 bg-black/60">
+        <style>{`
+          @keyframes qrScan {
+            0% { top: 0%; }
+            50% { top: 100%; }
+            100% { top: 0%; }
+          }
+          .qr-scanner-line {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.8) 50%, transparent);
+            box-shadow: 0 0 6px rgba(56, 189, 248, 0.8), 0 0 10px rgba(56, 189, 248, 0.4);
+            animation: qrScan 2.2s ease-in-out infinite;
+            pointer-events: none;
+          }
+        `}</style>
         <video
           ref={videoRef}
           autoPlay
@@ -131,6 +148,9 @@ export const LiveQRCamera = forwardRef<LiveCameraHandle, LiveQRCameraProps>(func
         {active && (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
             <div className="relative h-32 w-32">
+              <div className="absolute inset-0 overflow-hidden rounded-lg">
+                {!paused && <div className="qr-scanner-line" />}
+              </div>
               <div className="absolute left-0 top-0 h-6 w-6 border-l-2 border-t-2 border-sky-400 rounded-tl-lg" />
               <div className="absolute right-0 top-0 h-6 w-6 border-r-2 border-t-2 border-sky-400 rounded-tr-lg" />
               <div className="absolute bottom-0 left-0 h-6 w-6 border-b-2 border-l-2 border-sky-400 rounded-bl-lg" />

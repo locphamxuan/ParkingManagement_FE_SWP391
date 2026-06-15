@@ -121,6 +121,29 @@ export const LivePlateCamera = forwardRef<LiveCameraHandle, LivePlateCameraProps
       </div>
 
       <div className="relative aspect-[4/3] overflow-hidden rounded-lg border border-white/10 bg-black/60">
+        <style>{`
+          @keyframes laserScan {
+            0% { top: 0%; }
+            50% { top: 100%; }
+            100% { top: 0%; }
+          }
+          .laser-scanner-line {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(16, 185, 129, 0.85) 50%, transparent);
+            box-shadow: 0 0 8px rgba(16, 185, 129, 0.8), 0 0 15px rgba(16, 185, 129, 0.4);
+            animation: laserScan 2.8s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 10;
+          }
+          .laser-scanner-line-active {
+            background: linear-gradient(90deg, transparent, rgba(249, 115, 22, 0.95) 50%, transparent);
+            box-shadow: 0 0 12px rgba(249, 115, 22, 0.9), 0 0 22px rgba(249, 115, 22, 0.6);
+            animation: laserScan 1.2s ease-in-out infinite;
+          }
+        `}</style>
         <video
           ref={videoRef}
           autoPlay
@@ -129,12 +152,15 @@ export const LivePlateCamera = forwardRef<LiveCameraHandle, LivePlateCameraProps
           className={`h-full w-full object-cover ${active ? 'block' : 'hidden'}`}
         />
         {active && (
-          <div className="pointer-events-none absolute inset-0 border-2 border-emerald-400/30 rounded-lg">
-            <div className="absolute left-0 top-0 h-6 w-6 border-l-2 border-t-2 border-emerald-400" />
-            <div className="absolute right-0 top-0 h-6 w-6 border-r-2 border-t-2 border-emerald-400" />
-            <div className="absolute bottom-0 left-0 h-6 w-6 border-b-2 border-l-2 border-emerald-400" />
-            <div className="absolute bottom-0 right-0 h-6 w-6 border-b-2 border-r-2 border-emerald-400" />
-          </div>
+          <>
+            <div className="pointer-events-none absolute inset-0 border-2 border-emerald-400/30 rounded-lg">
+              <div className="absolute left-0 top-0 h-6 w-6 border-l-2 border-t-2 border-emerald-400" />
+              <div className="absolute right-0 top-0 h-6 w-6 border-r-2 border-t-2 border-emerald-400" />
+              <div className="absolute bottom-0 left-0 h-6 w-6 border-b-2 border-l-2 border-emerald-400" />
+              <div className="absolute bottom-0 right-0 h-6 w-6 border-b-2 border-r-2 border-emerald-400" />
+            </div>
+            <div className={processing ? 'laser-scanner-line laser-scanner-line-active' : 'laser-scanner-line'} />
+          </>
         )}
         {!active && !error && (
           <div className="absolute inset-0 flex items-center justify-center">
