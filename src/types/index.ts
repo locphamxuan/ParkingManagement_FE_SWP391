@@ -38,6 +38,8 @@ export interface AuditLog {
   severity: 'low' | 'medium' | 'high' | 'critical';
   timestamp: string;
   details: string;
+  /** Tên tòa nhà liên quan (nếu hành động gắn với một tòa nhà cụ thể). */
+  building?: string;
 }
 
 export interface FraudAlert {

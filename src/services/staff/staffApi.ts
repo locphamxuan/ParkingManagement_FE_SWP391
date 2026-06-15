@@ -120,6 +120,15 @@ export interface PlateInfo {
     building: string;
     entryTime: string;
   };
+  /** Gói dài hạn còn hiệu lực → staff phải gán 1 slot trống khi check-in. */
+  hasActivePackage?: boolean;
+  activePackage?: { id: string; name: string; maxHoursPerDay: number } | null;
+}
+
+export interface FreeSlot {
+  _id: string;
+  code: string;
+  floor?: { _id: string; name?: string; code?: string } | null;
 }
 
 export interface PaymentData {
@@ -171,8 +180,12 @@ export const staffApi = {
   getActiveSessions: (query?: Record<string, string | number | boolean | undefined>) =>
     api.get<Wrap<ApiList<ParkingSession>>>('/staff/parking-sessions/active', { query }),
 
-  checkIn: (payload: { plateNumber: string; vehicleType?: string; gate?: string; building?: string; vehicleBrand?: string; plateImage?: string | null; portraitImage?: string | null }) =>
+  checkIn: (payload: { plateNumber: string; vehicleType?: string; gate?: string; building?: string; vehicleBrand?: string; plateImage?: string | null; portraitImage?: string | null; slot?: string }) =>
     api.post<Wrap<{ item: ParkingSession }>>('/staff/parking-sessions/check-in', payload),
+
+  // Slot 'available' của 1 tòa nhà — để gán xe mua gói khi check-in.
+  freeSlots: (buildingId: string) =>
+    api.get<Wrap<{ items: FreeSlot[] }>>('/staff/parking-sessions/free-slots', { query: { building: buildingId } }),
 
   checkOut: (
     sessionId: string,

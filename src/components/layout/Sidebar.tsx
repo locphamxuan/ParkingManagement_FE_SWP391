@@ -3,12 +3,10 @@ import {
   Building2,
   ChevronLeft,
   CircleDollarSign,
-  Crown,
   FileSearch,
   Fingerprint,
   LayoutDashboard,
   Users,
-  Wallet,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/utils/cn';
@@ -23,9 +21,7 @@ const modules = [
   { to: 'buildings', label: 'Tòa nhà', icon: Building2 },
   { to: 'users', label: 'Người dùng', icon: Users },
   { to: 'revenue-analytics', label: 'Phân tích doanh thu', icon: CircleDollarSign },
-  { to: 'subscription-packages', label: 'Gói dịch vụ', icon: Crown },
-  { to: 'wallet-governance', label: 'Ví hệ thống', icon: Wallet },
-  { to: 'audit-logs', label: 'Nhật ký kiểm tra', icon: FileSearch },
+  { to: 'audit-logs', label: 'Nhật ký hoạt động', icon: FileSearch },
 ] as const;
 
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {

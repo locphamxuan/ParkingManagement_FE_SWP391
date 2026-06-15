@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { CustomSelect } from '@/components/ui/select';
 import { StatusBadge } from '@/components/common/StatusBadge';
 import { useBuildingContext } from '@/hooks/useBuildingContext';
@@ -15,21 +14,12 @@ const STATUS_FILTERS = [
 
 const fmtDate = (v?: string) => (v ? new Date(v).toLocaleDateString('vi-VN') : '—');
 
-// Lấy mã ô đỗ + tên tầng từ slot đã populate.
-const slotLabel = (slot: Subscription['slot']): { code: string; floor: string } | null => {
-  if (!slot || typeof slot === 'string') return null;
-  const floor =
-    slot.floor && typeof slot.floor === 'object' ? slot.floor.name || slot.floor.code || '' : '';
-  return { code: slot.code, floor };
-};
-
 export function ManagerSubscriptionsPage() {
   const { buildingId } = useBuildingContext();
   const [items, setItems] = useState<Subscription[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState('');
-  const [releasingId, setReleasingId] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -47,19 +37,6 @@ export function ManagerSubscriptionsPage() {
   useEffect(() => {
     refresh();
   }, [refresh]);
-
-  const onReleaseSlot = async (sub: Subscription) => {
-    if (!window.confirm(`Thu hồi chỗ đỗ cố định của biển ${sub.plateNumber}? Khách sẽ được thông báo.`)) return;
-    setReleasingId(sub._id);
-    try {
-      await managerApi.packages.releaseSlot(buildingId, sub._id);
-      await refresh();
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Thu hồi thất bại');
-    } finally {
-      setReleasingId(null);
-    }
-  };
 
   return (
     <Card>
@@ -90,58 +67,22 @@ export function ManagerSubscriptionsPage() {
                   <th className="py-2 pr-3">Biển số</th>
                   <th className="py-2 pr-3">Gói</th>
                   <th className="py-2 pr-3">Hiệu lực</th>
-                  <th className="py-2 pr-3">Slot cố định</th>
                   <th className="py-2 pr-3">Trạng thái</th>
-                  <th className="py-2 pr-3 text-right">Thao tác</th>
                 </tr>
               </thead>
               <tbody>
-                {items.map((s) => {
-                  const hasSlot = Boolean(s.slot) && !s.slotReleased;
-                  return (
-                    <tr key={s._id} className="border-b last:border-0">
-                      <td className="py-2 pr-3">
-                        <div className="font-medium">{s.user?.fullName ?? '—'}</div>
-                        <div className="text-xs text-muted-foreground">{s.user?.email}</div>
-                      </td>
-                      <td className="py-2 pr-3 font-mono">{s.plateNumber}</td>
-                      <td className="py-2 pr-3">{s.package?.name}</td>
-                      <td className="py-2 pr-3 whitespace-nowrap">{fmtDate(s.startDate)} → {fmtDate(s.endDate)}</td>
-                      <td className="py-2 pr-3">
-                        {(() => {
-                          const sl = slotLabel(s.slot);
-                          if (!sl) return <span className="text-xs text-muted-foreground">Không</span>;
-                          return (
-                            <div className="text-xs">
-                              <span className="font-mono font-semibold text-foreground">{sl.code}</span>
-                              {sl.floor ? <span className="text-muted-foreground"> · {sl.floor}</span> : null}
-                              {s.slotReleased ? (
-                                <span className="text-rose-500"> (đã thu hồi)</span>
-                              ) : (
-                                <span className="text-emerald-600"> · đang giữ</span>
-                              )}
-                            </div>
-                          );
-                        })()}
-                      </td>
-                      <td className="py-2 pr-3"><StatusBadge status={s.status} /></td>
-                      <td className="py-2 pr-3 text-right">
-                        {hasSlot ? (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={releasingId === s._id}
-                            onClick={() => onReleaseSlot(s)}
-                          >
-                            {releasingId === s._id ? 'Đang thu hồi...' : 'Thu hồi slot'}
-                          </Button>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
+                {items.map((s) => (
+                  <tr key={s._id} className="border-b last:border-0">
+                    <td className="py-2 pr-3">
+                      <div className="font-medium">{s.user?.fullName ?? '—'}</div>
+                      <div className="text-xs text-muted-foreground">{s.user?.email}</div>
+                    </td>
+                    <td className="py-2 pr-3 font-mono">{s.plateNumber}</td>
+                    <td className="py-2 pr-3">{s.package?.name}</td>
+                    <td className="py-2 pr-3 whitespace-nowrap">{fmtDate(s.startDate)} → {fmtDate(s.endDate)}</td>
+                    <td className="py-2 pr-3"><StatusBadge status={s.status} /></td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>

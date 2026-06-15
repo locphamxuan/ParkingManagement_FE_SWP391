@@ -17,33 +17,41 @@ import {
 import { userApi } from '@/services/user/userApi';
 import type { Reservation, LongTermSubscription } from '@/services/user/userApi';
 import { fmtMoney, fmtTime } from '@/pages/user/reservationsHelper';
+import {
+  packageStatusLabel,
+  packageStatusBadgeClass,
+  PACKAGE_STATUS_TABS,
+} from '@/utils/packageStatus';
 
-function StatusBadge({ status }: { status: string }) {
-  const labels: Record<string, string> = {
-    pending: 'Chờ thanh toán',
-    confirmed: 'Đã đặt',
-    checked_in: 'Đang sử dụng',
-    completed: 'Hoàn thành',
-    expired: 'Hết hạn',
-    cancelled: 'Đã hủy',
-    active: 'Đã mua',
-  };
-  const colors: Record<string, string> = {
-    pending: 'border-amber-500/30 bg-amber-500/10 text-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.1)]',
-    confirmed: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.1)]',
-    checked_in: 'border-cyan-500/30 bg-cyan-500/10 text-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.1)]',
-    completed: 'border-blue-500/30 bg-blue-500/10 text-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.1)]',
-    expired: 'border-slate-500/30 bg-slate-500/10 text-slate-400',
-    cancelled: 'border-rose-500/30 bg-rose-500/10 text-rose-400 shadow-[0_0_10px_rgba(244,63,94,0.1)]',
-    active: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.1)]',
-  };
+// Status đặt-theo-giờ (mode 'hourly'). Mode 'package' dùng util packageStatus dùng chung.
+const HOURLY_LABELS: Record<string, string> = {
+  pending: 'Chờ thanh toán',
+  confirmed: 'Đã đặt',
+  checked_in: 'Đang sử dụng',
+  completed: 'Hoàn thành',
+  expired: 'Hết hạn',
+  cancelled: 'Đã hủy',
+};
+const HOURLY_COLORS: Record<string, string> = {
+  pending: 'border-amber-500/30 bg-amber-500/10 text-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.1)]',
+  confirmed: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.1)]',
+  checked_in: 'border-cyan-500/30 bg-cyan-500/10 text-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.1)]',
+  completed: 'border-blue-500/30 bg-blue-500/10 text-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.1)]',
+  expired: 'border-slate-500/30 bg-slate-500/10 text-slate-400',
+  cancelled: 'border-rose-500/30 bg-rose-500/10 text-rose-400 shadow-[0_0_10px_rgba(244,63,94,0.1)]',
+};
+
+function StatusBadge({ status, mode = 'hourly' }: { status: string; mode?: 'hourly' | 'package' }) {
+  const label = mode === 'package' ? packageStatusLabel(status) : HOURLY_LABELS[status] || status;
+  const color =
+    mode === 'package'
+      ? packageStatusBadgeClass(status)
+      : HOURLY_COLORS[status] || 'border-slate-500/30 bg-slate-500/10 text-slate-400';
   return (
     <span
-      className={`rounded-full border px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider ${
-        colors[status] || 'border-slate-500/30 bg-slate-500/10 text-slate-400'
-      }`}
+      className={`rounded-full border px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider ${color}`}
     >
-      {labels[status] || status}
+      {label}
     </span>
   );
 }
@@ -59,7 +67,7 @@ export function ReservationHistoryTab() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
   const [cancellingSub, setCancellingSub] = useState<LongTermSubscription | null>(null);
-  const [cancelReason, setCancelReason] = useState<string>('change_slot');
+  const [cancelReason, setCancelReason] = useState<string>('change_vehicle');
   const [cancelNote, setCancelNote] = useState<string>('');
   const [isCancelling, setIsCancelling] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
@@ -88,14 +96,8 @@ export function ReservationHistoryTab() {
           .catch((err) => setError(err instanceof Error ? err.message : 'Tải lịch sử thất bại'))
           .finally(() => setLoading(false));
       } else {
-        let apiStatus: string | undefined = status;
-        if (status === 'all') {
-          apiStatus = undefined;
-        } else if (status === 'confirmed') {
-          apiStatus = 'active';
-        } else if (status === 'checked_in' || status === 'completed') {
-          apiStatus = 'none'; // Will return empty list because subscriptions don't have these statuses
-        }
+        // Tab value = đúng status API của gói (active/expired/cancelled); 'all' = không lọc.
+        const apiStatus = status === 'all' ? undefined : status;
 
         userApi.longTermSubscriptions
           .list({ page: p, limit: 10, status: apiStatus })
@@ -147,13 +149,7 @@ export function ReservationHistoryTab() {
           { value: 'cancelled', label: 'Đã hủy' },
           { value: 'expired', label: 'Hết hạn' },
         ]
-      : [
-          { value: 'all', label: 'Tất cả' },
-          { value: 'confirmed', label: 'Đã đặt' },
-          { value: 'checked_in', label: 'Đang sử dụng' },
-          { value: 'completed', label: 'Hoàn thành' },
-          { value: 'cancelled', label: 'Đã hủy' },
-        ];
+      : PACKAGE_STATUS_TABS;
 
   const fmtDateOnly = (iso: string | undefined | null) => {
     if (!iso) return '—';
@@ -418,7 +414,7 @@ export function ReservationHistoryTab() {
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0">
-                      <StatusBadge status={sub.status} />
+                      <StatusBadge status={sub.status} mode="package" />
                       {(() => {
                         const now = new Date();
                         const startDate = new Date(sub.startDate);
@@ -439,13 +435,7 @@ export function ReservationHistoryTab() {
                     </div>
                   </div>
 
-                  <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5 border-t border-white/[0.03] pt-4">
-                    <div>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Chỗ đỗ cố định</p>
-                      <p className="mt-1 text-sm font-bold text-slate-200">
-                        {sub.slot ? ((sub.slot as any).code ?? sub.slot) : 'Không cố định'}
-                      </p>
-                    </div>
+                  <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 border-t border-white/[0.03] pt-4">
                     <div>
                       <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Ngày bắt đầu</p>
                       <p className="mt-1 text-xs font-medium text-slate-300">{fmtDateOnly(sub.startDate)}</p>
@@ -537,7 +527,6 @@ export function ReservationHistoryTab() {
                 <span className="text-xs font-bold uppercase text-slate-400 block mb-2">Lý do hủy</span>
                 <div className="space-y-2">
                   {[
-                    { value: 'change_slot', label: '🚗 Đổi sang chỗ đỗ khác' },
                     { value: 'change_vehicle', label: '🔄 Thay đổi phương tiện / biển số xe' },
                     { value: 'no_longer_needed', label: '🏢 Không còn nhu cầu đỗ xe ở đây' },
                     { value: 'pricing_issue', label: '💸 Giá gói không còn phù hợp' },
@@ -599,7 +588,7 @@ export function ReservationHistoryTab() {
                 type="button"
                 onClick={() => {
                   setCancellingSub(null);
-                  setCancelReason('change_slot');
+                  setCancelReason('change_vehicle');
                   setCancelNote('');
                   setCancelError(null);
                 }}
@@ -621,7 +610,7 @@ export function ReservationHistoryTab() {
                     );
                     load(page, activeMode, statusFilter);
                     setCancellingSub(null);
-                    setCancelReason('change_slot');
+                    setCancelReason('change_vehicle');
                     setCancelNote('');
                   } catch (err) {
                     setCancelError(err instanceof Error ? err.message : 'Lỗi khi hủy gói dài hạn.');

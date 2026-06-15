@@ -38,8 +38,7 @@ const ManagerGatesPage = lazy(() => import('@/pages/manager/ManagerGatesPage').t
 const ManagerSlotsPage = lazy(() => import('@/pages/manager/ManagerSlotsPage').then((m) => ({ default: m.ManagerSlotsPage })));
 const ManagerPricingPage = lazy(() => import('@/pages/manager/ManagerPricingPage').then((m) => ({ default: m.ManagerPricingPage })));
 const ManagerReservationPolicyPage = lazy(() => import('@/pages/manager/ManagerReservationPolicyPage').then((m) => ({ default: m.ManagerReservationPolicyPage })));
-const ManagerPackagesPage = lazy(() => import('@/pages/manager/ManagerPackagesPage').then((m) => ({ default: m.ManagerPackagesPage })));
-const ManagerSubscriptionsPage = lazy(() => import('@/pages/manager/ManagerSubscriptionsPage').then((m) => ({ default: m.ManagerSubscriptionsPage })));
+const ManagerPackagesHubPage = lazy(() => import('@/pages/manager/ManagerPackagesHubPage').then((m) => ({ default: m.ManagerPackagesHubPage })));
 const ManagerShiftManagementPage = lazy(() => import('@/pages/manager/ManagerShiftManagementPage').then((m) => ({ default: m.ManagerShiftManagementPage })));
 const ManagerOperatingHoursPage = lazy(() => import('@/pages/manager/ManagerOperatingHoursPage').then((m) => ({ default: m.ManagerOperatingHoursPage })));
 const ManagerStaffPage = lazy(() => import('@/pages/manager/ManagerStaffPage').then((m) => ({ default: m.ManagerStaffPage })));
@@ -63,8 +62,6 @@ const UsersPage = lazy(() => import('@/pages/admin/UsersPage').then((m) => ({ de
 const RevenueAnalyticsPage = lazy(() => import('@/pages/admin/RevenueAnalyticsPage').then((m) => ({ default: m.RevenueAnalyticsPage })));
 const AuditLogsPage = lazy(() => import('@/pages/admin/AuditLogsPage').then((m) => ({ default: m.AuditLogsPage })));
 const AdminProfilePage = lazy(() => import('@/pages/admin/AdminProfilePage').then((m) => ({ default: m.AdminProfilePage })));
-const SystemWalletPage = lazy(() => import('@/pages/admin/SystemWalletPage').then((m) => ({ default: m.SystemWalletPage })));
-const SubscriptionPackagesPage = lazy(() => import('@/pages/admin/SubscriptionPackagesPage').then((m) => ({ default: m.SubscriptionPackagesPage })));
 const ModulePlaceholderPage = lazy(() => import('@/pages/admin/ModulePlaceholderPage').then((m) => ({ default: m.ModulePlaceholderPage })));
 
 /** Fallback hiển thị khi chunk của page đang được tải. */
@@ -113,8 +110,8 @@ export function AppRouter() {
           <Route path="slots" element={<ManagerSlotsPage />} />
           <Route path="price-policies" element={<ManagerPricingPage />} />
           <Route path="reservation-policy" element={<ManagerReservationPolicyPage />} />
-          <Route path="packages" element={<ManagerPackagesPage />} />
-          <Route path="subscriptions" element={<ManagerSubscriptionsPage />} />
+          <Route path="packages" element={<ManagerPackagesHubPage />} />
+          <Route path="subscriptions" element={<Navigate to="/manager/packages" replace />} />
           <Route path="shifts" element={<ManagerShiftManagementPage />} />
           <Route path="staff-shifts" element={<Navigate to="/manager/shifts" replace />} />
           <Route path="operating-hours" element={<ManagerOperatingHoursPage />} />
@@ -160,8 +157,6 @@ export function AppRouter() {
           <Route path="buildings" element={<BuildingsPage />} />
           <Route path="users" element={<UsersPage />} />
           <Route path="revenue-analytics" element={<RevenueAnalyticsPage />} />
-          <Route path="subscription-packages" element={<SubscriptionPackagesPage />} />
-          <Route path="wallet-governance" element={<SystemWalletPage />} />
           <Route path="audit-logs" element={<AuditLogsPage />} />
           <Route path="profile" element={<AdminProfilePage />} />
           <Route

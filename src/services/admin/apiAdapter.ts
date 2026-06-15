@@ -70,6 +70,7 @@ interface ApiAudit {
   targetTable: string;
   severity?: 'low' | 'medium' | 'high' | 'critical';
   description?: string;
+  building?: { name?: string; code?: string } | null;
   createdAt?: string;
 }
 
@@ -200,6 +201,11 @@ const toAudit = (item: ApiAudit): AuditLog => ({
   severity: item.severity || 'low',
   timestamp: item.createdAt ? new Date(item.createdAt).toLocaleString('vi-VN') : '-',
   details: item.description || `${item.action} trên ${item.targetTable}`,
+  building: item.building
+    ? [item.building.name, item.building.code ? `(${item.building.code})` : null]
+        .filter(Boolean)
+        .join(' ')
+    : undefined,
 });
 
 async function getManagerOverview(token: string, buildingId: string): Promise<ManagerOverviewData | null> {

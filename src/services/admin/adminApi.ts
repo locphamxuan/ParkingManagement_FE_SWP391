@@ -27,19 +27,9 @@ export interface AdminUser {
   createdAt?: string;
 }
 
-export interface BuildingSubscriptionStatus {
-  active: boolean;
-  endDate: string | null;
-  startDate: string | null;
-  daysRemaining: number;
-  package: { _id: string; name: string; price: number; durationDays: number } | null;
-  packageName: string | null;
-}
-
 export interface BuildingMembers {
   manager: AdminUser | null;
   staff: AdminUser[];
-  subscription?: BuildingSubscriptionStatus;
 }
 
 export interface AdminAuditLog {
@@ -84,15 +74,15 @@ export interface AdminPricePolicy {
   effectiveTo?: string | null;
 }
 
-export interface AdminSubscriptionPackage {
+/** Read-only view of a building's long-term (customer) package. */
+export interface AdminBuildingPackage {
   _id: string;
   name: string;
-  price: number;
+  code: string;
+  vehicleType?: { _id: string; code: string; name: string } | string | null;
   durationDays: number;
-  description?: string;
-  features?: string[];
+  price: number;
   isActive: boolean;
-  createdAt?: string;
 }
 
 export interface RevenueReportRow {
@@ -111,42 +101,6 @@ export interface RevenueReport {
   to: string;
   items: RevenueReportRow[];
   grandTotal: number;
-}
-
-export interface SubscriptionTransfer {
-  _id: string;
-  building: { _id: string; name: string; code: string } | null;
-  performedBy?: { _id: string; fullName: string; email: string } | null;
-  type: string;
-  reason: string;
-  amount: number;
-  balanceAfter: number;
-  createdAt: string;
-}
-
-export interface SubscriptionTransferReport {
-  items: SubscriptionTransfer[];
-  total: number;
-  grandTotal: number;
-  page: number;
-  limit: number;
-}
-
-export interface SystemWallet {
-  _id: string;
-  balance: number;
-  totalDistributed: number;
-  updatedAt: string;
-}
-
-export interface WalletDistribution {
-  _id: string;
-  building: { _id: string; name: string; code: string };
-  amount: number;
-  periodStart?: string;
-  periodEnd?: string;
-  note?: string;
-  createdAt: string;
 }
 
 interface ListResult<T> {
@@ -188,18 +142,6 @@ export const adminApi = {
       api.post(`/admin/buildings/${buildingId}/revoke-staff`, { userId }),
     getMembers: (buildingId: string) =>
       api.get<Wrap<BuildingMembers>>(`/admin/buildings/${buildingId}/members`),
-    /** Grant/extend a building's admin subscription, no wallet charge. */
-    grantSubscription: (buildingId: string, packageId: string) =>
-      api.post<Wrap<{ subscription: unknown }>>(
-        `/admin/buildings/${buildingId}/subscription/grant`,
-        { packageId }
-      ),
-    /** Immediately revoke a building's subscription (locks its dashboard). */
-    revokeSubscription: (buildingId: string) =>
-      api.post<Wrap<{ subscription: unknown }>>(
-        `/admin/buildings/${buildingId}/subscription/revoke`,
-        {}
-      ),
     /** Read-only: a building's price policies. */
     listPricePolicies: (buildingId: string, q?: Record<string, string | undefined>) =>
       api.get<Wrap<{ items: AdminPricePolicy[] }>>(
@@ -208,7 +150,7 @@ export const adminApi = {
       ),
     /** Read-only: a building's long-term packages. */
     listPackages: (buildingId: string) =>
-      api.get<Wrap<{ items: unknown[] }>>(`/admin/buildings/${buildingId}/packages`),
+      api.get<Wrap<{ items: AdminBuildingPackage[] }>>(`/admin/buildings/${buildingId}/packages`),
   },
 
   users: {
@@ -227,59 +169,16 @@ export const adminApi = {
   auditLogs: (q?: Record<string, string | undefined>) =>
     api.get<Wrap<ListResult<AdminAuditLog>>>('/admin/audit-logs', { query: q }),
 
-  wallet: {
-    get: () => api.get<Wrap<{ wallet: SystemWallet }>>('/admin/wallet'),
-    /** Manually top up the system wallet (POST /admin/wallet/topup). */
-    topup: (amount: number) =>
-      api.post<Wrap<{ wallet: SystemWallet }>>('/admin/wallet/topup', { amount }),
-    /** Distribute revenue from the system wallet to a building (POST /admin/wallet/distribute). */
-    distribute: (body: {
-      buildingId: string;
-      amount: number;
-      periodStart: string;
-      periodEnd: string;
-      note?: string;
-    }) =>
-      api.post<Wrap<{ wallet: SystemWallet; distribution: WalletDistribution }>>(
-        '/admin/wallet/distribute',
-        body
-      ),
-    distributions: (q?: Record<string, string | undefined>) =>
-      api.get<Wrap<ListResult<WalletDistribution>>>('/admin/wallet/distributions', { query: q }),
-  },
-
-  /** Revenue reports (shift-revenue aggregation + subscription transfers). */
+  /** Revenue reports (shift-revenue aggregation). */
   revenue: {
     /** GET /admin/revenue?from=&to=&buildingId= */
     report: (q: { from: string; to: string; buildingId?: string }) =>
       api.get<Wrap<RevenueReport>>('/admin/revenue', { query: q }),
-    /** GET /admin/revenue/subscriptions?from=&to=&buildingId= */
-    subscriptions: (q?: { from?: string; to?: string; buildingId?: string }) =>
-      api.get<Wrap<SubscriptionTransferReport>>('/admin/revenue/subscriptions', { query: q }),
   },
 
   /** Read-only price policies across buildings (managers own pricing). */
   pricePolicies: {
     list: (q?: Record<string, string | undefined>) =>
       api.get<Wrap<{ items: AdminPricePolicy[] }>>('/admin/price-policies', { query: q }),
-  },
-
-  /** Admin subscription packages (the plans managers buy) — full CRUD. */
-  subscriptionPackages: {
-    list: (q?: Record<string, string | undefined>) =>
-      api.get<Wrap<{ items: AdminSubscriptionPackage[] }>>('/admin/subscription-packages', { query: q }),
-    get: (id: string) =>
-      api.get<Wrap<AdminSubscriptionPackage>>(`/admin/subscription-packages/${id}`),
-    create: (body: {
-      name: string;
-      price: number;
-      durationDays: number;
-      description?: string;
-      features?: string[];
-      isActive?: boolean;
-    }) => api.post<Wrap<AdminSubscriptionPackage>>('/admin/subscription-packages', body),
-    update: (id: string, body: Partial<AdminSubscriptionPackage>) =>
-      api.put<Wrap<AdminSubscriptionPackage>>(`/admin/subscription-packages/${id}`, body),
-    remove: (id: string) => api.delete(`/admin/subscription-packages/${id}`),
   },
 };

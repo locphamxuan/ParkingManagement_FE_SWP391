@@ -425,7 +425,6 @@ export default function ReservationsPage() {
         const res = await userApi.longTermSubscriptions.create({
           packageId: selectedPkg._id,
           plateNumber: selectedPlate,
-          slotId: slots.find((s) => s.code === selectedSlot)?._id,
           startDate: startDateTime.toISOString(),
         });
         const data = (res as any)?.data;
