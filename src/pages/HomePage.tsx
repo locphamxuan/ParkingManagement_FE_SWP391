@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { motion, AnimatePresence, useMotionValue, useSpring, useTransform, useScroll } from 'framer-motion';
 import type { LucideIcon } from 'lucide-react';
+import { cn } from '@/utils/cn';
 import {
   AlertTriangle,
   ArrowRight,
@@ -28,6 +29,7 @@ import {
 import type { LegacyModule } from '../data/mainFlow';
 import { AnimatedParkingMap3D } from '@/components/map/AnimatedParkingMap3D';
 import { notificationApi } from '@/services/notificationApi';
+import { InteractiveParticleCanvas } from '@/components/common/InteractiveParticleCanvas';
 
 interface HomePageProps {
   modules: LegacyModule[];
@@ -57,6 +59,116 @@ const moduleIcons: Record<string, LucideIcon> = {
   sessions: ScanLine,
   payments: CreditCard,
   notifications: BellRing,
+};
+
+const moduleStyles: Record<
+  string,
+  {
+    glow: string;
+    iconBg: string;
+    iconText: string;
+    badgeBg: string;
+    badgeText: string;
+    badgeDot: string;
+    hoverBorder: string;
+    hoverShadow: string;
+    buttonGradient: string;
+    buttonText: string;
+    buttonGlow: string;
+  }
+> = {
+  profile: {
+    glow: 'bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.08),transparent_65%)]',
+    iconBg: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-450 group-hover:bg-emerald-500/20 group-hover:border-emerald-500/40',
+    iconText: 'text-emerald-400',
+    badgeBg: 'bg-emerald-500/10 border-emerald-500/20',
+    badgeText: 'text-emerald-400',
+    badgeDot: 'bg-emerald-500 shadow-[0_0_8px_#10b981]',
+    hoverBorder: 'group-hover:border-emerald-500/35 group-hover:bg-slate-900/60',
+    hoverShadow: 'hover:shadow-[0_12px_40px_rgba(16,185,129,0.15)]',
+    buttonGradient: 'from-emerald-500 to-teal-500',
+    buttonText: 'text-white font-black',
+    buttonGlow: 'hover:shadow-[0_0_20px_rgba(16,185,129,0.35)]',
+  },
+  wallet: {
+    glow: 'bg-[radial-gradient(circle_at_center,rgba(245,158,11,0.08),transparent_65%)]',
+    iconBg: 'bg-amber-500/10 border-amber-500/20 text-amber-450 group-hover:bg-amber-500/20 group-hover:border-amber-500/40',
+    iconText: 'text-amber-400',
+    badgeBg: 'bg-amber-500/10 border-amber-500/20',
+    badgeText: 'text-amber-400',
+    badgeDot: 'bg-amber-500 shadow-[0_0_8px_#f59e0b]',
+    hoverBorder: 'group-hover:border-amber-500/35 group-hover:bg-slate-900/60',
+    hoverShadow: 'hover:shadow-[0_12px_40px_rgba(245,158,11,0.15)]',
+    buttonGradient: 'from-amber-500 to-orange-500',
+    buttonText: 'text-slate-950 font-black',
+    buttonGlow: 'hover:shadow-[0_0_20px_rgba(245,158,11,0.35)]',
+  },
+  buildings: {
+    glow: 'bg-[radial-gradient(circle_at_center,rgba(56,189,248,0.08),transparent_65%)]',
+    iconBg: 'bg-sky-500/10 border-sky-500/20 text-sky-450 group-hover:bg-sky-500/20 group-hover:border-sky-500/40',
+    iconText: 'text-sky-400',
+    badgeBg: 'bg-sky-500/10 border-sky-500/20',
+    badgeText: 'text-sky-400',
+    badgeDot: 'bg-sky-500 shadow-[0_0_8px_#38bdf8]',
+    hoverBorder: 'group-hover:border-sky-500/35 group-hover:bg-slate-900/60',
+    hoverShadow: 'hover:shadow-[0_12px_40px_rgba(56,189,248,0.15)]',
+    buttonGradient: 'from-sky-500 to-blue-500',
+    buttonText: 'text-white font-black',
+    buttonGlow: 'hover:shadow-[0_0_20px_rgba(56,189,248,0.35)]',
+  },
+  packages: {
+    glow: 'bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.08),transparent_65%)]',
+    iconBg: 'bg-indigo-500/10 border-indigo-500/20 text-indigo-450 group-hover:bg-indigo-500/20 group-hover:border-indigo-500/40',
+    iconText: 'text-indigo-400',
+    badgeBg: 'bg-indigo-500/10 border-indigo-500/20',
+    badgeText: 'text-indigo-400',
+    badgeDot: 'bg-indigo-500 shadow-[0_0_8px_#6366f1]',
+    hoverBorder: 'group-hover:border-indigo-500/35 group-hover:bg-slate-900/60',
+    hoverShadow: 'hover:shadow-[0_12px_40px_rgba(99,102,241,0.15)]',
+    buttonGradient: 'from-violet-500 to-indigo-500',
+    buttonText: 'text-white font-black',
+    buttonGlow: 'hover:shadow-[0_0_20px_rgba(99,102,241,0.35)]',
+  },
+  reservations: {
+    glow: 'bg-[radial-gradient(circle_at_center,rgba(249,115,22,0.08),transparent_65%)]',
+    iconBg: 'bg-orange-500/10 border-orange-500/20 text-orange-450 group-hover:bg-orange-500/20 group-hover:border-orange-500/40',
+    iconText: 'text-orange-400',
+    badgeBg: 'bg-orange-500/10 border-orange-500/20',
+    badgeText: 'text-orange-400',
+    badgeDot: 'bg-orange-500 shadow-[0_0_8px_#f97316]',
+    hoverBorder: 'group-hover:border-orange-500/35 group-hover:bg-slate-900/60',
+    hoverShadow: 'hover:shadow-[0_12px_40px_rgba(249,115,22,0.15)]',
+    buttonGradient: 'from-orange-500 to-red-500',
+    buttonText: 'text-white font-black',
+    buttonGlow: 'hover:shadow-[0_0_20px_rgba(249,115,22,0.35)]',
+  },
+  feedback: {
+    glow: 'bg-[radial-gradient(circle_at_center,rgba(244,63,94,0.08),transparent_65%)]',
+    iconBg: 'bg-rose-500/10 border-rose-500/20 text-rose-450 group-hover:bg-rose-500/20 group-hover:border-rose-500/40',
+    iconText: 'text-rose-400',
+    badgeBg: 'bg-rose-500/10 border-rose-500/20',
+    badgeText: 'text-rose-400',
+    badgeDot: 'bg-rose-500 shadow-[0_0_8px_#f43f5e]',
+    hoverBorder: 'group-hover:border-rose-500/35 group-hover:bg-slate-900/60',
+    hoverShadow: 'hover:shadow-[0_12px_40px_rgba(244,63,94,0.15)]',
+    buttonGradient: 'from-rose-500 to-pink-500',
+    buttonText: 'text-white font-black',
+    buttonGlow: 'hover:shadow-[0_0_20px_rgba(244,63,94,0.35)]',
+  },
+};
+
+const defaultStyle = {
+  glow: 'bg-[radial-gradient(circle_at_center,rgba(100,116,139,0.03),transparent_65%)]',
+  iconBg: 'bg-slate-800/40 border-slate-700/30',
+  iconText: 'text-slate-500',
+  badgeBg: 'bg-slate-800/40 border-slate-700/30',
+  badgeText: 'text-slate-500',
+  badgeDot: 'bg-slate-550',
+  hoverBorder: 'hover:border-slate-700/40',
+  hoverShadow: 'hover:shadow-[0_8px_30px_rgba(0,0,0,0.1)]',
+  buttonGradient: 'from-slate-800 to-slate-700',
+  buttonText: 'text-slate-400 font-bold',
+  buttonGlow: '',
 };
 
 const heroHighlights = [
@@ -170,11 +282,12 @@ export default function HomePage({ modules, onOpenAuth, onViewProfile, onViewRes
   return (
     <main id="top" className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-orange-500 selection:text-white relative">
 
-      {/* Background Neon Glow Spheres — fixed so they never cause scroll issues */}
+      {/* Background Neon Glow Spheres & Interactive Particles — fixed so they never cause scroll issues */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10" aria-hidden="true">
         <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[55%] rounded-full bg-[radial-gradient(circle_at_center,hsla(24,95%,53%,0.08),transparent_55%)] blur-3xl" />
         <div className="absolute top-[35%] right-[-15%] w-[60%] h-[60%] rounded-full bg-[radial-gradient(circle_at_center,hsla(263,90%,51%,0.07),transparent_55%)] blur-3xl" />
         <div className="absolute bottom-[-10%] left-[20%] w-[50%] h-[50%] rounded-full bg-[radial-gradient(circle_at_center,hsla(142,76%,45%,0.04),transparent_50%)] blur-3xl" />
+        <InteractiveParticleCanvas />
       </div>
 
 
@@ -537,6 +650,7 @@ export default function HomePage({ modules, onOpenAuth, onViewProfile, onViewRes
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
             {productModules.map((module, index) => {
               const Icon = moduleIcons[module.id] || CarFront;
+              const style = moduleStyles[module.id] || defaultStyle;
               return (
                 <motion.article
                   key={module.id}
@@ -544,46 +658,54 @@ export default function HomePage({ modules, onOpenAuth, onViewProfile, onViewRes
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.4, delay: index * 0.08 }}
-                  whileHover={module.available ? { 
-                    scale: 1.03, 
-                    y: -4, 
-                    boxShadow: '0 0 25px rgba(249, 115, 22, 0.15)',
-                    borderColor: 'rgba(249, 115, 22, 0.35)' 
-                  } : { scale: 1.01 }}
-                  className={`p-5 rounded-2xl border backdrop-blur-md flex flex-col justify-between h-[230px] transition-all duration-300 ${
-                    module.available
-                      ? 'border-white/5 bg-slate-900/40'
-                      : 'border-white/5 bg-slate-900/10 opacity-75'
-                  }`}
+                  className={cn(
+                    "relative p-6 rounded-[28px] border flex flex-col justify-between h-[255px] backdrop-blur-md transition-all duration-500 shadow-lg group overflow-hidden border-white/8 bg-slate-900/40 hover:-translate-y-1.5",
+                    module.available ? `${style.hoverBorder} ${style.hoverShadow}` : "opacity-60 cursor-not-allowed"
+                  )}
                 >
-                  <div>
-                    <div className="flex items-center gap-3">
-                      <div className={`p-2.5 rounded-lg ${module.available ? 'bg-orange-500/10 text-orange-400 shadow-[0_0_10px_rgba(249,115,22,0.1)]' : 'bg-slate-800 text-slate-500'}`}>
-                        <Icon size={20} />
+                  {/* Glowing background card element */}
+                  <div className={cn("absolute inset-0 pointer-events-none opacity-20 blur-xl group-hover:opacity-40 transition-opacity duration-555", style.glow)} />
+
+                  {/* Diagonal Glass Reflection Shimmer Effect */}
+                  <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/5 to-transparent pointer-events-none" />
+
+                  <div className="relative z-10">
+                    <div className="flex items-center gap-3.5">
+                      <div className={cn(
+                        "flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border transition-all duration-300 group-hover:scale-110 group-hover:rotate-3", 
+                        style.iconBg
+                      )}>
+                        <Icon size={18} />
                       </div>
-                      <div>
-                        <h3 className="font-black text-xs text-white tracking-tight uppercase">{module.title}</h3>
-                        <span className={`text-[8px] font-black uppercase tracking-wider font-mono px-2 py-0.5 rounded ${module.available ? 'bg-emerald-500/10 text-emerald-400' : 'bg-slate-800 text-slate-500'
-                          }`}>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-black text-sm text-slate-100 tracking-tight uppercase leading-snug truncate group-hover:text-white transition-colors duration-300">{module.title}</h3>
+                        <span className={cn(
+                          "mt-1 inline-flex items-center rounded-md px-2 py-0.5 text-[8px] font-black uppercase tracking-wider font-mono border",
+                          module.available ? style.badgeBg + " " + style.badgeText : "bg-slate-800/40 border-slate-700/30 text-slate-500"
+                        )}>
+                          <span className={cn("w-1 h-1 rounded-full mr-1 animate-pulse", module.available ? style.badgeDot : 'bg-slate-550')} />
                           {module.available ? 'AVAILABLE' : 'ROADMAPPED'}
                         </span>
                       </div>
                     </div>
-                    <p className="mt-3 text-xs text-slate-400 leading-relaxed font-semibold">{module.description}</p>
+                    <p className="mt-4.5 text-xs text-slate-400 leading-relaxed font-semibold line-clamp-3 group-hover:text-slate-200 transition-colors duration-300">{module.description}</p>
                   </div>
 
-                  <div className="mt-4">
+                  <div className="mt-4 relative z-10">
                     <motion.button
-                      whileHover={module.available ? { scale: 1.02, boxShadow: '0 0 15px rgba(249,115,22,0.3)' } : {}}
-                      whileTap={module.available ? { scale: 0.98 } : {}}
-                      className={`w-full py-2.5 px-4 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-1.5 ${module.available
-                          ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 hover:shadow-[0_0_15px_rgba(249,115,22,0.2)] border-0'
+                      whileHover={module.available ? { scale: 1.015 } : {}}
+                      whileTap={module.available ? { scale: 0.985 } : {}}
+                      className={cn(
+                        "w-full py-2.5 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-1.5 cursor-pointer",
+                        module.available
+                          ? `bg-gradient-to-r ${style.buttonGradient} ${style.buttonText} ${style.buttonGlow}`
                           : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-white/5'
-                        }`}
+                      )}
                       onClick={() => { if (module.id === 'profile') return onViewProfile(); onAction(module); }}
                       disabled={!module.available}
                     >
-                      {module.available ? module.actionLabel : 'Sắp ra mắt'} <ArrowRight size={12} />
+                      <span>{module.available ? module.actionLabel : 'Sắp ra mắt'}</span>
+                      <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform duration-300" />
                     </motion.button>
                   </div>
                 </motion.article>

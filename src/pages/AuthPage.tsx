@@ -5,6 +5,7 @@ import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
 import { useSearchParams } from 'react-router-dom';
 import { CartoonCar3D } from '@/components/map/CartoonCar3D';
 import { forgotPassword, resetPassword } from '@/services/authService';
+import { InteractiveParticleCanvas } from '@/components/common/InteractiveParticleCanvas';
 
 const initialForm = {
   fullName: '',
@@ -450,6 +451,7 @@ export default function AuthPage({ mode, notice, onModeChange, onBackHome, onSub
       {/* Background Neon Glow Vectors */}
       <div className="absolute top-0 right-0 w-[550px] h-[550px] rounded-full bg-[radial-gradient(circle_at_center,rgba(249,115,22,0.08),transparent_60%)] pointer-events-none blur-3xl z-0" />
       <div className="absolute bottom-0 left-0 w-[450px] h-[450px] rounded-full bg-[radial-gradient(circle_at_center,rgba(168,85,247,0.06),transparent_60%)] pointer-events-none blur-3xl z-0" />
+      <InteractiveParticleCanvas />
 
       {/* 3D Cyber-Grid Perspective Floor */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
