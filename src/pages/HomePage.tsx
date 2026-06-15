@@ -683,7 +683,7 @@ export default function HomePage({ modules, onOpenAuth, onViewProfile, onViewRes
                   <div className="relative z-10">
                     <div className="flex items-center gap-3.5">
                       <div className={cn(
-                        "flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border transition-all duration-300 group-hover:scale-110 group-hover:rotate-3", 
+                        "flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border transition-all duration-300 group-hover:scale-110 group-hover:rotate-3",
                         style.iconBg
                       )}>
                         <Icon size={18} />
@@ -812,7 +812,7 @@ export default function HomePage({ modules, onOpenAuth, onViewProfile, onViewRes
           </div>
         </div>
         <div className="mt-10 border-t border-white/5 pt-6 text-center">
-          <small className="text-[10px] font-bold text-slate-500 font-mono">© {new Date().getFullYear()} PBMS PARKING. THIẾT KẾ GIAO DIỆN PREMIUM DƯỚI GIAO THỨC TẬP TRUNG.</small>
+          <small className="text-[10px] font-bold text-slate-500 font-mono">© {new Date().getFullYear()} PBMS PARKING .</small>
         </div>
       </footer>
     </main>
