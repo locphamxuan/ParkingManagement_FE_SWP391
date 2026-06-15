@@ -1,16 +1,16 @@
 import { useState } from 'react';
-import { 
-  AlertCircle, 
-  Building2, 
-  CheckCircle2, 
-  Clock, 
-  Edit, 
-  LogOut, 
-  Save, 
-  User, 
-  X, 
-  Mail, 
-  Phone, 
+import {
+  AlertCircle,
+  Building2,
+  CheckCircle2,
+  Clock,
+  Edit,
+  LogOut,
+  Save,
+  User,
+  X,
+  Mail,
+  Phone,
   Shield,
   Fingerprint
 } from 'lucide-react';
@@ -87,7 +87,7 @@ export function StaffProfilePage() {
       <div className="relative overflow-hidden flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-white/8 bg-slate-900/40 p-6 backdrop-blur-md shadow-lg">
         {/* Glow accent */}
         <div className="absolute top-0 left-0 w-40 h-40 bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.06),transparent_65%)] pointer-events-none blur-xl" />
-        
+
         <div className="flex items-center gap-4 relative z-10">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-emerald-500/20 bg-emerald-500/10 shadow-[0_0_12px_rgba(16,185,129,0.15)]">
             <User size={20} className="text-emerald-400" />
@@ -99,22 +99,20 @@ export function StaffProfilePage() {
         </div>
         <div className="flex gap-2.5 relative z-10">
           {!isEditing && (
-            <Button 
-              variant="secondary" 
-              size="sm" 
-              onClick={handleStartEdit} 
-              className="gap-1.5 rounded-xl border border-white/10 bg-slate-800/80 hover:bg-slate-700/80 text-slate-200 hover:text-white px-4 h-9.5 text-xs font-bold transition-all duration-300 hover:scale-[1.02] cursor-pointer"
+            <Button
+              variant="secondary"
+              onClick={handleStartEdit}
+              className="gap-2 rounded-xl border border-white/10 bg-slate-800/80 hover:bg-slate-700/80 text-slate-200 hover:text-white px-6 h-11 text-xs font-black uppercase tracking-wider transition-all duration-300 hover:scale-[1.02] cursor-pointer"
             >
-              <Edit size={13} className="text-emerald-400" /> Chỉnh sửa
+              <Edit size={14} className="text-emerald-400" /> Chỉnh sửa
             </Button>
           )}
           <Button
             variant="ghost"
-            size="sm"
             onClick={() => { logout(); navigate('/auth/login', { replace: true }); }}
-            className="gap-1.5 rounded-xl text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 px-4 h-9.5 text-xs font-bold transition-all duration-200 cursor-pointer"
+            className="gap-2 rounded-xl text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 px-6 h-11 text-xs font-black uppercase tracking-wider transition-all duration-200 cursor-pointer"
           >
-            <LogOut size={13} /> Đăng xuất
+            <LogOut size={14} /> Đăng xuất
           </Button>
         </div>
       </div>
@@ -194,21 +192,19 @@ export function StaffProfilePage() {
 
               {/* Action Buttons */}
               <div className="flex items-end gap-3 pt-3 md:col-span-2">
-                <Button 
-                  type="submit" 
-                  size="sm" 
-                  className="gap-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold text-xs uppercase tracking-wider px-5 h-10.5 hover:shadow-[0_0_20px_rgba(16,185,129,0.35)] transition-all duration-300 hover:scale-[1.01]"
+                <Button
+                  type="submit"
+                  className="gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-black text-xs uppercase tracking-wider px-6 h-11 hover:shadow-[0_0_20px_rgba(16,185,129,0.35)] transition-all duration-300 hover:scale-[1.01] cursor-pointer"
                 >
-                  <Save size={13} /> Lưu thay đổi
+                  <Save size={14} className="text-white" /> Lưu thay đổi
                 </Button>
-                <Button 
-                  type="button" 
-                  variant="secondary" 
-                  size="sm" 
-                  onClick={handleCancel} 
-                  className="gap-1.5 rounded-xl border border-white/10 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white px-5 h-10.5 font-bold text-xs uppercase tracking-wider transition-all duration-200"
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={handleCancel}
+                  className="gap-2 rounded-xl border border-white/10 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white px-6 h-11 font-black text-xs uppercase tracking-wider transition-all duration-200 cursor-pointer"
                 >
-                  <X size={13} /> Hủy
+                  <X size={14} className="text-slate-400" /> Hủy
                 </Button>
               </div>
             </form>
@@ -218,12 +214,12 @@ export function StaffProfilePage() {
                 { label: 'Họ tên', value: displayName || 'Chưa cập nhật', icon: User },
                 { label: 'Email', value: session.email, icon: Mail },
                 { label: 'Số điện thoại', value: session.phone || 'Chưa cập nhật', icon: Phone },
-                { label: 'Vai trò', value: 'NHÂN VIÊN VẬN HÀNH (STAFF)', icon: Shield },
+                { label: 'Vai trò', value: 'STAFF', icon: Shield },
               ].map((f) => {
                 const Icon = f.icon;
                 return (
-                  <div 
-                    key={f.label} 
+                  <div
+                    key={f.label}
                     className="flex items-center gap-4 rounded-2xl border border-white/5 bg-slate-950/40 p-4 transition-all duration-300 hover:border-emerald-500/20 hover:bg-slate-950/60 hover:shadow-[0_4px_20px_rgba(0,0,0,0.15)] group"
                   >
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/10 group-hover:scale-105 transition-all duration-300">
@@ -259,7 +255,7 @@ export function StaffProfilePage() {
             <span className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-1 text-[9px] font-black uppercase tracking-widest text-emerald-400 border border-emerald-500/20 font-mono">
               <Fingerprint size={10} /> Staff Portal
             </span>
-            
+
             <h2 className="mt-3 text-base font-extrabold text-white tracking-tight leading-snug truncate max-w-full">
               {displayName || 'Nhân viên'}
             </h2>
