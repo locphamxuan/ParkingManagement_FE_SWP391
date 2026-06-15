@@ -7,6 +7,7 @@ import { SearchFilterBar } from '@/components/common/SearchFilterBar';
 import { StatusBadge } from '@/components/common/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { CustomSelect } from '@/components/ui/select';
 import { useAdminDataset } from '@/hooks/admin/useAdminDataset';
 import { useAuth } from '@/hooks/useAuth';
 import {
@@ -420,18 +421,19 @@ export function BuildingsPage() {
                   )}
 
                   <div className="mt-2 flex items-center gap-2">
-                    <select
-                      className="h-9 flex-1 rounded-md border border-border bg-secondary px-3 text-sm text-foreground outline-none"
+                    <CustomSelect
+                      className="h-9 flex-1"
                       value={grantPackageId}
-                      onChange={(e) => setGrantPackageId(e.target.value)}
-                    >
-                      <option value="">-- Chọn gói để cấp/gia hạn --</option>
-                      {subPackages.map((p) => (
-                        <option key={p._id} value={p._id}>
-                          {p.name} · {fmtVnd(p.price)} · {p.durationDays} ngày
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(val) => setGrantPackageId(val)}
+                      placeholder="-- Chọn gói để cấp/gia hạn --"
+                      options={[
+                        { value: '', label: '-- Chọn gói để cấp/gia hạn --' },
+                        ...subPackages.map((p) => ({
+                          value: p._id,
+                          label: `${p.name} · ${fmtVnd(p.price)} · ${p.durationDays} ngày`
+                        }))
+                      ]}
+                    />
                     <Button size="sm" disabled={subBusy || !grantPackageId} onClick={handleGrantSubscription}>
                       Cấp gói
                     </Button>
