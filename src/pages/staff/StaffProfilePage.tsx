@@ -107,6 +107,13 @@ export function StaffProfilePage() {
               <Edit size={14} className="text-emerald-400" /> Chỉnh sửa
             </Button>
           )}
+          <Button
+            variant="ghost"
+            onClick={() => { logout(); navigate('/auth/login', { replace: true }); }}
+            className="gap-2 rounded-xl text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 px-6 h-11 text-xs font-black uppercase tracking-wider transition-all duration-200 cursor-pointer"
+          >
+            <LogOut size={14} /> Đăng xuất
+          </Button>
         </div>
       </div>
 

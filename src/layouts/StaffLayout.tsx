@@ -158,21 +158,6 @@ export function StaffLayout() {
               );
             })}
           </nav>
-
-          {/* Logout button pinned to bottom */}
-          <div className="mt-3 border-t border-white/8 pt-3">
-            <button
-              type="button"
-              onClick={onLogout}
-              className={cn(
-                'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold text-rose-400 transition-all duration-200 hover:bg-rose-500/10 hover:text-rose-300',
-                collapsed && 'justify-center',
-              )}
-            >
-              <LogOut size={15} className="shrink-0" />
-              {!collapsed ? <span className="tracking-wide">Đăng xuất</span> : null}
-            </button>
-          </div>
         </aside>
 
         {/* ── Main area ── */}
