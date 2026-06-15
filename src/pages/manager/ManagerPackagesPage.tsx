@@ -6,6 +6,7 @@ import { DataTable, type DataColumn } from '@/components/common/DataTable';
 import { StatusBadge } from '@/components/common/StatusBadge';
 import { ModalForm } from '@/components/modals/ModalForm';
 import { CustomSelect } from '@/components/ui/select';
+import { Spinner } from '@/components/ui/spinner';
 import { useBuildingContext } from '@/hooks/useBuildingContext';
 import { managerApi, type LongTermPackage, type VehicleType } from '@/services/manager/managerApi';
 
@@ -206,7 +207,9 @@ export function ManagerPackagesPage() {
         </Button>
       </div>
       {loading ? (
-        <div className="text-sm text-muted-foreground">Đang tải...</div>
+        <div className="flex justify-center py-10">
+          <Spinner label="Đang tải danh sách gói..." />
+        </div>
       ) : error ? (
         <div className="text-sm text-red-600">{error}</div>
       ) : (
