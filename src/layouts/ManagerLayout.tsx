@@ -61,6 +61,7 @@ export function ManagerLayout() {
             email={session?.email ?? ADMIN_EMAIL_FALLBACK}
             fullName={session?.displayName}
             role={session?.role}
+            showNotification={false}
             onLogout={() => {
               logout();
               navigate('/auth/login', { replace: true });
