@@ -13,9 +13,11 @@ interface ModalFormProps {
 export function ModalForm({ open, onOpenChange, title, children, onSubmit }: ModalFormProps) {
   return (
     <Modal open={open} onOpenChange={onOpenChange} title={title}>
-      <div className="grid gap-5">
-        <div className="text-slate-200 text-sm leading-relaxed">{children}</div>
-        <div className="flex justify-end gap-2.5 border-t border-white/10 pt-4 mt-2">
+      <div className="flex flex-col gap-4 max-h-[75vh]">
+        <div className="flex-1 overflow-y-auto text-slate-200 text-sm leading-relaxed pr-1.5">
+          {children}
+        </div>
+        <div className="flex justify-end gap-2.5 border-t border-white/10 pt-4 mt-1 shrink-0">
           <Button 
             variant="secondary" 
             onClick={() => onOpenChange(false)}
