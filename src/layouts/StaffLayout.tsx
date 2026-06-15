@@ -5,6 +5,7 @@ import {
   CalendarCheck2,
   Car,
   ChevronLeft,
+  ChevronDown,
   LayoutDashboard,
   LogOut,
   ScanLine,
@@ -203,18 +204,18 @@ export function StaffLayout() {
 
                 <DropdownMenu.Root>
                   <DropdownMenu.Trigger asChild>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      className="gap-2 border-white/10 bg-slate-800 text-slate-200 hover:bg-slate-700"
+                    <button
+                      type="button"
+                      className="group inline-flex items-center gap-2.5 rounded-full border border-white/10 bg-slate-900/80 px-3.5 py-2 text-xs font-semibold text-slate-200 shadow-md backdrop-blur-md transition-all duration-300 hover:bg-slate-800/80 hover:border-emerald-500/30 hover:shadow-[0_0_15px_rgba(16,185,129,0.15)] focus:outline-none focus:ring-2 focus:ring-emerald-500/40 cursor-pointer"
                     >
-                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-[11px] font-bold text-emerald-400 border border-emerald-500/20">
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500/20 to-teal-500/20 text-xs font-extrabold text-emerald-400 border border-emerald-500/30 shadow-inner">
                         {(user?.fullName ?? user?.email ?? 'S')[0]?.toUpperCase()}
                       </span>
-                      <span className="max-w-[120px] truncate text-xs">
-                        {user?.email}
+                      <span className="max-w-[120px] truncate text-slate-200 font-bold tracking-wide">
+                        {user?.fullName || user?.email?.split('@')[0]}
                       </span>
-                    </Button>
+                      <ChevronDown size={13} className="shrink-0 text-slate-500 transition-transform duration-300 group-aria-expanded:rotate-180 ml-0.5" />
+                    </button>
                   </DropdownMenu.Trigger>
                   <DropdownMenu.Portal>
                     <DropdownMenu.Content
@@ -258,16 +259,16 @@ export function StaffLayout() {
                       </div>
 
                       {/* Actions */}
-                      <div className="p-1">
+                      <div className="p-1.5 space-y-1">
                         <DropdownMenu.Item
-                          className="flex cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-slate-300 outline-none hover:bg-white/6 hover:text-white"
-                          onClick={() => navigate('profile')}
+                          className="flex cursor-pointer items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-300 outline-none transition-all duration-200 hover:bg-emerald-500/10 hover:text-emerald-400 focus:bg-emerald-500/10 focus:text-emerald-400"
+                          onClick={() => navigate('/staff/profile')}
                         >
                           <User size={14} className="text-emerald-400" /> Xem hồ sơ
                         </DropdownMenu.Item>
-                        <DropdownMenu.Separator className="my-1 h-px bg-white/8" />
+                        <DropdownMenu.Separator className="my-1.5 h-px bg-white/8" />
                         <DropdownMenu.Item
-                          className="flex cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-rose-400 outline-none hover:bg-rose-500/10 hover:text-rose-300"
+                          className="flex cursor-pointer items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs font-bold text-rose-400 outline-none transition-all duration-200 hover:bg-rose-500/10 hover:text-rose-300 focus:bg-rose-500/10 focus:text-rose-300"
                           onClick={onLogout}
                         >
                           <LogOut size={14} /> Đăng xuất
