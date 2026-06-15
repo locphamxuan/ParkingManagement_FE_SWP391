@@ -487,7 +487,7 @@ export function useSubscribeToPackage() {
   const [error, setError] = useState<Error | null>(null);
 
   const subscribe = useCallback(
-    async (body: { packageId: string; linkedPlates: string[]; slotId?: string; startDate?: string; paymentMethod?: string }) => {
+    async (body: { packageId: string; linkedPlates: string[]; startDate?: string; paymentMethod?: string }) => {
       setIsLoading(true);
       setError(null);
       try {
@@ -495,7 +495,6 @@ export function useSubscribeToPackage() {
         const result = await userApi.longTermSubscriptions.create({
           packageId: body.packageId,
           plateNumber: body.linkedPlates[0],
-          ...(body.slotId ? { slotId: body.slotId } : {}),
           ...(body.startDate ? { startDate: body.startDate } : {}),
         });
         return result.data.subscription;
@@ -544,7 +543,7 @@ export function useCancelSubscription() {
     setError(null);
     try {
       const result = await userApi.longTermSubscriptions.cancel(id, {
-        cancelReason: cancelReason || 'change_slot',
+        cancelReason: cancelReason || 'change_vehicle',
         cancelNote,
       });
       return result.data.subscription;

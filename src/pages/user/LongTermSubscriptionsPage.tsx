@@ -13,9 +13,9 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useBuildings, useLongTermPackages, useLongTermSubscriptions, useSubscribeToPackage, useCancelSubscription, useRenewSubscription } from '@/hooks/user';
-import type { LongTermPackage, LongTermPaymentMethod, LongTermSubscription, ParkingSlot, FloorAvailability } from '@/services/user/userApi';
-import { userApi } from '@/services/user/userApi';
+import type { LongTermPackage, LongTermPaymentMethod, LongTermSubscription } from '@/services/user/userApi';
 import { CustomSelect } from '@/components/ui/select';
+import { packageStatusLabel, packageStatusBadgeClass } from '@/utils/packageStatus';
 
 const currency = new Intl.NumberFormat('vi-VN', {
   style: 'currency',
@@ -52,7 +52,6 @@ interface PackageSelectModalProps {
     buildingId: string;
     plateNumber: string;
     startDate: string;
-    slotId?: string;
     paymentMethod: LongTermPaymentMethod;
   }) => Promise<void>;
   isSubmitting: boolean;
@@ -73,16 +72,6 @@ function PackageSelectModal({
   const [paymentMethod, setPaymentMethod] = useState<LongTermPaymentMethod>('wallet');
   const [error, setError] = useState<string | null>(null);
 
-  // ── Chọn slot cố định (chỉ khi gói cho phép) ──────────────────────────────
-  const pkgBuildingId = pkg
-    ? (typeof pkg.building === 'object' ? pkg.building._id : pkg.building)
-    : '';
-  const [floors, setFloors] = useState<FloorAvailability[]>([]);
-  const [selectedFloorId, setSelectedFloorId] = useState('');
-  const [slots, setSlots] = useState<ParkingSlot[]>([]);
-  const [selectedSlotId, setSelectedSlotId] = useState('');
-  const [loadingSlots, setLoadingSlots] = useState(false);
-
   useEffect(() => {
     if (isOpen && buildings.length > 0 && !selectedBuildingId) {
       setSelectedBuildingId(buildings[0]._id);
@@ -94,42 +83,6 @@ function PackageSelectModal({
       setSelectedPlate(userPlates[0].plateNumber);
     }
   }, [isOpen, userPlates]);
-
-  // Tải danh sách tầng của tòa nhà thuộc gói (khi mở modal & gói cho slot cố định).
-  useEffect(() => {
-    if (!isOpen || !pkg?.allowDedicatedSlot || !pkgBuildingId) return;
-    let cancelled = false;
-    userApi.buildings
-      .floors(pkgBuildingId)
-      .then((res) => {
-        if (cancelled) return;
-        const fl = res.data?.floors ?? [];
-        setFloors(fl);
-        setSelectedFloorId((cur) => cur || (fl[0]?._id ?? ''));
-      })
-      .catch(() => undefined);
-    return () => {
-      cancelled = true;
-    };
-  }, [isOpen, pkg?.allowDedicatedSlot, pkgBuildingId]);
-
-  // Tải ô đỗ theo tầng đã chọn (kèm owner/selectable từ BE).
-  useEffect(() => {
-    if (!isOpen || !pkg?.allowDedicatedSlot || !pkgBuildingId || !selectedFloorId) return;
-    let cancelled = false;
-    setLoadingSlots(true);
-    setSelectedSlotId('');
-    userApi.buildings
-      .slots(pkgBuildingId, selectedFloorId)
-      .then((res) => {
-        if (!cancelled) setSlots(res.data?.slots ?? []);
-      })
-      .catch(() => undefined)
-      .finally(() => !cancelled && setLoadingSlots(false));
-    return () => {
-      cancelled = true;
-    };
-  }, [isOpen, pkg?.allowDedicatedSlot, pkgBuildingId, selectedFloorId]);
 
   const handleSubmit = async () => {
     setError(null);
@@ -148,7 +101,6 @@ function PackageSelectModal({
         buildingId: selectedBuildingId,
         plateNumber: selectedPlate,
         startDate,
-        slotId: selectedSlotId || undefined,
         paymentMethod,
       });
       onClose();
@@ -232,65 +184,14 @@ function PackageSelectModal({
             />
           </div>
 
-          {/* Chọn chỗ đỗ cố định (chỉ với gói cho phép) */}
-          {pkg?.allowDedicatedSlot && (
-            <div className="rounded-xl border border-cyan-400/20 bg-cyan-500/5 p-3 space-y-2.5">
-              <p className="text-xs font-black uppercase tracking-wider text-cyan-300">Chọn chỗ đỗ cố định</p>
-              <div>
-                <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Tầng</label>
-                <CustomSelect
-                  value={selectedFloorId}
-                  onChange={setSelectedFloorId}
-                  options={floors.map((f) => ({ value: f._id, label: f.name || f.code }))}
-                  placeholder="Chọn tầng"
-                />
-              </div>
-              {loadingSlots ? (
-                <p className="text-[11px] text-slate-400">Đang tải chỗ đỗ...</p>
-              ) : slots.length === 0 ? (
-                <p className="text-[11px] text-slate-500">Tầng này chưa có chỗ đỗ.</p>
-              ) : (
-                <div className="grid grid-cols-4 gap-1.5 max-h-44 overflow-y-auto pr-1">
-                  {slots.map((s) => {
-                    const taken = s.selectable === false;
-                    const picked = selectedSlotId === s._id;
-                    return (
-                      <button
-                        key={s._id}
-                        type="button"
-                        disabled={taken}
-                        title={s.owner ? `Đã có chủ: ${s.owner.plateNumber}${s.owner.accountName ? ` · ${s.owner.accountName}` : ''}` : undefined}
-                        onClick={() => setSelectedSlotId(picked ? '' : s._id)}
-                        className={`rounded-lg border px-1 py-1.5 text-[11px] font-bold transition-all ${
-                          picked
-                            ? 'border-orange-400 bg-orange-500/20 text-orange-200'
-                            : taken
-                            ? 'cursor-not-allowed border-rose-500/20 bg-rose-500/5 text-rose-300/70'
-                            : 'border-white/10 bg-slate-950 text-slate-200 hover:border-cyan-400/40'
-                        }`}
-                      >
-                        <span className="block truncate">{s.code}</span>
-                        {taken && s.owner ? (
-                          <span className="block truncate text-[9px] font-semibold text-rose-300/70">{s.owner.plateNumber}</span>
-                        ) : null}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-              {selectedSlotId && (
-                <p className="text-[11px] font-bold text-orange-300">
-                  Đã chọn ô: {slots.find((x) => x._id === selectedSlotId)?.code}
-                  {floors.find((f) => f._id === selectedFloorId)?.name
-                    ? ` · ${floors.find((f) => f._id === selectedFloorId)?.name}`
-                    : ''}
-                </p>
-              )}
-              <p className="text-[10px] text-slate-500">
-                Ô đỏ = đã có chủ (không chọn được). Bỏ trống = không giữ chỗ cố định.
-              </p>
-            </div>
-          )}
+          {/* Gói floating: không giữ chỗ cố định */}
+          <div className="rounded-xl border border-amber-400/20 bg-amber-500/5 p-3">
+            <p className="text-[11px] text-amber-200/90">
+              Gói cho phép đỗ <strong>miễn phí {pkg?.maxHoursPerDay ? `${pkg.maxHoursPerDay} giờ` : 'theo gói'}/ngày</strong>,
+              vượt sẽ tính phí theo giá thường. Gói <strong>không giữ chỗ cố định</strong> — nhân viên sẽ xếp chỗ trống khi xe vào.
+              Nếu muốn chắc chắn có chỗ vào giờ cụ thể, hãy dùng <strong>Đặt chỗ</strong>.
+            </p>
+          </div>
 
           <div>
             <label className="block text-xs font-bold uppercase text-slate-400 mb-1">
@@ -463,7 +364,7 @@ export default function LongTermSubscriptionsPage() {
   };
 
   const [cancellingSub, setCancellingSub] = useState<LongTermSubscription | null>(null);
-  const [cancelReason, setCancelReason] = useState<string>('change_slot');
+  const [cancelReason, setCancelReason] = useState<string>('change_vehicle');
   const [cancelNote, setCancelNote] = useState<string>('');
   const [cancelError, setCancelError] = useState<string | null>(null);
 
@@ -492,7 +393,6 @@ export default function LongTermSubscriptionsPage() {
     buildingId: string;
     plateNumber: string;
     startDate: string;
-    slotId?: string;
     paymentMethod: LongTermPaymentMethod;
   }) => {
     setMessage(null);
@@ -506,14 +406,13 @@ export default function LongTermSubscriptionsPage() {
       await subscribe({
         packageId: selectedPackageForModal._id,
         linkedPlates: [data.plateNumber],
-        slotId: data.slotId,
         startDate: data.startDate,
       });
 
       await refreshSubscriptions();
       setMessage({
         type: 'success',
-        text: `Đăng ký thành công ${selectedPackageForModal.name} cho biển số ${data.plateNumber}${data.slotId ? ' (kèm chỗ đỗ cố định)' : ''}.`,
+        text: `Đăng ký thành công ${selectedPackageForModal.name} cho biển số ${data.plateNumber}.`,
       });
       setSelectedPackageForModal(null);
     } catch (error) {
@@ -675,16 +574,8 @@ export default function LongTermSubscriptionsPage() {
                       <div key={item._id} className="rounded-xl border border-white/10 bg-slate-950/60 p-4">
                         <div className="flex items-center justify-between gap-2">
                           <p className="text-xs font-black text-orange-300">{item.package.name}</p>
-                          <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider shrink-0 ${
-                            item.status === 'active'
-                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                              : item.status === 'pending'
-                              ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                              : item.status === 'cancelled'
-                              ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-                              : 'bg-slate-500/10 text-slate-400 border border-slate-500/20'
-                          }`}>
-                            {item.status === 'active' ? 'Hoạt động' : item.status === 'pending' ? 'Chờ kích hoạt' : item.status === 'cancelled' ? 'Đã hủy' : 'Hết hạn'}
+                          <span className={`rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider shrink-0 ${packageStatusBadgeClass(item.status)}`}>
+                            {packageStatusLabel(item.status)}
                           </span>
                         </div>
                         <p className="mt-1 text-xs font-semibold text-slate-300">
@@ -697,16 +588,6 @@ export default function LongTermSubscriptionsPage() {
                           {formatMoney(item.price ?? item.package.price)}
                         </p>
 
-                        {/* Dedicated Slot info if exists */}
-                        {item.slot && (
-                          <p className="mt-1 text-[10px] text-slate-400">
-                            Ô đỗ: <span className="font-bold text-slate-200">{item.slot.code}</span>
-                            {item.slot.floor && typeof item.slot.floor === 'object' && (item.slot.floor.name || item.slot.floor.code) ? (
-                              <span> · {item.slot.floor.name || item.slot.floor.code}</span>
-                            ) : null}
-                            {item.slotReleased ? <span className="text-rose-300"> (đã thu hồi)</span> : null}
-                          </p>
-                        )}
                         {typeof item.package.maxHoursPerDay === 'number' && item.package.maxHoursPerDay > 0 && (
                           <p className="mt-1 text-[10px] text-slate-400">
                             Giờ miễn phí: <span className="font-bold text-slate-200">{item.package.maxHoursPerDay}h/ngày</span>
@@ -714,12 +595,12 @@ export default function LongTermSubscriptionsPage() {
                         )}
                         {item.status === 'expired' && (
                           <p className="mt-2 text-[10px] text-amber-400/90 leading-relaxed border-t border-white/5 pt-1.5">
-                            Gói đã hết hạn — đang tính phí theo giờ. Gia hạn để giữ chỗ cố định.
+                            Gói đã hết hạn — đang tính phí theo giờ. Gia hạn để tiếp tục ưu đãi giờ đỗ.
                           </p>
                         )}
 
-                        {/* Gia hạn: cho gói đang hoạt động, hoặc vừa hết hạn còn giữ slot (grace). */}
-                        {(item.status === 'active' || (item.status === 'expired' && item.slot && !item.slotReleased)) && (
+                        {/* Gia hạn: cho gói đang hoạt động, hoặc vừa hết hạn (trong 7 ngày). */}
+                        {(item.status === 'active' || item.status === 'expired') && (
                           <button
                             type="button"
                             disabled={isRenewing}
@@ -784,8 +665,10 @@ export default function LongTermSubscriptionsPage() {
                   {selectedPackage.description && (
                     <p className="text-xs text-slate-400 mt-2">{selectedPackage.description}</p>
                   )}
-                  <p className="mt-2 inline-flex items-center gap-1 rounded-full border border-cyan-400/30 bg-cyan-500/10 px-2 py-0.5 text-[11px] font-bold text-cyan-300">
-                    <CheckCircle2 size={11} /> Có chỗ đỗ dành riêng
+                  <p className="mt-2 inline-flex items-center gap-1 rounded-full border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[11px] font-bold text-amber-300">
+                    {selectedPackage.maxHoursPerDay
+                      ? `Miễn phí ${selectedPackage.maxHoursPerDay}h/ngày`
+                      : 'Ưu đãi giờ đỗ theo gói'}
                   </p>
                   {(selectedPackage.benefits?.length ?? 0) > 0 && (
                     <div className="mt-2 border-t border-white/10 pt-2">
@@ -838,7 +721,6 @@ export default function LongTermSubscriptionsPage() {
                 <span className="text-xs font-bold uppercase text-slate-400 block mb-2">Lý do hủy</span>
                 <div className="space-y-2">
                   {[
-                    { value: 'change_slot', label: '🚗 Đổi sang chỗ đỗ khác' },
                     { value: 'change_vehicle', label: '🔄 Thay đổi phương tiện / biển số xe' },
                     { value: 'no_longer_needed', label: '🏢 Không còn nhu cầu đỗ xe ở đây' },
                     { value: 'pricing_issue', label: '💸 Giá gói không còn phù hợp' },
@@ -900,7 +782,7 @@ export default function LongTermSubscriptionsPage() {
                 type="button"
                 onClick={() => {
                   setCancellingSub(null);
-                  setCancelReason('change_slot');
+                  setCancelReason('change_vehicle');
                   setCancelNote('');
                   setCancelError(null);
                 }}
@@ -922,7 +804,7 @@ export default function LongTermSubscriptionsPage() {
                       text: 'Hủy gói dài hạn thành công! Số tiền hoàn lại (95%) đã được cộng vào ví tài khoản.',
                     });
                     setCancellingSub(null);
-                    setCancelReason('change_slot');
+                    setCancelReason('change_vehicle');
                     setCancelNote('');
                   } catch (err) {
                     setCancelError(err instanceof Error ? err.message : 'Lỗi khi hủy gói dài hạn.');

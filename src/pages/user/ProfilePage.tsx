@@ -8,6 +8,7 @@ import { UserQRModal } from '@/components/modals/UserQRModal';
 import { PlateQRModal } from '@/components/modals/PlateQRModal';
 import { userApi, type LongTermSubscription } from '@/services/user/userApi';
 import { normalizePlate, isValidVietnamPlate, brandsForVehicleType } from '@/utils/plate';
+import { packageStatusLabel, packageStatusBadgeClass } from '@/utils/packageStatus';
 
 // ─── Vietnamese license plate validation (shared util — canonical 59G2-038.80) ─
 // Series must be letter+digit (59G2) or two letters (30LD); a bare single letter
@@ -436,32 +437,16 @@ export default function ProfilePage() {
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               {subscriptions.map((s) => {
-                const statusMap: Record<string, { label: string; cls: string }> = {
-                  active: { label: 'Đang hoạt động', cls: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
-                  pending: { label: 'Chờ kích hoạt', cls: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
-                  expired: { label: 'Hết hạn', cls: 'bg-slate-500/10 text-slate-400 border-slate-500/20' },
-                  cancelled: { label: 'Đã hủy', cls: 'bg-rose-500/10 text-rose-400 border-rose-500/20' },
-                };
-                const st = statusMap[s.status] ?? statusMap.expired;
                 return (
                   <div key={s._id} className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-sm font-black text-orange-300">{s.package?.name ?? 'Gói dài hạn'}</p>
-                      <span className={`rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase ${st.cls}`}>{st.label}</span>
+                      <span className={`rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase ${packageStatusBadgeClass(s.status)}`}>{packageStatusLabel(s.status)}</span>
                     </div>
                     <p className="mt-1 font-mono text-xs font-semibold text-slate-200">{s.plateNumber ?? '—'}</p>
                     <p className="mt-1 text-[11px] text-slate-400">
                       {new Date(s.startDate).toLocaleDateString('vi-VN')} → {new Date(s.endDate).toLocaleDateString('vi-VN')}
                     </p>
-                    {s.slot?.code && (
-                      <p className="mt-1 text-[11px] text-slate-400">
-                        Chỗ đỗ: <span className="font-bold text-slate-200">{s.slot.code}</span>
-                        {s.slot.floor && typeof s.slot.floor === 'object' && (s.slot.floor.name || s.slot.floor.code) ? (
-                          <span> · {s.slot.floor.name || s.slot.floor.code}</span>
-                        ) : null}
-                        {s.slotReleased ? <span className="text-rose-300"> (đã thu hồi)</span> : null}
-                      </p>
-                    )}
                     {typeof s.package?.maxHoursPerDay === 'number' && s.package.maxHoursPerDay > 0 && (
                       <p className="mt-1 text-[11px] text-slate-400">Giờ miễn phí: {s.package.maxHoursPerDay}h/ngày</p>
                     )}

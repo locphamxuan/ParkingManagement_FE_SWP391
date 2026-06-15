@@ -55,7 +55,10 @@ export function StaffOperationsPage() {
   const portraitCamRef = useRef<LiveCameraHandle>(null);
 
   // Plate → account info (chỉ để hiển thị; khách vãng lai khi không có tài khoản)
-  const [plateAccountInfo, setPlateAccountInfo] = useState<{ hasAccount: boolean; registeredVehicleType?: 'car' | 'motorcycle' | null; user: { id: string; fullName: string; email: string } | null } | null>(null);
+  const [plateAccountInfo, setPlateAccountInfo] = useState<PlateInfo | null>(null);
+  // Gói floating: khi biển số có gói còn hạn, staff phải chọn 1 slot trống.
+  const [freeSlots, setFreeSlots] = useState<{ _id: string; code: string; floor?: { name?: string; code?: string } | null }[]>([]);
+  const [selectedSlotId, setSelectedSlotId] = useState('');
   // Reject (từ chối) check-in flow
   const [rejectOpen, setRejectOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
@@ -121,13 +124,33 @@ export function StaffOperationsPage() {
       staffApi
         .lookupPlate(clean)
         .then((res) => {
-          setPlateAccountInfo((res as { data?: typeof plateAccountInfo })?.data ?? null);
+          setPlateAccountInfo((res as { data?: PlateInfo })?.data ?? null);
         })
         .catch(() => undefined);
     } else {
       setPlateAccountInfo(null);
     }
   }, [plateNumber]);
+
+  // Biển số có gói còn hạn → tải slot trống của tòa nhà để staff gán chỗ.
+  const hasActivePackage = Boolean(plateAccountInfo?.hasActivePackage);
+  useEffect(() => {
+    if (!hasActivePackage || !buildingId) {
+      setFreeSlots([]);
+      setSelectedSlotId('');
+      return;
+    }
+    let cancelled = false;
+    staffApi
+      .freeSlots(buildingId)
+      .then((res) => {
+        if (!cancelled) setFreeSlots((res as { data?: { items?: typeof freeSlots } })?.data?.items ?? []);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [hasActivePackage, buildingId]);
 
   // Camera 1 nhận diện biển số → lưu ảnh biển số + mở popup đối chiếu.
   const handlePlateDetected = ({ plateNumber: plate, brand, plateImage: img }: PlateScanResult) => {
@@ -189,10 +212,17 @@ export function StaffOperationsPage() {
     setPlateImage(null);
     setPortraitImage(null);
     setPlateAccountInfo(null);
+    setFreeSlots([]);
+    setSelectedSlotId('');
   };
 
   const onCheckIn = async () => {
     setOpMessage(null);
+    // Gói floating: bắt buộc chọn slot trống cho xe mua gói.
+    if (hasActivePackage && !selectedSlotId) {
+      setOpMessage({ type: 'err', text: 'Xe này có gói dài hạn — vui lòng chọn 1 chỗ đỗ trống trước khi check-in.' });
+      return;
+    }
     setLoading(true);
     const currentPlate = normalizePlate(plateNumber) || plateNumber.trim().toUpperCase();
     // Ensure BOTH images are captured at check-in: use the already-scanned frame
@@ -209,6 +239,7 @@ export function StaffOperationsPage() {
         vehicleBrand: vehicleBrand || undefined,
         plateImage: plateImg,
         portraitImage: portraitImg,
+        slot: hasActivePackage && selectedSlotId ? selectedSlotId : undefined,
       });
       setOpMessage({ type: 'ok', text: `Đã tạo phiên gửi xe cho biển số ${currentPlate} thành công.` });
       resetForm();
@@ -391,11 +422,39 @@ export function StaffOperationsPage() {
               </div>
             </div>
 
+            {/* Gói dài hạn: bắt buộc chọn chỗ đỗ trống */}
+            {hasActivePackage && (
+              <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 space-y-2">
+                <p className="text-[11px] font-bold text-amber-300 flex items-center gap-1">
+                  <AlertCircle size={12} /> Xe có gói dài hạn
+                  {plateAccountInfo?.activePackage?.name ? ` "${plateAccountInfo.activePackage.name}"` : ''}
+                  {plateAccountInfo?.activePackage?.maxHoursPerDay
+                    ? ` · free ${plateAccountInfo.activePackage.maxHoursPerDay}h/ngày`
+                    : ''} — chọn 1 chỗ đỗ trống:
+                </p>
+                <select
+                  value={selectedSlotId}
+                  onChange={(e) => setSelectedSlotId(e.target.value)}
+                  className="h-10 w-full rounded-lg border border-white/10 bg-slate-950 px-3 text-sm font-semibold text-white outline-none focus:border-amber-400/60"
+                >
+                  <option value="">-- Chọn chỗ đỗ trống --</option>
+                  {freeSlots.map((s) => (
+                    <option key={s._id} value={s._id}>
+                      {s.code}{s.floor?.name || s.floor?.code ? ` · ${s.floor?.name || s.floor?.code}` : ''}
+                    </option>
+                  ))}
+                </select>
+                {freeSlots.length === 0 && (
+                  <p className="text-[11px] text-rose-300">Hiện không còn chỗ trống trong tòa nhà.</p>
+                )}
+              </div>
+            )}
+
             {/* Nút hành động */}
             <div className="flex gap-2">
               <Button
                 onClick={onCheckIn}
-                disabled={!plateNumber.trim() || loading || !!buildingSupportWarning}
+                disabled={!plateNumber.trim() || loading || !!buildingSupportWarning || (hasActivePackage && !selectedSlotId)}
                 className="flex-1 h-11 gap-2 bg-gradient-to-r from-orange-500 to-amber-400 text-slate-950 hover:brightness-110 disabled:opacity-60"
               >
                 <ScanLine size={16} /> Check-in (xe vào)

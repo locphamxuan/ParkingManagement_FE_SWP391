@@ -7,8 +7,6 @@ import {
   TrendingUp,
   ArrowUpRight,
   Wallet,
-  Crown,
-  CalendarClock,
   Plus,
   ExternalLink,
 } from 'lucide-react';
@@ -21,8 +19,6 @@ import {
   type BuildingWallet,
   type BuildingWalletTransaction,
   type DailyRevenueResult,
-  type AdminSubscriptionPackage,
-  type SubscriptionStatus,
 } from '@/services/manager/managerApi';
 
 const fmtVnd = (n: number | null | undefined) =>
@@ -31,30 +27,22 @@ const fmtVnd = (n: number | null | undefined) =>
 const fmtTime = (iso: string) =>
   new Date(iso).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' });
 
-const fmtDate = (iso: string | null | undefined) =>
-  iso ? new Date(iso).toLocaleDateString('vi-VN') : '—';
-
 const TX_REASON_LABELS: Record<string, string> = {
   parking_fee: 'Phí gửi xe',
   reservation_fee: 'Phí đặt chỗ',
   topup: 'Nạp ví',
-  admin_subscription: 'Mua gói hệ thống',
-  transfer_to_system: 'Chuyển cho Admin',
   refund: 'Hoàn tiền',
 };
 
 export function ManagerWalletPage() {
-  const { buildingId, refreshSubscription } = useBuildingContext();
+  const { buildingId } = useBuildingContext();
 
   const [wallet, setWallet] = useState<BuildingWallet | null>(null);
   const [daily, setDaily] = useState<DailyRevenueResult | null>(null);
   const [transactions, setTransactions] = useState<BuildingWalletTransaction[]>([]);
-  const [subscription, setSubscription] = useState<SubscriptionStatus | null>(null);
-  const [packages, setPackages] = useState<AdminSubscriptionPackage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [subscribingId, setSubscribingId] = useState<string | null>(null);
-  const [subMessage, setSubMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
+  const [message, setMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
 
   const [topupOpen, setTopupOpen] = useState(false);
   const [topupAmount, setTopupAmount] = useState('');
@@ -66,18 +54,14 @@ export function ManagerWalletPage() {
     setLoading(true);
     setError(null);
     try {
-      const [walletRes, dailyRes, txRes, subRes, pkgRes] = await Promise.all([
+      const [walletRes, dailyRes, txRes] = await Promise.all([
         managerApi.wallet.get(buildingId),
         managerApi.wallet.getDailyRevenue(buildingId),
         managerApi.wallet.listTransactions(buildingId),
-        managerApi.getSubscriptionStatus(buildingId),
-        managerApi.wallet.listSubscriptionPackages(buildingId),
       ]);
       setWallet((walletRes as { data?: { wallet: BuildingWallet } })?.data?.wallet ?? null);
       setDaily((dailyRes as { data?: DailyRevenueResult })?.data ?? null);
       setTransactions((txRes as { data?: { items: BuildingWalletTransaction[] } })?.data?.items ?? []);
-      setSubscription((subRes as { data?: SubscriptionStatus })?.data ?? null);
-      setPackages((pkgRes as { data?: { items: AdminSubscriptionPackage[] } })?.data?.items ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Tải dữ liệu ví thất bại');
     } finally {
@@ -89,37 +73,15 @@ export function ManagerWalletPage() {
     refresh();
   }, [refresh]);
 
-  const handleSubscribe = useCallback(
-    async (pkg: AdminSubscriptionPackage) => {
-      if (!buildingId) return;
-      if (!window.confirm(
-        `Mua gói "${pkg.name}" với giá ${fmtVnd(pkg.price)}? Số tiền sẽ được trừ từ ví tòa nhà và chuyển cho Admin.`,
-      )) return;
-      setSubscribingId(pkg._id);
-      setSubMessage(null);
-      try {
-        await managerApi.wallet.subscribe(buildingId, pkg._id);
-        setSubMessage({ type: 'ok', text: `Đã kích hoạt gói "${pkg.name}" thành công.` });
-        await refresh();
-        refreshSubscription?.();
-      } catch (err) {
-        setSubMessage({ type: 'err', text: err instanceof Error ? err.message : 'Đăng ký gói thất bại.' });
-      } finally {
-        setSubscribingId(null);
-      }
-    },
-    [buildingId, refresh, refreshSubscription],
-  );
-
   const handleInitiateTopup = useCallback(async () => {
     if (!buildingId) return;
     const amount = Number(topupAmount);
     if (!amount || amount <= 0) {
-      setSubMessage({ type: 'err', text: 'Số tiền nạp phải lớn hơn 0.' });
+      setMessage({ type: 'err', text: 'Số tiền nạp phải lớn hơn 0.' });
       return;
     }
     setTopupBusy(true);
-    setSubMessage(null);
+    setMessage(null);
     try {
       const res = await managerApi.wallet.initiateTopup(buildingId, amount);
       const data = (res as { data?: { orderCode: number; checkoutUrl: string } })?.data;
@@ -130,7 +92,7 @@ export function ManagerWalletPage() {
         window.open(data.checkoutUrl, '_blank', 'noopener');
       }
     } catch (err) {
-      setSubMessage({ type: 'err', text: err instanceof Error ? err.message : 'Không thể khởi tạo nạp ví.' });
+      setMessage({ type: 'err', text: err instanceof Error ? err.message : 'Không thể khởi tạo nạp ví.' });
     } finally {
       setTopupBusy(false);
     }
@@ -143,14 +105,14 @@ export function ManagerWalletPage() {
       const res = await managerApi.wallet.verifyTopup(buildingId, pendingTopup.orderCode);
       const status = (res as { data?: { status?: string } })?.data?.status;
       if (status === 'success') {
-        setSubMessage({ type: 'ok', text: `Đã nạp ${fmtVnd(pendingTopup.amount)} vào ví tòa nhà.` });
+        setMessage({ type: 'ok', text: `Đã nạp ${fmtVnd(pendingTopup.amount)} vào ví tòa nhà.` });
         setPendingTopup(null);
         await refresh();
       } else {
-        setSubMessage({ type: 'err', text: 'Chưa nhận được thanh toán. Hoàn tất giao dịch rồi thử lại.' });
+        setMessage({ type: 'err', text: 'Chưa nhận được thanh toán. Hoàn tất giao dịch rồi thử lại.' });
       }
     } catch (err) {
-      setSubMessage({ type: 'err', text: err instanceof Error ? err.message : 'Xác nhận nạp ví thất bại.' });
+      setMessage({ type: 'err', text: err instanceof Error ? err.message : 'Xác nhận nạp ví thất bại.' });
     } finally {
       setTopupBusy(false);
     }
@@ -164,8 +126,6 @@ export function ManagerWalletPage() {
     );
   }
 
-  const subActive = subscription?.active ?? false;
-
   return (
     <div className="grid gap-6">
       {/* Header */}
@@ -173,9 +133,9 @@ export function ManagerWalletPage() {
         <div className="flex items-center gap-3">
           <Wallet size={22} className="text-primary" />
           <div>
-            <h2 className="text-base font-bold text-foreground">Ví tòa nhà & Gói dịch vụ</h2>
+            <h2 className="text-base font-bold text-foreground">Ví tòa nhà</h2>
             <p className="text-xs text-muted-foreground">
-              Doanh thu giữ lại 100% trong ví tòa nhà. Mua gói dịch vụ hệ thống để mở khóa quản lý.
+              Toàn bộ doanh thu gửi xe được giữ lại 100% trong ví tòa nhà.
             </p>
           </div>
         </div>
@@ -235,8 +195,21 @@ export function ManagerWalletPage() {
         </div>
       )}
 
+      {message && (
+        <div
+          className={`flex items-center gap-2 rounded-lg border px-4 py-3 text-sm ${
+            message.type === 'ok'
+              ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
+              : 'border-rose-500/30 bg-rose-500/10 text-rose-400'
+          }`}
+        >
+          {message.type === 'ok' ? <CheckCircle2 size={14} /> : <AlertTriangle size={14} />}
+          {message.text}
+        </div>
+      )}
+
       {/* Thẻ tổng quan */}
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2">
         <Card>
           <CardContent className="p-5">
             <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
@@ -254,111 +227,7 @@ export function ManagerWalletPage() {
             <p className="mt-2 text-2xl font-bold text-emerald-400">{fmtVnd(daily?.totalRevenue)}</p>
           </CardContent>
         </Card>
-
-        <Card className={subActive ? 'border-emerald-500/20 bg-emerald-500/5' : 'border-amber-500/20 bg-amber-500/5'}>
-          <CardContent className="p-5">
-            <p className={`text-[10px] font-black uppercase tracking-widest ${subActive ? 'text-emerald-400/70' : 'text-amber-400/70'}`}>
-              Gói dịch vụ hệ thống
-            </p>
-            <p className={`mt-2 text-lg font-bold ${subActive ? 'text-emerald-400' : 'text-amber-400'}`}>
-              {subActive ? (subscription?.packageName ?? subscription?.package?.name ?? 'Đang hoạt động') : 'Chưa kích hoạt'}
-            </p>
-            <p className={`mt-1 text-xs ${subActive ? 'text-emerald-400/70' : 'text-amber-400/70'}`}>
-              {subActive
-                ? `Còn ${subscription?.daysRemaining ?? 0} ngày · hết hạn ${fmtDate(subscription?.endDate)}`
-                : 'Mua gói bên dưới để mở khóa bảng điều khiển.'}
-            </p>
-          </CardContent>
-        </Card>
       </div>
-
-      {subMessage && (
-        <div
-          className={`flex items-center gap-2 rounded-lg border px-4 py-3 text-sm ${
-            subMessage.type === 'ok'
-              ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
-              : 'border-rose-500/30 bg-rose-500/10 text-rose-400'
-          }`}
-        >
-          {subMessage.type === 'ok' ? <CheckCircle2 size={14} /> : <AlertTriangle size={14} />}
-          {subMessage.text}
-        </div>
-      )}
-
-      {/* Gói dịch vụ hệ thống (mua từ Admin) */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-sm">
-            <Crown size={15} className="text-amber-400" />
-            Gói dịch vụ hệ thống
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="mb-3 rounded-lg border border-blue-500/20 bg-blue-500/5 px-4 py-3 text-xs text-blue-400">
-            Hệ thống được bán theo dạng thuê bao: bạn mua một gói dịch vụ (tương tự gói phần mềm theo
-            tháng). Tiền gói được trừ từ ví tòa nhà và chuyển cho Admin. Trong thời gian gói còn hiệu
-            lực, bạn toàn quyền sử dụng bảng điều khiển quản lý.
-          </div>
-
-          {packages.length === 0 ? (
-            <p className="py-4 text-center text-sm text-muted-foreground">
-              Admin chưa phát hành gói dịch vụ nào.
-            </p>
-          ) : (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {packages.map((pkg) => {
-                const isCurrent = subActive && (subscription?.package?._id === pkg._id);
-                return (
-                  <div
-                    key={pkg._id}
-                    className={`flex flex-col rounded-xl border p-4 ${
-                      isCurrent ? 'border-emerald-500/40 bg-emerald-500/5' : 'border-border bg-card/50'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-bold text-foreground">{pkg.name}</p>
-                      {isCurrent && (
-                        <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-400">
-                          Đang dùng
-                        </span>
-                      )}
-                    </div>
-                    <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-                      <CalendarClock size={12} /> {pkg.durationDays} ngày
-                    </p>
-                    <p className="mt-2 text-xl font-black text-amber-400">{fmtVnd(pkg.price)}</p>
-                    {pkg.description && (
-                      <p className="mt-1 text-xs text-muted-foreground">{pkg.description}</p>
-                    )}
-                    {(pkg.features?.length ?? 0) > 0 && (
-                      <ul className="mt-2 space-y-1">
-                        {pkg.features!.map((f, i) => (
-                          <li key={i} className="flex items-start gap-1.5 text-xs text-muted-foreground">
-                            <CheckCircle2 size={12} className="mt-0.5 shrink-0 text-emerald-400" />
-                            <span>{f}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                    <Button
-                      className="mt-3 w-full gap-2"
-                      disabled={subscribingId === pkg._id}
-                      onClick={() => handleSubscribe(pkg)}
-                    >
-                      {subscribingId === pkg._id ? (
-                        <RefreshCw size={13} className="animate-spin" />
-                      ) : (
-                        <Crown size={13} />
-                      )}
-                      {subActive ? 'Gia hạn / Đổi gói' : 'Mua gói'}
-                    </Button>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
       {/* Lịch sử giao dịch */}
       <Card>
