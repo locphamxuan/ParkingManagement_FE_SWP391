@@ -325,7 +325,7 @@ export default function LongTermSubscriptionsPage() {
   const navigate = useNavigate();
   const { session } = useAuth();
 
-  const { items: buildings, isLoading: isLoadingBuildings } = useBuildings();
+  const { items: buildings } = useBuildings();
 
   const [selectedPackageForModal, setSelectedPackageForModal] = useState<LongTermPackage | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);

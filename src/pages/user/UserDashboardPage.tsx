@@ -27,14 +27,6 @@ const fmtVnd = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VN
 const fmtTime = (s?: string | null) =>
   s ? new Date(s).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' }) : '—';
 
-const STATUS_LABELS: Record<string, string> = {
-  pending: 'Đang chờ',
-  confirmed: 'Đã xác nhận',
-  checked_in: 'Đã check-in',
-  expired: 'Hết hạn',
-  cancelled: 'Đã hủy',
-};
-
 export default function UserDashboardPage() {
   const navigate = useNavigate();
   const { session, logout } = useAuth();

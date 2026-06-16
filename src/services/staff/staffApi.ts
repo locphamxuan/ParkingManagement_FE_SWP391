@@ -37,6 +37,10 @@ export interface ParkingSession {
   fee?: number | null;
   currentFee?: number | null;        // live fee (per manager PricePolicy) for active sessions
   isMember?: boolean;                 // true if the plate is linked to an account
+  // Gói dài hạn (long_term): miễn phí trong maxHoursPerDay/ngày; currentFee = phí phần vượt.
+  isLongTerm?: boolean;
+  overageHours?: number;             // số giờ đỗ vượt hạn mức (đang tính phí)
+  maxHoursPerDay?: number;           // hạn mức giờ free/ngày của gói (0 = không giới hạn)
   plateImage?: string | null;        // license-plate camera snapshot (Camera 1)
   portraitImage?: string | null;     // QR / account camera snapshot (Camera 2 — driver portrait)
   user?: { _id: string; fullName?: string; email?: string } | null;
@@ -123,6 +127,25 @@ export interface PlateInfo {
   /** Gói dài hạn còn hiệu lực → staff phải gán 1 slot trống khi check-in. */
   hasActivePackage?: boolean;
   activePackage?: { id: string; name: string; maxHoursPerDay: number } | null;
+  /** Đặt chỗ còn hiệu lực → luồng "chỉ cần quét", không bắt chụp ảnh. */
+  hasActiveReservation?: boolean;
+  activeReservation?: { id: string; code: string } | null;
+}
+
+export interface ShiftRevenueItem {
+  _id: string;
+  plateNumber: string | null;
+  amount: number;
+  method: 'cash' | 'wallet' | 'qr' | 'card' | 'payos';
+  createdAt: string;
+}
+
+export interface ShiftRevenueSummary {
+  date: string;
+  total: number;
+  count: number;
+  byMethod: { cash: number; wallet: number; online: number };
+  items: ShiftRevenueItem[];
 }
 
 export interface FreeSlot {
@@ -316,6 +339,10 @@ export const staffApi = {
       api.get<Wrap<{ hasAccount: boolean; user: { id: string; fullName: string; email: string } | null }>>(
         `/staff/users/lookup-qr/${qrCode}`
       ),
+
+    /** Doanh thu ca của nhân viên cổng ra (tiền đã thu hôm nay). */
+    myShiftRevenue: (buildingId: string) =>
+      api.get<Wrap<ShiftRevenueSummary>>('/staff/parking-sessions/my-shift-revenue', { query: { building: buildingId } }),
   },
 
   // Reservations

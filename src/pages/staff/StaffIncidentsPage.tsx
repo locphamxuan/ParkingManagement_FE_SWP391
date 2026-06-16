@@ -25,14 +25,6 @@ const SEVERITY_LABELS: Record<string, string> = {
   critical: 'Nghiêm trọng',
 };
 
-const STATUS_LABELS: Record<string, string> = {
-  open: 'Mở',
-  investigating: 'Đang xử lý',
-  escalated: 'Leo thang',
-  resolved: 'Đã giải quyết',
-  closed: 'Đóng',
-};
-
 export function StaffIncidentsPage() {
   const { buildingId, building } = useBuildingContext();
   const [query, setQuery] = useState('');

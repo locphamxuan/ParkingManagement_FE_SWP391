@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
+  ArrowRight,
   Building2,
   CalendarClock,
   Car,
@@ -9,12 +10,12 @@ import {
   Clock,
   DoorOpen,
   Gauge,
+  ScanLine,
   ShieldAlert,
   Ticket,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { ScanLine } from 'lucide-react';
 import { StatusBadge } from '@/components/common/StatusBadge';
 import { useBuildingContext } from '@/hooks/useBuildingContext';
 import {
@@ -48,30 +49,23 @@ interface StatCardProps {
   value: number | string;
   icon: React.ElementType;
   accent: string;
-  bg: string;
   loading?: boolean;
-  glowColor: string;
 }
 
-function StatCard({ label, value, icon: Icon, accent, bg, loading, glowColor }: StatCardProps) {
+function StatCard({ label, value, icon: Icon, accent, loading }: StatCardProps) {
   return (
-    <div className="relative overflow-hidden rounded-3xl border border-white/8 bg-slate-900/40 p-5 backdrop-blur-md shadow-lg transition-all duration-305 hover:scale-[1.02] hover:shadow-[0_8px_30px_rgba(0,0,0,0.25)] hover:border-white/12 group">
-      {/* Glow effect */}
-      <div className={`absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl ${glowColor} opacity-10 blur-xl pointer-events-none group-hover:opacity-20 transition-opacity duration-300`} />
-      
-      <div className="flex items-start justify-between relative z-10">
-        <div>
-          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500 font-mono">{label}</p>
-          {loading ? (
-            <Skeleton className="mt-2.5 h-9 w-14" />
-          ) : (
-            <p className="mt-1.5 text-4xl font-black tabular-nums text-white tracking-tight">{value}</p>
-          )}
-        </div>
-        <div className={`flex h-11 w-11 items-center justify-center rounded-xl border ${accent} ${bg} group-hover:scale-105 transition-transform duration-300`}>
-          <Icon size={18} className="text-slate-200" />
-        </div>
+    <div className="rounded-2xl border border-white/10 bg-slate-900/40 p-4">
+      <div className="flex items-center justify-between">
+        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{label}</p>
+        <span className={`flex h-8 w-8 items-center justify-center rounded-lg ${accent}`}>
+          <Icon size={15} />
+        </span>
       </div>
+      {loading ? (
+        <Skeleton className="mt-2 h-8 w-12" />
+      ) : (
+        <p className="mt-1.5 text-3xl font-bold tabular-nums text-white">{value}</p>
+      )}
     </div>
   );
 }
@@ -79,7 +73,6 @@ function StatCard({ label, value, icon: Icon, accent, bg, loading, glowColor }: 
 function formatSlotLocation(session: ParkingSession): string {
   const floor = session.slot?.floor?.name || session.slot?.floor?.code || null;
   const slotCode = session.slot?.code || null;
-  
   if (!floor && !slotCode) return 'Vị trí —';
   if (!floor) return `Ô ${slotCode}`;
   if (!slotCode) return `Tầng ${floor}`;
@@ -117,13 +110,10 @@ export function StaffDashboardPage() {
         const rawInc =
           (incidentRes as { data?: { items?: StaffIncident[] } | StaffIncident[] })?.data;
         setIncidents(
-          Array.isArray(rawInc)
-            ? rawInc
-            : (rawInc as { items?: StaffIncident[] })?.items ?? [],
+          Array.isArray(rawInc) ? rawInc : (rawInc as { items?: StaffIncident[] })?.items ?? [],
         );
 
-        const rawRes =
-          (resRes as { data?: { items?: StaffReservation[] } })?.data?.items ?? [];
+        const rawRes = (resRes as { data?: { items?: StaffReservation[] } })?.data?.items ?? [];
         setReservations(Array.isArray(rawRes) ? rawRes : []);
 
         setError(null);
@@ -169,42 +159,19 @@ export function StaffDashboardPage() {
 
   const showCheckIn = assignedGates.some((g) => g.direction === 'in' || g.direction === 'both') || assignedGates.length === 0;
   const showCheckOut = assignedGates.some((g) => g.direction === 'out' || g.direction === 'both') || assignedGates.length === 0;
+  const taskCount = (showCheckIn ? 1 : 0) + (showCheckOut ? 1 : 0);
 
   const stats = [
-    {
-      label: 'Ca hôm nay',
-      value: todayShifts.length,
-      icon: CalendarClock,
-      accent: 'border-teal-500/20 bg-teal-500/10',
-      bg: 'bg-teal-500/10',
-      glowColor: 'from-teal-500/20 to-transparent',
-      loading,
-    },
-    {
-      label: 'Đang đỗ xe',
-      value: activeSessions.length,
-      icon: Gauge,
-      accent: 'border-emerald-500/20 bg-emerald-500/10',
-      bg: 'bg-emerald-500/10',
-      glowColor: 'from-emerald-500/20 to-transparent',
-      loading,
-    },
-    {
-      label: 'Đặt chỗ trước',
-      value: pendingReservations.length,
-      icon: Ticket,
-      accent: 'border-amber-500/20 bg-amber-500/10',
-      bg: 'bg-amber-500/10',
-      glowColor: 'from-amber-500/20 to-transparent',
-      loading,
-    },
+    { label: 'Ca hôm nay', value: todayShifts.length, icon: CalendarClock, accent: 'border border-teal-500/20 bg-teal-500/10 text-teal-400', loading },
+    { label: 'Đang đỗ xe', value: activeSessions.length, icon: Gauge, accent: 'border border-emerald-500/20 bg-emerald-500/10 text-emerald-400', loading },
+    { label: 'Đặt chỗ trước', value: pendingReservations.length, icon: Ticket, accent: 'border border-amber-500/20 bg-amber-500/10 text-amber-400', loading },
     {
       label: 'Sự cố mở',
       value: openIncidents.length,
       icon: ShieldAlert,
-      accent: openIncidents.length > 0 ? 'border-rose-500/30 bg-rose-500/10' : 'border-white/5 bg-slate-950/20',
-      bg: openIncidents.length > 0 ? 'bg-rose-500/10' : 'bg-slate-950/20',
-      glowColor: openIncidents.length > 0 ? 'from-rose-500/20 to-transparent' : 'from-slate-500/10 to-transparent',
+      accent: openIncidents.length > 0
+        ? 'border border-rose-500/30 bg-rose-500/10 text-rose-400'
+        : 'border border-white/10 bg-slate-950/40 text-slate-400',
       loading,
     },
   ];
@@ -212,10 +179,10 @@ export function StaffDashboardPage() {
   if (!loading && !building) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
-        <div className="max-w-sm rounded-3xl border border-amber-500/30 bg-amber-500/10 p-8 text-center backdrop-blur-md shadow-lg">
+        <div className="max-w-sm rounded-2xl border border-amber-500/30 bg-amber-500/10 p-8 text-center">
           <Building2 size={36} className="mx-auto mb-3 text-amber-400" />
-          <p className="text-base font-extrabold text-amber-300">Chưa chọn tòa nhà</p>
-          <p className="mt-1 text-sm text-slate-400 font-medium">
+          <p className="text-base font-bold text-amber-300">Chưa chọn tòa nhà</p>
+          <p className="mt-1 text-sm text-slate-400">
             Vui lòng chọn tòa nhà từ menu bên trái để bắt đầu ca làm việc.
           </p>
         </div>
@@ -228,285 +195,210 @@ export function StaffDashboardPage() {
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className="space-y-6 max-w-6xl mx-auto"
+      className="space-y-5"
     >
-      {/* Hero */}
-      <div className="relative overflow-hidden rounded-3xl border border-white/8 bg-slate-900/40 p-6 backdrop-blur-md shadow-lg">
-        {/* Glow accents */}
-        <div className="absolute top-0 left-0 w-60 h-60 bg-[radial-gradient(circle_at_center,rgba(20,184,166,0.06),transparent_65%)] pointer-events-none blur-2xl animate-pulse" />
-        <div className="absolute bottom-0 right-0 w-40 h-40 bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.04),transparent_65%)] pointer-events-none blur-2xl" />
-
-        <div className="relative z-10 flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-teal-500/20 bg-teal-500/10 shadow-[0_0_12px_rgba(20,184,166,0.15)]">
-              <Building2 size={20} className="text-teal-400" />
-            </div>
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 font-mono">
-                Nhân viên vận hành
-              </p>
-              <h1 className="mt-1 text-2xl font-black text-white tracking-tight leading-none">
-                {building ? building.name : <Skeleton className="h-7 w-48" />}
-              </h1>
-              <p className="mt-1.5 text-xs font-semibold text-slate-400">{fmtDateFull()}</p>
-            </div>
+      {/* ── Header ── */}
+      <div className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-slate-900/40 p-5 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-teal-500/20 bg-teal-500/10">
+            <Building2 size={20} className="text-teal-400" />
           </div>
-
-          <div className="flex flex-wrap items-center gap-2.5">
-            {!loading && (
-              assignedGates.length > 0 ? (
-                assignedGates.map((g) => (
-                  <div
-                    key={g._id}
-                    className="flex items-center gap-1.5 rounded-xl border border-teal-500/20 bg-teal-500/10 px-3.5 py-2 text-xs font-black uppercase tracking-wider text-teal-400 shadow-[0_0_10px_rgba(20,184,166,0.08)]"
-                  >
-                    <DoorOpen size={13} />
-                    Cổng {g.code}{g.name ? ` · ${g.name}` : ''} · {directionText(g.direction)}
-                  </div>
-                ))
-              ) : (
-                <div className="flex items-center gap-1.5 rounded-xl border border-white/5 bg-slate-950/40 px-3.5 py-2 text-xs font-black uppercase tracking-wider text-slate-400">
-                  <DoorOpen size={13} /> Chưa được gán cổng
-                </div>
-              )
-            )}
-            {building?.operatingHours && (
-              <div className="flex items-center gap-1.5 rounded-xl border border-white/5 bg-slate-950/40 px-3.5 py-2 text-xs font-black uppercase tracking-wider text-slate-400 font-mono">
-                <Clock size={12} />
-                {building.operatingHours.open} – {building.operatingHours.close}
-              </div>
-            )}
-            <StatusBadge status={building?.status ?? 'active'} />
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Nhân viên vận hành</p>
+            <h1 className="text-xl font-bold leading-tight text-white">
+              {building ? building.name : <Skeleton className="h-6 w-44" />}
+            </h1>
+            <p className="mt-0.5 text-xs text-slate-400">{fmtDateFull()}</p>
           </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {!loading &&
+            (assignedGates.length > 0 ? (
+              assignedGates.map((g) => (
+                <span
+                  key={g._id}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-teal-500/20 bg-teal-500/10 px-3 py-1.5 text-xs font-semibold text-teal-300"
+                >
+                  <DoorOpen size={13} /> Cổng {g.code}
+                  {g.name ? ` · ${g.name}` : ''} · {directionText(g.direction)}
+                </span>
+              ))
+            ) : (
+              <span className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-slate-950/40 px-3 py-1.5 text-xs font-semibold text-slate-400">
+                <DoorOpen size={13} /> Chưa được gán cổng
+              </span>
+            ))}
+          {building?.operatingHours && (
+            <span className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-slate-950/40 px-3 py-1.5 text-xs font-semibold text-slate-400">
+              <Clock size={12} /> {building.operatingHours.open} – {building.operatingHours.close}
+            </span>
+          )}
+          <StatusBadge status={building?.status ?? 'active'} />
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {stats.map((s) => (
-          <StatCard key={s.label} {...s} />
-        ))}
-      </div>
-
-      {/* Interactive Action Cards */}
+      {/* ── Thao tác chính ── */}
       {!loading && (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className={`grid gap-3 ${taskCount === 2 ? 'sm:grid-cols-2' : 'grid-cols-1'}`}>
           {showCheckIn && (
             <Link
               to="/staff/operations"
-              className="group relative overflow-hidden rounded-3xl border border-emerald-500/20 bg-slate-900/35 p-5 transition-all duration-300 hover:border-emerald-500/40 hover:bg-slate-900/60 hover:shadow-[0_8px_30px_rgba(16,185,129,0.15)] hover:scale-[1.02]"
+              className="group flex items-center gap-4 rounded-2xl border border-emerald-500/25 bg-emerald-500/[0.06] p-5 transition-colors hover:bg-emerald-500/10"
             >
-              <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-emerald-500/5 to-transparent blur-xl pointer-events-none" />
-
-              <div className="flex items-center gap-4 relative z-10">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-emerald-500/20 bg-emerald-500/10 shadow-[0_0_10px_rgba(16,185,129,0.1)] group-hover:scale-105 transition-all duration-300">
-                  <ScanLine size={20} className="text-emerald-400" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-500 font-mono">
-                    {assignedGates.length > 0 ? 'Cổng vào được gán' : 'Nhiệm vụ'}
-                  </p>
-                  <h3 className="mt-0.5 text-base font-extrabold text-white tracking-tight">Check-in xe vào</h3>
-                  <p className="text-xs text-slate-400 mt-0.5 font-medium">Quét biển số / QR để cho xe vào bãi</p>
-                </div>
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-emerald-500/25 bg-emerald-500/10">
+                <ScanLine size={22} className="text-emerald-400" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <h3 className="text-base font-bold text-white">Check-in xe vào</h3>
+                <p className="text-xs text-slate-400">Quét biển số / QR cho xe vào bãi</p>
               </div>
+              <ArrowRight size={18} className="shrink-0 text-emerald-400 transition-transform group-hover:translate-x-1" />
             </Link>
           )}
           {showCheckOut && (
             <Link
               to="/staff/checkout"
-              className="group relative overflow-hidden rounded-3xl border border-orange-500/20 bg-slate-900/35 p-5 transition-all duration-300 hover:border-orange-500/40 hover:bg-slate-900/60 hover:shadow-[0_8px_30px_rgba(249,115,22,0.15)] hover:scale-[1.02]"
+              className="group flex items-center gap-4 rounded-2xl border border-orange-500/25 bg-orange-500/[0.06] p-5 transition-colors hover:bg-orange-500/10"
             >
-              <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-orange-500/5 to-transparent blur-xl pointer-events-none" />
-
-              <div className="flex items-center gap-4 relative z-10">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-orange-500/20 bg-orange-500/10 shadow-[0_0_10px_rgba(249,115,22,0.1)] group-hover:scale-105 transition-all duration-300">
-                  <ScanLine size={20} className="text-orange-400" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-500 font-mono">
-                    {assignedGates.length > 0 ? 'Cổng ra được gán' : 'Nhiệm vụ'}
-                  </p>
-                  <h3 className="mt-0.5 text-base font-extrabold text-white tracking-tight">Check-out xe ra</h3>
-                  <p className="text-xs text-slate-400 mt-0.5 font-medium">Quét biển số / QR → đối chiếu ảnh → thu phí & cho ra</p>
-                </div>
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-orange-500/25 bg-orange-500/10">
+                <ScanLine size={22} className="text-orange-400" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <h3 className="text-base font-bold text-white">Check-out xe ra</h3>
+                <p className="text-xs text-slate-400">Quét → đối chiếu ảnh → thu phí & cho ra</p>
               </div>
+              <ArrowRight size={18} className="shrink-0 text-orange-400 transition-transform group-hover:translate-x-1" />
             </Link>
           )}
-          <Link
-            to="/staff/parked"
-            className="group relative overflow-hidden rounded-3xl border border-white/8 bg-slate-900/35 p-5 transition-all duration-300 hover:border-white/18 hover:bg-slate-900/60 hover:shadow-[0_8px_30px_rgba(255,255,255,0.05)] hover:scale-[1.02]"
-          >
-            <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-white/5 to-transparent blur-xl pointer-events-none" />
-
-            <div className="flex items-center gap-4 relative z-10">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/8 bg-slate-950/40 group-hover:scale-105 transition-all duration-300">
-                <Car size={20} className="text-slate-350" />
-              </div>
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 font-mono">Giám sát</p>
-                <h3 className="mt-0.5 text-base font-extrabold text-white tracking-tight">Xe đang đỗ</h3>
-                <p className="text-xs text-slate-400 mt-0.5 font-medium">Xem danh sách xe đang đỗ (chỉ xem)</p>
-              </div>
-            </div>
-          </Link>
         </div>
       )}
 
-      {/* Error */}
+      {/* ── Thống kê ── */}
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+        {stats.map((s) => (
+          <StatCard key={s.label} {...s} />
+        ))}
+      </div>
+
+      {/* ── Banners ── */}
       {error && (
-        <div className="flex items-center gap-3 rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3.5 shadow-[0_0_15px_rgba(244,63,94,0.1)]">
-          <AlertTriangle size={16} className="shrink-0 text-rose-450" />
-          <p className="text-sm font-semibold text-rose-350">{error}</p>
+        <div className="flex items-center gap-3 rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm font-semibold text-rose-400">
+          <AlertTriangle size={16} className="shrink-0" /> {error}
         </div>
       )}
-
-      {/* Open incidents banner */}
       {!loading && openIncidents.length > 0 && (
-        <div className="flex items-start gap-3 rounded-2xl border border-rose-500/30 bg-rose-500/8 px-4 py-3.5 shadow-[0_0_15px_rgba(244,63,94,0.08)]">
-          <ShieldAlert size={16} className="mt-0.5 shrink-0 text-rose-400" />
-          <div>
-            <p className="text-sm font-extrabold text-rose-300">
-              {openIncidents.length} sự cố đang mở
-            </p>
-            <p className="text-xs text-slate-400 mt-0.5 font-medium">
-              Truy cập tab Sự cố để xem chi tiết và xử lý kịp thời.
-            </p>
-          </div>
-        </div>
+        <Link
+          to="/staff/incidents"
+          className="flex items-center gap-3 rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 transition-colors hover:bg-rose-500/15"
+        >
+          <ShieldAlert size={16} className="shrink-0 text-rose-400" />
+          <p className="flex-1 text-sm text-rose-300">
+            <strong>{openIncidents.length} sự cố đang mở</strong> — bấm để xem và xử lý.
+          </p>
+          <ArrowRight size={16} className="shrink-0 text-rose-400" />
+        </Link>
       )}
 
-      {/* Main grid */}
-      <div className="grid gap-6 xl:grid-cols-2">
-        {/* Ca làm việc */}
-        <div className="rounded-3xl border border-white/8 bg-slate-900/40 p-6 backdrop-blur-md shadow-lg relative overflow-hidden">
-          <div className="absolute bottom-0 left-0 w-48 h-48 bg-[radial-gradient(circle_at_center,rgba(20,184,166,0.03),transparent_60%)] pointer-events-none blur-2xl" />
+      {/* ── Danh sách: Xe đang đỗ (2/3) · Ca làm việc (1/3) ── */}
+      <div className="grid items-start gap-5 xl:grid-cols-3">
+        {/* Xe đang đỗ */}
+        <section className="rounded-2xl border border-white/10 bg-slate-900/40 p-5 xl:col-span-2">
+          <div className="mb-4 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Car size={16} className="text-emerald-400" />
+              <h2 className="text-sm font-bold text-white">Xe đang đỗ</h2>
+              <span className="rounded-md bg-white/5 px-2 py-0.5 text-[11px] font-bold text-slate-400">
+                {loading ? '…' : activeSessions.length}
+              </span>
+            </div>
+            <Link to="/staff/parked" className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-400 hover:text-emerald-300">
+              Xem tất cả <ArrowRight size={12} />
+            </Link>
+          </div>
 
-          <div className="mb-5 flex items-center justify-between relative z-10">
+          {loading ? (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Skeleton className="h-16 w-full rounded-xl" />
+              <Skeleton className="h-16 w-full rounded-xl" />
+            </div>
+          ) : activeSessions.length === 0 ? (
+            <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-white/10 bg-slate-950/20 py-8 text-center">
+              <CheckCircle2 size={26} className="text-slate-700" />
+              <p className="text-sm text-slate-500">Không có xe nào đang đỗ</p>
+            </div>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2">
+              {activeSessions.slice(0, 6).map((session) => (
+                <div
+                  key={session._id}
+                  className="flex items-center gap-3 rounded-xl border border-white/5 bg-slate-950/35 px-3.5 py-3"
+                >
+                  <span className="flex h-9 min-w-[88px] items-center justify-center rounded-lg border border-amber-500/20 bg-amber-500/5 px-2 font-mono text-xs font-bold tracking-wide text-amber-300">
+                    {session.plateNumber}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-xs text-slate-400">
+                      {session.entryGate?.name ?? session.entryGate?.code ?? '—'}
+                      {session.vehicleType ? ` · ${session.vehicleType.name}` : ''}
+                    </p>
+                    <p className="truncate text-xs font-semibold text-orange-300">{formatSlotLocation(session)}</p>
+                    <p className="text-[11px] text-slate-500">Vào lúc {fmtTime(session.entryTime)}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          {!loading && activeSessions.length > 6 && (
+            <p className="mt-3 text-center text-xs font-semibold text-slate-500">
+              +{activeSessions.length - 6} xe khác
+            </p>
+          )}
+        </section>
+
+        {/* Ca làm việc hôm nay */}
+        <section className="rounded-2xl border border-white/10 bg-slate-900/40 p-5">
+          <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <CalendarClock size={16} className="text-teal-400" />
-              <h2 className="text-sm font-bold text-white tracking-tight">Ca làm việc hôm nay</h2>
+              <h2 className="text-sm font-bold text-white">Ca làm việc hôm nay</h2>
             </div>
-            <span className="rounded-md border border-white/5 bg-slate-950/40 px-2 py-0.5 text-[11px] font-bold text-slate-400 font-mono">
+            <span className="rounded-md bg-white/5 px-2 py-0.5 text-[11px] font-bold text-slate-400">
               {loading ? '…' : todayShifts.length}
             </span>
           </div>
 
-          <div className="space-y-3 relative z-10">
-            {loading ? (
-              <>
-                <Skeleton className="h-16 w-full rounded-2xl" />
-                <Skeleton className="h-16 w-full rounded-2xl" />
-              </>
-            ) : todayShifts.length === 0 ? (
-              <div className="flex flex-col items-center gap-2.5 py-12 text-center border border-dashed border-white/5 rounded-2xl bg-slate-950/20">
-                <Circle size={28} className="text-slate-700 opacity-60" />
-                <p className="text-sm text-slate-500 font-medium">Không có ca nào hôm nay</p>
-              </div>
-            ) : (
-              todayShifts.map((s) => (
-                <div
-                  key={s._id}
-                  className="flex items-center gap-4 rounded-2xl border border-white/5 bg-slate-950/35 px-4 py-3.5 transition-all duration-300 hover:border-teal-500/10 hover:bg-slate-950/60"
-                >
-                  <div className="w-20 shrink-0 text-center">
-                    <p className="text-[11px] font-black tabular-nums text-teal-400 font-mono">
-                      {s.shift.startTime}
-                    </p>
-                    <div className="mx-auto my-1.5 h-3.5 w-px bg-slate-800" />
-                    <p className="text-[11px] font-black tabular-nums text-slate-500 font-mono">
-                      {s.shift.endTime}
-                    </p>
-                  </div>
-                  <div className="h-11 w-px shrink-0 bg-white/5" />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-bold text-slate-200">
-                      {s.shift.code} — {s.shift.name}
-                    </p>
-                    <p className="mt-0.5 truncate text-xs text-slate-400 font-medium">{s.building.name}</p>
-                    {s.gate ? (
-                      <p className="mt-1.5 inline-flex items-center gap-1 rounded-md border border-teal-500/20 bg-teal-500/10 px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-teal-400 font-mono">
-                        <DoorOpen size={10} />
-                        Cổng {s.gate.code}
-                        {s.gate.name ? ` · ${s.gate.name}` : ''}
-                        {' · '}
-                        {s.gate.direction === 'in' ? 'Cổng vào' : s.gate.direction === 'out' ? 'Cổng ra' : 'Hai chiều'}
-                      </p>
-                    ) : (
-                      <p className="mt-1.5 text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono italic">Chưa phân công cổng</p>
-                    )}
-                    {s.note && (
-                      <p className="mt-1 truncate text-[11px] text-slate-500 italic">Ghi chú: {s.note}</p>
-                    )}
-                  </div>
-                  <StatusBadge status={s.status} />
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-
-        {/* Xe đang đỗ */}
-        <div className="rounded-3xl border border-white/8 bg-slate-900/40 p-6 backdrop-blur-md shadow-lg relative overflow-hidden">
-          <div className="absolute bottom-0 right-0 w-48 h-48 bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.03),transparent_60%)] pointer-events-none blur-2xl" />
-
-          <div className="mb-5 flex items-center justify-between relative z-10">
-            <div className="flex items-center gap-2">
-              <Car size={16} className="text-emerald-400" />
-              <h2 className="text-sm font-bold text-white tracking-tight">Xe đang đỗ</h2>
+          {loading ? (
+            <div className="space-y-3">
+              <Skeleton className="h-16 w-full rounded-xl" />
             </div>
-            <span className="rounded-md border border-white/5 bg-slate-950/40 px-2 py-0.5 text-[11px] font-bold text-slate-400 font-mono">
-              {loading ? '…' : activeSessions.length}
-            </span>
-          </div>
-
-          <div className="space-y-3 relative z-10">
-            {loading ? (
-              <>
-                <Skeleton className="h-16 w-full rounded-2xl" />
-                <Skeleton className="h-16 w-full rounded-2xl" />
-              </>
-            ) : activeSessions.length === 0 ? (
-              <div className="flex flex-col items-center gap-2.5 py-12 text-center border border-dashed border-white/5 rounded-2xl bg-slate-950/20">
-                <CheckCircle2 size={28} className="text-slate-700 opacity-60" />
-                <p className="text-sm text-slate-500 font-medium">Không có xe nào đang đỗ</p>
-              </div>
-            ) : (
-              activeSessions.slice(0, 5).map((session) => (
-                <div
-                  key={session._id}
-                  className="flex items-center gap-3 rounded-2xl border border-white/5 bg-slate-950/35 px-4 py-3.5 transition-all duration-300 hover:border-emerald-500/10 hover:bg-slate-950/60"
-                >
-                  <div className="flex h-9 min-w-[90px] items-center justify-center rounded-xl border border-amber-500/20 bg-amber-500/5 px-2.5 shadow-[0_0_10px_rgba(245,158,11,0.05)]">
-                    <span className="font-mono text-xs font-black tracking-widest text-amber-450">
-                      {session.plateNumber}
-                    </span>
+          ) : todayShifts.length === 0 ? (
+            <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-white/10 bg-slate-950/20 py-8 text-center">
+              <Circle size={26} className="text-slate-700" />
+              <p className="text-sm text-slate-500">Không có ca nào hôm nay</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {todayShifts.map((s) => (
+                <div key={s._id} className="rounded-xl border border-white/5 bg-slate-950/35 p-3.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-bold text-slate-200">{s.shift.code} — {s.shift.name}</p>
+                    <StatusBadge status={s.status} />
                   </div>
-                  <div className="min-w-0 flex-1 pl-1">
-                    <p className="truncate text-xs text-slate-400 font-medium">
-                      <DoorOpen size={11} className="mr-1 inline-block text-slate-550" />
-                      {session.entryGate?.name ?? session.entryGate?.code ?? '—'}
-                      {session.vehicleType ? ` · ${session.vehicleType.name}` : ''}
+                  <p className="mt-1 font-mono text-xs text-teal-400">{s.shift.startTime} – {s.shift.endTime}</p>
+                  {s.gate ? (
+                    <p className="mt-2 inline-flex items-center gap-1 rounded-md border border-teal-500/20 bg-teal-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-teal-400">
+                      <DoorOpen size={10} /> Cổng {s.gate.code}{s.gate.name ? ` · ${s.gate.name}` : ''} · {directionText(s.gate.direction)}
                     </p>
-                    <p className="mt-1.5 text-xs font-bold text-orange-450 font-sans">
-                      {formatSlotLocation(session)}
-                    </p>
-                    <p className="mt-0.5 text-[11px] text-slate-500 font-mono">
-                      Vào lúc {fmtTime(session.entryTime)}
-                    </p>
-                  </div>
-                  <StatusBadge status={session.status} />
+                  ) : (
+                    <p className="mt-2 text-[10px] font-semibold uppercase tracking-wide text-slate-500 italic">Chưa phân công cổng</p>
+                  )}
+                  {s.note && <p className="mt-1 truncate text-[11px] text-slate-500 italic">Ghi chú: {s.note}</p>}
                 </div>
-              ))
-            )}
-
-            {!loading && activeSessions.length > 5 && (
-              <p className="pt-1.5 text-center text-xs font-bold text-slate-500 font-mono tracking-wide">
-                +{activeSessions.length - 5} XE KHÁC
-              </p>
-            )}
-          </div>
-        </div>
+              ))}
+            </div>
+          )}
+        </section>
       </div>
     </motion.div>
   );

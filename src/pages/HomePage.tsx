@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
-import { motion, AnimatePresence, useMotionValue, useSpring, useTransform, useScroll } from 'framer-motion';
+import { motion, AnimatePresence, useSpring, useTransform, useScroll } from 'framer-motion';
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import {
@@ -14,9 +14,7 @@ import {
   Clock3,
   CreditCard,
   History,
-  Mail,
   MapPinned,
-  PhoneCall,
   ScanLine,
   ShieldCheck,
   Ticket,

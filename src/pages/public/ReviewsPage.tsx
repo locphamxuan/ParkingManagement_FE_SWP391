@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, MessageSquare, Star, Sparkles, Plus, AlertTriangle, CheckCircle, RefreshCw, Quote, ArrowRight } from 'lucide-react';
+import { ArrowLeft, MessageSquare, Star, Sparkles, AlertTriangle, CheckCircle, RefreshCw, Quote } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { userApi, type Feedback, type ParkingHistory } from '@/services/user/userApi';
 import { Modal } from '@/components/ui/modal';

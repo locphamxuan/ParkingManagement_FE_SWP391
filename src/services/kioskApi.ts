@@ -21,8 +21,7 @@ export interface KioskCheckInResult {
 
 export const kioskApi = {
   reservationCheckIn: (payload: {
-    qrCode?: string;
-    plateNumber?: string;
+    qrCode: string;
     gate?: string;
     plateImage?: string | null;
     portraitImage?: string | null;

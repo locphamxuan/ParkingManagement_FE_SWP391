@@ -294,21 +294,17 @@ export function ManagerSlotsPage() {
   };
 
   const onMultiSlotSubmit = async (rows: SlotFormRow[]) => {
-    try {
-      for (const row of rows) {
-        const payload = {
-          code: row.code.trim().toUpperCase(),
-          floor: row.floor,
-          status: row.status,
-          reservable: row.reservable,
-          note: row.note.trim(),
-        };
-        await managerApi.slots.create(buildingId, payload as Partial<ParkingSlot> & { floor: string });
-      }
-      refresh();
-    } catch (err) {
-      throw err;
+    for (const row of rows) {
+      const payload = {
+        code: row.code.trim().toUpperCase(),
+        floor: row.floor,
+        status: row.status,
+        reservable: row.reservable,
+        note: row.note.trim(),
+      };
+      await managerApi.slots.create(buildingId, payload as Partial<ParkingSlot> & { floor: string });
     }
+    refresh();
   };
 
   const onStatusChange = async (row: ParkingSlot, status: ParkingSlot['status']) => {

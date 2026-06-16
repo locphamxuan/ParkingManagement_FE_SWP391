@@ -1,11 +1,8 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { CheckCircle2, Loader2, QrCode, AlertCircle, Car } from 'lucide-react';
+import { CheckCircle2, Loader2, QrCode, AlertCircle, UserCog } from 'lucide-react';
 import { LiveQRCamera } from '@/components/staff/LiveQRCamera';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { kioskApi } from '@/services/kioskApi';
-import { normalizePlate } from '@/utils/plate';
 
 type Result =
   | { type: 'ok'; plate: string; code: string; entryTime: string }
@@ -18,9 +15,8 @@ type Result =
 export default function KioskCheckInPage() {
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
-  const [manualPlate, setManualPlate] = useState('');
 
-  const submit = async (payload: { qrCode?: string; plateNumber?: string; portraitImage?: string | null }) => {
+  const submit = async (payload: { qrCode: string; portraitImage?: string | null }) => {
     if (busy) return;
     setBusy(true);
     setResult(null);
@@ -29,7 +25,7 @@ export default function KioskCheckInPage() {
       const data = (res as { data?: { reservation?: { code?: string; plateNumber?: string }; parkingSession?: { entryTime?: string } } })?.data;
       setResult({
         type: 'ok',
-        plate: data?.reservation?.plateNumber ?? payload.plateNumber ?? '',
+        plate: data?.reservation?.plateNumber ?? '',
         code: data?.reservation?.code ?? '',
         entryTime: data?.parkingSession?.entryTime ?? new Date().toISOString(),
       });
@@ -44,13 +40,6 @@ export default function KioskCheckInPage() {
 
   const handleQr = (code: string) => {
     void submit({ qrCode: code });
-  };
-
-  const handleManual = () => {
-    const plate = normalizePlate(manualPlate) || manualPlate.trim().toUpperCase();
-    if (!plate) return;
-    void submit({ plateNumber: plate });
-    setManualPlate('');
   };
 
   return (
@@ -93,22 +82,9 @@ export default function KioskCheckInPage() {
           </div>
         )}
 
-        <div className="rounded-2xl border border-white/10 bg-slate-900/60 p-4">
-          <p className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
-            <Car size={13} /> Nhập biển số thủ công (nếu không quét được QR)
-          </p>
-          <div className="flex gap-2">
-            <Input
-              value={manualPlate}
-              onChange={(e) => setManualPlate(e.target.value)}
-              placeholder="59G2-038.80"
-              onKeyDown={(e) => e.key === 'Enter' && handleManual()}
-              className="bg-slate-800 text-white"
-            />
-            <Button onClick={handleManual} disabled={!manualPlate.trim() || busy} className="shrink-0">
-              Check-in
-            </Button>
-          </div>
+        <div className="flex items-start gap-2 rounded-2xl border border-white/10 bg-slate-900/60 p-4 text-xs text-slate-400">
+          <UserCog size={14} className="mt-0.5 shrink-0" />
+          <span>Không quét được mã QR? Vui lòng gặp nhân viên tại cổng để được check-in thủ công.</span>
         </div>
       </div>
     </div>

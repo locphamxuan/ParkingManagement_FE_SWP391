@@ -28,7 +28,7 @@ const pageTitle: Record<string, string> = {
   parked: 'Xe đang đỗ',
   reservations: 'Đặt chỗ trước',
   'my-shifts': 'Ca làm việc của tôi',
-  sessions: 'Theo dõi thanh toán',
+  sessions: 'Doanh thu ca',
   incidents: 'Quản lý sự cố',
 };
 
@@ -52,7 +52,8 @@ export function StaffLayout() {
       { to: 'parked', label: 'Xe đang đỗ', icon: Car },
       { to: 'reservations', label: 'Đặt chỗ trước', icon: CalendarCheck2 },
       { to: 'my-shifts', label: 'Ca làm việc', icon: CalendarClock },
-      { to: 'sessions', label: 'Thanh toán', icon: Wallet },
+      // Doanh thu ca chỉ dành cho nhân viên cổng RA (người thu tiền).
+      ...(showCheckOut ? [{ to: 'sessions', label: 'Doanh thu ca', icon: Wallet }] : []),
       { to: 'incidents', label: 'Sự cố', icon: ShieldAlert },
     ],
     [showCheckIn, showCheckOut],

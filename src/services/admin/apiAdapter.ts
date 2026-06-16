@@ -1,4 +1,4 @@
-import { requestJson } from '@/services/client/apiClient';
+import { api } from '@/services/client/apiClient';
 import type { AdminDataset } from '@/services/admin/types';
 import type {
   AuditLog,
@@ -28,7 +28,11 @@ interface AdminOverviewData {
     /** @deprecated legacy alias — backend now returns `total`. */
     today?: number;
     byMethod: Record<string, { amount: number; count: number }>;
+    /** System-wide 7-day revenue trend (backend-aggregated). */
+    weekly?: Array<{ date: string; revenue: number; sessions: number }>;
   };
+  /** Per-building occupancy + today revenue (backend-aggregated, no N+1). */
+  buildingStats?: Array<{ buildingId: string; occupancyRate: number; revenueToday: number }>;
 }
 
 interface Paginated<T> {
@@ -74,24 +78,6 @@ interface ApiAudit {
   createdAt?: string;
 }
 
-interface ManagerOverviewData {
-  slots?: {
-    occupancyRate?: number;
-  };
-  sessions?: {
-    today?: number;
-    active?: number;
-  };
-  revenue?: {
-    today?: number;
-    weekly?: Array<{
-      date: string;
-      revenue: number;
-      sessions: number;
-    }>;
-  };
-}
-
 const OPERATIONAL_GUARDRAILS = [
   'Mã thẻ online phải gắn với tài khoản người dùng đã xác thực và biển số liên kết.',
   'Khách walk-in chỉ được vào qua phiên gửi xe hợp lệ và đóng phí trước khi rời bãi.',
@@ -117,7 +103,7 @@ const formatChartDate = (dateValue: string): string => {
 const toBuilding = (
   item: ApiBuilding,
   managerNameById: Map<string, string>,
-  overview?: ManagerOverviewData,
+  stats?: { occupancyRate: number; revenueToday: number },
 ): Building => {
   // Handle manager field that can be a populated object, a string ID, or null
   let managerName = 'Chưa gán';
@@ -138,48 +124,17 @@ const toBuilding = (
     name: item.name,
     address: item.address?.fullAddress || 'Chưa cập nhật địa chỉ',
     floors: item.totalFloors || 0,
-    occupancyRate: Number(overview?.slots?.occupancyRate || 0),
+    occupancyRate: Number(stats?.occupancyRate || 0),
     status: item.status || 'inactive',
     manager: managerName,
-    revenueToday: Number(overview?.revenue?.today ?? 0),
+    revenueToday: Number(stats?.revenueToday ?? 0),
   };
 };
 
 const toUser = (item: ApiUser): UserRecord => {
-  // Check if locally updated user exists
-  const locallyUpdatedRaw = localStorage.getItem('pbms.locallyUpdatedUsers');
-  const locallyUpdated = locallyUpdatedRaw ? JSON.parse(locallyUpdatedRaw) : {};
-  
-  // Case-insensitive and trimmed lookup
-  const targetEmail = (item.email || '').trim().toLowerCase();
-  const matchingKey = Object.keys(locallyUpdated).find(
-    (key) => key.trim().toLowerCase() === targetEmail
-  );
-  const localUser = matchingKey ? locallyUpdated[matchingKey] : null;
-
-  const backendPlates = (item.licensePlates || []).map((p) => 
+  const backendPlates = (item.licensePlates || []).map((p) =>
     typeof p === 'string' ? p : p.plateNumber || ''
   ).filter(Boolean);
-
-  if (localUser) {
-    const localPlates = (localUser.licensePlates || []).map((p: any) => 
-      typeof p === 'string' ? p : p.plateNumber || ''
-    ).filter(Boolean);
-
-    // Merge both arrays uniquely
-    const mergedPlates = Array.from(new Set([...localPlates, ...backendPlates]));
-
-    return {
-      id: item._id,
-      name: localUser.fullName || item.fullName,
-      email: item.email,
-      role: item.role,
-      status: item.isActive === false ? 'blocked' : 'active',
-      walletBalance: 0,
-      linkedPlates: mergedPlates,
-      phone: localUser.phone || item.phone || '',
-    };
-  }
 
   return {
     id: item._id,
@@ -208,24 +163,12 @@ const toAudit = (item: ApiAudit): AuditLog => ({
     : undefined,
 });
 
-async function getManagerOverview(token: string, buildingId: string): Promise<ManagerOverviewData | null> {
-  try {
-    const response = await requestJson<ApiEnvelope<ManagerOverviewData>>({
-      path: `/manager/buildings/${buildingId}/dashboard`,
-      token,
-    });
-    return response.data;
-  } catch {
-    return null;
-  }
-}
-
 export async function getApiAdminDataset(token: string): Promise<AdminDataset> {
   const [overviewRes, buildingsRes, usersRes, auditRes] = await Promise.all([
-    requestJson<ApiEnvelope<AdminOverviewData>>({ path: '/admin/dashboard', token }),
-    requestJson<ApiEnvelope<Paginated<ApiBuilding>>>({ path: '/admin/buildings?limit=200', token }),
-    requestJson<ApiEnvelope<Paginated<ApiUser>>>({ path: '/admin/users?limit=200', token }),
-    requestJson<ApiEnvelope<Paginated<ApiAudit>>>({ path: '/admin/audit-logs?limit=200', token }),
+    api.get<ApiEnvelope<AdminOverviewData>>('/admin/dashboard', { token }),
+    api.get<ApiEnvelope<Paginated<ApiBuilding>>>('/admin/buildings?limit=200', { token }),
+    api.get<ApiEnvelope<Paginated<ApiUser>>>('/admin/users?limit=200', { token }),
+    api.get<ApiEnvelope<Paginated<ApiAudit>>>('/admin/audit-logs?limit=200', { token }),
   ]);
 
   const buildingItems = buildingsRes.data.items || [];
@@ -238,49 +181,32 @@ export async function getApiAdminDataset(token: string): Promise<AdminDataset> {
       .map((user) => [String(user._id), user.fullName]),
   );
 
-  const managerOverviews = await Promise.all(
-    buildingItems.map(async (building) => ({
-      buildingId: building._id,
-      data: await getManagerOverview(token, building._id),
-    })),
+  // Per-building occupancy + today revenue come pre-aggregated from the backend
+  // (`buildingStats`) — no more one dashboard request per building (N+1 removed).
+  const statsByBuilding = new Map(
+    (overviewRes.data.buildingStats || []).map((s) => [String(s.buildingId), s]),
   );
-  const managerOverviewMap = new Map(managerOverviews.map((x) => [x.buildingId, x.data]));
 
   const buildings: Building[] = buildingItems.map((item) =>
-    toBuilding(item, managerNameById, managerOverviewMap.get(item._id) || undefined),
+    toBuilding(item, managerNameById, statsByBuilding.get(String(item._id))),
   );
 
   const users: UserRecord[] = userItems.map(toUser);
   const auditLogs: AuditLog[] = auditItems.map(toAudit);
 
-  const weeklyMap = new Map<string, { revenue: number; sessions: number; occupancySum: number; count: number }>();
+  // System-wide 7-day revenue trend, also backend-aggregated.
+  const avgOccupancy =
+    buildings.length > 0
+      ? buildings.reduce((sum, b) => sum + Number(b.occupancyRate || 0), 0) / buildings.length
+      : 0;
 
-  managerOverviews.forEach(({ data }) => {
-    if (!data?.revenue?.weekly) return;
-
-    data.revenue.weekly.forEach((point) => {
-      const current = weeklyMap.get(point.date) || {
-        revenue: 0,
-        sessions: 0,
-        occupancySum: 0,
-        count: 0,
-      };
-      current.revenue += Number(point.revenue || 0);
-      current.sessions += Number(point.sessions || 0);
-      current.occupancySum += Number(data?.slots?.occupancyRate || 0);
-      current.count += 1;
-      weeklyMap.set(point.date, current);
-    });
-  });
-
-  const revenueTrend: RevenuePoint[] = Array.from(weeklyMap.entries())
-    .sort(([a], [b]) => (a > b ? 1 : -1))
+  const revenueTrend: RevenuePoint[] = (overviewRes.data.revenue.weekly || [])
     .slice(-7)
-    .map(([date, value]) => ({
-      date: formatChartDate(date),
-      revenue: Math.round(value.revenue),
-      occupancy: value.count > 0 ? Math.round((value.occupancySum / value.count) * 10) / 10 : 0,
-      sessions: value.sessions,
+    .map((point) => ({
+      date: formatChartDate(point.date),
+      revenue: Math.round(Number(point.revenue || 0)),
+      occupancy: Math.round(avgOccupancy * 10) / 10,
+      sessions: Number(point.sessions || 0),
     }));
 
   const paymentMethodDistribution = Object.entries(overviewRes.data.revenue.byMethod || {}).map(

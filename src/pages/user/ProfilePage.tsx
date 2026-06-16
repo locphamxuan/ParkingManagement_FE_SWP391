@@ -2,7 +2,7 @@ import { useMemo, useState, useRef, useEffect } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
-import { ArrowLeft, LogOut, User, Edit, Save, X, ShieldAlert, Plus, AlertCircle, CheckCircle2, Car, Bike, Loader2, Star, QrCode, KeyRound } from 'lucide-react';
+import { ArrowLeft, LogOut, User, Edit, Save, X, ShieldAlert, Plus, AlertCircle, CheckCircle2, Car, Bike, Loader2, QrCode, KeyRound } from 'lucide-react';
 import { syncPlates, listPlates, type PlateRecord } from '@/services/licensePlateService';
 import { UserQRModal } from '@/components/modals/UserQRModal';
 import { PlateQRModal } from '@/components/modals/PlateQRModal';
@@ -65,7 +65,6 @@ export default function ProfilePage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [isSettingDefaultId, setIsSettingDefaultId] = useState<string | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
   const [showQRModal, setShowQRModal] = useState(false);
   // Server plates carry the per-plate QR token (PLT-...) used by the plate-QR modal.
@@ -87,13 +86,6 @@ export default function ProfilePage() {
       role: session.role,
     };
   }, [session]);
-
-  useEffect(() => {
-    // Initialize mock database if not already present
-    if (!localStorage.getItem('pbms.allRegisteredPhones')) {
-      localStorage.setItem('pbms.allRegisteredPhones', JSON.stringify(["0911111111", "0922222222"]));
-    }
-  }, []);
 
   // Fetch plates (with their PLT- QR tokens) so each plate can show its scannable QR.
   useEffect(() => {
@@ -216,32 +208,13 @@ export default function ProfilePage() {
     setApiError(null);
 
     const newPhone = form.phone.trim();
-    const oldPhone = user.phone.trim();
 
-    // Step 1: Format check
+    // Format check (BE kiểm tra trùng SĐT khi PUT /users/profile → 409 PHONE_TAKEN).
     const phoneRegex = /^0[0-9]{9}$/;
     if (!phoneRegex.test(newPhone)) {
       setProfileError('Số điện thoại phải bắt đầu bằng số 0 và có đúng 10 chữ số!');
       return;
     }
-
-    // Step 2: Duplicate check
-    const allRegisteredPhonesRaw = localStorage.getItem('pbms.allRegisteredPhones');
-    let allRegisteredPhones: string[] = allRegisteredPhonesRaw
-      ? JSON.parse(allRegisteredPhonesRaw)
-      : ['0911111111', '0922222222'];
-
-    if (newPhone !== oldPhone && allRegisteredPhones.includes(newPhone)) {
-      setProfileError('Số điện thoại này đã được đăng ký bởi một tài khoản khác!');
-      return;
-    }
-
-    // Step 3: Update simulated registry
-    if (oldPhone) {
-      allRegisteredPhones = allRegisteredPhones.filter((p) => p !== oldPhone);
-    }
-    allRegisteredPhones.push(newPhone);
-    localStorage.setItem('pbms.allRegisteredPhones', JSON.stringify(allRegisteredPhones));
 
     setIsSaving(true);
 

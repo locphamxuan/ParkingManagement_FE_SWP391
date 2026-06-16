@@ -67,6 +67,8 @@ export interface Reservation {
   refundPercent?: number;
   refundAmount?: number;
   estimatedFee?: number;
+  /** Snapshot: phải hủy trước giờ đặt ít nhất số giờ này (0 = không giới hạn). */
+  cancellationCutoffHours?: number;
   createdAt?: string;
   updatedAt?: string;
   parkingSession?: {

@@ -3,8 +3,6 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { ScrollToTop } from '@/components/common/ScrollToTop';
 // Guards + layouts: eager (nhỏ, là khung luôn cần). Page: lazy để tách chunk.
 import { ProtectedRoute } from '@/routes/ProtectedRoute';
-import { ManagerProtectedRoute } from '@/routes/ManagerProtectedRoute';
-import { StaffProtectedRoute } from '@/routes/StaffProtectedRoute';
 import { AdminLayout } from '@/layouts/AdminLayout';
 import { ManagerLayout } from '@/layouts/ManagerLayout';
 import { StaffLayout } from '@/layouts/StaffLayout';
@@ -98,7 +96,7 @@ export function AppRouter() {
 
       <Route path="/manager/login" element={<Navigate to="/auth/login" replace />} />
       <Route path="/manager" element={<Navigate to="/manager/dashboard" replace />} />
-      <Route element={<ManagerProtectedRoute />}>
+      <Route element={<ProtectedRoute role="manager" />}>
         <Route path="/manager" element={<ManagerLayout />}>
           <Route index element={<ManagerDashboardPage />} />
           <Route path="dashboard" element={<ManagerDashboardPage />} />
@@ -132,13 +130,13 @@ export function AppRouter() {
 
       <Route path="/staff/login" element={<Navigate to="/auth/login" replace />} />
       <Route path="/staff" element={<Navigate to="/staff/dashboard" replace />} />
-      <Route element={<StaffProtectedRoute />}>
+      <Route element={<ProtectedRoute role="staff" />}>
         <Route path="/staff" element={<StaffLayout />}>
           <Route index element={<StaffDashboardPage />} />
           <Route path="dashboard" element={<StaffDashboardPage />} />
           <Route path="operations" element={<StaffOperationsPage />} />
-          <Route path="checkout" element={<StaffParkedPage />} />
-          <Route path="parked" element={<StaffParkedPage readOnly />} />
+          <Route path="checkout" element={<StaffParkedPage view="scanner" />} />
+          <Route path="parked" element={<StaffParkedPage view="list" />} />
           <Route path="reservations" element={<StaffReservationsPage />} />
           <Route path="my-shifts" element={<StaffShiftsPage />} />
           <Route path="sessions" element={<StaffSessionsPage />} />

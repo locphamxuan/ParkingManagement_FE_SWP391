@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { X, Loader } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
 import { managerApi, type StaffShift, type Gate } from '@/services/manager/managerApi';
 import { CustomSelect } from '@/components/ui/select';

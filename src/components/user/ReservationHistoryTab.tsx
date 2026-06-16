@@ -1,18 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   CalendarClock,
-  MapPin,
   Clock,
-  Timer,
   RefreshCw,
   XCircle,
   Building2,
-  Sparkles,
-  ChevronLeft,
-  ChevronRight,
-  X,
   Car,
-  RefreshCw as RefreshIcon,
 } from 'lucide-react';
 import { userApi } from '@/services/user/userApi';
 import type { Reservation, LongTermSubscription } from '@/services/user/userApi';
@@ -55,6 +48,13 @@ function StatusBadge({ status, mode = 'hourly' }: { status: string; mode?: 'hour
     </span>
   );
 }
+
+// Đã quá hạn hủy? (phải hủy trước giờ đặt ít nhất cancellationCutoffHours giờ).
+const cancelCutoffPassed = (r: { startTime?: string; cancellationCutoffHours?: number }): boolean => {
+  const cutoff = Number(r?.cancellationCutoffHours ?? 0);
+  if (cutoff <= 0 || !r?.startTime) return false;
+  return Date.now() > new Date(r.startTime).getTime() - cutoff * 60 * 60 * 1000;
+};
 
 export function ReservationHistoryTab() {
   const [activeMode, setActiveMode] = useState<'hourly' | 'package'>('hourly');
@@ -277,15 +277,24 @@ export function ReservationHistoryTab() {
                     <div className="flex items-center gap-2 shrink-0">
                       <StatusBadge status={r.status} />
                       {(r.status === 'pending' || r.status === 'confirmed') && (
-                        <button
-                          type="button"
-                          disabled={cancellingId === r._id}
-                          onClick={() => handleCancel(r._id)}
-                          className="flex items-center gap-1 rounded-lg border border-rose-500/30 bg-rose-500/10 px-2.5 py-1 text-xs font-bold text-rose-400 hover:bg-rose-500/20 hover:border-rose-500/50 transition-all disabled:opacity-50"
-                        >
-                          <XCircle size={12} />
-                          {cancellingId === r._id ? 'Đang hủy...' : 'Hủy'}
-                        </button>
+                        cancelCutoffPassed(r) ? (
+                          <span
+                            title={`Phải hủy trước giờ đặt ít nhất ${r.cancellationCutoffHours} giờ`}
+                            className="rounded-lg border border-slate-500/30 bg-slate-500/10 px-2.5 py-1 text-[11px] font-bold text-slate-400"
+                          >
+                            Quá hạn hủy
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={cancellingId === r._id}
+                            onClick={() => handleCancel(r._id)}
+                            className="flex items-center gap-1 rounded-lg border border-rose-500/30 bg-rose-500/10 px-2.5 py-1 text-xs font-bold text-rose-400 hover:bg-rose-500/20 hover:border-rose-500/50 transition-all disabled:opacity-50"
+                          >
+                            <XCircle size={12} />
+                            {cancellingId === r._id ? 'Đang hủy...' : 'Hủy'}
+                          </button>
+                        )
                       )}
                     </div>
                   </div>
