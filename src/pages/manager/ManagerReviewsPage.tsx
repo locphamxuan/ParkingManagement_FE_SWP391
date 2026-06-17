@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { DataTable, type DataColumn } from '@/components/common/DataTable';
 import { useBuildingContext } from '@/hooks/useBuildingContext';
-import { userApi } from '@/services/user/userApi';
+import { managerApi } from '@/services/manager/managerApi';
 import type { Feedback } from '@/services/user/userApi';
 import { Modal } from '@/components/ui/modal';
 
@@ -26,15 +26,14 @@ export function ManagerReviewsPage() {
   const [replying, setReplying] = useState(false);
 
   const refresh = useCallback(async () => {
+    if (!buildingId) return;
     setLoading(true);
     try {
-      const query: Record<string, string | undefined> = {
-        buildingId,
-      };
+      const query: Record<string, string | undefined> = {};
       if (statusFilter !== 'all') {
         query.status = statusFilter;
       }
-      const result = await userApi.feedbacks.listAll(query);
+      const result = await managerApi.feedbacks.list(buildingId, query);
       setReviews(result.data.items);
       setError(null);
     } catch (err) {
@@ -55,6 +54,10 @@ export function ManagerReviewsPage() {
   };
 
   const handleReplySubmit = async () => {
+    if (!buildingId) {
+      alert('Không tìm thấy thông tin tòa nhà');
+      return;
+    }
     if (!replyForm.staffReply.trim()) {
       alert('Vui lòng nhập phản hồi');
       return;
@@ -62,21 +65,10 @@ export function ManagerReviewsPage() {
 
     setReplying(true);
     try {
-      // Create a new FormData to send the reply
-      // Since userApi doesn't have a reply endpoint, we'll need to implement this via direct API call
-      const response = await fetch(
-        `/api/feedbacks/${replyForm.reviewId}/reply`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ staffReply: replyForm.staffReply.trim() }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Gửi phản hồi thất bại');
-      }
+      await managerApi.feedbacks.respond(buildingId, replyForm.reviewId, {
+        staffReply: replyForm.staffReply.trim(),
+        status: 'resolved',
+      });
 
       await refresh();
       setReplyModalOpen(false);
