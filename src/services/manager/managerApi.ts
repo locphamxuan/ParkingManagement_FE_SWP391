@@ -1,4 +1,5 @@
 import { api } from '@/services/client/apiClient';
+import type { Feedback } from '@/services/user/userApi';
 
 export interface ManagerBuilding {
   _id: string;
@@ -360,6 +361,12 @@ export const managerApi = {
       api.get<Wrap<{ status: string; credited: boolean }>>(path(b, `/wallet/topup/${orderCode}/verify`)),
   },
 
+  feedbacks: {
+    list: (b: string, q?: Record<string, string | undefined>) =>
+      api.get<Wrap<{ items: Feedback[]; pagination?: { page: number; limit: number; total: number; totalPages: number } }>>(path(b, '/feedbacks'), { query: q }),
+    respond: (b: string, id: string, body: { staffReply: string; status?: string }) =>
+      api.patch<Wrap<{ item: Feedback }>>(path(b, `/feedbacks/${id}`), body),
+  },
 };
 
 export const unwrapItems = <T,>(payload: Wrap<{ items: T[] }> | Wrap<T[]> | undefined): T[] => {
