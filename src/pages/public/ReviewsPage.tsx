@@ -77,18 +77,24 @@ export default function ReviewsPage() {
 
   // Load user parking sessions when opening modal
   const handleOpenWriteReview = async () => {
-    if (!session) {
-      navigate('/auth/login');
-      return;
-    }
     setModalOpen(true);
-    setLoadingSessions(true);
-    setSessionsError(null);
     setSubmitSuccess(false);
     setSubmitError(null);
     setCommentInput('');
     setRatingInput(5);
     setSelectedSessionId('');
+
+    if (!session) {
+      setSessions([]);
+      return;
+    }
+    if (session.role !== 'user') {
+      setSessions([]);
+      return;
+    }
+
+    setLoadingSessions(true);
+    setSessionsError(null);
 
     try {
       const res = await userApi.parkingHistory.list({ limit: 100 });
@@ -429,7 +435,38 @@ export default function ReviewsPage() {
       {/* Review Submission Modal */}
       <Modal open={modalOpen} onOpenChange={setModalOpen} title="Đánh giá dịch vụ gửi xe">
         <div className="text-slate-100 text-sm leading-relaxed p-1">
-          {session && session.role !== 'user' ? (
+          {!session ? (
+            <div className="py-6 text-center space-y-4">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-400 shadow-[0_0_12px_rgba(249,115,22,0.15)]">
+                <AlertTriangle size={24} />
+              </div>
+              <div className="space-y-1.5 px-4">
+                <p className="font-black text-white text-base">Yêu cầu đăng nhập</p>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Bạn cần đăng nhập bằng tài khoản Khách hàng và hoàn thành ít nhất một lượt gửi xe mới có quyền viết đánh giá dịch vụ.
+                </p>
+              </div>
+              <div className="flex justify-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setModalOpen(false)}
+                  className="rounded-xl text-xs font-bold px-4 py-2 border border-white/10 bg-slate-800 text-white hover:bg-slate-700 transition-all cursor-pointer"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setModalOpen(false);
+                    navigate('/auth/login');
+                  }}
+                  className="rounded-xl text-xs font-bold px-5 py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 hover:shadow-[0_0_15px_rgba(249,115,22,0.3)] transition-all cursor-pointer"
+                >
+                  Đăng nhập ngay
+                </button>
+              </div>
+            </div>
+          ) : session.role !== 'user' ? (
             <div className="py-6 text-center space-y-4">
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.15)]">
                 <AlertTriangle size={24} />
