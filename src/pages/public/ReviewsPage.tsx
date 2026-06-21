@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, MessageSquare, Star, Sparkles, Plus, AlertTriangle, CheckCircle, RefreshCw, Quote, ArrowRight } from 'lucide-react';
+import { ArrowLeft, MessageSquare, Star, Sparkles, Plus, AlertTriangle, CheckCircle, RefreshCw, Quote, ArrowRight, ChevronDown } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { userApi, type Feedback, type ParkingHistory } from '@/services/user/userApi';
 import { Modal } from '@/components/ui/modal';
@@ -37,6 +37,22 @@ export default function ReviewsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // Custom Dropdown state
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+
+  // Get currently selected session details
+  const selectedSession = useMemo(() => {
+    return sessions.find((s) => s._id === selectedSessionId) || null;
+  }, [sessions, selectedSessionId]);
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    if (!dropdownOpen) return;
+    const handleClose = () => setDropdownOpen(false);
+    document.addEventListener('click', handleClose);
+    return () => document.removeEventListener('click', handleClose);
+  }, [dropdownOpen]);
 
   // Load buildings
   useEffect(() => {
@@ -532,20 +548,50 @@ export default function ReviewsPage() {
               </p>
 
               {/* Sessions Select */}
-              <div className="space-y-1.5">
+              <div className="space-y-1.5 relative">
                 <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono">Chọn lượt gửi xe đã hoàn thành</label>
-                <select
-                  value={selectedSessionId}
-                  onChange={(e) => setSelectedSessionId(e.target.value)}
-                  required
-                  className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2.5 text-xs text-white focus:border-orange-500 focus:outline-none transition-all cursor-pointer"
-                >
-                  {sessions.map((s) => (
-                    <option key={s._id} value={s._id}>
-                      {s.plateNumber} tại {s.building.name} (Check-out: {fmtTime(s.checkOut)})
-                    </option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDropdownOpen(!dropdownOpen);
+                    }}
+                    className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-4 py-3 text-xs text-white focus:border-orange-500/50 focus:outline-none transition-all flex justify-between items-center cursor-pointer hover:bg-slate-900/60 hover:border-white/15"
+                  >
+                    <span className="font-semibold text-slate-200">
+                      {selectedSession ? (
+                        `${selectedSession.plateNumber} tại ${selectedSession.building.name} (Check-out: ${fmtTime(selectedSession.checkOut)})`
+                      ) : (
+                        'Chọn lượt gửi xe đã hoàn thành'
+                      )}
+                    </span>
+                    <ChevronDown size={14} className={`text-slate-400 transition-transform duration-200 ${dropdownOpen ? 'transform rotate-180' : ''}`} />
+                  </button>
+
+                  {dropdownOpen && (
+                    <div className="absolute z-50 w-full mt-1.5 rounded-xl border border-white/10 bg-slate-950/95 backdrop-blur-xl shadow-2xl max-h-60 overflow-y-auto py-1 animate-in fade-in slide-in-from-top-1 duration-200 scrollbar-thin scrollbar-thumb-slate-800">
+                      {sessions.map((s) => (
+                        <button
+                          key={s._id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedSessionId(s._id);
+                            setDropdownOpen(false);
+                          }}
+                          className={`w-full text-left px-4 py-3 text-xs transition-all flex justify-between items-center hover:bg-white/5 cursor-pointer border-b border-white/5 last:border-b-0 ${
+                            s._id === selectedSessionId
+                              ? 'text-orange-400 bg-orange-500/10 font-bold'
+                              : 'text-slate-350 hover:text-white'
+                          }`}
+                        >
+                          <span className="font-semibold">{s.plateNumber} tại {s.building.name}</span>
+                          <span className="text-[10px] opacity-75 font-mono text-slate-400">Check-out: {fmtTime(s.checkOut)}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Stars Input */}
