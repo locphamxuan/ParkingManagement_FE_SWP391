@@ -185,15 +185,13 @@ export default function ReviewsPage() {
             </div>
             <p className="text-xs text-slate-400">Xem ý kiến và đóng góp từ khách hàng của hệ thống</p>
           </div>
-          {(!session || session.role === 'user') && (
-            <button
-              type="button"
-              onClick={handleOpenWriteReview}
-              className="px-4 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider shadow-[0_0_15px_rgba(249,115,22,0.3)] transition-all hover:scale-105 hover:shadow-[0_0_20px_rgba(249,115,22,0.5)] cursor-pointer"
-            >
-              Viết đánh giá
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={handleOpenWriteReview}
+            className="px-4 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider shadow-[0_0_15px_rgba(249,115,22,0.3)] transition-all hover:scale-105 hover:shadow-[0_0_20px_rgba(249,115,22,0.5)] cursor-pointer"
+          >
+            Viết đánh giá
+          </button>
         </div>
       </header>
 
@@ -300,15 +298,13 @@ export default function ReviewsPage() {
                 ? 'Không tìm thấy đánh giá nào khớp với bộ lọc hiện tại.'
                 : 'Hãy là người đầu tiên gửi đánh giá trải nghiệm gửi xe của bạn!'}
             </p>
-            {selectedBuilding === 'all' && selectedRating === 'all' && (!session || session.role === 'user') && (
-              <button
-                type="button"
-                onClick={handleOpenWriteReview}
-                className="mt-5 px-5 py-2.5 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider transition-all hover:scale-105 cursor-pointer shadow-lg shadow-orange-500/10"
-              >
-                Viết đánh giá đầu tiên
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={handleOpenWriteReview}
+              className="mt-5 px-5 py-2.5 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider transition-all hover:scale-105 cursor-pointer shadow-lg shadow-orange-500/20"
+            >
+              Viết đánh giá đầu tiên
+            </button>
           </div>
         ) : (
           <div className="space-y-6">
@@ -433,7 +429,26 @@ export default function ReviewsPage() {
       {/* Review Submission Modal */}
       <Modal open={modalOpen} onOpenChange={setModalOpen} title="Đánh giá dịch vụ gửi xe">
         <div className="text-slate-100 text-sm leading-relaxed p-1">
-          {loadingSessions ? (
+          {session && session.role !== 'user' ? (
+            <div className="py-6 text-center space-y-4">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.15)]">
+                <AlertTriangle size={24} />
+              </div>
+              <div className="space-y-1.5 px-4">
+                <p className="font-black text-white text-base">Tính năng dành cho khách hàng</p>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Tài khoản hiện tại của bạn có vai trò là <strong>{session.role === 'admin' ? 'Quản trị viên' : session.role === 'manager' ? 'Quản lý' : 'Nhân viên'}</strong>. Chỉ tài khoản Khách hàng (User) mới có quyền gửi đánh giá dịch vụ.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setModalOpen(false)}
+                className="mt-2 rounded-xl text-xs font-bold px-5 py-2.5 border border-white/10 bg-slate-800 text-white hover:bg-slate-700 transition-all cursor-pointer"
+              >
+                Đã hiểu
+              </button>
+            </div>
+          ) : loadingSessions ? (
             <div className="py-12 text-center space-y-2">
               <RefreshCw className="mx-auto animate-spin text-orange-500" size={24} />
               <p className="text-xs text-slate-400">Đang kiểm tra lịch sử gửi xe của bạn...</p>
