@@ -178,20 +178,22 @@ export default function ReviewsPage() {
           >
             <ArrowLeft size={16} />
           </button>
-          <div className="flex flex-col">
+          <div className="flex flex-col flex-1">
             <div className="flex items-center gap-2">
               <MessageSquare size={20} className="text-orange-400 animate-pulse" />
               <h1 className="text-lg font-black tracking-tight text-white">Đánh giá dịch vụ</h1>
             </div>
             <p className="text-xs text-slate-400">Xem ý kiến và đóng góp từ khách hàng của hệ thống</p>
           </div>
-          <button
-            type="button"
-            onClick={handleOpenWriteReview}
-            className="ml-auto flex items-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 px-4 py-2.5 text-xs font-bold text-white shadow-lg shadow-orange-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
-          >
-            <Plus size={14} /> Viết đánh giá
-          </button>
+          {(!session || session.role === 'user') && (
+            <button
+              type="button"
+              onClick={handleOpenWriteReview}
+              className="px-4 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider shadow-[0_0_15px_rgba(249,115,22,0.3)] transition-all hover:scale-105 hover:shadow-[0_0_20px_rgba(249,115,22,0.5)] cursor-pointer"
+            >
+              Viết đánh giá
+            </button>
+          )}
         </div>
       </header>
 
@@ -290,14 +292,23 @@ export default function ReviewsPage() {
             <p className="text-sm text-slate-450 font-medium">Đang tải danh sách đánh giá...</p>
           </div>
         ) : reviews.length === 0 ? (
-          <div className="rounded-3xl border border-white/8 bg-white/3 p-16 text-center max-w-md mx-auto">
+          <div className="rounded-3xl border border-white/8 bg-white/3 p-16 text-center max-w-md mx-auto flex flex-col items-center">
             <MessageSquare size={48} className="mx-auto mb-4 text-slate-650" />
             <p className="text-base font-bold text-slate-300">Chưa có đánh giá nào</p>
-            <p className="mt-1.5 text-xs text-slate-500 leading-relaxed">
+            <p className="mt-1.5 text-xs text-slate-500 leading-relaxed max-w-xs">
               {selectedBuilding !== 'all' || selectedRating !== 'all'
                 ? 'Không tìm thấy đánh giá nào khớp với bộ lọc hiện tại.'
                 : 'Hãy là người đầu tiên gửi đánh giá trải nghiệm gửi xe của bạn!'}
             </p>
+            {selectedBuilding === 'all' && selectedRating === 'all' && (!session || session.role === 'user') && (
+              <button
+                type="button"
+                onClick={handleOpenWriteReview}
+                className="mt-5 px-5 py-2.5 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider transition-all hover:scale-105 cursor-pointer shadow-lg shadow-orange-500/10"
+              >
+                Viết đánh giá đầu tiên
+              </button>
+            )}
           </div>
         ) : (
           <div className="space-y-6">
@@ -421,14 +432,14 @@ export default function ReviewsPage() {
 
       {/* Review Submission Modal */}
       <Modal open={modalOpen} onOpenChange={setModalOpen} title="Đánh giá dịch vụ gửi xe">
-        <div className="text-slate-700 text-sm leading-relaxed p-1">
+        <div className="text-slate-100 text-sm leading-relaxed p-1">
           {loadingSessions ? (
             <div className="py-12 text-center space-y-2">
               <RefreshCw className="mx-auto animate-spin text-orange-500" size={24} />
-              <p className="text-xs text-stone-500">Đang kiểm tra lịch sử gửi xe của bạn...</p>
+              <p className="text-xs text-slate-400">Đang kiểm tra lịch sử gửi xe của bạn...</p>
             </div>
           ) : sessionsError ? (
-            <div className="rounded-2xl border border-red-500/20 bg-red-500/5 p-4 flex gap-3 text-red-650 items-start">
+            <div className="rounded-2xl border border-rose-500/25 bg-rose-950/20 p-4 flex gap-3 text-rose-400 items-start">
               <AlertTriangle className="shrink-0 mt-0.5" size={16} />
               <div className="space-y-1">
                 <p className="font-bold text-sm">Lỗi tải dữ liệu</p>
@@ -437,45 +448,45 @@ export default function ReviewsPage() {
             </div>
           ) : sessions.length === 0 ? (
             <div className="py-6 text-center space-y-4">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-amber-50 text-amber-500">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.15)]">
                 <AlertTriangle size={24} />
               </div>
               <div className="space-y-1 px-4">
-                <p className="font-black text-stone-850 text-base">Yêu cầu hoàn thành dịch vụ</p>
-                <p className="text-xs text-stone-500 leading-relaxed">
+                <p className="font-black text-white text-base">Yêu cầu hoàn thành dịch vụ</p>
+                <p className="text-xs text-slate-400 leading-relaxed">
                   Hệ thống ghi nhận bạn chưa hoàn thành phiên gửi xe nào. Vui lòng sử dụng dịch vụ và hoàn tất thanh toán trước khi thực hiện đánh giá.
                 </p>
               </div>
-              <Button
-                variant="secondary"
+              <button
+                type="button"
                 onClick={() => setModalOpen(false)}
-                className="mt-2 rounded-xl text-xs font-bold px-5 py-2.5"
+                className="mt-2 rounded-xl text-xs font-bold px-5 py-2.5 border border-white/10 bg-slate-800 text-white hover:bg-slate-700 transition-all cursor-pointer"
               >
                 Đã hiểu
-              </Button>
+              </button>
             </div>
           ) : submitSuccess ? (
             <div className="py-8 text-center space-y-3">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-500">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500/15 border border-emerald-500/20 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.15)]">
                 <CheckCircle size={32} />
               </div>
-              <p className="font-black text-stone-850 text-base">Cảm ơn đánh giá của bạn!</p>
-              <p className="text-xs text-stone-500">Ý kiến đóng góp đã được gửi lên hệ thống và đang chờ phê duyệt.</p>
+              <p className="font-black text-white text-base">Cảm ơn đánh giá của bạn!</p>
+              <p className="text-xs text-slate-400 font-semibold">Ý kiến đóng góp đã được gửi lên hệ thống và đang chờ phê duyệt.</p>
             </div>
           ) : (
             <form onSubmit={handleSubmitFeedback} className="space-y-4">
-              <p className="text-xs text-stone-500">
+              <p className="text-xs text-slate-400">
                 Ý kiến của bạn giúp chúng tôi cải thiện chất lượng bãi đỗ xe tốt hơn mỗi ngày.
               </p>
 
               {/* Sessions Select */}
               <div className="space-y-1.5">
-                <label className="text-xs font-black text-stone-600 uppercase">Chọn lượt gửi xe đã hoàn thành</label>
+                <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono">Chọn lượt gửi xe đã hoàn thành</label>
                 <select
                   value={selectedSessionId}
                   onChange={(e) => setSelectedSessionId(e.target.value)}
                   required
-                  className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2.5 text-xs text-stone-850 focus:border-orange-500 focus:outline-none transition-all"
+                  className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2.5 text-xs text-white focus:border-orange-500 focus:outline-none transition-all cursor-pointer"
                 >
                   {sessions.map((s) => (
                     <option key={s._id} value={s._id}>
@@ -487,7 +498,7 @@ export default function ReviewsPage() {
 
               {/* Stars Input */}
               <div className="space-y-1.5">
-                <label className="text-xs font-black text-stone-600 uppercase">Mức độ hài lòng</label>
+                <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono">Mức độ hài lòng</label>
                 <div className="flex gap-1.5 py-1">
                   {Array.from({ length: 5 }).map((_, i) => {
                     const index = i + 1;
@@ -500,17 +511,17 @@ export default function ReviewsPage() {
                         onClick={() => setRatingInput(index)}
                         onMouseEnter={() => setHoveredRating(index)}
                         onMouseLeave={() => setHoveredRating(null)}
-                        className="text-stone-300 hover:scale-110 active:scale-95 transition-all focus:outline-none"
+                        className="text-slate-700 hover:scale-110 active:scale-95 transition-all focus:outline-none cursor-pointer"
                       >
                         <Star
                           size={28}
                           fill={active ? '#f97316' : 'none'}
-                          className={active ? 'text-orange-500' : 'text-stone-350'}
+                          className={active ? 'text-orange-500' : 'text-slate-800'}
                         />
                       </button>
                     );
                   })}
-                  <span className="ml-3 font-black text-stone-800 self-center text-sm">
+                  <span className="ml-3 font-mono font-black text-orange-400 self-center text-xs">
                     {ratingInput} / 5 sao
                   </span>
                 </div>
@@ -518,7 +529,7 @@ export default function ReviewsPage() {
 
               {/* Comment Input */}
               <div className="space-y-1.5">
-                <label className="text-xs font-black text-stone-600 uppercase">Nội dung đánh giá</label>
+                <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono">Nội dung đánh giá</label>
                 <textarea
                   value={commentInput}
                   onChange={(e) => setCommentInput(e.target.value)}
@@ -526,39 +537,38 @@ export default function ReviewsPage() {
                   rows={4}
                   required
                   maxLength={1000}
-                  className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-xs text-stone-850 placeholder:text-stone-400 focus:border-orange-500 focus:outline-none transition-all resize-none"
+                  className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 text-xs text-white placeholder:text-slate-650 focus:border-orange-500 focus:outline-none transition-all resize-none"
                 />
-                <div className="text-right text-[10px] text-stone-400">
+                <div className="text-right text-[9px] font-mono text-slate-500">
                   {commentInput.length} / 1000 ký tự
                 </div>
               </div>
 
               {/* Submit Error */}
               {submitError && (
-                <div className="rounded-xl border border-red-500/20 bg-red-500/5 px-3 py-2.5 text-xs text-red-650 flex gap-2 items-center">
+                <div className="rounded-xl border border-rose-500/25 bg-rose-950/20 px-3 py-2.5 text-xs text-rose-450 flex gap-2 items-center">
                   <AlertTriangle className="shrink-0" size={13} />
                   <span>{submitError}</span>
                 </div>
               )}
 
               {/* Form buttons */}
-              <div className="flex justify-end gap-2.5 border-t border-stone-100 pt-4 mt-2">
-                <Button
+              <div className="flex justify-end gap-2.5 border-t border-white/5 pt-4 mt-2">
+                <button
                   type="button"
-                  variant="secondary"
                   onClick={() => setModalOpen(false)}
                   disabled={submitting}
-                  className="rounded-xl px-5 py-2.5 font-bold text-xs"
+                  className="rounded-xl px-5 py-2.5 font-bold text-xs border border-white/10 bg-transparent text-white hover:bg-white/5 transition-all cursor-pointer"
                 >
                   Hủy
-                </Button>
-                <Button
+                </button>
+                <button
                   type="submit"
                   disabled={submitting}
-                  className="rounded-xl px-5 py-2.5 font-bold text-xs bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white shadow-md shadow-orange-500/10 transition-all"
+                  className="rounded-xl px-5 py-2.5 font-bold text-xs bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 hover:shadow-[0_0_20px_rgba(249,115,22,0.35)] transition-all cursor-pointer"
                 >
                   {submitting ? 'Đang gửi...' : 'Gửi đánh giá'}
-                </Button>
+                </button>
               </div>
             </form>
           )}
