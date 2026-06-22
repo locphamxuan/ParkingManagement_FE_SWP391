@@ -259,7 +259,7 @@ export default function ReviewsPage() {
         {/* Title Banner */}
         <div className="text-center py-6">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-orange-500/30 bg-orange-500/10 px-3 py-1 text-[11px] font-black uppercase tracking-wider text-orange-400">
-            <Sparkles size={11} /> Đánh giá thực tế
+            Đánh giá thực tế
           </span>
           <h2 className="mt-3 text-3xl font-black text-white tracking-tight">
             Khách hàng nói gì về <span className="bg-gradient-to-r from-orange-400 to-amber-500 bg-clip-text text-transparent">chúng tôi</span>
