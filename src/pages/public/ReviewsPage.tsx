@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, MessageSquare, Star, Sparkles, Plus, AlertTriangle, CheckCircle, RefreshCw, Quote, ArrowRight, ChevronDown } from 'lucide-react';
+import { ArrowLeft, MessageSquare, Star, Sparkles, Plus, AlertTriangle, CheckCircle, RefreshCw, Quote, ArrowRight, ChevronDown, Trash2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { userApi, type Feedback, type ParkingHistory } from '@/services/user/userApi';
 import { Modal } from '@/components/ui/modal';
@@ -11,11 +11,25 @@ const fmtTime = (s?: string | null) =>
 
 export default function ReviewsPage() {
   const navigate = useNavigate();
-  const { session } = useAuth();
+  const { session, user } = useAuth();
 
   // Reviews states
   const [reviews, setReviews] = useState<Feedback[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const handleDeleteFeedback = async (feedbackId: string) => {
+    if (!window.confirm('Bạn có chắc chắn muốn xóa đánh giá này không?')) return;
+    setDeletingId(feedbackId);
+    try {
+      await userApi.feedbacks.remove(feedbackId);
+      loadReviews(page);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Xóa đánh giá thất bại.');
+    } finally {
+      setDeletingId(null);
+    }
+  };
   const [error, setError] = useState<string | null>(null);
   const [buildings, setBuildings] = useState<{ _id: string; name: string }[]>([]);
   const [selectedBuilding, setSelectedBuilding] = useState<string>('all');
@@ -444,6 +458,25 @@ export default function ReviewsPage() {
                     <div className="absolute top-0 right-0 p-4 text-white/5 group-hover:text-orange-500/5 transition-colors">
                       <Quote size={40} className="transform rotate-180" />
                     </div>
+
+                    {user && item.user?._id === user.userId && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteFeedback(item._id);
+                        }}
+                        disabled={deletingId === item._id}
+                        className="absolute top-4 right-4 z-10 flex h-8 w-8 items-center justify-center rounded-lg border border-red-500/25 bg-red-950/20 text-red-400 hover:text-white hover:bg-red-500 hover:border-red-500 transition-all duration-200 disabled:opacity-40 cursor-pointer shadow-lg hover:scale-105"
+                        title="Xóa đánh giá"
+                      >
+                        {deletingId === item._id ? (
+                          <RefreshCw size={14} className="animate-spin" />
+                        ) : (
+                          <Trash2 size={14} />
+                        )}
+                      </button>
+                    )}
 
                     <div className="flex items-start gap-4">
                       {/* Avatar */}

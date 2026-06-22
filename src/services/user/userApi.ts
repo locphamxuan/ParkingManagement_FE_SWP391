@@ -453,6 +453,9 @@ export const userApi = {
 
     listAll: (query?: { buildingId?: string; rating?: number; limit?: number; page?: number; status?: string }) =>
       api.get<Wrap<ListResult<Feedback>>>('/users/feedbacks', { query }),
+
+    remove: (id: string) =>
+      api.delete<Wrap<{ id: string }>>(`/users/feedbacks/${id}`),
   },
 
   // ========== NOTIFICATIONS ==========
