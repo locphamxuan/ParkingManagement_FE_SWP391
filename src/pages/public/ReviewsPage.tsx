@@ -40,19 +40,43 @@ export default function ReviewsPage() {
 
   // Custom Dropdown state
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [buildingDropdownOpen, setBuildingDropdownOpen] = useState(false);
+  const [ratingDropdownOpen, setRatingDropdownOpen] = useState(false);
 
   // Get currently selected session details
   const selectedSession = useMemo(() => {
     return sessions.find((s) => s._id === selectedSessionId) || null;
   }, [sessions, selectedSessionId]);
 
-  // Close dropdown on click outside
+  const selectedBuildingName = useMemo(() => {
+    if (selectedBuilding === 'all') return 'Tất cả bãi xe';
+    const found = buildings.find((b) => b._id === selectedBuilding);
+    return found ? found.name : 'Tất cả bãi xe';
+  }, [selectedBuilding, buildings]);
+
+  const selectedRatingLabel = useMemo(() => {
+    switch (selectedRating) {
+      case 'all': return 'Tất cả sao';
+      case '5': return '5 sao ⭐⭐⭐⭐⭐';
+      case '4': return '4 sao ⭐⭐⭐⭐';
+      case '3': return '3 sao ⭐⭐⭐';
+      case '2': return '2 sao ⭐⭐';
+      case '1': return '1 sao ⭐';
+      default: return 'Tất cả sao';
+    }
+  }, [selectedRating]);
+
+  // Close dropdowns on click outside
   useEffect(() => {
-    if (!dropdownOpen) return;
-    const handleClose = () => setDropdownOpen(false);
+    if (!dropdownOpen && !buildingDropdownOpen && !ratingDropdownOpen) return;
+    const handleClose = () => {
+      setDropdownOpen(false);
+      setBuildingDropdownOpen(false);
+      setRatingDropdownOpen(false);
+    };
     document.addEventListener('click', handleClose);
     return () => document.removeEventListener('click', handleClose);
-  }, [dropdownOpen]);
+  }, [dropdownOpen, buildingDropdownOpen, ratingDropdownOpen]);
 
   // Load buildings
   useEffect(() => {
@@ -257,36 +281,105 @@ export default function ReviewsPage() {
           <div className="md:col-span-2 rounded-3xl border border-white/8 bg-white/3 p-6 space-y-4">
             <p className="text-xs font-black uppercase tracking-wider text-slate-300">Bộ lọc đánh giá</p>
             <div className="grid gap-4 sm:grid-cols-2">
-              <div>
+              <div className="relative">
                 <label className="text-[11px] font-bold text-slate-400 uppercase">Tòa nhà / Bãi xe</label>
-                <select
-                  value={selectedBuilding}
-                  onChange={(e) => setSelectedBuilding(e.target.value)}
-                  className="mt-1.5 w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2.5 text-xs text-white focus:border-orange-500/50 focus:outline-none focus:ring-1 focus:ring-orange-500/50 transition-all"
-                >
-                  <option value="all">Tất cả bãi xe</option>
-                  {buildings.map((b) => (
-                    <option key={b._id} value={b._id}>
-                      {b.name}
-                    </option>
-                  ))}
-                </select>
+                <div className="relative mt-1.5">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setBuildingDropdownOpen(!buildingDropdownOpen);
+                      setRatingDropdownOpen(false);
+                    }}
+                    className="w-full rounded-xl border border-white/10 bg-slate-900 px-3.5 py-2.5 text-xs text-white focus:border-orange-500/50 focus:outline-none transition-all flex justify-between items-center cursor-pointer hover:border-white/20 hover:bg-slate-850"
+                  >
+                    <span className="font-semibold text-slate-200">{selectedBuildingName}</span>
+                    <ChevronDown size={14} className={`text-slate-400 transition-transform duration-200 ${buildingDropdownOpen ? 'transform rotate-180' : ''}`} />
+                  </button>
+
+                  {buildingDropdownOpen && (
+                    <div className="absolute z-30 w-full mt-1.5 rounded-xl border border-white/10 bg-slate-950/95 backdrop-blur-xl shadow-2xl max-h-60 overflow-y-auto py-1 animate-in fade-in slide-in-from-top-1 duration-200">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedBuilding('all');
+                          setBuildingDropdownOpen(false);
+                        }}
+                        className={`w-full text-left px-3.5 py-2.5 text-xs transition-all cursor-pointer ${
+                          selectedBuilding === 'all'
+                            ? 'text-orange-400 bg-orange-500/10 font-bold'
+                            : 'text-slate-355 hover:text-white hover:bg-white/5'
+                        }`}
+                      >
+                        Tất cả bãi xe
+                      </button>
+                      {buildings.map((b) => (
+                        <button
+                          key={b._id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedBuilding(b._id);
+                            setBuildingDropdownOpen(false);
+                          }}
+                          className={`w-full text-left px-3.5 py-2.5 text-xs transition-all cursor-pointer ${
+                            selectedBuilding === b._id
+                              ? 'text-orange-400 bg-orange-500/10 font-bold'
+                              : 'text-slate-355 hover:text-white hover:bg-white/5'
+                          }`}
+                        >
+                          {b.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
 
-              <div>
+              <div className="relative">
                 <label className="text-[11px] font-bold text-slate-400 uppercase">Số sao</label>
-                <select
-                  value={selectedRating}
-                  onChange={(e) => setSelectedRating(e.target.value)}
-                  className="mt-1.5 w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2.5 text-xs text-white focus:border-orange-500/50 focus:outline-none focus:ring-1 focus:ring-orange-500/50 transition-all"
-                >
-                  <option value="all">Tất cả sao</option>
-                  <option value="5">5 sao ⭐⭐⭐⭐⭐</option>
-                  <option value="4">4 sao ⭐⭐⭐⭐</option>
-                  <option value="3">3 sao ⭐⭐⭐</option>
-                  <option value="2">2 sao ⭐⭐</option>
-                  <option value="1">1 sao ⭐</option>
-                </select>
+                <div className="relative mt-1.5">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setRatingDropdownOpen(!ratingDropdownOpen);
+                      setBuildingDropdownOpen(false);
+                    }}
+                    className="w-full rounded-xl border border-white/10 bg-slate-900 px-3.5 py-2.5 text-xs text-white focus:border-orange-500/50 focus:outline-none transition-all flex justify-between items-center cursor-pointer hover:border-white/20 hover:bg-slate-850"
+                  >
+                    <span className="font-semibold text-slate-200">{selectedRatingLabel}</span>
+                    <ChevronDown size={14} className={`text-slate-400 transition-transform duration-200 ${ratingDropdownOpen ? 'transform rotate-180' : ''}`} />
+                  </button>
+
+                  {ratingDropdownOpen && (
+                    <div className="absolute z-30 w-full mt-1.5 rounded-xl border border-white/10 bg-slate-950/95 backdrop-blur-xl shadow-2xl py-1 animate-in fade-in slide-in-from-top-1 duration-200">
+                      {[
+                        { val: 'all', label: 'Tất cả sao' },
+                        { val: '5', label: '5 sao ⭐⭐⭐⭐⭐' },
+                        { val: '4', label: '4 sao ⭐⭐⭐⭐' },
+                        { val: '3', label: '3 sao ⭐⭐⭐' },
+                        { val: '2', label: '2 sao ⭐⭐' },
+                        { val: '1', label: '1 sao ⭐' }
+                      ].map((item) => (
+                        <button
+                          key={item.val}
+                          type="button"
+                          onClick={() => {
+                            setSelectedRating(item.val);
+                            setRatingDropdownOpen(false);
+                          }}
+                          className={`w-full text-left px-3.5 py-2.5 text-xs transition-all cursor-pointer ${
+                            selectedRating === item.val
+                              ? 'text-orange-400 bg-orange-500/10 font-bold'
+                              : 'text-slate-355 hover:text-white hover:bg-white/5'
+                          }`}
+                        >
+                          {item.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
