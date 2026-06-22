@@ -153,6 +153,19 @@ const moduleStyles: Record<
     buttonText: 'text-white font-black',
     buttonGlow: 'hover:shadow-[0_0_20px_rgba(244,63,94,0.35)]',
   },
+  auth: {
+    glow: 'bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.08),transparent_65%)]',
+    iconBg: 'bg-indigo-500/10 border-indigo-500/20 text-indigo-450 group-hover:bg-indigo-500/20 group-hover:border-indigo-500/40',
+    iconText: 'text-indigo-400',
+    badgeBg: 'bg-indigo-500/10 border-indigo-500/20',
+    badgeText: 'text-indigo-400',
+    badgeDot: 'bg-indigo-500 shadow-[0_0_8px_#6366f1]',
+    hoverBorder: 'group-hover:border-indigo-500/60 group-hover:bg-slate-950/75',
+    hoverShadow: 'hover:shadow-[0_12px_40px_rgba(99,102,241,0.25),0_0_18px_rgba(99,102,241,0.18)]',
+    buttonGradient: 'from-violet-500 to-indigo-500',
+    buttonText: 'text-white font-black',
+    buttonGlow: 'hover:shadow-[0_0_20px_rgba(99,102,241,0.35)]',
+  },
 };
 
 const defaultStyle = {
