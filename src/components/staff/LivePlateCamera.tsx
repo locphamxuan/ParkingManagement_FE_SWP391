@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { ScanLine, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { ScanLine, Loader2, AlertCircle, CheckCircle2, RefreshCw, Upload } from 'lucide-react';
 import { staffApi } from '@/services/staff/staffApi';
 import { videoConstraintFor } from '@/hooks/useCameraDevices';
 
@@ -34,18 +34,37 @@ export const LivePlateCamera = forwardRef<LiveCameraHandle, LivePlateCameraProps
 ) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [active, setActive] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     let stream: MediaStream | null = null;
     let cancelled = false;
 
+    const timeout = setTimeout(() => {
+      if (!cancelled) setError('Camera chưa sẵn sàng sau 8 giây. Bấm "Thử lại" hoặc kiểm tra quyền camera trong trình duyệt.');
+    }, 8000);
+
     (async () => {
       try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraintFor(deviceId, 'environment') });
+        if (!navigator.mediaDevices?.getUserMedia) {
+          throw Object.assign(new Error('API not supported'), { name: 'NotSupportedError' });
+        }
+        // Small delay to let any tracks released by React StrictMode cleanup be freed by the browser.
+        await new Promise<void>((r) => setTimeout(r, 150));
+        if (cancelled) return;
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            ...videoConstraintFor(deviceId, 'environment'),
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+          },
+        });
+        clearTimeout(timeout);
         if (cancelled) {
           stream.getTracks().forEach((t) => t.stop());
           return;
@@ -54,22 +73,46 @@ export const LivePlateCamera = forwardRef<LiveCameraHandle, LivePlateCameraProps
           videoRef.current.srcObject = stream;
           videoRef.current.onloadedmetadata = () => {
             videoRef.current?.play().catch(() => undefined);
-            setActive(true);
+            if (!cancelled) setActive(true);
           };
           videoRef.current.play().catch(() => undefined);
         }
         setError(null);
-      } catch {
-        if (!cancelled) setError('Không thể truy cập camera biển số. Vui lòng cấp quyền.');
+      } catch (err) {
+        clearTimeout(timeout);
+        if (!cancelled) {
+          const name = (err as { name?: string })?.name ?? '';
+          if (name === 'NotAllowedError' || name === 'PermissionDeniedError' || name === 'SecurityError') {
+            setError('Trình duyệt chưa cấp quyền camera. Bấm vào biểu tượng khóa trên thanh địa chỉ → Quyền → Camera → Cho phép.');
+          } else if (name === 'NotFoundError' || name === 'DevicesNotFoundError' || name === 'NotSupportedError') {
+            setError('Không tìm thấy thiết bị camera. Cắm camera rồi bấm Thử lại.');
+          } else if (name === 'NotReadableError' || name === 'TrackStartError') {
+            setError('Camera đang bị ứng dụng khác sử dụng. Đóng ứng dụng đó rồi bấm Thử lại.');
+          } else if (name === 'AbortError') {
+            setError('Kết nối camera bị hủy. Bấm Thử lại.');
+          } else if (name === 'OverconstrainedError') {
+            setError('Camera không hỗ trợ định dạng yêu cầu. Bấm Thử lại.');
+          } else {
+            setError(`Không thể truy cập camera (${name || 'lỗi không xác định'}). Bấm Thử lại.`);
+          }
+        }
       }
     })();
 
     return () => {
       cancelled = true;
+      clearTimeout(timeout);
       const s = (videoRef.current?.srcObject as MediaStream | null) ?? stream;
       s?.getTracks().forEach((t) => t.stop());
+      if (videoRef.current) videoRef.current.srcObject = null;
     };
-  }, [deviceId]);
+  }, [deviceId, retryCount]);
+
+  const handleRetry = () => {
+    setError(null);
+    setActive(false);
+    setRetryCount((c) => c + 1);
+  };
 
   const captureFrame = (): string | null => {
     const video = videoRef.current;
@@ -77,12 +120,12 @@ export const LivePlateCamera = forwardRef<LiveCameraHandle, LivePlateCameraProps
     if (!video || !canvas || video.videoWidth === 0) return null;
     const ctx = canvas.getContext('2d');
     if (!ctx) return null;
-    const MAX_W = 1280;
+    const MAX_W = 1920;
     const scale = Math.min(1, MAX_W / video.videoWidth);
     canvas.width = Math.round(video.videoWidth * scale);
     canvas.height = Math.round(video.videoHeight * scale);
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    return canvas.toDataURL('image/jpeg', 0.8);
+    return canvas.toDataURL('image/jpeg', 0.92);
   };
 
   useImperativeHandle(ref, () => ({ capture: () => captureFrame() }), []);
@@ -90,26 +133,74 @@ export const LivePlateCamera = forwardRef<LiveCameraHandle, LivePlateCameraProps
   const handleCapture = async () => {
     setError(null);
     setSuccess(null);
-    const dataUrl = captureFrame();
-    if (!dataUrl) {
-      setError('Camera chưa sẵn sàng. Vui lòng thử lại.');
-      return;
-    }
     setProcessing(true);
     try {
+      // Wait for autofocus to settle before grabbing the frame.
+      await new Promise<void>((r) => setTimeout(r, 350));
+
+      const doScan = async (): Promise<{ plateNumber: string; brand: string | null; dataUrl: string } | null> => {
+        const dataUrl = captureFrame();
+        if (!dataUrl) return null;
+        const base64 = dataUrl.split(',')[1];
+        const res = await staffApi.scanVehicle(base64);
+        const data = (res as { data?: { plateNumber?: string; brand?: string | null } })?.data;
+        return { plateNumber: data?.plateNumber || '', brand: data?.brand ?? null, dataUrl };
+      };
+
+      let result = await doScan();
+      if (!result) {
+        setError('Camera chưa sẵn sàng. Vui lòng thử lại.');
+        return;
+      }
+
+      // Auto-retry once when no plate detected — different frame timing often succeeds.
+      if (!result.plateNumber) {
+        await new Promise<void>((r) => setTimeout(r, 600));
+        const retry = await doScan();
+        if (retry && retry.plateNumber) result = retry;
+      }
+
+      onDetected({ plateNumber: result.plateNumber, brand: result.brand, plateImage: result.dataUrl });
+      if (result.plateNumber) {
+        setSuccess(`Biển số: ${result.plateNumber}${result.brand ? ` · ${result.brand}` : ''}`);
+        setTimeout(() => setSuccess(null), 2500);
+      } else {
+        setSuccess('Đã lưu ảnh biển số. Không đọc được số tự động — vui lòng nhập tay.');
+        setTimeout(() => setSuccess(null), 3500);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Lỗi nhận diện biển số');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    // Reset input so same file can be re-selected if needed
+    e.target.value = '';
+    setError(null);
+    setSuccess(null);
+    setProcessing(true);
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = () => reject(new Error('Không đọc được file'));
+        reader.readAsDataURL(file);
+      });
       const base64 = dataUrl.split(',')[1];
       const res = await staffApi.scanVehicle(base64);
       const data = (res as { data?: { plateNumber?: string; brand?: string | null } })?.data;
       const plateNumber = data?.plateNumber || '';
       const brand = data?.brand ?? null;
-      // Luôn trả ảnh đã chụp (làm bằng chứng/ảnh biển số), kèm số biển nếu AI đọc được.
-      // Nếu AI không đọc ra số, nhân viên nhập tay — ảnh vẫn được lưu.
       onDetected({ plateNumber, brand, plateImage: dataUrl });
       if (plateNumber) {
         setSuccess(`Biển số: ${plateNumber}${brand ? ` · ${brand}` : ''}`);
         setTimeout(() => setSuccess(null), 2500);
       } else {
-        setSuccess('Đã lưu ảnh biển số. Không đọc được số tự động — vui lòng nhập tay.');
+        setSuccess('Đã lưu ảnh. Không đọc được số tự động — vui lòng nhập tay.');
         setTimeout(() => setSuccess(null), 3500);
       }
     } catch (err) {
@@ -159,11 +250,18 @@ export const LivePlateCamera = forwardRef<LiveCameraHandle, LivePlateCameraProps
         />
         {active && (
           <>
-            <div className="pointer-events-none absolute inset-0 border-2 border-emerald-400/30 rounded-lg">
+            {/* Corner brackets */}
+            <div className="pointer-events-none absolute inset-0 border-2 border-emerald-400/20 rounded-lg">
               <div className="absolute left-0 top-0 h-6 w-6 border-l-2 border-t-2 border-emerald-400" />
               <div className="absolute right-0 top-0 h-6 w-6 border-r-2 border-t-2 border-emerald-400" />
               <div className="absolute bottom-0 left-0 h-6 w-6 border-b-2 border-l-2 border-emerald-400" />
               <div className="absolute bottom-0 right-0 h-6 w-6 border-b-2 border-r-2 border-emerald-400" />
+            </div>
+            {/* License-plate targeting box — guides staff to align the plate here */}
+            <div className="pointer-events-none absolute inset-x-[12%] top-[30%] bottom-[30%] rounded border-2 border-dashed border-yellow-400/70 shadow-[0_0_10px_rgba(250,204,21,0.3)]">
+              <span className="absolute -top-5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-black/60 px-2 py-0.5 text-[10px] font-bold text-yellow-300 tracking-widest">
+                BIỂN SỐ VÀO ĐÂY
+              </span>
             </div>
             <div className={processing ? 'laser-scanner-line laser-scanner-line-active' : 'laser-scanner-line'} />
           </>
@@ -173,22 +271,49 @@ export const LivePlateCamera = forwardRef<LiveCameraHandle, LivePlateCameraProps
             <Loader2 size={28} className="animate-spin text-emerald-400" />
           </div>
         )}
-        {error && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/70 p-3 text-center">
-            <p className="text-xs text-rose-300">{error}</p>
+        {error && !active && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/70 p-4 text-center">
+            <AlertCircle size={20} className="shrink-0 text-rose-400" />
+            <p className="text-xs text-rose-300 leading-relaxed">{error}</p>
+            <button
+              type="button"
+              onClick={handleRetry}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-rose-500/20 border border-rose-500/30 px-3 py-1.5 text-xs font-semibold text-rose-300 hover:bg-rose-500/30 transition"
+            >
+              <RefreshCw size={12} /> Thử lại
+            </button>
           </div>
         )}
       </div>
 
-      <button
-        type="button"
-        onClick={handleCapture}
-        disabled={!active || processing || busy}
-        className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition hover:brightness-110 disabled:opacity-60"
-      >
-        {processing ? <Loader2 size={15} className="animate-spin" /> : <ScanLine size={15} />}
-        Chụp &amp; nhận diện
-      </button>
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={handleCapture}
+          disabled={!active || processing || busy}
+          className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition hover:brightness-110 disabled:opacity-60"
+        >
+          {processing ? <Loader2 size={15} className="animate-spin" /> : <ScanLine size={15} />}
+          Chụp &amp; nhận diện
+        </button>
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={processing || busy}
+          title="Tải ảnh biển số từ thiết bị lên thay vì dùng camera"
+          className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2.5 text-xs font-semibold text-muted-foreground transition hover:bg-accent hover:text-foreground disabled:opacity-60"
+        >
+          <Upload size={14} />
+          Tải ảnh
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleFileUpload}
+        />
+      </div>
 
       {success && (
         <div className="flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-2 text-xs text-emerald-400">

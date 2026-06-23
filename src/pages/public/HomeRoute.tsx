@@ -42,7 +42,7 @@ export function HomeRoute() {
       if (module.id === 'profile') return onViewProfile();
       if (module.id === 'wallet') return session ? navigate('/wallet') : onOpenAuth('login');
       if (module.id === 'buildings') return navigate('/buildings');
-      if (module.id === 'packages') return navigate('/reservations', { state: { mode: 'package' } });
+      if (module.id === 'packages') return navigate('/long-term-subscriptions');
       if (module.id === 'reservations') return navigate('/reservations');
       if (module.id === 'payments') return navigate('/long-term-subscriptions');
       if (module.id === 'feedback') return navigate('/reviews');

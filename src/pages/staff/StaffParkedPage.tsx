@@ -210,15 +210,17 @@ export function StaffParkedPage({ view = 'list' }: { view?: 'scanner' | 'list' }
       // Ảnh chân dung lúc ra: ưu tiên ảnh đã chụp, nếu chưa thì chụp 1 khung từ camera chân dung.
       const exitPortrait = capturedPortraitImage ?? portraitCamRef.current?.capture() ?? null;
       await staffApi.checkOut(target._id, {
-        paymentMethod: dueFee > 0 ? paymentMethod : 'cash',
+        ...(target.isReservation ? {} : { paymentMethod: dueFee > 0 ? paymentMethod : 'cash' }),
         exitPlateImage: capturedPlateImage,
         exitPortraitImage: exitPortrait,
       });
       setOpMessage({
         type: 'ok',
-        text: dueFee > 0
-          ? `Đã thu phí & cho ra xe ${target.plateNumber}.`
-          : `Đã cho ra xe ${target.plateNumber} (miễn phí theo gói).`,
+        text: target.isReservation
+          ? `Đã cho ra xe ${target.plateNumber} — hệ thống tự trừ ví.`
+          : dueFee > 0
+            ? `Đã thu phí & cho ra xe ${target.plateNumber}.`
+            : `Đã cho ra xe ${target.plateNumber} (miễn phí theo gói).`,
       });
       setPaymentMethod('cash');
       setCheckoutTarget(null);
@@ -385,7 +387,7 @@ export function StaffParkedPage({ view = 'list' }: { view?: 'scanner' | 'list' }
               {sessions.map((s) => {
                 const floor = s.slot?.floor?.name || s.slot?.floor?.code || '—';
                 const slotCode = s.slot?.code || '—';
-                const isMember = Boolean(s.isMember ?? s.user);
+                const isMember = Boolean(s.isMember ?? s.user) || s.isLongTerm;
                 return (
                   <button
                     key={s._id}
@@ -469,12 +471,14 @@ export function StaffParkedPage({ view = 'list' }: { view?: 'scanner' | 'list' }
                     </div>
                     <div className="mt-2 flex items-center justify-between">
                       <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                        {s.isLongTerm ? 'Phí vượt giờ' : 'Phí tạm tính'}
+                        {s.isLongTerm ? 'Phí vượt giờ' : s.isReservation ? 'Còn lại phải trả' : 'Phí tạm tính'}
                       </span>
                       <span className="font-bold text-primary">
-                        {(s.currentFee ?? s.fee ?? 0) > 0
-                          ? fmtMoney(s.currentFee ?? s.fee)
-                          : s.isLongTerm ? 'Miễn phí' : fmtMoney(0)}
+                        {s.isReservation
+                          ? fmtMoney(s.reservationRemainingFee ?? 0)
+                          : (s.currentFee ?? s.fee ?? 0) > 0
+                            ? fmtMoney(s.currentFee ?? s.fee)
+                            : s.isLongTerm ? 'Miễn phí' : fmtMoney(0)}
                       </span>
                     </div>
                     {canCheckout && (
@@ -589,30 +593,38 @@ export function StaffParkedPage({ view = 'list' }: { view?: 'scanner' | 'list' }
               </div>
             )}
 
-            <div className="mt-4 rounded-xl border border-primary/30 bg-primary/10 p-4 flex items-center justify-between">
-              <span className="text-sm font-semibold text-foreground">Số tiền phải trả</span>
-              <span className="font-mono text-2xl font-black text-primary">
-                {(checkoutTarget.currentFee ?? checkoutTarget.fee ?? 0) > 0
-                  ? fmtMoney(checkoutTarget.currentFee ?? checkoutTarget.fee)
-                  : 'Miễn phí'}
-              </span>
-            </div>
-
-            {(checkoutTarget.currentFee ?? checkoutTarget.fee ?? 0) > 0 && (
+            {checkoutTarget.isReservation ? (
+              <div className="mt-4 rounded-xl border border-sky-500/30 bg-sky-500/10 p-4 text-sm text-sky-300">
+                Đặt chỗ trước — hệ thống sẽ tự trừ tiền còn lại (<strong>{fmtMoney(checkoutTarget.reservationRemainingFee ?? 0)}</strong>) vào ví sau khi cho xe ra.
+              </div>
+            ) : (
               <>
-                <p className="mt-4 mb-2 text-xs uppercase tracking-[0.18em] text-muted-foreground">Phương thức thanh toán</p>
-                <div className="grid gap-2 sm:grid-cols-3">
-                  {[{ value: 'cash', label: 'Tiền mặt' }, { value: 'bank_transfer', label: 'Chuyển khoản' }, { value: 'wallet', label: 'Trừ ví' }].map((m) => (
-                    <button
-                      key={m.value}
-                      type="button"
-                      onClick={() => setPaymentMethod(m.value as PaymentKind)}
-                      className={`rounded-xl border px-3 py-2.5 text-center text-sm font-medium transition ${paymentMethod === m.value ? 'border-primary/40 bg-primary/10 text-foreground' : 'border-border bg-card text-muted-foreground hover:border-primary/20'}`}
-                    >
-                      {m.label}
-                    </button>
-                  ))}
+                <div className="mt-4 rounded-xl border border-primary/30 bg-primary/10 p-4 flex items-center justify-between">
+                  <span className="text-sm font-semibold text-foreground">Số tiền phải trả</span>
+                  <span className="font-mono text-2xl font-black text-primary">
+                    {(checkoutTarget.currentFee ?? checkoutTarget.fee ?? 0) > 0
+                      ? fmtMoney(checkoutTarget.currentFee ?? checkoutTarget.fee)
+                      : 'Miễn phí'}
+                  </span>
                 </div>
+
+                {(checkoutTarget.currentFee ?? checkoutTarget.fee ?? 0) > 0 && (
+                  <>
+                    <p className="mt-4 mb-2 text-xs uppercase tracking-[0.18em] text-muted-foreground">Phương thức thanh toán</p>
+                    <div className="grid gap-2 sm:grid-cols-3">
+                      {[{ value: 'cash', label: 'Tiền mặt' }, { value: 'bank_transfer', label: 'Chuyển khoản' }, { value: 'wallet', label: 'Trừ ví' }].map((m) => (
+                        <button
+                          key={m.value}
+                          type="button"
+                          onClick={() => setPaymentMethod(m.value as PaymentKind)}
+                          className={`rounded-xl border px-3 py-2.5 text-center text-sm font-medium transition ${paymentMethod === m.value ? 'border-primary/40 bg-primary/10 text-foreground' : 'border-border bg-card text-muted-foreground hover:border-primary/20'}`}
+                        >
+                          {m.label}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
               </>
             )}
 
@@ -621,9 +633,11 @@ export function StaffParkedPage({ view = 'list' }: { view?: 'scanner' | 'list' }
                 <ArrowLeft size={16} /> Quay lại
               </Button>
               <Button onClick={onCheckOut} disabled={loading} className="flex-1 h-11 gap-2 bg-gradient-to-r from-orange-500 to-amber-400 text-slate-950 hover:brightness-110 disabled:opacity-60">
-                <CheckCircle2 size={16} /> {(checkoutTarget.currentFee ?? checkoutTarget.fee ?? 0) <= 0
-                  ? 'Cho ra (miễn phí)'
-                  : paymentMethod === 'bank_transfer' ? 'Tạo QR thu tiền' : `Thu ${fmtMoney(checkoutTarget.currentFee ?? checkoutTarget.fee)} & cho ra`}
+                <CheckCircle2 size={16} /> {checkoutTarget.isReservation
+                  ? 'Cho xe ra (trừ ví tự động)'
+                  : (checkoutTarget.currentFee ?? checkoutTarget.fee ?? 0) <= 0
+                    ? 'Cho ra (miễn phí)'
+                    : paymentMethod === 'bank_transfer' ? 'Tạo QR thu tiền' : `Thu ${fmtMoney(checkoutTarget.currentFee ?? checkoutTarget.fee)} & cho ra`}
               </Button>
               <Button type="button" variant="outline" onClick={() => setRejectOpen(true)} className="h-11 border-rose-500/40 text-rose-400 hover:bg-rose-500/10">
                 Từ chối

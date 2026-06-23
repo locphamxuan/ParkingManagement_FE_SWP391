@@ -6,9 +6,8 @@ import { ArrowLeft, LogOut, User, Edit, Save, X, ShieldAlert, Plus, AlertCircle,
 import { syncPlates, listPlates, type PlateRecord } from '@/services/licensePlateService';
 import { UserQRModal } from '@/components/modals/UserQRModal';
 import { PlateQRModal } from '@/components/modals/PlateQRModal';
-import { userApi, type LongTermSubscription } from '@/services/user/userApi';
+import { userApi } from '@/services/user/userApi';
 import { normalizePlate, isValidVietnamPlate, brandsForVehicleType } from '@/utils/plate';
-import { packageStatusLabel, packageStatusBadgeClass } from '@/utils/packageStatus';
 
 // ─── Vietnamese license plate validation (shared util — canonical 59G2-038.80) ─
 // Series must be letter+digit (59G2) or two letters (30LD); a bare single letter
@@ -70,7 +69,6 @@ export default function ProfilePage() {
   // Server plates carry the per-plate QR token (PLT-...) used by the plate-QR modal.
   const [serverPlates, setServerPlates] = useState<PlateRecord[]>([]);
   const [plateQrTarget, setPlateQrTarget] = useState<{ qrToken: string; plateNumber: string; brand?: string | null } | null>(null);
-  const [subscriptions, setSubscriptions] = useState<LongTermSubscription[]>([]);
   const [pwForm, setPwForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [pwError, setPwError] = useState<string | null>(null);
   const [pwSuccess, setPwSuccess] = useState<string | null>(null);
@@ -92,13 +90,6 @@ export default function ProfilePage() {
     listPlates().then(setServerPlates).catch(() => undefined);
   }, []);
 
-  // Fetch user's long-term subscriptions (gói dài hạn đã mua) để hiển thị trong hồ sơ.
-  useEffect(() => {
-    userApi.longTermSubscriptions
-      .list()
-      .then((res) => setSubscriptions(res.data?.items ?? []))
-      .catch(() => undefined);
-  }, []);
 
   const plateQrToken = (plateNumber: string): string | null =>
     serverPlates.find((p) => p.plateNumber.toUpperCase() === plateNumber.toUpperCase())?.qrCode ?? null;
@@ -401,41 +392,6 @@ export default function ProfilePage() {
           )}
         </AnimatePresence>
 
-        {/* Gói dài hạn đã mua */}
-        {subscriptions.length > 0 && (
-          <section className="mb-6 rounded-3xl border border-white/10 bg-slate-900/40 p-5">
-            <div className="mb-3 flex items-center gap-2">
-              <p className="text-[10px] font-black uppercase tracking-[0.24em] text-orange-400 font-mono">Gói dài hạn của tôi</p>
-              <span className="rounded-full bg-orange-500/15 px-2 py-0.5 text-[10px] font-bold text-orange-300">{subscriptions.length}</span>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {subscriptions.map((s) => {
-                return (
-                  <div key={s._id} className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-sm font-black text-orange-300">{s.package?.name ?? 'Gói dài hạn'}</p>
-                      <span className={`rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase ${packageStatusBadgeClass(s.status)}`}>{packageStatusLabel(s.status)}</span>
-                    </div>
-                    <p className="mt-1 font-mono text-xs font-semibold text-slate-200">{s.plateNumber ?? '—'}</p>
-                    <p className="mt-1 text-[11px] text-slate-400">
-                      {new Date(s.startDate).toLocaleDateString('vi-VN')} → {new Date(s.endDate).toLocaleDateString('vi-VN')}
-                    </p>
-                    {typeof s.package?.maxHoursPerDay === 'number' && s.package.maxHoursPerDay > 0 && (
-                      <p className="mt-1 text-[11px] text-slate-400">Giờ miễn phí: {s.package.maxHoursPerDay}h/ngày</p>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-            <button
-              type="button"
-              onClick={() => navigate('/long-term-subscriptions')}
-              className="mt-3 text-[11px] font-semibold text-orange-400 hover:text-orange-300"
-            >
-              Quản lý / gia hạn gói →
-            </button>
-          </section>
-        )}
 
         {/* Content Section layout */}
         <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">

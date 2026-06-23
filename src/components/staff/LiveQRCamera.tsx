@@ -87,6 +87,8 @@ export const LiveQRCamera = forwardRef<LiveCameraHandle, LiveQRCameraProps>(func
 
     (async () => {
       try {
+        await new Promise<void>((r) => setTimeout(r, 150));
+        if (cancelled) return;
         stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraintFor(deviceId, 'environment') });
         if (cancelled) {
           stream.getTracks().forEach((t) => t.stop());

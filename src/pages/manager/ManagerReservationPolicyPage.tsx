@@ -12,7 +12,6 @@ interface FormState {
   depositPercent: string;
   maxAdvanceDays: string;
   maxDurationHours: string;
-  overstayPenaltyPercent: string;
   cancellationCutoffHours: string;
   isActive: boolean;
 }
@@ -23,7 +22,6 @@ const toForm = (p: ReservationPolicy | null): FormState => ({
   depositPercent: String(p?.depositPercent ?? 15),
   maxAdvanceDays: String(p?.maxAdvanceDays ?? 7),
   maxDurationHours: String(p?.maxDurationHours ?? 24),
-  overstayPenaltyPercent: String(p?.overstayPenaltyPercent ?? 0),
   cancellationCutoffHours: String(p?.cancellationCutoffHours ?? 0),
   isActive: p?.isActive ?? true,
 });
@@ -59,7 +57,7 @@ export function ManagerReservationPolicyPage() {
         depositPercent: Number(form.depositPercent),
         maxAdvanceDays: Number(form.maxAdvanceDays),
         maxDurationHours: Number(form.maxDurationHours),
-        overstayPenaltyPercent: Number(form.overstayPenaltyPercent),
+        overstayPenaltyPercent: 0,
         cancellationCutoffHours: Number(form.cancellationCutoffHours),
         isActive: form.isActive,
       });
@@ -173,22 +171,6 @@ export function ManagerReservationPolicyPage() {
               />
               <p className="text-[11px] text-muted-foreground">
                 Mỗi lượt đặt chỗ không vượt quá số giờ này.
-              </p>
-            </div>
-            <div className="grid gap-1.5">
-              <label className="text-xs uppercase text-muted-foreground">
-                % Phạt đậu quá giờ (overstay)
-              </label>
-              <Input
-                type="number"
-                min={0}
-                value={form.overstayPenaltyPercent}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, overstayPenaltyPercent: e.target.value }))
-                }
-              />
-              <p className="text-[11px] text-muted-foreground">
-                Phụ phí phạt áp lên phần đỗ quá giờ đặt. 0 = chỉ thu theo giá thường, không phạt.
               </p>
             </div>
             <div className="grid gap-1.5">

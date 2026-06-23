@@ -41,6 +41,10 @@ export interface ParkingSession {
   isLongTerm?: boolean;
   overageHours?: number;             // số giờ đỗ vượt hạn mức (đang tính phí)
   maxHoursPerDay?: number;           // hạn mức giờ free/ngày của gói (0 = không giới hạn)
+  // Reservation: tiền còn lại sau khi trừ cọc.
+  isReservation?: boolean;
+  reservationRemainingFee?: number;
+  reservation?: { estimatedFee: number; fee: number; endTime?: string } | null;
   plateImage?: string | null;        // license-plate camera snapshot (Camera 1)
   portraitImage?: string | null;     // QR / account camera snapshot (Camera 2 — driver portrait)
   user?: { _id: string; fullName?: string; email?: string } | null;
@@ -286,6 +290,8 @@ export const staffApi = {
         plate?: { plateNumber: string; vehicleType: string; brand?: string | null } | null;
         user: { id: string; fullName: string; email: string; phone?: string | null; walletBalance?: number } | null;
         activeSessions?: { id: string; building: string; plateNumber: string; entryTime: string; fee: number }[];
+        /** Gói dài hạn đang hoạt động của user (chỉ có khi kind === 'user'). */
+        activePackages?: { id: string; name: string; code: string | null; plateNumber: string; startDate?: string; endDate?: string }[];
       }>
     >(`/staff/users/resolve-qr/${encodeURIComponent(code)}`),
 
@@ -343,6 +349,10 @@ export const staffApi = {
     /** Doanh thu ca của nhân viên cổng ra (tiền đã thu hôm nay). */
     myShiftRevenue: (buildingId: string) =>
       api.get<Wrap<ShiftRevenueSummary>>('/staff/parking-sessions/my-shift-revenue', { query: { building: buildingId } }),
+
+    /** Lịch sử xe vào hôm nay của nhân viên cổng VÀO — có location (cổng, tầng, ô). */
+    myCheckIns: (buildingId: string) =>
+      api.get<Wrap<{ items: ParkingSession[] }>>('/staff/parking-sessions/my-checkins', { query: { building: buildingId } }),
   },
 
   // Reservations
