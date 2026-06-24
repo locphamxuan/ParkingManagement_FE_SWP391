@@ -17,6 +17,7 @@ import {
   updateBuildingStatus,
   revokeStaffFromBuilding,
   revokeManagerFromBuilding,
+  assignManagerToBuilding,
 } from '@/services/admin/adminCrud';
 import {
   adminApi,
@@ -63,6 +64,8 @@ export function BuildingsPage() {
   const [membersState, setMembersState] = useState<MembersState | null>(null);
   const [isMembersLoading, setIsMembersLoading] = useState(false);
   const [membersError, setMembersError] = useState<string | null>(null);
+  const [unassignedManagers, setUnassignedManagers] = useState<AdminUser[]>([]);
+  const [isLoadingManagers, setIsLoadingManagers] = useState(false);
 
   const [pendingDeleteMember, setPendingDeleteMember] = useState<AdminUser | null>(null);
   const [isDeletingMember, setIsDeletingMember] = useState(false);
@@ -107,16 +110,56 @@ export function BuildingsPage() {
     setMembersState({ buildingId: bid, buildingName: building.name, manager: null, staff: [] });
     setIsMembersLoading(true);
     setMembersError(null);
+    setUnassignedManagers([]);
     try {
       const res = await adminApi.buildings.getMembers(bid);
+      const manager = res.data?.manager ?? null;
       setMembersState({
         buildingId: bid,
         buildingName: building.name,
+        manager,
+        staff: res.data?.staff ?? [],
+      });
+      if (!manager) {
+        setIsLoadingManagers(true);
+        try {
+          const userRes = await adminApi.users.list({ role: 'manager', limit: '200' });
+          const raw = userRes as unknown as { data?: { items?: AdminUser[] } | AdminUser[] };
+          const list =
+            (raw?.data as { items?: AdminUser[] })?.items ??
+            (Array.isArray(raw?.data) ? (raw.data as AdminUser[]) : []);
+          const unassigned = list.filter(
+            (u) => !u.assignedBuildings || u.assignedBuildings.length === 0
+          );
+          setUnassignedManagers(unassigned);
+        } catch (err) {
+          console.error('Không thể tải danh sách quản lý:', err);
+        } finally {
+          setIsLoadingManagers(false);
+        }
+      }
+    } catch (err) {
+      setMembersError(err instanceof Error ? err.message : 'Không thể tải danh sách thành viên');
+    } finally {
+      setIsMembersLoading(false);
+    }
+  };
+
+  const handleAssignManager = async (managerId: string) => {
+    if (!token || !membersState) return;
+    setIsMembersLoading(true);
+    setMembersError(null);
+    try {
+      await assignManagerToBuilding(token, membersState.buildingId, managerId);
+      const res = await adminApi.buildings.getMembers(membersState.buildingId);
+      setMembersState({
+        ...membersState,
         manager: res.data?.manager ?? null,
         staff: res.data?.staff ?? [],
       });
+      await refresh();
     } catch (err) {
-      setMembersError(err instanceof Error ? err.message : 'Không thể tải danh sách thành viên');
+      setMembersError(err instanceof Error ? err.message : 'Không thể gán quản lý');
     } finally {
       setIsMembersLoading(false);
     }
@@ -400,7 +443,35 @@ export function BuildingsPage() {
                       </Button>
                     </div>
                   ) : (
-                    <p className="text-sm text-muted-foreground italic">Chưa có quản lý</p>
+                    <div className="space-y-3 rounded-xl border border-dashed border-border p-4 bg-muted/20">
+                      <p className="text-sm text-muted-foreground italic">Chưa có quản lý cho tòa nhà này</p>
+                      {isLoadingManagers ? (
+                        <p className="text-xs text-muted-foreground font-mono animate-pulse">Đang tải danh sách quản lý chưa được gán...</p>
+                      ) : unassignedManagers.length === 0 ? (
+                        <p className="text-xs text-amber-500 font-medium">Không có quản lý nào chưa được gán tòa nhà.</p>
+                      ) : (
+                        <div className="space-y-2">
+                          <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider">Gán quản lý:</label>
+                          <div className="max-h-40 overflow-y-auto space-y-1.5 pr-1">
+                            {unassignedManagers.map((mgr) => (
+                              <div key={mgr._id} className="flex items-center justify-between rounded-lg border border-border bg-background p-2.5 text-xs">
+                                <div className="min-w-0 flex-1 pr-2">
+                                  <p className="font-semibold text-foreground truncate">{mgr.fullName}</p>
+                                  <p className="text-[10px] text-muted-foreground truncate">{mgr.email}</p>
+                                </div>
+                                <Button
+                                  size="sm"
+                                  className="h-7 text-[11px] px-3 font-semibold"
+                                  onClick={() => handleAssignManager(mgr._id)}
+                                >
+                                  Gán
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </section>
 
@@ -527,33 +598,48 @@ export function BuildingsPage() {
         title={selectedBuilding ? 'Sửa tòa nhà' : 'Tạo tòa nhà'}
         onSubmit={saveBuilding}
       >
-        <div className="grid gap-3 md:grid-cols-2">
-          <Input
-            placeholder="Tên tòa nhà"
-            value={form.name}
-            onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-          />
-          <Input
-            placeholder="Mã tòa nhà"
-            value={form.code}
-            onChange={(e) => setForm((prev) => ({ ...prev, code: e.target.value }))}
-          />
-          <Input
-            placeholder="Địa chỉ"
-            value={form.address}
-            onChange={(e) => setForm((prev) => ({ ...prev, address: e.target.value }))}
-          />
-          <Input
-            placeholder="Số tầng"
-            value={form.floors}
-            onChange={(e) => setForm((prev) => ({ ...prev, floors: e.target.value }))}
-          />
-          {!selectedBuilding ? (
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Tên tòa nhà</label>
             <Input
-              placeholder="Giá giờ (VND)"
-              value={form.hourlyRate}
-              onChange={(e) => setForm((prev) => ({ ...prev, hourlyRate: e.target.value }))}
+              placeholder="Nhập tên tòa nhà"
+              value={form.name}
+              onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
             />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Mã tòa nhà</label>
+            <Input
+              placeholder="Nhập mã tòa nhà"
+              value={form.code}
+              onChange={(e) => setForm((prev) => ({ ...prev, code: e.target.value }))}
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Địa chỉ</label>
+            <Input
+              placeholder="Nhập địa chỉ"
+              value={form.address}
+              onChange={(e) => setForm((prev) => ({ ...prev, address: e.target.value }))}
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Số tầng</label>
+            <Input
+              placeholder="Nhập số tầng"
+              value={form.floors}
+              onChange={(e) => setForm((prev) => ({ ...prev, floors: e.target.value }))}
+            />
+          </div>
+          {!selectedBuilding ? (
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Giá theo giờ (VND)</label>
+              <Input
+                placeholder="Nhập giá theo giờ"
+                value={form.hourlyRate}
+                onChange={(e) => setForm((prev) => ({ ...prev, hourlyRate: e.target.value }))}
+              />
+            </div>
           ) : null}
         </div>
         {isSaving ? <p className="text-xs text-muted-foreground">Đang lưu...</p> : null}

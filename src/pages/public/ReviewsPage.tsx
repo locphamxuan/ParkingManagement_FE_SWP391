@@ -357,7 +357,7 @@ export default function ReviewsPage() {
                       {item.user?.avatar ? (
                         <img
                           src={item.user.avatar}
-                          alt={item.user.fullName || 'User'}
+                          alt={item.user?.fullName || 'User'}
                           className="h-11 w-11 rounded-full object-cover border border-white/10"
                         />
                       ) : (
