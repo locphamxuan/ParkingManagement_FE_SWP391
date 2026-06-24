@@ -97,11 +97,6 @@ export function UsersPage() {
 
   const saveCreate = async () => {
     if (!token) return;
-    const needsBuilding = form.role === 'staff' || form.role === 'manager';
-    if (needsBuilding && !form.buildingId) {
-      setActionError('Vui lòng chọn tòa nhà cho nhân viên / quản lý.');
-      return;
-    }
     try {
       setIsSaving(true);
       setActionError(null);
@@ -111,7 +106,7 @@ export function UsersPage() {
         password: form.password,
         phone: form.phone,
         role: form.role,
-        buildingId: needsBuilding ? form.buildingId : undefined,
+        buildingId: form.buildingId || undefined,
       });
       await refresh();
       closeModals();
