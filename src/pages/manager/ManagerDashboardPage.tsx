@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, Crown, Layers, MessageSquare, Square } from 'lucide-react';
+import { Building2, Car, Crown, Square, TrendingUp, Ticket } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
@@ -63,10 +63,10 @@ export function ManagerDashboardPage() {
 
   const cards = useMemo(
     () => [
-      { label: 'Số tầng', value: overview?.floors ?? 0, icon: Layers, color: 'text-cyan-400', bg: 'bg-cyan-500/10 border-cyan-500/20' },
-      { label: 'Số cổng', value: overview?.gates ?? 0, icon: Building2, color: 'text-purple-400', bg: 'bg-purple-500/10 border-purple-500/20' },
-      { label: 'Chỗ đỗ xe', value: overview?.slots?.total ?? 0, icon: Square, color: 'text-orange-400', bg: 'bg-orange-500/10 border-orange-500/20' },
-      { label: 'Đang hoạt động', value: overview?.sessions?.active ?? 0, icon: MessageSquare, color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
+      { label: 'Xe đang đỗ', value: overview?.sessions?.active ?? 0, icon: Car, color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
+      { label: 'Lượt xe hôm nay', value: overview?.sessions?.today ?? 0, icon: TrendingUp, color: 'text-cyan-400', bg: 'bg-cyan-500/10 border-cyan-500/20' },
+      { label: 'Ô đỗ trống', value: (overview?.slots?.available ?? (overview?.slots?.total ?? 0) - (overview?.slots?.occupied ?? 0)), icon: Square, color: 'text-orange-400', bg: 'bg-orange-500/10 border-orange-500/20' },
+      { label: 'Gói dài hạn', value: overview?.subscriptions?.active ?? 0, icon: Ticket, color: 'text-purple-400', bg: 'bg-purple-500/10 border-purple-500/20' },
     ],
     [overview],
   );
@@ -110,6 +110,26 @@ export function ManagerDashboardPage() {
           </div>
         </div>
       </motion.section>
+
+      {/* Quick actions */}
+      <motion.div variants={itemVariants} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {[
+          { label: 'Bảng giá', desc: 'Chỉnh sách giá gửi xe', href: '/manager/price-policies', color: 'border-orange-500/20 bg-orange-500/5 text-orange-400' },
+          { label: 'Nhân viên & ca', desc: 'Phân ca và quản lý staff', href: '/manager/shifts', color: 'border-teal-500/20 bg-teal-500/5 text-teal-400' },
+          { label: 'Gói dài hạn', desc: 'Quản lý gói và đăng ký', href: '/manager/packages', color: 'border-purple-500/20 bg-purple-500/5 text-purple-400' },
+          { label: 'Đánh giá', desc: 'Xem và phản hồi khiếu nại', href: '/manager/reviews', color: 'border-cyan-500/20 bg-cyan-500/5 text-cyan-400' },
+        ].map((action) => (
+          <button
+            key={action.href}
+            type="button"
+            onClick={() => navigate(action.href)}
+            className={`rounded-2xl border p-4 text-left transition-all duration-300 hover:scale-[1.02] hover:shadow-lg ${action.color}`}
+          >
+            <p className="font-black text-sm text-white">{action.label}</p>
+            <p className="mt-1 text-[10px] text-slate-400">{action.desc}</p>
+          </button>
+        ))}
+      </motion.div>
 
       <section className="grid gap-6 lg:grid-cols-[1.3fr,0.7fr]">
         <div className="space-y-6">
@@ -261,14 +281,14 @@ export function ManagerDashboardPage() {
           <motion.div variants={itemVariants}>
             <Card className="border border-white/5 bg-slate-900/40 shadow-2xl backdrop-blur-md overflow-hidden rounded-3xl">
               <CardHeader className="border-b border-white/5 bg-slate-950/30 p-5">
-                <CardTitle className="text-xs font-black uppercase tracking-wider text-slate-300 font-mono">Gói đăng ký</CardTitle>
+                <CardTitle className="text-xs font-black uppercase tracking-wider text-slate-300 font-mono">Gói dài hạn khách hàng</CardTitle>
               </CardHeader>
               <CardContent className="p-5 space-y-3">
                 <div className="rounded-2xl border border-white/5 bg-slate-950/40 p-4">
-                  <p className="text-[9px] font-black uppercase tracking-wider text-slate-400 font-mono">Gói đăng ký đang hoạt động</p>
+                  <p className="text-[9px] font-black uppercase tracking-wider text-slate-400 font-mono">Gói dài hạn đang hoạt động</p>
                   <p className="mt-1.5 text-xl font-black text-white font-mono">
                     {overview?.subscriptions?.active ?? 0}{' '}
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">thuê bao</span>
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">gói</span>
                   </p>
                 </div>
               </CardContent>

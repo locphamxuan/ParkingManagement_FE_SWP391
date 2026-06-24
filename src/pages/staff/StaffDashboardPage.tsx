@@ -163,8 +163,8 @@ export function StaffDashboardPage() {
 
   const stats = [
     { label: 'Ca hôm nay', value: todayShifts.length, icon: CalendarClock, accent: 'border border-teal-500/20 bg-teal-500/10 text-teal-400', loading },
-    { label: 'Đang đỗ xe', value: activeSessions.length, icon: Gauge, accent: 'border border-emerald-500/20 bg-emerald-500/10 text-emerald-400', loading },
-    { label: 'Đặt chỗ trước', value: pendingReservations.length, icon: Ticket, accent: 'border border-amber-500/20 bg-amber-500/10 text-amber-400', loading },
+    { label: 'Xe đang đỗ', value: activeSessions.length, icon: Gauge, accent: 'border border-emerald-500/20 bg-emerald-500/10 text-emerald-400', loading },
+    { label: 'Đặt chỗ chờ phục vụ', value: pendingReservations.length, icon: Ticket, accent: 'border border-amber-500/20 bg-amber-500/10 text-amber-400', loading },
     {
       label: 'Sự cố mở',
       value: openIncidents.length,

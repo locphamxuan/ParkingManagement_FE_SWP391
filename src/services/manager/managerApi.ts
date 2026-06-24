@@ -301,6 +301,8 @@ export const managerApi = {
     remove: (b: string, id: string) => api.delete(path(b, `/packages/${id}`)),
     subscriptions: (b: string, q?: Record<string, string | undefined>) =>
       api.get<Wrap<{ items: Subscription[]; pagination: unknown }>>(path(b, '/subscriptions'), { query: q }),
+    cancelSubscription: (b: string, id: string, reason?: string) =>
+      api.delete<Wrap<{ subscription: Subscription; refundAmount: number }>>(path(b, `/subscriptions/${id}`), { body: { reason } }),
   },
 
   reservationPolicy: {

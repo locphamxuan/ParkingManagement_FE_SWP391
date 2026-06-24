@@ -192,30 +192,41 @@ export function DashboardOverviewPage() {
           <ActivityTimeline title="Hoạt động bãi đỗ trực tiếp" items={data.liveActivities} />
         </div>
 
-        {/* Transactions list */}
+        {/* Buildings performance */}
         <div className="relative overflow-hidden rounded-3xl glass-premium glow-border-pulse p-6 shadow-2xl">
           <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-sm font-black uppercase tracking-wider text-slate-300 font-mono">Giao dịch gần đây</h3>
-            <span className="px-2 py-0.5 rounded-md bg-orange-500/10 border border-orange-500/20 text-[9px] font-black text-orange-400 font-mono uppercase tracking-wider">{data.transactions.length} tx</span>
+            <h3 className="text-sm font-black uppercase tracking-wider text-slate-300 font-mono">Hiệu suất tòa nhà</h3>
+            <span className="px-2 py-0.5 rounded-md bg-orange-500/10 border border-orange-500/20 text-[9px] font-black text-orange-400 font-mono uppercase tracking-wider">{data.buildings.length} tòa</span>
           </div>
           <div className="max-h-[360px] overflow-y-auto pr-1 space-y-3">
-            {data.transactions.map((tx) => (
-              <motion.div
-                key={tx.id}
-                whileHover={{ scale: 1.01, x: 2 }}
-                className="rounded-2xl border border-white/5 bg-slate-900/50 p-4 transition-all duration-300 hover:border-orange-500/25 hover:shadow-[0_0_12px_rgba(249,115,22,0.08)]"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="font-mono font-black text-xs text-white">
-                      {tx.id} - <span className="text-slate-400 text-[10px]">{tx.method}</span>
-                    </p>
-                    <p className="mt-1.5 text-[10px] text-slate-500 font-bold uppercase tracking-wider">{tx.building}</p>
+            {data.buildings.length === 0 ? (
+              <p className="text-xs text-slate-500 italic text-center py-6">Chưa có dữ liệu tòa nhà.</p>
+            ) : (
+              data.buildings.slice(0, 8).map((b) => (
+                <motion.div
+                  key={b.id}
+                  whileHover={{ scale: 1.01, x: 2 }}
+                  className="rounded-2xl border border-white/5 bg-slate-900/50 p-4 transition-all duration-300 hover:border-orange-500/25 hover:shadow-[0_0_12px_rgba(249,115,22,0.08)]"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-black text-xs text-white truncate">{b.name}</p>
+                      <p className="mt-1 text-[10px] text-slate-500 font-bold">{b.address}</p>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <p className="text-xs font-black text-orange-400 font-mono">{b.occupancyRate}%</p>
+                      <p className="text-[10px] text-slate-500 font-mono">{b.revenueToday.toLocaleString('vi-VN')} VND</p>
+                    </div>
                   </div>
-                  <p className="shrink-0 text-xs font-black text-orange-400 font-mono">+{tx.amount.toLocaleString()} VND</p>
-                </div>
-              </motion.div>
-            ))}
+                  <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-slate-800">
+                    <div
+                      className="h-full bg-gradient-to-r from-orange-500 to-amber-400 transition-all duration-500"
+                      style={{ width: `${Math.min(b.occupancyRate, 100)}%` }}
+                    />
+                  </div>
+                </motion.div>
+              ))
+            )}
           </div>
         </div>
 

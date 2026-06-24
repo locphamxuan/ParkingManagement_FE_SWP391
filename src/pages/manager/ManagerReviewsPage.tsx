@@ -143,11 +143,10 @@ export function ManagerReviewsPage() {
         const Icon = resolved ? CheckCircle : Clock;
         return (
           <span
-            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold border ${
-              resolved
+            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold border ${resolved
                 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25'
                 : 'bg-amber-500/10 text-amber-400 border-amber-500/25'
-            }`}
+              }`}
           >
             <Icon size={12} />
             {resolved ? 'Đã trả lời' : 'Chờ trả lời'}
@@ -264,7 +263,7 @@ export function ManagerReviewsPage() {
               <div className="mt-4 space-y-3 rounded-lg bg-slate-800/40 p-4">
                 <div>
                   <p className="text-xs font-semibold text-slate-400">NGƯỜI DÙNG</p>
-                  <p className="mt-1 font-medium text-slate-100">{selectedReview.user?.fullName || 'Người dùng ẩn danh'}</p>
+                  <p className="mt-1 font-medium text-slate-100">{selectedReview.user.fullName}</p>
                 </div>
                 <div>
                   <p className="text-xs font-semibold text-slate-400">ĐÁNH GIÁ</p>
