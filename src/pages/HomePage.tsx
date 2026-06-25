@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
-import { motion, AnimatePresence, useMotionValue, useSpring, useTransform, useScroll } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue, useSpring, useTransform, useScroll, animate } from 'framer-motion';
 import type { LucideIcon } from 'lucide-react';
-import { cn } from '@/utils/cn';
 import {
   AlertTriangle,
   ArrowRight,
@@ -20,6 +19,7 @@ import {
   ScanLine,
   ShieldCheck,
   Ticket,
+  Star,
   Wallet,
   User,
   ChevronDown,
@@ -29,7 +29,7 @@ import {
 import type { LegacyModule } from '../data/mainFlow';
 import { AnimatedParkingMap3D } from '@/components/map/AnimatedParkingMap3D';
 import { notificationApi } from '@/services/notificationApi';
-import { InteractiveParticleCanvas } from '@/components/common/InteractiveParticleCanvas';
+import back1 from '@/assets/back1.webp';
 
 interface HomePageProps {
   modules: LegacyModule[];
@@ -59,129 +59,7 @@ const moduleIcons: Record<string, LucideIcon> = {
   sessions: ScanLine,
   payments: CreditCard,
   notifications: BellRing,
-};
-
-const moduleStyles: Record<
-  string,
-  {
-    glow: string;
-    iconBg: string;
-    iconText: string;
-    badgeBg: string;
-    badgeText: string;
-    badgeDot: string;
-    hoverBorder: string;
-    hoverShadow: string;
-    buttonGradient: string;
-    buttonText: string;
-    buttonGlow: string;
-  }
-> = {
-  profile: {
-    glow: 'bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.08),transparent_65%)]',
-    iconBg: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-450 group-hover:bg-emerald-500/20 group-hover:border-emerald-500/40',
-    iconText: 'text-emerald-400',
-    badgeBg: 'bg-emerald-500/10 border-emerald-500/20',
-    badgeText: 'text-emerald-400',
-    badgeDot: 'bg-emerald-500 shadow-[0_0_8px_#10b981]',
-    hoverBorder: 'group-hover:border-emerald-500/60 group-hover:bg-slate-950/75',
-    hoverShadow: 'hover:shadow-[0_12px_40px_rgba(16,185,129,0.25),0_0_18px_rgba(16,185,129,0.18)]',
-    buttonGradient: 'from-emerald-500 to-teal-500',
-    buttonText: 'text-white font-black',
-    buttonGlow: 'hover:shadow-[0_0_20px_rgba(16,185,129,0.35)]',
-  },
-  wallet: {
-    glow: 'bg-[radial-gradient(circle_at_center,rgba(245,158,11,0.08),transparent_65%)]',
-    iconBg: 'bg-amber-500/10 border-amber-500/20 text-amber-450 group-hover:bg-amber-500/20 group-hover:border-amber-500/40',
-    iconText: 'text-amber-400',
-    badgeBg: 'bg-amber-500/10 border-amber-500/20',
-    badgeText: 'text-amber-400',
-    badgeDot: 'bg-amber-500 shadow-[0_0_8px_#f59e0b]',
-    hoverBorder: 'group-hover:border-amber-500/60 group-hover:bg-slate-950/75',
-    hoverShadow: 'hover:shadow-[0_12px_40px_rgba(245,158,11,0.25),0_0_18px_rgba(245,158,11,0.18)]',
-    buttonGradient: 'from-amber-500 to-orange-500',
-    buttonText: 'text-slate-950 font-black',
-    buttonGlow: 'hover:shadow-[0_0_20px_rgba(245,158,11,0.35)]',
-  },
-  buildings: {
-    glow: 'bg-[radial-gradient(circle_at_center,rgba(56,189,248,0.08),transparent_65%)]',
-    iconBg: 'bg-sky-500/10 border-sky-500/20 text-sky-450 group-hover:bg-sky-500/20 group-hover:border-sky-500/40',
-    iconText: 'text-sky-400',
-    badgeBg: 'bg-sky-500/10 border-sky-500/20',
-    badgeText: 'text-sky-400',
-    badgeDot: 'bg-sky-500 shadow-[0_0_8px_#38bdf8]',
-    hoverBorder: 'group-hover:border-sky-500/60 group-hover:bg-slate-950/75',
-    hoverShadow: 'hover:shadow-[0_12px_40px_rgba(56,189,248,0.25),0_0_18px_rgba(56,189,248,0.18)]',
-    buttonGradient: 'from-sky-500 to-blue-500',
-    buttonText: 'text-white font-black',
-    buttonGlow: 'hover:shadow-[0_0_20px_rgba(56,189,248,0.35)]',
-  },
-  packages: {
-    glow: 'bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.08),transparent_65%)]',
-    iconBg: 'bg-indigo-500/10 border-indigo-500/20 text-indigo-450 group-hover:bg-indigo-500/20 group-hover:border-indigo-500/40',
-    iconText: 'text-indigo-400',
-    badgeBg: 'bg-indigo-500/10 border-indigo-500/20',
-    badgeText: 'text-indigo-400',
-    badgeDot: 'bg-indigo-500 shadow-[0_0_8px_#6366f1]',
-    hoverBorder: 'group-hover:border-indigo-500/60 group-hover:bg-slate-950/75',
-    hoverShadow: 'hover:shadow-[0_12px_40px_rgba(99,102,241,0.25),0_0_18px_rgba(99,102,241,0.18)]',
-    buttonGradient: 'from-violet-500 to-indigo-500',
-    buttonText: 'text-white font-black',
-    buttonGlow: 'hover:shadow-[0_0_20px_rgba(99,102,241,0.35)]',
-  },
-  reservations: {
-    glow: 'bg-[radial-gradient(circle_at_center,rgba(249,115,22,0.08),transparent_65%)]',
-    iconBg: 'bg-orange-500/10 border-orange-500/20 text-orange-450 group-hover:bg-orange-500/20 group-hover:border-orange-500/40',
-    iconText: 'text-orange-400',
-    badgeBg: 'bg-orange-500/10 border-orange-500/20',
-    badgeText: 'text-orange-400',
-    badgeDot: 'bg-orange-500 shadow-[0_0_8px_#f97316]',
-    hoverBorder: 'group-hover:border-orange-500/60 group-hover:bg-slate-950/75',
-    hoverShadow: 'hover:shadow-[0_12px_40px_rgba(249,115,22,0.25),0_0_18px_rgba(249,115,22,0.18)]',
-    buttonGradient: 'from-orange-500 to-red-500',
-    buttonText: 'text-white font-black',
-    buttonGlow: 'hover:shadow-[0_0_20px_rgba(249,115,22,0.35)]',
-  },
-  feedback: {
-    glow: 'bg-[radial-gradient(circle_at_center,rgba(244,63,94,0.08),transparent_65%)]',
-    iconBg: 'bg-rose-500/10 border-rose-500/20 text-rose-450 group-hover:bg-rose-500/20 group-hover:border-rose-500/40',
-    iconText: 'text-rose-400',
-    badgeBg: 'bg-rose-500/10 border-rose-500/20',
-    badgeText: 'text-rose-400',
-    badgeDot: 'bg-rose-500 shadow-[0_0_8px_#f43f5e]',
-    hoverBorder: 'group-hover:border-rose-500/60 group-hover:bg-slate-950/75',
-    hoverShadow: 'hover:shadow-[0_12px_40px_rgba(244,63,94,0.25),0_0_18px_rgba(244,63,94,0.18)]',
-    buttonGradient: 'from-rose-500 to-pink-500',
-    buttonText: 'text-white font-black',
-    buttonGlow: 'hover:shadow-[0_0_20px_rgba(244,63,94,0.35)]',
-  },
-  auth: {
-    glow: 'bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.08),transparent_65%)]',
-    iconBg: 'bg-indigo-500/10 border-indigo-500/20 text-indigo-450 group-hover:bg-indigo-500/20 group-hover:border-indigo-500/40',
-    iconText: 'text-indigo-400',
-    badgeBg: 'bg-indigo-500/10 border-indigo-500/20',
-    badgeText: 'text-indigo-400',
-    badgeDot: 'bg-indigo-500 shadow-[0_0_8px_#6366f1]',
-    hoverBorder: 'group-hover:border-indigo-500/60 group-hover:bg-slate-950/75',
-    hoverShadow: 'hover:shadow-[0_12px_40px_rgba(99,102,241,0.25),0_0_18px_rgba(99,102,241,0.18)]',
-    buttonGradient: 'from-violet-500 to-indigo-500',
-    buttonText: 'text-white font-black',
-    buttonGlow: 'hover:shadow-[0_0_20px_rgba(99,102,241,0.35)]',
-  },
-};
-
-const defaultStyle = {
-  glow: 'bg-[radial-gradient(circle_at_center,rgba(100,116,139,0.03),transparent_65%)]',
-  iconBg: 'bg-slate-800/40 border-slate-700/30',
-  iconText: 'text-slate-500',
-  badgeBg: 'bg-slate-800/40 border-slate-700/30',
-  badgeText: 'text-slate-500',
-  badgeDot: 'bg-slate-550',
-  hoverBorder: 'hover:border-slate-700/40',
-  hoverShadow: 'hover:shadow-[0_8px_30px_rgba(0,0,0,0.1)]',
-  buttonGradient: 'from-slate-800 to-slate-700',
-  buttonText: 'text-slate-400 font-bold',
-  buttonGlow: '',
+  feedback: Star,
 };
 
 const heroHighlights = [
@@ -211,6 +89,242 @@ const benefits = [
 // Interactive 3D Parking Building Component with Parallax Tilt Effect
 
 
+const CARD_THEMES = {
+  cyan: {
+    borderGradient: 'linear-gradient(270deg, #06b6d4, #10b981, #3b82f6, #06b6d4)', // Cyan, Emerald, Blue, Cyan
+    glow: 'rgba(6,182,212,0.18), rgba(16,185,129,0.08)',
+    glowColor: 'rgba(6,182,212,0.12)',
+    boxShadowHover: '0 15px 35px rgba(6, 182, 212, 0.25), 0 0 25px rgba(59, 130, 246, 0.15), inset 0 0 15px rgba(6, 182, 212, 0.15)',
+    boxShadowActive: '0 0 25px rgba(6, 182, 212, 0.15)',
+    iconBg: 'bg-cyan-500/10 text-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.1)]',
+    iconBgHover: 'bg-cyan-500/20 text-cyan-300 shadow-[0_0_15px_rgba(6,182,212,0.3)] scale-110',
+    buttonBg: 'bg-gradient-to-r from-cyan-500 to-emerald-500 text-slate-950 hover:shadow-[0_0_15px_rgba(6,182,212,0.2)] border-0',
+    buttonHoverGlow: '0 0 15px rgba(6,182,212,0.3)',
+    sheenGradient: 'linear-gradient(115deg, transparent 35%, rgba(6, 182, 212, 0.08) 45%, rgba(255, 255, 255, 0.25) 50%, rgba(16, 185, 129, 0.1) 55%, transparent 65%)',
+    particleColors: ['#06b6d4', '#10b981', '#3b82f6', '#ffffff', '#67e8f9', '#34d399']
+  },
+  orange: {
+    borderGradient: 'linear-gradient(270deg, #f97316, #fbbf24, #a78bfa, #ec4899, #f43f5e, #f97316)',
+    glow: 'rgba(249,115,22,0.18), rgba(168,85,247,0.08)',
+    glowColor: 'rgba(249,115,22,0.12)',
+    boxShadowHover: '0 15px 35px rgba(249, 115, 22, 0.25), 0 0 25px rgba(168, 85, 247, 0.15), inset 0 0 15px rgba(249, 115, 22, 0.15)',
+    boxShadowActive: '0 0 25px rgba(249,115,22,0.15)',
+    iconBg: 'bg-orange-500/10 text-orange-400 shadow-[0_0_10px_rgba(249,115,22,0.1)]',
+    iconBgHover: 'bg-orange-500/20 text-orange-300 shadow-[0_0_15px_rgba(249,115,22,0.3)] scale-110',
+    buttonBg: 'bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 hover:shadow-[0_0_15px_rgba(249,115,22,0.2)] border-0',
+    buttonHoverGlow: '0 0 15px rgba(249,115,22,0.3)',
+    sheenGradient: 'linear-gradient(115deg, transparent 35%, rgba(255, 215, 0, 0.08) 45%, rgba(255, 255, 255, 0.25) 50%, rgba(249, 115, 22, 0.1) 55%, transparent 65%)',
+    particleColors: ['#ffd700', '#f97316', '#fbbf24', '#ffffff', '#ffb700', '#f43f5e']
+  }
+};
+
+function ModuleCard({ 
+  module, 
+  index, 
+  onViewProfile, 
+  onAction,
+  colorTheme = 'orange'
+}: { 
+  module: any; 
+  index: number; 
+  onViewProfile: () => void; 
+  onAction: (module: any) => void; 
+  colorTheme?: 'orange' | 'cyan';
+}) {
+  const [isHovered, setIsHovered] = useState(false);
+  const Icon = moduleIcons[module.id] || CarFront;
+
+  // Generate unique particles for each card instance on hover
+  const particles = useMemo(() => {
+    const themeColors = CARD_THEMES[colorTheme].particleColors;
+    return Array.from({ length: 22 }).map((_, i) => {
+      const type = ['star', 'diamond', 'circle'][Math.floor(Math.random() * 3)];
+      return {
+        id: i,
+        type,
+        size: type === 'star' ? Math.random() * 6 + 3.5 : Math.random() * 3.5 + 1.5,
+        delay: Math.random() * 1.5,
+        duration: Math.random() * 1.6 + 1.4, // 1.4s to 3.0s
+        startX: Math.random() * 90 + 5, // 5% to 95%
+        drift: Math.random() * 40 - 20, // -20% to 20% drift
+        color: themeColors[Math.floor(Math.random() * themeColors.length)],
+      };
+    });
+  }, [colorTheme]);
+
+  return (
+    <motion.article
+      key={module.id}
+      initial={{ opacity: 0, y: 16 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.4, delay: index * 0.08 }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      whileHover={module.available ? { 
+        scale: 1.03, 
+        y: -4, 
+        boxShadow: CARD_THEMES[colorTheme].boxShadowHover,
+      } : { scale: 1.01 }}
+      className={`rounded-2xl p-[1px] relative overflow-hidden transition-all duration-300 ${
+        module.available
+          ? isHovered 
+            ? colorTheme === 'cyan' ? 'shadow-[0_0_25px_rgba(6,182,212,0.2)]' : 'shadow-[0_0_25px_rgba(249,115,22,0.2)]'
+            : 'bg-white/10'
+          : 'bg-white/5 opacity-75'
+      }`}
+    >
+      {/* The moving gradient border layer (only visible on hover for available modules) */}
+      {module.available && (
+        <motion.div
+          animate={{
+            backgroundPosition: ['0% 50%', '100% 50%', '0% 50%']
+          }}
+          transition={{
+            duration: isHovered ? 4 : 8, // Slower, elegant loop when idle; faster on hover
+            repeat: Infinity,
+            ease: "linear"
+          }}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: CARD_THEMES[colorTheme].borderGradient,
+            backgroundSize: '400% 400%',
+            opacity: 1, // Always fully visible
+            borderRadius: '16px',
+            pointerEvents: 'none',
+          }}
+        />
+      )}
+
+      {/* Main Inner Card Content */}
+      <div className={`p-5 rounded-[15px] backdrop-blur-md flex flex-col justify-between h-[228px] w-full relative z-10 overflow-hidden ${
+        module.available
+          ? 'bg-gradient-to-b from-slate-900/90 to-slate-950/95'
+          : 'bg-slate-900/10'
+      }`}>
+        {/* Luxurious Ambient Background Glow */}
+        <div
+          className="absolute inset-0 pointer-events-none transition-opacity duration-500"
+          style={{
+            background: `radial-gradient(circle at 50% 0%, ${CARD_THEMES[colorTheme].glow}, transparent 65%)`,
+            opacity: isHovered && module.available ? 1 : 0
+          }}
+        />
+
+        {/* Premium Diagonal Sheen sweep reflection */}
+        <motion.div
+          initial={{ x: '-100%', y: '-100%', rotate: -35 }}
+          animate={isHovered && module.available ? { x: '200%', y: '200%' } : { x: '-100%', y: '-100%' }}
+          transition={{
+            duration: 1.8,
+            repeat: Infinity,
+            repeatDelay: 2.5,
+            ease: "easeInOut"
+          }}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '250%',
+            background: CARD_THEMES[colorTheme].sheenGradient,
+            pointerEvents: 'none',
+            zIndex: 5,
+          }}
+        />
+
+        {/* Glittering Sparkles Falling Effect */}
+        {isHovered && module.available && (
+          <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-[15px] z-10">
+            {particles.map((p) => {
+              const clipPath = p.type === 'star'
+                ? 'polygon(50% 0%, 63% 37%, 100% 50%, 63% 63%, 50% 100%, 37% 63%, 0% 50%, 37% 37%)'
+                : p.type === 'diamond'
+                  ? 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)'
+                  : undefined;
+              return (
+                <motion.div
+                  key={p.id}
+                  initial={{ 
+                    opacity: 0, 
+                    x: `${p.startX}%`, 
+                    y: -10, 
+                    scale: 0,
+                    rotate: 0 
+                  }}
+                  animate={{ 
+                    opacity: [0, 1, 0.7, 1, 0.4, 0], 
+                    x: [`${p.startX}%`, `${p.startX + p.drift / 2}%`, `${p.startX + p.drift}%`],
+                    y: 240, 
+                    scale: [0, 1.4, 0.8, 1.3, 0.6, 0],
+                    rotate: [0, 180, 360, 540, 720]
+                  }}
+                  transition={{ 
+                    duration: p.duration, 
+                    repeat: Infinity, 
+                    delay: p.delay,
+                    ease: "linear"
+                  }}
+                  style={{
+                    position: 'absolute',
+                    width: p.size,
+                    height: p.size,
+                    backgroundColor: p.color,
+                    borderRadius: p.type === 'circle' ? '50%' : undefined,
+                    clipPath,
+                    filter: `drop-shadow(0 0 3px ${p.color})`,
+                    boxShadow: p.type === 'circle' ? `0 0 6px ${p.color}` : undefined,
+                  }}
+                />
+              );
+            })}
+          </div>
+        )}
+
+        <div className="relative z-20">
+          <div className="flex items-center gap-3">
+            <div className={`p-2.5 rounded-lg transition-all duration-300 ${
+              module.available 
+                ? isHovered
+                  ? CARD_THEMES[colorTheme].iconBgHover
+                  : CARD_THEMES[colorTheme].iconBg
+                : 'bg-slate-800 text-slate-500'
+            }`}>
+              <Icon size={20} className="transition-transform duration-300" />
+            </div>
+            <div>
+              <h3 className="font-black text-xs text-white tracking-tight uppercase">{module.title}</h3>
+              <span className={`text-[8px] font-black uppercase tracking-wider font-mono px-2 py-0.5 rounded ${module.available ? 'bg-emerald-500/10 text-emerald-400' : 'bg-slate-800 text-slate-500'
+                }`}>
+                {module.available ? 'AVAILABLE' : 'ROADMAPPED'}
+              </span>
+            </div>
+          </div>
+          <p className="mt-3 text-xs text-slate-400 leading-relaxed font-semibold">{module.description}</p>
+
+        </div>
+
+        <div className="mt-4 relative z-20">
+          <motion.button
+            whileHover={module.available ? { scale: 1.02, boxShadow: CARD_THEMES[colorTheme].buttonHoverGlow } : {}}
+            whileTap={module.available ? { scale: 0.98 } : {}}
+            className={`w-full py-2.5 px-4 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors duration-200 ${module.available
+                ? CARD_THEMES[colorTheme].buttonBg
+                : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-white/5'
+              }`}
+            onClick={() => { if (module.id === 'profile') return onViewProfile(); onAction(module); }}
+            disabled={!module.available}
+          >
+            {module.available ? module.actionLabel : 'Sắp ra mắt'} <ArrowRight size={12} />
+          </motion.button>
+        </div>
+      </div>
+    </motion.article>
+  );
+}
+
+
 export default function HomePage({ modules, onOpenAuth, onViewProfile, onViewReservationHistory, onAction, user, onLogout }: HomePageProps) {
   const hasMissingInfo = Boolean(
     user &&
@@ -222,7 +336,16 @@ export default function HomePage({ modules, onOpenAuth, onViewProfile, onViewRes
   const serviceModules = useMemo(() => modules.filter((m) => !m.available), [modules]);
   const [showPlateBanner, setShowPlateBanner] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   // Số thông báo chưa đọc — hiện badge trên nút tài khoản (chỉ khi đã đăng nhập là user).
   const [unreadNotif, setUnreadNotif] = useState(0);
@@ -293,46 +416,60 @@ export default function HomePage({ modules, onOpenAuth, onViewProfile, onViewRes
   };
 
   return (
-    <main id="top" className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-orange-500 selection:text-white relative">
+    <main id="top" className="min-h-screen text-slate-100 font-sans selection:bg-orange-500 selection:text-white relative isolate">
 
-      {/* Background Neon Glow Spheres & Interactive Particles — fixed so they never cause scroll issues */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10" aria-hidden="true">
+      {/* Background Neon Glow Spheres — fixed so they never cause scroll issues */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10 bg-slate-950" aria-hidden="true">
+        {/* Subtle Blurred Background Image */}
+        <div 
+          className="absolute inset-0 opacity-[0.38] filter blur-[4px] bg-cover pointer-events-none"
+          style={{ backgroundImage: `url(${back1})`, backgroundPosition: 'center 85%' }}
+        />
+        {/* Radial dark gradient overlay to ensure text readability in the center */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(2,6,23,0.3)_0%,rgba(2,6,23,0.85)_100%)] pointer-events-none" />
         <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[55%] rounded-full bg-[radial-gradient(circle_at_center,hsla(24,95%,53%,0.08),transparent_55%)] blur-3xl" />
         <div className="absolute top-[35%] right-[-15%] w-[60%] h-[60%] rounded-full bg-[radial-gradient(circle_at_center,hsla(263,90%,51%,0.07),transparent_55%)] blur-3xl" />
         <div className="absolute bottom-[-10%] left-[20%] w-[50%] h-[50%] rounded-full bg-[radial-gradient(circle_at_center,hsla(142,76%,45%,0.04),transparent_50%)] blur-3xl" />
-        <InteractiveParticleCanvas />
       </div>
 
 
       {/* Cyber Header Navigation */}
-      <header className="border-b border-white/5 bg-slate-950/60 sticky top-0 z-40 backdrop-blur-md">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+      <header className={`sticky top-0 z-40 transition-all duration-500 border-b ${
+        scrolled 
+          ? 'bg-slate-950/85 backdrop-blur-xl border-orange-500/10 shadow-[0_10px_30px_-10px_rgba(0,0,0,0.8),0_1px_0_0_rgba(249,115,22,0.15)] py-2.5' 
+          : 'bg-transparent border-transparent py-4'
+      }`}>
+        {/* Top edge glowing gradient border */}
+        <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-orange-500 via-amber-400 to-purple-600 opacity-60 pointer-events-none" />
+
+        <div className="max-w-6xl mx-auto px-4 flex items-center justify-between">
           <a href="#top" aria-label="PBMS Trang chủ" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 grid place-items-center shadow-[0_0_15px_rgba(249,115,22,0.3)] transition-all group-hover:scale-105 group-hover:shadow-[0_0_20px_rgba(249,115,22,0.5)]">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 grid place-items-center shadow-[0_0_15px_rgba(249,115,22,0.3)] transition-all duration-300 group-hover:scale-105 group-hover:shadow-[0_0_20px_rgba(249,115,22,0.5)] group-hover:rotate-6">
               <span className="w-2.5 h-2.5 bg-slate-950 rounded-full" />
             </div>
             <div>
-              <strong className="block text-lg font-black tracking-tight bg-gradient-to-r from-orange-400 to-amber-400 bg-clip-text text-transparent">PBMS Parking</strong>
-              <span className="text-[10px] uppercase font-mono tracking-widest text-slate-500 font-extrabold">Cloud Management</span>
+              <strong className="block text-lg font-black tracking-tight bg-gradient-to-r from-orange-400 via-amber-400 to-orange-500 bg-clip-text text-transparent group-hover:brightness-110 transition-all duration-300">PBMS Parking</strong>
+              <span className="text-[10px] uppercase font-mono tracking-widest text-slate-500 font-extrabold block">Cloud Management</span>
             </div>
           </a>
 
-          <nav className="hidden md:flex gap-6">
+          <nav className="hidden md:flex gap-8">
             {navigationLinks.map((link) => (
               <a
                 key={link.href}
                 href={link.href}
-                className="text-sm font-semibold text-slate-400 hover:text-orange-400 transition-colors duration-200"
+                className="text-sm font-bold text-slate-400 hover:text-white relative py-1.5 transition-colors duration-300 group"
               >
                 {link.label}
+                <span className="absolute bottom-0 left-0 w-full h-[2px] bg-gradient-to-r from-orange-500 to-amber-400 scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left" />
               </a>
             ))}
           </nav>
 
           <div className="flex items-center gap-5">
-            <div className="text-right hidden sm:block">
-              <span className="text-[10px] uppercase font-mono tracking-wider text-slate-500 font-bold block">Hỗ trợ 24/7</span>
-              <strong className="text-xs font-black text-slate-300">1900 636 447</strong>
+            <div className="text-right hidden sm:block group cursor-pointer">
+              <span className="text-[9px] uppercase font-mono tracking-widest text-slate-500 font-black block">Hỗ trợ 24/7</span>
+              <strong className="text-xs font-black text-slate-300 group-hover:text-orange-400 transition-colors duration-300">1900 636 447</strong>
             </div>
 
             {user ? (
@@ -341,11 +478,13 @@ export default function HomePage({ modules, onOpenAuth, onViewProfile, onViewRes
                   type="button"
                   aria-expanded={menuOpen}
                   onClick={() => setMenuOpen((v) => !v)}
-                  className="inline-flex items-center gap-2 px-4 py-1.5 rounded-xl bg-slate-900 border border-white/10 hover:border-orange-500/30 text-white transition-all shadow-md"
+                  className="inline-flex items-center gap-2 px-4 py-1.5 rounded-xl bg-slate-900/80 backdrop-blur-sm border border-white/5 hover:border-orange-500/30 text-white transition-all duration-300 shadow-lg hover:shadow-orange-500/5"
                 >
-                  <User size={14} className="text-orange-400" />
-                  <span className="text-xs font-bold">{user.fullName ?? user.email}</span>
-                  <ChevronDown size={12} className="text-slate-400" />
+                  <div className="w-5 h-5 rounded-full bg-orange-500/10 border border-orange-500/20 flex items-center justify-center">
+                    <User size={10} className="text-orange-400" />
+                  </div>
+                  <span className="text-xs font-extrabold tracking-tight">{user.fullName ?? user.email}</span>
+                  <ChevronDown size={12} className="text-slate-400 transition-transform duration-300" style={{ transform: menuOpen ? 'rotate(180deg)' : 'rotate(0deg)' }} />
                 </button>
 
                 {unreadNotif > 0 && (
@@ -363,57 +502,61 @@ export default function HomePage({ modules, onOpenAuth, onViewProfile, onViewRes
                   </span>
                 )}
 
-                {menuOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="absolute right-0 mt-2 w-48 bg-slate-900/95 border border-white/10 rounded-xl shadow-2xl py-2 backdrop-blur-md z-50"
-                  >
-                    <button
-                      className="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-between"
-                      onClick={() => { setMenuOpen(false); onViewProfile(); }}
+                <AnimatePresence>
+                  {menuOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      transition={{ duration: 0.15, ease: "easeOut" }}
+                      className="absolute right-0 mt-2 w-52 bg-slate-950/95 border border-white/10 rounded-2xl shadow-2xl py-2 backdrop-blur-xl z-50 overflow-hidden"
                     >
-                      <span>Hồ sơ của tôi</span>
-                      {hasMissingInfo && (
-                        <span className="flex h-2 w-2 rounded-full bg-rose-500 animate-pulse shadow-[0_0_6px_#f43f5e]" />
-                      )}
-                    </button>
-                    <a
-                      href="/notifications"
-                      onClick={() => setMenuOpen(false)}
-                      className="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-between"
-                    >
-                      <span className="flex items-center"><BellRing size={12} className="mr-2" /> Thông báo</span>
-                      {unreadNotif > 0 && (
-                        <span className="rounded-full bg-rose-500 px-1.5 text-[9px] font-bold text-white">
-                          {unreadNotif > 9 ? '9+' : unreadNotif}
-                        </span>
-                      )}
-                    </a>
-                    <button
-                      className="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-slate-800 text-slate-300 hover:text-white"
-                      onClick={() => { setMenuOpen(false); onViewWallet(); }}
-                    >
-                      <Wallet size={12} className="inline-block mr-2" /> Ví tiền
-                    </button>
-                    <button
-                      className="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-slate-800 text-slate-300 hover:text-white"
-                      onClick={() => { setMenuOpen(false); onViewReservationHistory(); }}
-                    >
-                      <History size={12} className="inline-block mr-2" /> Lịch sử đặt chỗ
-                    </button>
-                    <a
-                      href="/parking-history"
-                      className="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-slate-800 text-slate-300 hover:text-white flex items-center"
-                      onClick={() => setMenuOpen(false)}
-                    >
-                      <MapPinned size={12} className="inline-block mr-2" /> Lịch sử gửi xe
-                    </a>
-                    <button className="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-slate-800 text-rose-400 hover:text-rose-300 border-t border-white/5 mt-1" onClick={onLogout}>
-                      <LogOut size={12} className="inline-block mr-2" /> Đăng xuất
-                    </button>
-                  </motion.div>
-                )}
+                      <button
+                        className="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-between"
+                        onClick={() => { setMenuOpen(false); onViewProfile(); }}
+                      >
+                        <span>Hồ sơ của tôi</span>
+                        {hasMissingInfo && (
+                          <span className="flex h-2 w-2 rounded-full bg-rose-500 animate-pulse shadow-[0_0_6px_#f43f5e]" />
+                        )}
+                      </button>
+                      <a
+                        href="/notifications"
+                        onClick={() => setMenuOpen(false)}
+                        className="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-between"
+                      >
+                        <span className="flex items-center"><BellRing size={12} className="mr-2" /> Thông báo</span>
+                        {unreadNotif > 0 && (
+                          <span className="rounded-full bg-rose-500 px-1.5 text-[9px] font-bold text-white">
+                            {unreadNotif > 9 ? '9+' : unreadNotif}
+                          </span>
+                        )}
+                      </a>
+                      <button
+                        className="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-slate-800 text-slate-300 hover:text-white"
+                        onClick={() => { setMenuOpen(false); onViewWallet(); }}
+                      >
+                        <Wallet size={12} className="inline-block mr-2" /> Ví tiền
+                      </button>
+                      <button
+                        className="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-slate-800 text-slate-300 hover:text-white"
+                        onClick={() => { setMenuOpen(false); onViewReservationHistory(); }}
+                      >
+                        <History size={12} className="inline-block mr-2" /> Lịch sử đặt chỗ
+                      </button>
+                      <a
+                        href="/parking-history"
+                        className="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-slate-800 text-slate-300 hover:text-white flex items-center"
+                        onClick={() => setMenuOpen(false)}
+                      >
+                        <MapPinned size={12} className="inline-block mr-2" /> Lịch sử gửi xe
+                      </a>
+                      <button className="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-slate-800 text-rose-400 hover:text-rose-300 border-t border-white/5 mt-1" onClick={onLogout}>
+                        <LogOut size={12} className="inline-block mr-2" /> Đăng xuất
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             ) : (
               <motion.button
@@ -661,80 +804,16 @@ export default function HomePage({ modules, onOpenAuth, onViewProfile, onViewRes
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-            {productModules.map((module, index) => {
-              const Icon = moduleIcons[module.id] || CarFront;
-              const style = moduleStyles[module.id] || defaultStyle;
-              return (
-                <motion.article
-                  key={module.id}
-                  initial={{ opacity: 0, y: 16 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.4, delay: index * 0.08 }}
-                  className={cn(
-                    "relative p-6 rounded-[28px] border flex flex-col justify-between h-[255px] backdrop-blur-md transition-all duration-500 shadow-lg group overflow-hidden border-white/8 bg-slate-900/40 hover:-translate-y-1.5",
-                    module.available ? `${style.hoverBorder} ${style.hoverShadow}` : "opacity-60 cursor-not-allowed"
-                  )}
-                >
-                  {/* Glowing background card element */}
-                  <div className={cn("absolute inset-0 pointer-events-none opacity-20 blur-xl group-hover:opacity-40 transition-opacity duration-555", style.glow)} />
-
-                  {/* Diagonal Glass Reflection Shimmer Effect */}
-                  <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/5 to-transparent pointer-events-none" />
-
-                  {/* Glitter falling particles on hover */}
-                  {module.available && (
-                    <div className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500 overflow-hidden">
-                      <span className={cn("glitter-particle w-1 h-1", style.badgeDot)} style={{ top: '-10px', left: '15%', animationDuration: '2.2s', animationDelay: '0s' }} />
-                      <span className={cn("glitter-particle w-1.5 h-1.5", style.badgeDot)} style={{ top: '-10px', left: '35%', animationDuration: '2.8s', animationDelay: '0.4s' }} />
-                      <span className={cn("glitter-particle w-1 h-1", style.badgeDot)} style={{ top: '-10px', left: '55%', animationDuration: '2.4s', animationDelay: '0.2s' }} />
-                      <span className={cn("glitter-particle w-1.5 h-1.5", style.badgeDot)} style={{ top: '-10px', left: '75%', animationDuration: '3.0s', animationDelay: '0.6s' }} />
-                      <span className={cn("glitter-particle w-1 h-1", style.badgeDot)} style={{ top: '-10px', left: '90%', animationDuration: '2.6s', animationDelay: '0.8s' }} />
-                    </div>
-                  )}
-
-                  <div className="relative z-10">
-                    <div className="flex items-center gap-3.5">
-                      <div className={cn(
-                        "flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border transition-all duration-300 group-hover:scale-110 group-hover:rotate-3",
-                        style.iconBg
-                      )}>
-                        <Icon size={18} />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <h3 className="font-black text-sm text-slate-100 tracking-tight uppercase leading-snug truncate group-hover:text-white transition-colors duration-300">{module.title}</h3>
-                        <span className={cn(
-                          "mt-1 inline-flex items-center rounded-md px-2 py-0.5 text-[8px] font-black uppercase tracking-wider font-mono border",
-                          module.available ? style.badgeBg + " " + style.badgeText : "bg-slate-800/40 border-slate-700/30 text-slate-500"
-                        )}>
-                          <span className={cn("w-1 h-1 rounded-full mr-1 animate-pulse", module.available ? style.badgeDot : 'bg-slate-550')} />
-                          {module.available ? 'AVAILABLE' : 'ROADMAPPED'}
-                        </span>
-                      </div>
-                    </div>
-                    <p className="mt-4.5 text-xs text-slate-400 leading-relaxed font-semibold line-clamp-3 group-hover:text-slate-200 transition-colors duration-300">{module.description}</p>
-                  </div>
-
-                  <div className="mt-4 relative z-10">
-                    <motion.button
-                      whileHover={module.available ? { scale: 1.015 } : {}}
-                      whileTap={module.available ? { scale: 0.985 } : {}}
-                      className={cn(
-                        "w-full py-2.5 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-1.5 cursor-pointer",
-                        module.available
-                          ? `bg-gradient-to-r ${style.buttonGradient} ${style.buttonText} ${style.buttonGlow}`
-                          : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-white/5'
-                      )}
-                      onClick={() => { if (module.id === 'profile') return onViewProfile(); onAction(module); }}
-                      disabled={!module.available}
-                    >
-                      <span>{module.available ? module.actionLabel : 'Sắp ra mắt'}</span>
-                      <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform duration-300" />
-                    </motion.button>
-                  </div>
-                </motion.article>
-              );
-            })}
+            {productModules.map((module, index) => (
+              <ModuleCard
+                key={module.id}
+                module={module}
+                index={index}
+                onViewProfile={onViewProfile}
+                onAction={onAction}
+                colorTheme={module.id === 'profile' || module.id === 'packages' ? 'cyan' : 'orange'}
+              />
+            ))}
           </div>
         </div>
       </section>
@@ -779,55 +858,399 @@ export default function HomePage({ modules, onOpenAuth, onViewProfile, onViewRes
         </div>
       </section>
 
-      {/* CTA Footer banner */}
-      <section className="py-16 relative z-10 border-t border-white/5 bg-gradient-to-b from-slate-950 to-slate-900">
-        <div className="max-w-6xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-6">
-          <div>
-            <span className="text-[10px] font-black uppercase tracking-widest text-orange-400 font-mono">Bắt Đầu Trải Nghiệm</span>
-            <h2 className="text-2xl font-black mt-1 text-white">Triển khai bãi đỗ xe thông minh toàn diện</h2>
-          </div>
-          <div className="flex gap-4">
-            <a href="/auth/register" className="px-6 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider hover:shadow-[0_0_20px_rgba(249,115,22,0.3)] transition-all duration-200">Tạo tài khoản</a>
-            {user ? (
-              <button className="px-6 py-3 rounded-xl bg-slate-900 border border-white/10 text-white font-bold text-xs uppercase tracking-wider hover:border-orange-500/25 transition-all duration-200" onClick={onViewProfile}>Xem hồ sơ</button>
-            ) : (
-              <a href="/auth/login" className="px-6 py-3 rounded-xl bg-slate-900 border border-white/10 text-white font-bold text-xs uppercase tracking-wider hover:border-orange-500/25 transition-all duration-200 inline-flex items-center">Đăng nhập</a>
-            )}
-          </div>
+      {/* Premium CTA Banner */}
+      <PremiumCTABanner user={user} onViewProfile={onViewProfile} />
+
+      {/* Premium Cyber Footer */}
+      <PremiumFooter user={user} onViewProfile={onViewProfile} navigationLinks={navigationLinks} />
+    </main>
+  );
+}
+
+// ==========================================
+// PREMIUM FOOTER & CTA BANNER COMPONENTS WITH 3D TILT
+// ==========================================
+
+interface TiltCardProps {
+  children: React.ReactNode;
+  className?: string;
+  glowColor?: string;
+}
+
+function TiltCard({ children, className = '', glowColor = 'rgba(249,115,22,0.12)' }: TiltCardProps) {
+  const [isHovered, setIsHovered] = useState(false);
+  const x = useMotionValue(0.5);
+  const y = useMotionValue(0.5);
+
+  const rotateX = useSpring(useTransform(y, [0, 1], [8, -8]), { stiffness: 200, damping: 25 });
+  const rotateY = useSpring(useTransform(x, [0, 1], [-8, 8]), { stiffness: 200, damping: 25 });
+
+  // Shine reflection position
+  const shineX = useTransform(x, [0, 1], ['-30%', '130%']);
+  const shineY = useTransform(y, [0, 1], ['-30%', '130%']);
+
+  // Cursor glow background
+  const glowX = useMotionValue(0);
+  const glowY = useMotionValue(0);
+
+  // Auto floating 3D animation when not hovered
+  useEffect(() => {
+    if (isHovered) return;
+
+    // We animate x and y around the center (0.5, 0.5) in a smooth oscillation loop
+    const controlsX = animate(x, [0.35, 0.65, 0.35], {
+      duration: 6,
+      repeat: Infinity,
+      repeatType: "reverse",
+      ease: "easeInOut"
+    });
+
+    const controlsY = animate(y, [0.65, 0.35, 0.65], {
+      duration: 7,
+      repeat: Infinity,
+      repeatType: "reverse",
+      ease: "easeInOut"
+    });
+
+    return () => {
+      controlsX.stop();
+      controlsY.stop();
+    };
+  }, [isHovered, x, y]);
+  
+  function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
+    setIsHovered(true);
+    const rect = e.currentTarget.getBoundingClientRect();
+    const width = rect.width;
+    const height = rect.height;
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+    
+    x.set(mouseX / width);
+    y.set(mouseY / height);
+
+    glowX.set(mouseX);
+    glowY.set(mouseY);
+  }
+
+  function handleMouseLeave() {
+    setIsHovered(false);
+    x.set(0.5);
+    y.set(0.5);
+  }
+
+  const borderBg = useTransform(
+    [glowX, glowY],
+    ([gx, gy]) => `radial-gradient(280px circle at ${gx}px ${gy}px, rgba(249,115,22,0.35), transparent 70%)`
+  );
+
+  return (
+    <motion.div
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      style={{
+        rotateX,
+        rotateY,
+        transformStyle: 'preserve-3d',
+      }}
+      className={`relative p-[1px] rounded-3xl overflow-hidden transition-all duration-300 ${className}`}
+    >
+      {/* Cursor-following border glow background */}
+      <motion.div
+        className="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+        style={{
+          background: borderBg,
+        }}
+      />
+      
+      {/* Card Content body */}
+      <div 
+        className="h-full w-full rounded-[23px] bg-slate-950/85 backdrop-blur-xl p-8 md:p-12 relative overflow-hidden"
+        style={{ transformStyle: 'preserve-3d' }}
+      >
+        {/* Interactive cursor center glow */}
+        <motion.div
+          className="pointer-events-none absolute -inset-px opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-[23px]"
+          style={{
+            background: useTransform(
+              [glowX, glowY],
+              ([gx, gy]) => `radial-gradient(350px circle at ${gx}px ${gy}px, ${glowColor}, transparent 80%)`
+            ),
+          }}
+        />
+
+        {/* Shine overlay */}
+        <motion.div
+          className="pointer-events-none absolute w-[150%] h-[150%] -left-1/4 -top-1/4 opacity-0 group-hover:opacity-20 transition-opacity duration-300 mix-blend-overlay bg-[radial-gradient(circle,rgba(255,255,255,0.45)_0%,transparent_60%)]"
+          style={{
+            x: shineX,
+            y: shineY,
+          }}
+        />
+
+        <div style={{ transform: 'translateZ(20px)', transformStyle: 'preserve-3d' }} className="relative z-10 h-full w-full">
+          {children}
         </div>
-      </section>
+      </div>
+    </motion.div>
+  );
+}
 
-      {/* Cyber Footer */}
-      <footer id="lien-he" className="bg-slate-950 border-t border-white/5 text-slate-400 py-12 relative z-10">
-        <div className="max-w-6xl mx-auto px-4 grid md:grid-cols-3 gap-10">
-          <div>
-            <p className="text-sm font-black text-white tracking-wider font-mono">PBMS PLATFORM</p>
-            <h3 className="mt-3 text-xs leading-relaxed font-semibold">Hệ thống quản lý bãi đỗ xe chuyên nghiệp dành cho tòa nhà và tổ chức doanh nghiệp lớn.</h3>
-            <p className="mt-2 text-[10px] text-slate-500 font-mono">Phiên bản UI V2.5.0 - Cyberpunk Glassmorphism</p>
-          </div>
+interface PremiumCTABannerProps {
+  user: any;
+  onViewProfile: () => void;
+}
 
-          <div>
-            <h4 className="font-black text-white text-xs uppercase tracking-wider">Liên kết nhanh</h4>
-            <nav className="mt-3 flex flex-col gap-2">
-              {navigationLinks.map((link) => (
-                <a key={link.href} href={link.href} className="text-xs hover:text-orange-400 transition-colors">{link.label}</a>
-              ))}
-            </nav>
-          </div>
-
-          <div>
-            <h4 className="font-black text-white text-xs uppercase tracking-wider">Truy cập cổng</h4>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <a href="/auth/login" className="px-3.5 py-2 bg-orange-500/10 border border-orange-500/20 text-orange-400 hover:bg-orange-500 hover:text-slate-950 rounded-xl text-xs font-black uppercase transition-all">Đăng nhập</a>
-              <a href="/auth/register" className="px-3.5 py-2 bg-slate-900 border border-white/5 text-slate-300 hover:border-white/20 rounded-xl text-xs font-bold uppercase transition-all">Đăng ký</a>
-              {user ? <button onClick={onViewProfile} className="px-3.5 py-2 bg-slate-900 border border-white/5 text-slate-300 hover:border-white/20 rounded-xl text-xs font-bold uppercase transition-all">Hồ sơ</button> : null}
+function PremiumCTABanner({ user, onViewProfile }: PremiumCTABannerProps) {
+  return (
+    <section className="py-20 relative z-10 overflow-hidden bg-slate-950">
+      {/* Background glow effects */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-orange-500/10 rounded-full blur-[120px] pointer-events-none" />
+      
+      <div className="max-w-6xl mx-auto px-4">
+        <TiltCard className="group p-8 md:p-12 border border-white/10 hover:border-orange-500/30 shadow-2xl shadow-orange-950/10 bg-slate-900/40 relative">
+          {/* Subtle tech grid background inside */}
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none rounded-3xl" />
+          
+          <div className="relative flex flex-col md:flex-row items-center justify-between gap-8 z-20">
+            <div className="text-center md:text-left">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-400 text-[10px] font-black uppercase tracking-wider font-mono">
+                <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
+                Bắt Đầu Trải Nghiệm Mới
+              </div>
+              <h2 className="text-2xl md:text-3xl font-black mt-4 text-white tracking-tight leading-tight">
+                Triển khai bãi đỗ xe <br className="hidden md:inline" />
+                <span className="bg-gradient-to-r from-orange-400 via-amber-400 to-orange-500 bg-clip-text text-transparent">thông minh toàn diện</span>
+              </h2>
+              <p className="text-xs text-slate-400 mt-2 max-w-md leading-relaxed font-semibold">
+                Quản lý tối ưu, đặt chỗ tức thì và giám sát thời gian thực. Nâng tầm giá trị cho bãi đỗ xe của tòa nhà bạn.
+              </p>
+            </div>
+            
+            <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto shrink-0 justify-center">
+              <motion.a
+                whileHover={{ scale: 1.03, boxShadow: '0 0 25px rgba(249,115,22,0.4)' }}
+                whileTap={{ scale: 0.98 }}
+                href="/auth/register"
+                className="px-8 py-4 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider text-center transition-all duration-200"
+              >
+                Tạo tài khoản
+              </motion.a>
+              
+              {user ? (
+                <motion.button
+                  whileHover={{ scale: 1.03, borderColor: 'rgba(249,115,22,0.4)' }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={onViewProfile}
+                  className="px-8 py-4 rounded-xl bg-slate-950/80 border border-white/10 text-white font-bold text-xs uppercase tracking-wider transition-all duration-200 text-center backdrop-blur-sm"
+                >
+                  Xem hồ sơ của bạn
+                </motion.button>
+              ) : (
+                <motion.a
+                  whileHover={{ scale: 1.03, borderColor: 'rgba(249,115,22,0.4)' }}
+                  whileTap={{ scale: 0.98 }}
+                  href="/auth/login"
+                  className="px-8 py-4 rounded-xl bg-slate-950/80 border border-white/10 text-white font-bold text-xs uppercase tracking-wider transition-all duration-200 inline-flex items-center justify-center backdrop-blur-sm"
+                >
+                  Đăng nhập cổng
+                </motion.a>
+              )}
             </div>
           </div>
-        </div>
-        <div className="mt-10 border-t border-white/5 pt-6 text-center">
-          <small className="text-[10px] font-bold text-slate-500 font-mono">© {new Date().getFullYear()} PBMS PARKING .</small>
-        </div>
-      </footer>
-    </main>
+        </TiltCard>
+      </div>
+    </section>
+  );
+}
+
+interface PremiumFooterProps {
+  user: any;
+  onViewProfile: () => void;
+  navigationLinks: Array<{ href: string; label: string }>;
+}
+
+function PremiumFooter({ user, onViewProfile, navigationLinks }: PremiumFooterProps) {
+  const [email, setEmail] = useState('');
+  const [subscribed, setSubscribed] = useState(false);
+
+  function handleSubscribe(e: React.FormEvent) {
+    e.preventDefault();
+    if (!email) return;
+    setSubscribed(true);
+    setTimeout(() => {
+      setSubscribed(false);
+      setEmail('');
+    }, 3000);
+  }
+
+  return (
+    <footer id="lien-he" className="bg-slate-950 py-20 relative z-10 overflow-hidden">
+      {/* Ambient background glows */}
+      <div className="absolute bottom-0 left-1/4 w-[600px] h-[400px] bg-orange-500/5 rounded-full blur-[140px] pointer-events-none" />
+      
+      <div className="max-w-6xl mx-auto px-4">
+        <TiltCard className="group border border-white/5 shadow-2xl relative">
+          {/* Subtle tech grid background inside */}
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.01)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.01)_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none rounded-[23px]" />
+          
+          <div className="relative z-20 grid md:grid-cols-3 gap-10 lg:gap-16 pb-12" style={{ transformStyle: 'preserve-3d' }}>
+            {/* Col 1: Platform Info */}
+            <div className="space-y-6" style={{ transform: 'translateZ(30px)' }}>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center shadow-[0_0_15px_rgba(249,115,22,0.3)]">
+                  <span className="text-slate-950 font-black text-base font-mono">P</span>
+                </div>
+                <div>
+                  <p className="text-sm font-black text-white tracking-wider font-mono leading-none">PBMS PLATFORM</p>
+                  <span className="text-[9px] text-slate-500 font-mono tracking-widest uppercase">Cloud Management</span>
+                </div>
+              </div>
+
+              <p className="text-xs leading-relaxed text-slate-400 font-medium">
+                Hệ thống quản lý bãi đỗ xe thông minh hàng đầu dành cho các tòa nhà và tổ chức doanh nghiệp lớn tại Việt Nam.
+              </p>
+
+              {/* Realtime Status Monitor */}
+              <div className="inline-flex items-center gap-2.5 px-3 py-2 rounded-xl bg-emerald-500/5 border border-emerald-500/10 backdrop-blur-sm shadow-[0_0_15px_rgba(16,185,129,0.05)]">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                <span className="text-[10px] font-bold text-emerald-400 font-mono uppercase tracking-wider">
+                  Mọi hệ thống đang hoạt động ổn định
+                </span>
+              </div>
+
+              <div className="text-[10px] text-slate-500 font-mono space-y-1">
+                <p>Phiên bản UI V2.5.0 - Cyberpunk Glassmorphism</p>
+                <p>Hệ thống tự động đồng bộ thời gian thực</p>
+              </div>
+            </div>
+
+            {/* Col 2: Navigation Links */}
+            <div className="space-y-6" style={{ transform: 'translateZ(30px)', transformStyle: 'preserve-3d' }}>
+              <h4 className="font-black text-white text-xs uppercase tracking-wider font-mono border-l-2 border-orange-500 pl-3">
+                Liên kết nhanh
+              </h4>
+              <nav className="flex flex-col gap-3">
+                {navigationLinks.map((link) => (
+                  <motion.a
+                    key={link.href}
+                    href={link.href}
+                    whileHover={{ x: 6, color: '#f97316' }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                    className="text-xs font-semibold text-slate-400 flex items-center gap-1.5 transition-colors"
+                  >
+                    <span className="w-1 h-1 rounded-full bg-white/20 group-hover:bg-orange-500 transition-colors" />
+                    {link.label}
+                  </motion.a>
+                ))}
+              </nav>
+            </div>
+
+            {/* Col 3: Portal & Newsletter */}
+            <div className="space-y-6" style={{ transform: 'translateZ(35px)', transformStyle: 'preserve-3d' }}>
+              <h4 className="font-black text-white text-xs uppercase tracking-wider font-mono border-l-2 border-orange-500 pl-3">
+                Truy cập hệ thống
+              </h4>
+              
+              <div className="flex flex-wrap gap-2.5">
+                <motion.a
+                  whileHover={{ scale: 1.03, backgroundColor: '#f97316', color: '#020617', boxShadow: '0 0 15px rgba(249,115,22,0.3)' }}
+                  whileTap={{ scale: 0.98 }}
+                  href="/auth/login"
+                  className="px-4 py-2.5 bg-orange-500/10 border border-orange-500/20 text-orange-400 rounded-xl text-xs font-black uppercase transition-all"
+                >
+                  Đăng nhập
+                </motion.a>
+                
+                <motion.a
+                  whileHover={{ scale: 1.03, borderColor: 'rgba(255,255,255,0.25)', backgroundColor: 'rgba(255,255,255,0.02)' }}
+                  whileTap={{ scale: 0.98 }}
+                  href="/auth/register"
+                  className="px-4 py-2.5 bg-slate-900 border border-white/5 text-slate-300 rounded-xl text-xs font-bold uppercase transition-all"
+                >
+                  Đăng ký thành viên
+                </motion.a>
+
+                {user ? (
+                  <motion.button
+                    whileHover={{ scale: 1.03, borderColor: 'rgba(255,255,255,0.25)', backgroundColor: 'rgba(255,255,255,0.02)' }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={onViewProfile}
+                    className="px-4 py-2.5 bg-slate-900 border border-white/5 text-slate-300 rounded-xl text-xs font-bold uppercase transition-all"
+                  >
+                    Hồ sơ
+                  </motion.button>
+                ) : null}
+              </div>
+
+              <div className="pt-2">
+                <p className="text-[10px] font-black text-white uppercase tracking-wider font-mono mb-2">Đăng ký nhận tin tức</p>
+                <form onSubmit={handleSubscribe} className="relative flex items-center">
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Email của bạn..."
+                    className="w-full px-4 py-3 bg-slate-900/60 border border-white/5 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-orange-500/35 transition-all"
+                    required
+                  />
+                  <button
+                    type="submit"
+                    className="absolute right-1.5 p-2 bg-orange-500 text-slate-950 hover:bg-orange-400 rounded-lg transition-colors flex items-center justify-center"
+                  >
+                    <ArrowRight size={14} strokeWidth={2.5} />
+                  </button>
+                </form>
+                <AnimatePresence>
+                  {subscribed && (
+                    <motion.p
+                      initial={{ opacity: 0, y: 5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0 }}
+                      className="text-[10px] text-emerald-400 font-bold mt-1.5 font-mono"
+                    >
+                      ✓ Đã đăng ký bản tin thành công!
+                    </motion.p>
+                  )}
+                </AnimatePresence>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom footer bar */}
+          <div className="pt-8 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-6" style={{ transform: 'translateZ(25px)' }}>
+            <small className="text-[10px] font-bold text-slate-500 font-mono tracking-tight">
+              © {new Date().getFullYear()} PBMS PARKING. THIẾT KẾ GIAO DIỆN PREMIUM DƯỚI GIAO THỨC TẬP TRUNG.
+            </small>
+
+            {/* Social Links */}
+            <div className="flex items-center gap-3">
+              {[
+                { icon: Building2, label: 'Website', href: '#' },
+                { icon: Mail, label: 'Contact', href: 'mailto:support@pbms.com' },
+                { icon: PhoneCall, label: 'Hotline', href: 'tel:1900636447' }
+              ].map((social, index) => {
+                const Icon = social.icon;
+                return (
+                  <motion.a
+                    key={index}
+                    href={social.href}
+                    whileHover={{ scale: 1.1, y: -2, backgroundColor: 'rgba(249,115,22,0.1)', color: '#f97316', borderColor: 'rgba(249,115,22,0.2)' }}
+                    className="w-8 h-8 rounded-xl bg-slate-900/60 border border-white/5 flex items-center justify-center text-slate-500 hover:text-orange-400 transition-colors"
+                    title={social.label}
+                  >
+                    <Icon size={14} />
+                  </motion.a>
+                );
+              })}
+            </div>
+          </div>
+        </TiltCard>
+      </div>
+    </footer>
   );
 }

@@ -514,5 +514,16 @@ select:disabled {
   background-color: rgba(15, 23, 42, 0.6) !important;
 }
 
+/* Custom styles for premium UI upgrades */
+.animate-gradient-x {
+  background-size: 200% auto;
+  animation: borderColorShift 4s linear infinite;
+}
+
+.hover-neon-amber:hover {
+  text-shadow: 0 0 8px rgba(245, 158, 11, 0.6);
+  filter: drop-shadow(0 0 8px rgba(245, 158, 11, 0.5));
+}
+
 
 
