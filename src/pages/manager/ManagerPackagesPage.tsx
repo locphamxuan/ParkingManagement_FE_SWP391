@@ -16,12 +16,9 @@ interface FormState {
   vehicleType: string;
   durationDays: string;
   price: string;
-  reservedSlots: string;
   maxHoursPerDay: string;
-  graceDays: string;
   description: string;
   benefits: string;
-  allowDedicatedSlot: boolean;
   isActive: boolean;
 }
 
@@ -31,12 +28,9 @@ const empty: FormState = {
   vehicleType: '',
   durationDays: '30',
   price: '0',
-  reservedSlots: '0',
   maxHoursPerDay: '',
-  graceDays: '7',
   description: '',
   benefits: '',
-  allowDedicatedSlot: false,
   isActive: true,
 };
 
@@ -85,12 +79,9 @@ export function ManagerPackagesPage() {
       vehicleType: typeof row.vehicleType === 'string' ? row.vehicleType : row.vehicleType._id,
       durationDays: String(row.durationDays),
       price: String(row.price),
-      reservedSlots: String(row.reservedSlots),
       maxHoursPerDay: row.maxHoursPerDay != null ? String(row.maxHoursPerDay) : '',
-      graceDays: row.graceDays != null ? String(row.graceDays) : '7',
       description: row.description ?? '',
       benefits: (row.benefits ?? []).join('\n'),
-      allowDedicatedSlot: row.allowDedicatedSlot ?? false,
       isActive: row.isActive,
     });
     setModalOpen(true);
@@ -107,16 +98,13 @@ export function ManagerPackagesPage() {
       vehicleType: form.vehicleType,
       durationDays: Number(form.durationDays),
       price: Number(form.price),
-      reservedSlots: Number(form.reservedSlots),
       // Để trống → BE tự đặt mặc định theo thời hạn (tuần 5 / tháng 7 / năm 10).
       ...(form.maxHoursPerDay.trim() !== '' ? { maxHoursPerDay: Number(form.maxHoursPerDay) } : {}),
-      ...(form.graceDays.trim() !== '' ? { graceDays: Number(form.graceDays) } : {}),
       description: form.description.trim(),
       benefits: form.benefits
         .split('\n')
         .map((b) => b.trim())
         .filter(Boolean),
-      allowDedicatedSlot: form.allowDedicatedSlot,
       isActive: form.isActive,
     };
     try {
@@ -158,23 +146,16 @@ export function ManagerPackagesPage() {
     },
     {
       key: 'maxHoursPerDay',
-      title: 'Giờ tối đa/ngày',
+      title: 'Giờ free/ngày',
       render: (row) =>
         row.maxHoursPerDay && row.maxHoursPerDay > 0 ? `${row.maxHoursPerDay}h` : 'Không giới hạn',
     },
-    {
-      key: 'graceDays',
-      title: 'Grace (ngày)',
-      render: (row) => `${row.graceDays ?? 7} ngày`,
-    },
-    { key: 'reservedSlots', title: 'Slot dành riêng' },
     {
       key: 'benefits',
       title: 'Ưu đãi',
       render: (row) => (
         <span className="text-xs text-slate-400">
           {(row.benefits?.length ?? 0) > 0 ? `${row.benefits!.length} ưu đãi` : '—'}
-          {row.allowDedicatedSlot ? ' · chỗ riêng' : ''}
         </span>
       ),
     },
@@ -274,18 +255,8 @@ export function ManagerPackagesPage() {
               className="bg-slate-950 border-white/10 text-white rounded-xl focus:border-orange-500/40"
             />
           </div>
-          <div className="grid gap-1.5">
-            <label className="text-[10px] font-black uppercase tracking-wider text-slate-300 font-mono">Số slot dành riêng</label>
-            <Input
-              type="number"
-              min={0}
-              value={form.reservedSlots}
-              onChange={(e) => setForm((f) => ({ ...f, reservedSlots: e.target.value }))}
-              className="bg-slate-950 border-white/10 text-white rounded-xl focus:border-orange-500/40"
-            />
-          </div>
-          <div className="grid gap-1.5">
-            <label className="text-[10px] font-black uppercase tracking-wider text-slate-300 font-mono">Giờ tối đa / ngày</label>
+          <div className="grid gap-1.5 md:col-span-2">
+            <label className="text-[10px] font-black uppercase tracking-wider text-slate-300 font-mono">Giờ free / ngày</label>
             <Input
               type="number"
               min={0}
@@ -296,19 +267,7 @@ export function ManagerPackagesPage() {
             />
             <p className="text-[11px] text-slate-400">
               Số giờ đỗ miễn phí/ngày. Vượt sẽ tính phí theo giá thường. Để trống → mặc định tuần 5h / tháng 7h / năm 10h. 0 = không giới hạn.
-            </p>
-          </div>
-          <div className="grid gap-1.5">
-            <label className="text-[10px] font-black uppercase tracking-wider text-slate-300 font-mono">Giữ slot sau hết hạn (ngày)</label>
-            <Input
-              type="number"
-              min={1}
-              value={form.graceDays}
-              onChange={(e) => setForm((f) => ({ ...f, graceDays: e.target.value }))}
-              className="bg-slate-950 border-white/10 text-white rounded-xl focus:border-orange-500/40"
-            />
-            <p className="text-[11px] text-slate-400">
-              Sau khi gói hết hạn, giữ chỗ cố định cho khách thêm số ngày này (grace) trước khi thu hồi. Mặc định 7.
+              Gói KHÔNG giữ chỗ cố định — nhân viên gán chỗ trống lúc khách vào.
             </p>
           </div>
           <div className="grid gap-1.5 md:col-span-2">
@@ -334,15 +293,6 @@ export function ManagerPackagesPage() {
               Những ưu đãi này sẽ hiển thị cho khách hàng khi chọn mua gói.
             </p>
           </div>
-          <label className="flex items-center gap-3 text-xs font-bold text-slate-300 md:col-span-2 select-none">
-            <input
-              type="checkbox"
-              checked={form.allowDedicatedSlot}
-              onChange={(e) => setForm((f) => ({ ...f, allowDedicatedSlot: e.target.checked }))}
-              className="w-4 h-4 rounded border-white/10 bg-slate-950 text-orange-500 focus:ring-0 cursor-pointer"
-            />
-            <span>Cho phép giữ chỗ đỗ dành riêng (dedicated slot)</span>
-          </label>
           <label className="flex items-center gap-3 text-xs font-bold text-slate-300 md:col-span-2 select-none">
             <input
               type="checkbox"

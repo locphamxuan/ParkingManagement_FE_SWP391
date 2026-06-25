@@ -2,11 +2,11 @@ import { useMemo, useState, useRef, useEffect } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
-import { ArrowLeft, LogOut, User, Edit, Save, X, ShieldAlert, Plus, AlertCircle, CheckCircle2, Car, Bike, Loader2, Star, QrCode, KeyRound } from 'lucide-react';
+import { ArrowLeft, LogOut, User, Edit, Save, X, ShieldAlert, Plus, AlertCircle, CheckCircle2, Car, Bike, Loader2, QrCode, KeyRound } from 'lucide-react';
 import { syncPlates, listPlates, type PlateRecord } from '@/services/licensePlateService';
 import { UserQRModal } from '@/components/modals/UserQRModal';
 import { PlateQRModal } from '@/components/modals/PlateQRModal';
-import { userApi, type LongTermSubscription } from '@/services/user/userApi';
+import { userApi } from '@/services/user/userApi';
 import { normalizePlate, isValidVietnamPlate, brandsForVehicleType } from '@/utils/plate';
 
 // ─── Vietnamese license plate validation (shared util — canonical 59G2-038.80) ─
@@ -64,13 +64,11 @@ export default function ProfilePage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [isSettingDefaultId, setIsSettingDefaultId] = useState<string | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
   const [showQRModal, setShowQRModal] = useState(false);
   // Server plates carry the per-plate QR token (PLT-...) used by the plate-QR modal.
   const [serverPlates, setServerPlates] = useState<PlateRecord[]>([]);
   const [plateQrTarget, setPlateQrTarget] = useState<{ qrToken: string; plateNumber: string; brand?: string | null } | null>(null);
-  const [subscriptions, setSubscriptions] = useState<LongTermSubscription[]>([]);
   const [pwForm, setPwForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [pwError, setPwError] = useState<string | null>(null);
   const [pwSuccess, setPwSuccess] = useState<string | null>(null);
@@ -87,25 +85,11 @@ export default function ProfilePage() {
     };
   }, [session]);
 
-  useEffect(() => {
-    // Initialize mock database if not already present
-    if (!localStorage.getItem('pbms.allRegisteredPhones')) {
-      localStorage.setItem('pbms.allRegisteredPhones', JSON.stringify(["0911111111", "0922222222"]));
-    }
-  }, []);
-
   // Fetch plates (with their PLT- QR tokens) so each plate can show its scannable QR.
   useEffect(() => {
     listPlates().then(setServerPlates).catch(() => undefined);
   }, []);
 
-  // Fetch user's long-term subscriptions (gói dài hạn đã mua) để hiển thị trong hồ sơ.
-  useEffect(() => {
-    userApi.longTermSubscriptions
-      .list()
-      .then((res) => setSubscriptions(res.data?.items ?? []))
-      .catch(() => undefined);
-  }, []);
 
   const plateQrToken = (plateNumber: string): string | null =>
     serverPlates.find((p) => p.plateNumber.toUpperCase() === plateNumber.toUpperCase())?.qrCode ?? null;
@@ -215,32 +199,13 @@ export default function ProfilePage() {
     setApiError(null);
 
     const newPhone = form.phone.trim();
-    const oldPhone = user.phone.trim();
 
-    // Step 1: Format check
+    // Format check (BE kiểm tra trùng SĐT khi PUT /users/profile → 409 PHONE_TAKEN).
     const phoneRegex = /^0[0-9]{9}$/;
     if (!phoneRegex.test(newPhone)) {
       setProfileError('Số điện thoại phải bắt đầu bằng số 0 và có đúng 10 chữ số!');
       return;
     }
-
-    // Step 2: Duplicate check
-    const allRegisteredPhonesRaw = localStorage.getItem('pbms.allRegisteredPhones');
-    let allRegisteredPhones: string[] = allRegisteredPhonesRaw
-      ? JSON.parse(allRegisteredPhonesRaw)
-      : ['0911111111', '0922222222'];
-
-    if (newPhone !== oldPhone && allRegisteredPhones.includes(newPhone)) {
-      setProfileError('Số điện thoại này đã được đăng ký bởi một tài khoản khác!');
-      return;
-    }
-
-    // Step 3: Update simulated registry
-    if (oldPhone) {
-      allRegisteredPhones = allRegisteredPhones.filter((p) => p !== oldPhone);
-    }
-    allRegisteredPhones.push(newPhone);
-    localStorage.setItem('pbms.allRegisteredPhones', JSON.stringify(allRegisteredPhones));
 
     setIsSaving(true);
 
@@ -427,57 +392,6 @@ export default function ProfilePage() {
           )}
         </AnimatePresence>
 
-        {/* Gói dài hạn đã mua */}
-        {subscriptions.length > 0 && (
-          <section className="mb-6 rounded-3xl border border-white/10 bg-slate-900/40 p-5">
-            <div className="mb-3 flex items-center gap-2">
-              <p className="text-[10px] font-black uppercase tracking-[0.24em] text-orange-400 font-mono">Gói dài hạn của tôi</p>
-              <span className="rounded-full bg-orange-500/15 px-2 py-0.5 text-[10px] font-bold text-orange-300">{subscriptions.length}</span>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {subscriptions.map((s) => {
-                const statusMap: Record<string, { label: string; cls: string }> = {
-                  active: { label: 'Đang hoạt động', cls: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
-                  pending: { label: 'Chờ kích hoạt', cls: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
-                  expired: { label: 'Hết hạn', cls: 'bg-slate-500/10 text-slate-400 border-slate-500/20' },
-                  cancelled: { label: 'Đã hủy', cls: 'bg-rose-500/10 text-rose-400 border-rose-500/20' },
-                };
-                const st = statusMap[s.status] ?? statusMap.expired;
-                return (
-                  <div key={s._id} className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-sm font-black text-orange-300">{s.package?.name ?? 'Gói dài hạn'}</p>
-                      <span className={`rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase ${st.cls}`}>{st.label}</span>
-                    </div>
-                    <p className="mt-1 font-mono text-xs font-semibold text-slate-200">{s.plateNumber ?? '—'}</p>
-                    <p className="mt-1 text-[11px] text-slate-400">
-                      {new Date(s.startDate).toLocaleDateString('vi-VN')} → {new Date(s.endDate).toLocaleDateString('vi-VN')}
-                    </p>
-                    {s.slot?.code && (
-                      <p className="mt-1 text-[11px] text-slate-400">
-                        Chỗ đỗ: <span className="font-bold text-slate-200">{s.slot.code}</span>
-                        {s.slot.floor && typeof s.slot.floor === 'object' && (s.slot.floor.name || s.slot.floor.code) ? (
-                          <span> · {s.slot.floor.name || s.slot.floor.code}</span>
-                        ) : null}
-                        {s.slotReleased ? <span className="text-rose-300"> (đã thu hồi)</span> : null}
-                      </p>
-                    )}
-                    {typeof s.package?.maxHoursPerDay === 'number' && s.package.maxHoursPerDay > 0 && (
-                      <p className="mt-1 text-[11px] text-slate-400">Giờ miễn phí: {s.package.maxHoursPerDay}h/ngày</p>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-            <button
-              type="button"
-              onClick={() => navigate('/long-term-subscriptions')}
-              className="mt-3 text-[11px] font-semibold text-orange-400 hover:text-orange-300"
-            >
-              Quản lý / gia hạn gói →
-            </button>
-          </section>
-        )}
 
         {/* Content Section layout */}
         <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">

@@ -65,13 +65,15 @@ export function BookingSummarySidebar({
 
           <div className="h-px bg-white/[0.06]" />
 
-          <div className="grid grid-cols-2 gap-2">
-            <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
-              <p className="text-[9px] font-bold uppercase text-slate-500">Ô đỗ</p>
-              <p className="mt-1 font-mono text-lg font-black text-orange-300">
-                {selectedSlot || '—'}
-              </p>
-            </div>
+          <div className={`grid gap-2 ${mode === 'hourly' ? 'grid-cols-2' : 'grid-cols-1'}`}>
+            {mode === 'hourly' && (
+              <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
+                <p className="text-[9px] font-bold uppercase text-slate-500">Ô đỗ</p>
+                <p className="mt-1 font-mono text-lg font-black text-orange-300">
+                  {selectedSlot || '—'}
+                </p>
+              </div>
+            )}
             <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
               <p className="text-[9px] font-bold uppercase text-slate-500">Biển số</p>
               <p className="mt-1 font-mono text-sm font-black text-cyan-200 truncate">

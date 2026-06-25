@@ -37,6 +37,14 @@ export interface ParkingSession {
   fee?: number | null;
   currentFee?: number | null;        // live fee (per manager PricePolicy) for active sessions
   isMember?: boolean;                 // true if the plate is linked to an account
+  // Gói dài hạn (long_term): miễn phí trong maxHoursPerDay/ngày; currentFee = phí phần vượt.
+  isLongTerm?: boolean;
+  overageHours?: number;             // số giờ đỗ vượt hạn mức (đang tính phí)
+  maxHoursPerDay?: number;           // hạn mức giờ free/ngày của gói (0 = không giới hạn)
+  // Reservation: tiền còn lại sau khi trừ cọc.
+  isReservation?: boolean;
+  reservationRemainingFee?: number;
+  reservation?: { estimatedFee: number; fee: number; endTime?: string } | null;
   plateImage?: string | null;        // license-plate camera snapshot (Camera 1)
   portraitImage?: string | null;     // QR / account camera snapshot (Camera 2 — driver portrait)
   user?: { _id: string; fullName?: string; email?: string } | null;
@@ -120,6 +128,34 @@ export interface PlateInfo {
     building: string;
     entryTime: string;
   };
+  /** Gói dài hạn còn hiệu lực → staff phải gán 1 slot trống khi check-in. */
+  hasActivePackage?: boolean;
+  activePackage?: { id: string; name: string; maxHoursPerDay: number } | null;
+  /** Đặt chỗ còn hiệu lực → luồng "chỉ cần quét", không bắt chụp ảnh. */
+  hasActiveReservation?: boolean;
+  activeReservation?: { id: string; code: string } | null;
+}
+
+export interface ShiftRevenueItem {
+  _id: string;
+  plateNumber: string | null;
+  amount: number;
+  method: 'cash' | 'wallet' | 'qr' | 'card' | 'payos';
+  createdAt: string;
+}
+
+export interface ShiftRevenueSummary {
+  date: string;
+  total: number;
+  count: number;
+  byMethod: { cash: number; wallet: number; online: number };
+  items: ShiftRevenueItem[];
+}
+
+export interface FreeSlot {
+  _id: string;
+  code: string;
+  floor?: { _id: string; name?: string; code?: string } | null;
 }
 
 export interface PaymentData {
@@ -171,8 +207,12 @@ export const staffApi = {
   getActiveSessions: (query?: Record<string, string | number | boolean | undefined>) =>
     api.get<Wrap<ApiList<ParkingSession>>>('/staff/parking-sessions/active', { query }),
 
-  checkIn: (payload: { plateNumber: string; vehicleType?: string; gate?: string; building?: string; vehicleBrand?: string; plateImage?: string | null; portraitImage?: string | null }) =>
+  checkIn: (payload: { plateNumber: string; vehicleType?: string; gate?: string; building?: string; vehicleBrand?: string; plateImage?: string | null; portraitImage?: string | null; slot?: string }) =>
     api.post<Wrap<{ item: ParkingSession }>>('/staff/parking-sessions/check-in', payload),
+
+  // Slot 'available' của 1 tòa nhà — để gán xe mua gói khi check-in.
+  freeSlots: (buildingId: string) =>
+    api.get<Wrap<{ items: FreeSlot[] }>>('/staff/parking-sessions/free-slots', { query: { building: buildingId } }),
 
   checkOut: (
     sessionId: string,
@@ -250,6 +290,8 @@ export const staffApi = {
         plate?: { plateNumber: string; vehicleType: string; brand?: string | null } | null;
         user: { id: string; fullName: string; email: string; phone?: string | null; walletBalance?: number } | null;
         activeSessions?: { id: string; building: string; plateNumber: string; entryTime: string; fee: number }[];
+        /** Gói dài hạn đang hoạt động của user (chỉ có khi kind === 'user'). */
+        activePackages?: { id: string; name: string; code: string | null; plateNumber: string; startDate?: string; endDate?: string }[];
       }>
     >(`/staff/users/resolve-qr/${encodeURIComponent(code)}`),
 
@@ -303,6 +345,14 @@ export const staffApi = {
       api.get<Wrap<{ hasAccount: boolean; user: { id: string; fullName: string; email: string } | null }>>(
         `/staff/users/lookup-qr/${qrCode}`
       ),
+
+    /** Doanh thu ca của nhân viên cổng ra (tiền đã thu hôm nay). */
+    myShiftRevenue: (buildingId: string) =>
+      api.get<Wrap<ShiftRevenueSummary>>('/staff/parking-sessions/my-shift-revenue', { query: { building: buildingId } }),
+
+    /** Lịch sử xe vào hôm nay của nhân viên cổng VÀO — có location (cổng, tầng, ô). */
+    myCheckIns: (buildingId: string) =>
+      api.get<Wrap<{ items: ParkingSession[] }>>('/staff/parking-sessions/my-checkins', { query: { building: buildingId } }),
   },
 
   // Reservations

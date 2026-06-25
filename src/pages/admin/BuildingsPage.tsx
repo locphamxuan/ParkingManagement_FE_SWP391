@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Users } from 'lucide-react';
+import { Eye, Users } from 'lucide-react';
 import { ConfirmModal } from '@/components/modals/ConfirmModal';
 import { DataTable, type DataColumn } from '@/components/common/DataTable';
 import { ModalForm } from '@/components/modals/ModalForm';
@@ -7,7 +7,6 @@ import { SearchFilterBar } from '@/components/common/SearchFilterBar';
 import { StatusBadge } from '@/components/common/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { CustomSelect } from '@/components/ui/select';
 import { useAdminDataset } from '@/hooks/admin/useAdminDataset';
 import { useAuth } from '@/hooks/useAuth';
 import {
@@ -18,27 +17,35 @@ import {
   updateBuildingStatus,
   revokeStaffFromBuilding,
   revokeManagerFromBuilding,
+  assignManagerToBuilding,
 } from '@/services/admin/adminCrud';
 import {
   adminApi,
   type AdminUser,
-  type AdminSubscriptionPackage,
-  type BuildingSubscriptionStatus,
+  type AdminPricePolicy,
+  type AdminBuildingPackage,
 } from '@/services/admin/adminApi';
 import type { Building } from '@/types';
 
 const PAGE_SIZE = 10;
 
-const fmtVnd = (n: number) => `${n.toLocaleString('vi-VN')} ₫`;
-const fmtDate = (iso: string | null | undefined) =>
-  iso ? new Date(iso).toLocaleDateString('vi-VN') : '—';
+const fmtVnd = (n: number | null | undefined) =>
+  n != null ? `${n.toLocaleString('vi-VN')} ₫` : '—';
+
+const vehicleTypeLabel = (vt: AdminPricePolicy['vehicleType'] | AdminBuildingPackage['vehicleType']) =>
+  vt && typeof vt === 'object' ? vt.name : '—';
 
 interface MembersState {
   buildingId: string;
   buildingName: string;
   manager: AdminUser | null;
   staff: AdminUser[];
-  subscription: BuildingSubscriptionStatus | null;
+}
+
+interface DetailState {
+  buildingName: string;
+  pricePolicies: AdminPricePolicy[];
+  packages: AdminBuildingPackage[];
 }
 
 export function BuildingsPage() {
@@ -57,13 +64,15 @@ export function BuildingsPage() {
   const [membersState, setMembersState] = useState<MembersState | null>(null);
   const [isMembersLoading, setIsMembersLoading] = useState(false);
   const [membersError, setMembersError] = useState<string | null>(null);
+  const [unassignedManagers, setUnassignedManagers] = useState<AdminUser[]>([]);
+  const [isLoadingManagers, setIsLoadingManagers] = useState(false);
 
   const [pendingDeleteMember, setPendingDeleteMember] = useState<AdminUser | null>(null);
   const [isDeletingMember, setIsDeletingMember] = useState(false);
 
-  const [subPackages, setSubPackages] = useState<AdminSubscriptionPackage[]>([]);
-  const [grantPackageId, setGrantPackageId] = useState('');
-  const [subBusy, setSubBusy] = useState(false);
+  const [detailState, setDetailState] = useState<DetailState | null>(null);
+  const [isDetailLoading, setIsDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     name: '',
@@ -98,23 +107,37 @@ export function BuildingsPage() {
 
   const openViewMembers = async (building: Building) => {
     const bid = building.backendId || building.id;
-    setMembersState({ buildingId: bid, buildingName: building.name, manager: null, staff: [], subscription: null });
+    setMembersState({ buildingId: bid, buildingName: building.name, manager: null, staff: [] });
     setIsMembersLoading(true);
     setMembersError(null);
-    setGrantPackageId('');
+    setUnassignedManagers([]);
     try {
-      const [res, pkgRes] = await Promise.all([
-        adminApi.buildings.getMembers(bid),
-        adminApi.subscriptionPackages.list({ isActive: 'true' }),
-      ]);
+      const res = await adminApi.buildings.getMembers(bid);
+      const manager = res.data?.manager ?? null;
       setMembersState({
         buildingId: bid,
         buildingName: building.name,
-        manager: res.data?.manager ?? null,
+        manager,
         staff: res.data?.staff ?? [],
-        subscription: res.data?.subscription ?? null,
       });
-      setSubPackages((pkgRes as { data?: { items: AdminSubscriptionPackage[] } })?.data?.items ?? []);
+      if (!manager) {
+        setIsLoadingManagers(true);
+        try {
+          const userRes = await adminApi.users.list({ role: 'manager', limit: '200' });
+          const raw = userRes as unknown as { data?: { items?: AdminUser[] } | AdminUser[] };
+          const list =
+            (raw?.data as { items?: AdminUser[] })?.items ??
+            (Array.isArray(raw?.data) ? (raw.data as AdminUser[]) : []);
+          const unassigned = list.filter(
+            (u) => !u.assignedBuildings || u.assignedBuildings.length === 0
+          );
+          setUnassignedManagers(unassigned);
+        } catch (err) {
+          console.error('Không thể tải danh sách quản lý:', err);
+        } finally {
+          setIsLoadingManagers(false);
+        }
+      }
     } catch (err) {
       setMembersError(err instanceof Error ? err.message : 'Không thể tải danh sách thành viên');
     } finally {
@@ -122,46 +145,45 @@ export function BuildingsPage() {
     }
   };
 
-  const reloadMembersSubscription = async (bid: string) => {
+  const handleAssignManager = async (managerId: string) => {
+    if (!token || !membersState) return;
+    setIsMembersLoading(true);
+    setMembersError(null);
     try {
-      const res = await adminApi.buildings.getMembers(bid);
-      setMembersState((prev) =>
-        prev && prev.buildingId === bid
-          ? { ...prev, subscription: res.data?.subscription ?? null }
-          : prev,
-      );
-    } catch {
-      /* ignore */
+      await assignManagerToBuilding(token, membersState.buildingId, managerId);
+      const res = await adminApi.buildings.getMembers(membersState.buildingId);
+      setMembersState({
+        ...membersState,
+        manager: res.data?.manager ?? null,
+        staff: res.data?.staff ?? [],
+      });
+      await refresh();
+    } catch (err) {
+      setMembersError(err instanceof Error ? err.message : 'Không thể gán quản lý');
+    } finally {
+      setIsMembersLoading(false);
     }
   };
 
-  const handleGrantSubscription = async () => {
-    if (!membersState || !grantPackageId) return;
-    setSubBusy(true);
-    setMembersError(null);
+  const openViewDetail = async (building: Building) => {
+    const bid = building.backendId || building.id;
+    setDetailState({ buildingName: building.name, pricePolicies: [], packages: [] });
+    setIsDetailLoading(true);
+    setDetailError(null);
     try {
-      await adminApi.buildings.grantSubscription(membersState.buildingId, grantPackageId);
-      await reloadMembersSubscription(membersState.buildingId);
-      setGrantPackageId('');
+      const [policyRes, pkgRes] = await Promise.all([
+        adminApi.buildings.listPricePolicies(bid),
+        adminApi.buildings.listPackages(bid),
+      ]);
+      setDetailState({
+        buildingName: building.name,
+        pricePolicies: (policyRes as { data?: { items: AdminPricePolicy[] } })?.data?.items ?? [],
+        packages: (pkgRes as { data?: { items: AdminBuildingPackage[] } })?.data?.items ?? [],
+      });
     } catch (err) {
-      setMembersError(err instanceof Error ? err.message : 'Không thể cấp gói');
+      setDetailError(err instanceof Error ? err.message : 'Không thể tải chi tiết tòa nhà');
     } finally {
-      setSubBusy(false);
-    }
-  };
-
-  const handleRevokeSubscription = async () => {
-    if (!membersState) return;
-    if (!window.confirm('Thu hồi gói dịch vụ của tòa nhà này? Bảng điều khiển của quản lý sẽ bị khóa ngay.')) return;
-    setSubBusy(true);
-    setMembersError(null);
-    try {
-      await adminApi.buildings.revokeSubscription(membersState.buildingId);
-      await reloadMembersSubscription(membersState.buildingId);
-    } catch (err) {
-      setMembersError(err instanceof Error ? err.message : 'Không thể thu hồi gói');
-    } finally {
-      setSubBusy(false);
+      setIsDetailLoading(false);
     }
   };
 
@@ -292,7 +314,7 @@ export function BuildingsPage() {
     { key: 'floors', title: 'Số tầng' },
     {
       key: 'occupancyRate',
-      title: 'Tỉ lệ chiếm dụng',
+      title: 'Mức độ đông đúc',
       render: (row) => (
         <div className="w-32">
           <div className="mb-1 text-xs text-muted-foreground">{row.occupancyRate}%</div>
@@ -318,6 +340,14 @@ export function BuildingsPage() {
       title: 'Hành động',
       render: (row) => (
         <div className="flex flex-wrap gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            className="gap-1"
+            onClick={() => openViewDetail(row)}
+          >
+            <Eye size={12} /> Chi tiết
+          </Button>
           <Button
             variant="secondary"
             size="sm"
@@ -394,55 +424,6 @@ export function BuildingsPage() {
               <p className="text-sm text-red-600">{membersError}</p>
             ) : (
               <div className="grid gap-4">
-                {/* Gói dịch vụ hệ thống */}
-                <section className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3">
-                  <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-amber-500">
-                    Gói dịch vụ hệ thống
-                  </h3>
-                  {membersState.subscription?.active ? (
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="text-sm">
-                        <p className="font-medium text-foreground">
-                          {membersState.subscription.packageName
-                            ?? membersState.subscription.package?.name
-                            ?? 'Đang hoạt động'}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Còn {membersState.subscription.daysRemaining} ngày · hết hạn{' '}
-                          {fmtDate(membersState.subscription.endDate)}
-                        </p>
-                      </div>
-                      <Button variant="danger" size="sm" disabled={subBusy} onClick={handleRevokeSubscription}>
-                        Thu hồi
-                      </Button>
-                    </div>
-                  ) : (
-                    <p className="mb-2 text-sm italic text-muted-foreground">Chưa có gói đang hoạt động</p>
-                  )}
-
-                  <div className="mt-2 flex items-center gap-2">
-                    <CustomSelect
-                      className="h-9 flex-1"
-                      value={grantPackageId}
-                      onChange={(val) => setGrantPackageId(val)}
-                      placeholder="-- Chọn gói để cấp/gia hạn --"
-                      options={[
-                        { value: '', label: '-- Chọn gói để cấp/gia hạn --' },
-                        ...subPackages.map((p) => ({
-                          value: p._id,
-                          label: `${p.name} · ${fmtVnd(p.price)} · ${p.durationDays} ngày`
-                        }))
-                      ]}
-                    />
-                    <Button size="sm" disabled={subBusy || !grantPackageId} onClick={handleGrantSubscription}>
-                      Cấp gói
-                    </Button>
-                  </div>
-                  <p className="mt-1 text-[11px] text-muted-foreground">
-                    Cấp gói thủ công (miễn phí) — không trừ tiền ví tòa nhà.
-                  </p>
-                </section>
-
                 <section>
                   <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
                     Quản lý
@@ -462,7 +443,35 @@ export function BuildingsPage() {
                       </Button>
                     </div>
                   ) : (
-                    <p className="text-sm text-muted-foreground italic">Chưa có quản lý</p>
+                    <div className="space-y-3 rounded-xl border border-dashed border-border p-4 bg-muted/20">
+                      <p className="text-sm text-muted-foreground italic">Chưa có quản lý cho tòa nhà này</p>
+                      {isLoadingManagers ? (
+                        <p className="text-xs text-muted-foreground font-mono animate-pulse">Đang tải danh sách quản lý chưa được gán...</p>
+                      ) : unassignedManagers.length === 0 ? (
+                        <p className="text-xs text-amber-500 font-medium">Không có quản lý nào chưa được gán tòa nhà.</p>
+                      ) : (
+                        <div className="space-y-2">
+                          <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider">Gán quản lý:</label>
+                          <div className="max-h-40 overflow-y-auto space-y-1.5 pr-1">
+                            {unassignedManagers.map((mgr) => (
+                              <div key={mgr._id} className="flex items-center justify-between rounded-lg border border-border bg-background p-2.5 text-xs">
+                                <div className="min-w-0 flex-1 pr-2">
+                                  <p className="font-semibold text-foreground truncate">{mgr.fullName}</p>
+                                  <p className="text-[10px] text-muted-foreground truncate">{mgr.email}</p>
+                                </div>
+                                <Button
+                                  size="sm"
+                                  className="h-7 text-[11px] px-3 font-semibold"
+                                  onClick={() => handleAssignManager(mgr._id)}
+                                >
+                                  Gán
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </section>
 
@@ -504,6 +513,82 @@ export function BuildingsPage() {
         </div>
       ) : null}
 
+      {/* Building Detail Modal (read-only operator view) */}
+      {detailState ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-2xl rounded-2xl border border-border bg-background p-6 shadow-xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold">
+                Chi tiết tòa nhà — {detailState.buildingName}
+              </h2>
+              <Button variant="ghost" size="sm" onClick={() => setDetailState(null)}>
+                ✕
+              </Button>
+            </div>
+
+            {isDetailLoading ? (
+              <p className="text-sm text-muted-foreground">Đang tải chi tiết tòa nhà...</p>
+            ) : detailError ? (
+              <p className="text-sm text-red-600">{detailError}</p>
+            ) : (
+              <div className="grid max-h-[70vh] gap-5 overflow-y-auto">
+                {/* Chính sách giá */}
+                <section>
+                  <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    Chính sách giá ({detailState.pricePolicies.length})
+                  </h3>
+                  {detailState.pricePolicies.length === 0 ? (
+                    <p className="text-sm italic text-muted-foreground">Tòa nhà chưa cấu hình chính sách giá.</p>
+                  ) : (
+                    <div className="grid gap-2">
+                      {detailState.pricePolicies.map((p) => (
+                        <div key={p._id} className="flex items-center justify-between rounded-xl border border-border bg-card p-3 text-sm">
+                          <div>
+                            <p className="font-medium">{p.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {vehicleTypeLabel(p.vehicleType)} · {fmtVnd(p.hourlyRate)}/giờ
+                              {p.dailyCap ? ` · trần ngày ${fmtVnd(p.dailyCap)}` : ''}
+                            </p>
+                          </div>
+                          <StatusBadge status={p.isActive ? 'active' : 'inactive'} />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </section>
+
+                {/* Gói dài hạn của tòa nhà */}
+                <section>
+                  <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    Gói dài hạn ({detailState.packages.length})
+                  </h3>
+                  {detailState.packages.length === 0 ? (
+                    <p className="text-sm italic text-muted-foreground">Tòa nhà chưa phát hành gói dài hạn nào.</p>
+                  ) : (
+                    <div className="grid gap-2">
+                      {detailState.packages.map((pkg) => (
+                        <div key={pkg._id} className="flex items-center justify-between rounded-xl border border-border bg-card p-3 text-sm">
+                          <div>
+                            <p className="font-medium">
+                              {pkg.name}
+                              {pkg.code && <span className="ml-1.5 font-mono text-xs text-muted-foreground">{pkg.code}</span>}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {vehicleTypeLabel(pkg.vehicleType)} · {fmtVnd(pkg.price)} · {pkg.durationDays} ngày
+                            </p>
+                          </div>
+                          <StatusBadge status={pkg.isActive ? 'active' : 'inactive'} />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </section>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : null}
+
       {/* Edit / Create Building Modal */}
       <ModalForm
         open={isModalOpen}
@@ -513,33 +598,48 @@ export function BuildingsPage() {
         title={selectedBuilding ? 'Sửa tòa nhà' : 'Tạo tòa nhà'}
         onSubmit={saveBuilding}
       >
-        <div className="grid gap-3 md:grid-cols-2">
-          <Input
-            placeholder="Tên tòa nhà"
-            value={form.name}
-            onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-          />
-          <Input
-            placeholder="Mã tòa nhà"
-            value={form.code}
-            onChange={(e) => setForm((prev) => ({ ...prev, code: e.target.value }))}
-          />
-          <Input
-            placeholder="Địa chỉ"
-            value={form.address}
-            onChange={(e) => setForm((prev) => ({ ...prev, address: e.target.value }))}
-          />
-          <Input
-            placeholder="Số tầng"
-            value={form.floors}
-            onChange={(e) => setForm((prev) => ({ ...prev, floors: e.target.value }))}
-          />
-          {!selectedBuilding ? (
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Tên tòa nhà</label>
             <Input
-              placeholder="Giá giờ (VND)"
-              value={form.hourlyRate}
-              onChange={(e) => setForm((prev) => ({ ...prev, hourlyRate: e.target.value }))}
+              placeholder="Nhập tên tòa nhà"
+              value={form.name}
+              onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
             />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Mã tòa nhà</label>
+            <Input
+              placeholder="Nhập mã tòa nhà"
+              value={form.code}
+              onChange={(e) => setForm((prev) => ({ ...prev, code: e.target.value }))}
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Địa chỉ</label>
+            <Input
+              placeholder="Nhập địa chỉ"
+              value={form.address}
+              onChange={(e) => setForm((prev) => ({ ...prev, address: e.target.value }))}
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Số tầng</label>
+            <Input
+              placeholder="Nhập số tầng"
+              value={form.floors}
+              onChange={(e) => setForm((prev) => ({ ...prev, floors: e.target.value }))}
+            />
+          </div>
+          {!selectedBuilding ? (
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Giá theo giờ (VND)</label>
+              <Input
+                placeholder="Nhập giá theo giờ"
+                value={form.hourlyRate}
+                onChange={(e) => setForm((prev) => ({ ...prev, hourlyRate: e.target.value }))}
+              />
+            </div>
           ) : null}
         </div>
         {isSaving ? <p className="text-xs text-muted-foreground">Đang lưu...</p> : null}

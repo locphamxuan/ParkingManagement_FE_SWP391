@@ -39,13 +39,7 @@ export function useAdminDataset(): UseAdminDatasetResult {
   }, [session?.token]);
 
   useEffect(() => {
-    let mounted = true;
-
     refresh().catch(() => undefined);
-
-    return () => {
-      mounted = false;
-    };
   }, [refresh]);
 
   return { data, isLoading, error, refresh };

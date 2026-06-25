@@ -1,14 +1,10 @@
 import { useMemo, useState } from 'react';
-import { Navigate, Outlet, useLocation, useNavigate, useMatch } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate, useMatch } from 'react-router-dom';
 import { Navbar } from '@/components/layout/Navbar';
 import { ManagerSidebar } from '@/components/layout/ManagerSidebar';
 import { useAuth } from '@/hooks/useAuth';
 import { ADMIN_EMAIL_FALLBACK } from '@/utils/constants';
 import { useManagerBuildings } from '@/hooks/useManagerBuildings';
-import { useSubscriptionStatus } from '@/hooks/useSubscriptionStatus';
-
-// Pages a manager can reach WITHOUT an active subscription (so they can pay).
-const UNGATED_PATHS = ['/manager/wallet', '/manager/profile', '/manager/operating-hours'];
 
 const titles: Record<string, string> = {
   '/manager': 'Bảng điều khiển Manager',
@@ -21,7 +17,7 @@ const titles: Record<string, string> = {
   '/manager/operating-hours': 'Giờ hoạt động',
   '/manager/price-policies': 'Chính sách giá',
   '/manager/reservation-policy': 'Chính sách đặt chỗ',
-  '/manager/packages': 'Gói đăng ký',
+  '/manager/packages': 'Quản lý gói',
   '/manager/shifts': 'Ca trực & Gán ca',
   '/manager/reviews': 'Xem đánh giá',
   '/manager/wallet': 'Ví tòa nhà',
@@ -32,19 +28,12 @@ const titles: Record<string, string> = {
 export function ManagerLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const { session, logout } = useAuth();
-  const { buildings, selectedBuildingId, setSelectedBuildingId, isLoading } = useManagerBuildings();
-  const { status: subscription, loading: subLoading, refresh: refreshSubscription } =
-    useSubscriptionStatus(selectedBuildingId);
+  const { selectedBuildingId, isLoading } = useManagerBuildings();
   const navigate = useNavigate();
   const location = useLocation();
 
   const title = useMemo(() => titles[location.pathname] ?? 'Manager Dashboard', [location.pathname]);
   const isProfileRoute = Boolean(useMatch('/manager/profile'));
-
-  // Gate: an inactive subscription locks every page except wallet + profile.
-  const isUngatedPath = UNGATED_PATHS.includes(location.pathname);
-  const subscriptionBlocked =
-    !!selectedBuildingId && !subLoading && subscription !== null && !subscription.active && !isUngatedPath;
 
   return (
     <div className="admin-theme relative min-h-screen bg-slate-950 text-foreground">
@@ -74,15 +63,10 @@ export function ManagerLayout() {
               <div className="rounded-md border border-border bg-card p-6 text-sm text-muted-foreground">
                 Tài khoản này chưa được gán tòa nhà nào. Vui lòng liên hệ quản lý.
               </div>
-            ) : subscriptionBlocked ? (
-              // No active subscription → force the manager to the wallet to buy a package.
-              <Navigate to="/manager/wallet" replace />
             ) : (
               <Outlet
                 context={{
                   buildingId: selectedBuildingId ?? '',
-                  subscription,
-                  refreshSubscription,
                 }}
               />
             )}

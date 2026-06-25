@@ -1,10 +1,13 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { UserSquare, Loader2 } from 'lucide-react';
+import { UserSquare, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import type { LiveCameraHandle } from '@/components/staff/LivePlateCamera';
+import { videoConstraintFor } from '@/hooks/useCameraDevices';
 
 interface LivePortraitCameraProps {
   /** Pause stream rendering (kept for API parity; portrait cam always on). */
   paused?: boolean;
+  /** Thiết bị camera vật lý gán cho vai trò chân dung. */
+  deviceId?: string;
 }
 
 /**
@@ -13,11 +16,12 @@ interface LivePortraitCameraProps {
  * the driver portrait (so staff can compare the person at check-out).
  */
 export const LivePortraitCamera = forwardRef<LiveCameraHandle, LivePortraitCameraProps>(
-  function LivePortraitCamera(_props, ref) {
+  function LivePortraitCamera({ deviceId }, ref) {
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [active, setActive] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [retryCount, setRetryCount] = useState(0);
 
     useImperativeHandle(ref, () => ({
       capture: () => {
@@ -37,9 +41,19 @@ export const LivePortraitCamera = forwardRef<LiveCameraHandle, LivePortraitCamer
       let stream: MediaStream | null = null;
       let cancelled = false;
 
+      const timeout = setTimeout(() => {
+        if (!cancelled) setError('Camera chưa sẵn sàng sau 8 giây. Bấm "Thử lại" hoặc kiểm tra quyền camera.');
+      }, 8000);
+
       (async () => {
         try {
-          stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+          if (!navigator.mediaDevices?.getUserMedia) {
+            throw Object.assign(new Error('API not supported'), { name: 'NotSupportedError' });
+          }
+          await new Promise<void>((r) => setTimeout(r, 150));
+          if (cancelled) return;
+          stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraintFor(deviceId, 'user') });
+          clearTimeout(timeout);
           if (cancelled) {
             stream.getTracks().forEach((t) => t.stop());
             return;
@@ -48,28 +62,50 @@ export const LivePortraitCamera = forwardRef<LiveCameraHandle, LivePortraitCamer
             videoRef.current.srcObject = stream;
             videoRef.current.onloadedmetadata = () => {
               videoRef.current?.play().catch(() => undefined);
-              setActive(true);
+              if (!cancelled) setActive(true);
             };
             videoRef.current.play().catch(() => undefined);
           }
           setError(null);
-        } catch {
-          if (!cancelled) setError('Không thể truy cập camera chân dung. Vui lòng cấp quyền.');
+        } catch (err) {
+          clearTimeout(timeout);
+          if (!cancelled) {
+            const name = (err as { name?: string })?.name ?? '';
+            if (name === 'NotAllowedError' || name === 'PermissionDeniedError' || name === 'SecurityError') {
+              setError('Trình duyệt chưa cấp quyền camera. Bấm biểu tượng khóa trên thanh địa chỉ → Camera → Cho phép.');
+            } else if (name === 'NotFoundError' || name === 'DevicesNotFoundError' || name === 'NotSupportedError') {
+              setError('Không tìm thấy camera. Bấm Thử lại hoặc Bỏ qua để tiếp tục không có ảnh.');
+            } else if (name === 'NotReadableError' || name === 'TrackStartError') {
+              setError('Camera đang bị ứng dụng khác sử dụng. Đóng app đó rồi bấm Thử lại.');
+            } else if (name === 'AbortError') {
+              setError('Kết nối camera bị hủy. Bấm Thử lại.');
+            } else {
+              setError(`Không thể truy cập camera chân dung (${name || 'lỗi không xác định'}). Bấm Thử lại.`);
+            }
+          }
         }
       })();
 
       return () => {
         cancelled = true;
+        clearTimeout(timeout);
         const s = (videoRef.current?.srcObject as MediaStream | null) ?? stream;
         s?.getTracks().forEach((t) => t.stop());
+        if (videoRef.current) videoRef.current.srcObject = null;
       };
-    }, []);
+    }, [deviceId, retryCount]);
+
+    const handleRetry = () => {
+      setError(null);
+      setActive(false);
+      setRetryCount((c) => c + 1);
+    };
 
     return (
       <div className="rounded-xl border border-border bg-card/40 p-3 space-y-2.5">
         <div className="flex items-center gap-2">
           <UserSquare size={15} className="text-violet-400" />
-          <p className="text-sm font-semibold text-foreground">Camera 1 · Chân dung tài xế</p>
+          <p className="text-sm font-semibold text-foreground">Camera 3 · Chân dung tài xế</p>
         </div>
 
         <div className="relative aspect-[4/3] overflow-hidden rounded-lg border border-white/10 bg-black/60">
@@ -90,9 +126,17 @@ export const LivePortraitCamera = forwardRef<LiveCameraHandle, LivePortraitCamer
               <Loader2 size={28} className="animate-spin text-violet-400" />
             </div>
           )}
-          {error && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/70 p-3 text-center">
-              <p className="text-xs text-rose-300">{error}</p>
+          {error && !active && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/70 p-4 text-center">
+              <AlertCircle size={20} className="shrink-0 text-rose-400" />
+              <p className="text-xs text-rose-300 leading-relaxed">{error}</p>
+              <button
+                type="button"
+                onClick={handleRetry}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-rose-500/20 border border-rose-500/30 px-3 py-1.5 text-xs font-semibold text-rose-300 hover:bg-rose-500/30 transition"
+              >
+                <RefreshCw size={12} /> Thử lại
+              </button>
             </div>
           )}
         </div>

@@ -4,13 +4,11 @@ import {
   AlertCircle,
   Car,
   Bike,
-  User,
-  Mail,
-  Phone,
-  Wallet,
-  Calendar,
-  ShieldCheck,
-  ShieldAlert,
+  ArrowLeft,
+  ArrowRight,
+  UserSquare,
+  QrCode,
+  Settings,
   Image as ImageIcon,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -20,10 +18,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useBuildingContext } from '@/hooks/useBuildingContext';
 import { staffApi, type PlateInfo } from '@/services/staff/staffApi';
+import { useAssignedGates } from '@/hooks/staff/useAssignedGates';
 import { LivePlateCamera, type PlateScanResult, type LiveCameraHandle } from '@/components/staff/LivePlateCamera';
 import { LiveQRCamera } from '@/components/staff/LiveQRCamera';
 import { LivePortraitCamera } from '@/components/staff/LivePortraitCamera';
-import { QRCodeScannerModal } from '@/components/staff/QRCodeScannerModal';
+import { useCameraDevices, type CameraRole } from '@/hooks/useCameraDevices';
 import { normalizePlate } from '@/utils/plate';
 
 type VehicleKind = 'car' | 'motorcycle';
@@ -36,6 +35,8 @@ const ALLOWED_TYPES = ['CAR', 'MOTORCYCLE'];
 
 export function StaffOperationsPage() {
   const { buildingId, building } = useBuildingContext();
+  const { gates } = useAssignedGates();
+  const entryGateId = gates.find((g) => g.direction === 'in' || g.direction === 'both')?._id;
 
   const [loading, setLoading] = useState(false);
 
@@ -54,20 +55,36 @@ export function StaffOperationsPage() {
   const qrCamRef = useRef<LiveCameraHandle>(null);
   const portraitCamRef = useRef<LiveCameraHandle>(null);
 
+  // Gán thiết bị camera vật lý cho từng vai trò (hỗ trợ nhiều camera thực tế).
+  const { devices, assignment, assign, requestAndRefresh } = useCameraDevices();
+  const [cameraSettingsOpen, setCameraSettingsOpen] = useState(false);
+  // Số thiết bị KHÁC NHAU đã gán — đủ 2+ thì mới có ý nghĩa "mở nhiều camera cùng lúc".
+  const distinctDeviceCount = new Set(
+    [assignment.plate, assignment.portrait, assignment.qr].filter(Boolean),
+  ).size;
+  // Chế độ nhiều camera: mở cả 3 cùng lúc để chụp đồng thời (quầy có nhiều camera).
+  const [multiCamMode, setMultiCamMode] = useState(() => distinctDeviceCount >= 2);
+
+  // Wizard tuần tự: mỗi bước chỉ 1 camera chạy.
+  //  1: Nhận diện xe (biển số AI / QR) · 2: Chụp chân dung · 3: Xác nhận & check-in
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [identifyMode, setIdentifyMode] = useState<'plate' | 'qr'>('plate');
+
   // Plate → account info (chỉ để hiển thị; khách vãng lai khi không có tài khoản)
-  const [plateAccountInfo, setPlateAccountInfo] = useState<{ hasAccount: boolean; registeredVehicleType?: 'car' | 'motorcycle' | null; user: { id: string; fullName: string; email: string } | null } | null>(null);
+  const [plateAccountInfo, setPlateAccountInfo] = useState<PlateInfo | null>(null);
+  // Gói floating: khi biển số có gói còn hạn, staff phải chọn 1 slot trống.
+  const [freeSlots, setFreeSlots] = useState<{ _id: string; code: string; floor?: { name?: string; code?: string } | null }[]>([]);
+  const [selectedSlotId, setSelectedSlotId] = useState('');
   // Reject (từ chối) check-in flow
   const [rejectOpen, setRejectOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
-
-  // Popup đối chiếu biển số sau khi quét
-  const [scannedPlateInfo, setScannedPlateInfo] = useState<PlateInfo | null>(null);
-  const [isPlateInfoModalOpen, setIsPlateInfoModalOpen] = useState(false);
-  const [isPlateInfoLoading, setIsPlateInfoLoading] = useState(false);
-
-  // Check-in đặt chỗ trước
-  const [reservationCode, setReservationCode] = useState('');
-  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
+  // QR user scan: thông tin tài khoản + gói đang hoạt động
+  const [userQrInfo, setUserQrInfo] = useState<{
+    fullName: string;
+    email: string;
+    walletBalance?: number;
+    activePackages: { id: string; name: string; code: string | null; plateNumber: string; endDate?: string }[];
+  } | null>(null);
 
   // Both vehicle types supported by default (staff can always override)
   const allowedTypes = ALLOWED_TYPES;
@@ -118,39 +135,81 @@ export function StaffOperationsPage() {
   useEffect(() => {
     const clean = plateNumber.trim().toUpperCase();
     if (clean.length >= 7) {
+      let cancelled = false;
       staffApi
         .lookupPlate(clean)
         .then((res) => {
-          setPlateAccountInfo((res as { data?: typeof plateAccountInfo })?.data ?? null);
+          if (!cancelled) setPlateAccountInfo((res as { data?: PlateInfo })?.data ?? null);
         })
         .catch(() => undefined);
+      return () => { cancelled = true; };
     } else {
       setPlateAccountInfo(null);
     }
   }, [plateNumber]);
 
-  // Camera 1 nhận diện biển số → lưu ảnh biển số + mở popup đối chiếu.
-  const handlePlateDetected = ({ plateNumber: plate, brand, plateImage: img }: PlateScanResult) => {
-    setPlateImage(img);
-    void openPlateInfo(plate, brand);
-  };
+  // Biển số có gói còn hạn → tải slot trống của tòa nhà để staff gán chỗ.
+  const hasActivePackage = Boolean(plateAccountInfo?.hasActivePackage);
+  const hasActiveReservation = Boolean(plateAccountInfo?.hasActiveReservation);
+  // Loại check-in quyết định luật ảnh:
+  //  - 'package'/'reservation': chỉ cần quét (biển/QR) định danh — không bắt ảnh.
+  //  - 'standard' (khách vãng lai / user thường): bắt buộc ảnh biển + chân dung.
+  const checkInKind: 'package' | 'reservation' | 'standard' = hasActivePackage
+    ? 'package'
+    : hasActiveReservation
+      ? 'reservation'
+      : 'standard';
+  // Load free slots cho cả package lẫn standard (khách vãng lai / user thường cũng phải chọn slot)
+  const needsSlotSelection = hasActivePackage || checkInKind === 'standard';
+  useEffect(() => {
+    if (!needsSlotSelection || !buildingId) {
+      setFreeSlots([]);
+      setSelectedSlotId('');
+      return;
+    }
+    let cancelled = false;
+    staffApi
+      .freeSlots(buildingId)
+      .then((res) => {
+        if (!cancelled) setFreeSlots((res as { data?: { items?: typeof freeSlots } })?.data?.items ?? []);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [needsSlotSelection, buildingId]);
 
-  // Tra cứu biển số rồi mở popup đối chiếu (dùng cho cả Camera 1 và Camera 2/QR).
-  const openPlateInfo = async (plate: string, brand: string | null = null) => {
+  // Áp biển số đã nhận diện (AI/QR) → lookup chạy tự động qua effect theo plateNumber.
+  const applyPlate = (plate: string, brand: string | null = null) => {
     const clean = normalizePlate(plate) || plate.trim().toUpperCase();
     setPlateNumber(clean);
     if (brand) setVehicleBrand(brand);
-    setIsPlateInfoLoading(true);
-    try {
-      const res = await staffApi.lookupPlate(clean);
-      const info = (res as { data?: PlateInfo })?.data ?? null;
-      setScannedPlateInfo(info ?? { plateNumber: clean, hasAccount: false });
-    } catch {
-      setScannedPlateInfo({ plateNumber: clean, hasAccount: false });
-    } finally {
-      setIsPlateInfoLoading(false);
-      setIsPlateInfoModalOpen(true);
+  };
+
+  // Camera biển số: luôn lưu ảnh vừa chụp; chỉ áp số biển nếu AI đọc được.
+  // KHÔNG tự sang bước sau — đợi lookup để biết loại (gói/đặt chỗ/thường) rồi mới rẽ.
+  const handlePlateDetected = ({ plateNumber: plate, brand, plateImage: img }: PlateScanResult) => {
+    setPlateImage(img);
+    if (plate) applyPlate(plate, brand);
+  };
+
+  // Rời bước 1 → bước Chụp chân dung. MỌI loại check-in đều cần ảnh chân dung
+  // (đối chiếu người khi lấy xe). Ảnh biển số bắt buộc thêm với khách vãng lai /
+  // user thường (gói/đặt chỗ định danh bằng quét nên biển là tuỳ chọn).
+  const proceedFromIdentify = () => {
+    setStep(2);
+  };
+
+  // Bước 2: chụp chân dung từ camera chân dung → lưu ảnh → sang bước Xác nhận.
+  const capturePortraitAndNext = () => {
+    const img = portraitCamRef.current?.capture() ?? null;
+    if (!img) {
+      setOpMessage({ type: 'err', text: 'Camera chân dung chưa sẵn sàng. Vui lòng thử lại.' });
+      return;
     }
+    setPortraitImage(img);
+    setOpMessage(null);
+    setStep(3);
   };
 
   // Camera 3: quét QR (token biển số PLT- hoặc ID tài khoản) → mở popup. Ảnh chân
@@ -162,7 +221,8 @@ export function StaffOperationsPage() {
         data?: {
           kind: 'plate' | 'user';
           plate?: { plateNumber: string; vehicleType?: string; brand?: string | null } | null;
-          user?: { id: string; fullName: string; email: string } | null;
+          user?: { id: string; fullName: string; email: string; walletBalance?: number } | null;
+          activePackages?: { id: string; name: string; code: string | null; plateNumber: string; endDate?: string }[];
         };
       })?.data;
       if (!data) {
@@ -172,9 +232,17 @@ export function StaffOperationsPage() {
       if (data.kind === 'plate' && data.plate?.plateNumber) {
         if (data.plate.vehicleType === 'motorcycle') setVehicleType('motorcycle');
         else if (data.plate.vehicleType) setVehicleType('car');
-        await openPlateInfo(data.plate.plateNumber, data.plate.brand ?? null);
+        applyPlate(data.plate.plateNumber, data.plate.brand ?? null);
+        // Không tự sang bước — đợi lookup để biết loại; nhân viên bấm "Tiếp tục".
+        setOpMessage({ type: 'ok', text: `Đã nhận diện biển số ${data.plate.plateNumber}. Bấm "Tiếp tục".` });
       } else if (data.user) {
-        setOpMessage({ type: 'ok', text: `Đã nhận diện tài khoản: ${data.user.fullName} (${data.user.email}). Đã lưu ảnh chân dung.` });
+        setUserQrInfo({
+          fullName: data.user.fullName,
+          email: data.user.email,
+          walletBalance: data.user.walletBalance,
+          activePackages: data.activePackages ?? [],
+        });
+        setOpMessage({ type: 'ok', text: `Đã nhận diện tài khoản: ${data.user.fullName}. Vui lòng quét/nhập biển số xe.` });
       } else {
         setOpMessage({ type: 'err', text: 'Mã QR không khớp với tài khoản hoặc phương tiện nào.' });
       }
@@ -189,10 +257,19 @@ export function StaffOperationsPage() {
     setPlateImage(null);
     setPortraitImage(null);
     setPlateAccountInfo(null);
+    setFreeSlots([]);
+    setSelectedSlotId('');
+    setStep(1);
+    setIdentifyMode('plate');
   };
 
   const onCheckIn = async () => {
     setOpMessage(null);
+    // Gói floating: bắt buộc chọn slot trống cho xe mua gói.
+    if (hasActivePackage && !selectedSlotId) {
+      setOpMessage({ type: 'err', text: 'Xe này có gói dài hạn — vui lòng chọn 1 chỗ đỗ trống trước khi check-in.' });
+      return;
+    }
     setLoading(true);
     const currentPlate = normalizePlate(plateNumber) || plateNumber.trim().toUpperCase();
     // Ensure BOTH images are captured at check-in: use the already-scanned frame
@@ -209,6 +286,8 @@ export function StaffOperationsPage() {
         vehicleBrand: vehicleBrand || undefined,
         plateImage: plateImg,
         portraitImage: portraitImg,
+        slot: selectedSlotId || undefined,
+        gate: entryGateId || undefined,
       });
       setOpMessage({ type: 'ok', text: `Đã tạo phiên gửi xe cho biển số ${currentPlate} thành công.` });
       resetForm();
@@ -248,17 +327,6 @@ export function StaffOperationsPage() {
     plateAccountInfo?.registeredVehicleType && plateAccountInfo.registeredVehicleType !== vehicleType
   );
 
-  const onCheckInReservation = async () => {
-    if (!reservationCode.trim()) return;
-    setOpMessage(null);
-    try {
-      await staffApi.checkInReservation(reservationCode.trim());
-      setOpMessage({ type: 'ok', text: 'Check-in đặt chỗ trước thành công.' });
-      setReservationCode('');
-    } catch (err) {
-      setOpMessage({ type: 'err', text: err instanceof Error ? err.message : 'Check-in đặt chỗ thất bại' });
-    }
-  };
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }} className="grid gap-6">
@@ -281,135 +349,463 @@ export function StaffOperationsPage() {
         </div>
       </section>
 
-      {/* 3 camera riêng biệt: Chân dung · Biển số · QR */}
-      <section className="grid gap-4 lg:grid-cols-3">
-        <LivePortraitCamera ref={portraitCamRef} paused={isPlateInfoModalOpen} />
-        <LivePlateCamera ref={plateCamRef} onDetected={handlePlateDetected} busy={loading || isPlateInfoLoading} />
-        <LiveQRCamera ref={qrCamRef} onResult={handleResolveIdQr} paused={isPlateInfoModalOpen} />
-      </section>
-
-      {/* Main panel */}
-      <section className="grid gap-6 xl:grid-cols-[1.05fr,0.95fr]">
-        {/* Form vận hành */}
+      {/* Check-in — chế độ Tuần tự (1 camera/bước) hoặc Nhiều camera (mở cùng lúc) */}
+      <section className={`mx-auto w-full space-y-4 ${multiCamMode ? 'max-w-6xl' : 'max-w-3xl'}`}>
         <Card>
           <CardHeader>
-            <CardTitle>Thông tin xe vào</CardTitle>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <CardTitle>Check-in xe vào</CardTitle>
+              <div className="flex items-center gap-2">
+                {/* Toggle chế độ */}
+                <div className="flex rounded-lg border border-border bg-muted p-0.5 text-[11px] font-bold">
+                  <button
+                    type="button"
+                    onClick={() => setMultiCamMode(false)}
+                    className={`rounded-md px-2.5 py-1 transition ${!multiCamMode ? 'bg-primary text-primary-foreground shadow' : 'text-muted-foreground hover:text-foreground'}`}
+                  >
+                    Tuần tự
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMultiCamMode(true)}
+                    className={`rounded-md px-2.5 py-1 transition ${multiCamMode ? 'bg-primary text-primary-foreground shadow' : 'text-muted-foreground hover:text-foreground'}`}
+                  >
+                    Nhiều camera
+                  </button>
+                </div>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => { setCameraSettingsOpen(true); void requestAndRefresh(); }}
+                  className="gap-1.5 text-xs"
+                  title="Gán camera cho từng vai trò (khi có nhiều camera)"
+                >
+                  <Settings size={13} /> Cài đặt camera
+                </Button>
+              </div>
+            </div>
+            {/* Step indicator (chỉ ở chế độ tuần tự) */}
+            {!multiCamMode && (
+            <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] font-bold">
+              {[
+                { n: 1, label: 'Nhận diện xe' },
+                { n: 2, label: 'Chụp chân dung' },
+                { n: 3, label: 'Xác nhận' },
+              ].map((s, i) => (
+                <div key={s.n} className="flex items-center gap-2">
+                  <span className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] ${step >= s.n ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>{s.n}</span>
+                  <span className={step === s.n ? 'text-foreground' : 'text-muted-foreground'}>{s.label}</span>
+                  {i < 2 && <span className="mx-1 hidden h-px w-5 bg-border sm:inline-block" />}
+                </div>
+              ))}
+            </div>
+            )}
           </CardHeader>
           <CardContent className="space-y-5">
-            <div className="space-y-4">
-              <div className="grid gap-1.5">
-                <label className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Biển số xe</label>
-                <Input
-                  value={plateNumber}
-                  onChange={(e) => setPlateNumber(e.target.value)}
-                  onBlur={(e) => {
-                    const n = normalizePlate(e.target.value);
-                    if (n) setPlateNumber(n);
-                  }}
-                  placeholder="59G2-038.80"
-                  onKeyDown={(e) => e.key === 'Enter' && onCheckIn()}
-                />
-                {vehicleBrand && (
-                  <span className="inline-flex w-fit items-center gap-1 rounded-full border border-sky-500/30 bg-sky-500/10 px-2.5 py-1 text-[11px] font-semibold text-sky-300">
-                    <Car size={11} /> Hãng xe: {vehicleBrand}
-                  </span>
+            {/* ══ CHẾ ĐỘ NHIỀU CAMERA — mở cả 3 cùng lúc, chụp đồng thời ══ */}
+            {multiCamMode && (
+              <div className="space-y-5">
+                <div className="grid gap-3 lg:grid-cols-3">
+                  <LivePlateCamera ref={plateCamRef} onDetected={handlePlateDetected} busy={loading} deviceId={assignment.plate} />
+                  <LivePortraitCamera ref={portraitCamRef} deviceId={assignment.portrait} />
+                  <LiveQRCamera ref={qrCamRef} onResult={handleResolveIdQr} deviceId={assignment.qr} />
+                </div>
+
+                {distinctDeviceCount < 2 && (
+                  <p className="rounded-lg border border-amber-500/20 bg-amber-500/10 p-2.5 text-[11px] text-amber-300">
+                    Đang dùng chung 1 webcam cho cả 3 vai trò nên các khung giống nhau. Cắm thêm camera rồi vào “Cài đặt camera” gán riêng từng cái để chụp biển số &amp; chân dung đồng thời.
+                  </p>
                 )}
-                {plateNumber.trim().length >= 7 && plateAccountInfo?.hasAccount && (
-                  <div className="mt-1 rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-2.5 flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                    <p className="text-xs text-emerald-400">
+
+                {/* Biển số + tài khoản */}
+                <div className="grid gap-1.5">
+                  <label className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Biển số xe</label>
+                  <Input
+                    value={plateNumber}
+                    onChange={(e) => setPlateNumber(e.target.value)}
+                    onBlur={(e) => { const n = normalizePlate(e.target.value); if (n) setPlateNumber(n); }}
+                    placeholder="59G2-038.80"
+                    onKeyDown={(e) => { if (e.key === 'Enter' && !(!plateNumber.trim() || loading || !!buildingSupportWarning || (hasActivePackage && !selectedSlotId))) onCheckIn(); }}
+                  />
+                  {vehicleBrand && (
+                    <span className="inline-flex w-fit items-center gap-1 rounded-full border border-sky-500/30 bg-sky-500/10 px-2.5 py-1 text-[11px] font-semibold text-sky-300">
+                      <Car size={11} /> Hãng xe: {vehicleBrand}
+                    </span>
+                  )}
+                  {plateNumber.trim().length >= 7 && plateAccountInfo?.hasAccount && (
+                    <div className="mt-1 rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-2.5 text-xs text-emerald-400">
                       Thành viên: <strong className="text-foreground">{plateAccountInfo.user?.fullName}</strong> ({plateAccountInfo.user?.email})
-                    </p>
-                  </div>
-                )}
-                {plateNumber.trim().length >= 7 && plateAccountInfo && !plateAccountInfo.hasAccount && (
-                  <div className="mt-1 rounded-lg border border-amber-500/20 bg-amber-500/10 p-2.5 flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full bg-amber-500" />
-                    <p className="text-xs text-amber-300">
-                      Biển số <strong className="text-foreground">{plateNumber.toUpperCase()}</strong> — <strong>Khách vãng lai</strong> (chưa có tài khoản).
-                    </p>
-                  </div>
-                )}
-              </div>
+                    </div>
+                  )}
+                  {plateNumber.trim().length >= 7 && plateAccountInfo && !plateAccountInfo.hasAccount && (
+                    <div className="mt-1 rounded-lg border border-amber-500/20 bg-amber-500/10 p-2.5 text-xs text-amber-300">
+                      <strong className="text-foreground">Khách vãng lai</strong> (chưa có tài khoản).
+                    </div>
+                  )}
+                  {plateNumber.trim().length >= 7 && checkInKind === 'package' && (
+                    <div className="mt-1 rounded-lg border border-amber-500/30 bg-amber-500/10 p-2.5 text-xs text-amber-300">
+                      🅿️ Xe có gói dài hạn{plateAccountInfo?.activePackage?.name ? ` "${plateAccountInfo.activePackage.name}"` : ''} — chọn chỗ trống bên dưới.
+                    </div>
+                  )}
+                  {plateNumber.trim().length >= 7 && checkInKind === 'reservation' && (
+                    <div className="mt-1 rounded-lg border border-sky-500/30 bg-sky-500/10 p-2.5 text-xs text-sky-300">
+                      📅 Xe có đặt chỗ{plateAccountInfo?.activeReservation?.code ? ` (mã ${plateAccountInfo.activeReservation.code})` : ''}.
+                    </div>
+                  )}
+                </div>
 
-              {/* Captured snapshots preview */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Ảnh biển số</p>
-                  <div className="aspect-[4/3] overflow-hidden rounded-lg border border-border bg-muted/40 flex items-center justify-center">
-                    {plateImage ? (
-                      <img src={plateImage} alt="Ảnh biển số" className="h-full w-full object-cover" />
-                    ) : (
-                      <ImageIcon size={20} className="text-muted-foreground/40" />
+                {/* Loại xe + cảnh báo */}
+                <div className="grid gap-1.5">
+                  <label className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Loại xe</label>
+                  <div className="flex gap-2 p-1 rounded-lg bg-muted border border-border">
+                    <button type="button" disabled={!allowedTypes.includes('CAR')} onClick={() => setVehicleType('car')}
+                      className={`flex-1 flex items-center justify-center gap-1.5 h-8 rounded-md text-xs font-bold transition-all ${vehicleType === 'car' ? 'bg-primary text-primary-foreground shadow' : 'text-muted-foreground hover:text-foreground disabled:opacity-30'}`}>
+                      <Car size={13} /> Ô tô
+                    </button>
+                    <button type="button" disabled={!allowedTypes.includes('MOTORCYCLE')} onClick={() => setVehicleType('motorcycle')}
+                      className={`flex-1 flex items-center justify-center gap-1.5 h-8 rounded-md text-xs font-bold transition-all ${vehicleType === 'motorcycle' ? 'bg-primary text-primary-foreground shadow' : 'text-muted-foreground hover:text-foreground disabled:opacity-30'}`}>
+                      <Bike size={13} /> Xe máy
+                    </button>
+                  </div>
+                  {plateTypeWarning && <p className="text-[11px] text-amber-400 flex items-center gap-1"><AlertCircle size={11} /> {plateTypeWarning}</p>}
+                  {buildingSupportWarning && <p className="text-[11px] text-rose-400 flex items-center gap-1"><AlertCircle size={11} /> {buildingSupportWarning}</p>}
+                  {vehicleTypeMismatch && (
+                    <p className="text-[11px] text-rose-300 flex items-center gap-1">
+                      <AlertCircle size={12} /> Loại xe không khớp đăng ký (đã đăng ký: <strong>{plateAccountInfo?.registeredVehicleType === 'car' ? 'Ô tô' : 'Xe máy'}</strong>).
+                    </p>
+                  )}
+                </div>
+
+                {/* Chọn ô đỗ — gói dài hạn và standard (walk-in / user thường) */}
+                {needsSlotSelection && (
+                  <div className={`rounded-xl border p-3 space-y-2 ${hasActivePackage ? 'border-amber-500/30 bg-amber-500/10' : 'border-sky-500/30 bg-sky-500/10'}`}>
+                    <p className={`text-[11px] font-bold flex items-center gap-1 ${hasActivePackage ? 'text-amber-300' : 'text-sky-300'}`}>
+                      <AlertCircle size={12} />
+                      {hasActivePackage ? 'Xe có gói dài hạn — chọn 1 chỗ đỗ trống:' : 'Chọn ô đỗ xe cho khách:'}
+                    </p>
+                    <select value={selectedSlotId} onChange={(e) => setSelectedSlotId(e.target.value)}
+                      className={`h-10 w-full rounded-lg border border-white/10 bg-slate-950 px-3 text-sm font-semibold text-white outline-none ${hasActivePackage ? 'focus:border-amber-400/60' : 'focus:border-sky-400/60'}`}>
+                      <option value="">-- Chọn ô đỗ trống --</option>
+                      {freeSlots.map((s) => (
+                        <option key={s._id} value={s._id}>{s.code}{s.floor?.name || s.floor?.code ? ` · ${s.floor?.name || s.floor?.code}` : ''}</option>
+                      ))}
+                    </select>
+                    {freeSlots.length === 0 && (
+                      <p className="text-[11px] text-slate-400">Tòa nhà không có slot cố định — xe đỗ theo sức chứa chung.</p>
                     )}
                   </div>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Ảnh chân dung</p>
-                  <div className="aspect-[4/3] overflow-hidden rounded-lg border border-border bg-muted/40 flex items-center justify-center">
-                    {portraitImage ? (
-                      <img src={portraitImage} alt="Ảnh chân dung" className="h-full w-full object-cover" />
-                    ) : (
-                      <ImageIcon size={20} className="text-muted-foreground/40" />
-                    )}
-                  </div>
+                )}
+
+                {/* Cảnh báo ảnh còn thiếu (standard: cần cả biển số + chân dung từ camera) */}
+                {checkInKind === 'standard' && !plateImage && (
+                  <p className="text-[11px] text-rose-300 flex items-center gap-1">
+                    <AlertCircle size={12} /> Cần bấm <strong>"Chụp &amp; nhận diện"</strong> ở camera biển số trước khi check-in.
+                  </p>
+                )}
+
+                <p className="text-[11px] text-muted-foreground">Ảnh chân dung được chụp tự động từ camera chân dung khi bấm Check-in.</p>
+
+                <div className="flex gap-2">
+                  <Button
+                    onClick={onCheckIn}
+                    disabled={
+                      !plateNumber.trim() ||
+                      loading ||
+                      !!buildingSupportWarning ||
+                      (hasActivePackage && !selectedSlotId) ||
+                      (checkInKind === 'standard' && !plateImage) ||
+                      (checkInKind === 'standard' && freeSlots.length > 0 && !selectedSlotId)
+                    }
+                    className="flex-1 h-11 gap-2 bg-gradient-to-r from-orange-500 to-amber-400 text-slate-950 hover:brightness-110 disabled:opacity-60"
+                  >
+                    <ScanLine size={16} /> Check-in (xe vào)
+                  </Button>
+                  <Button type="button" variant="outline" onClick={() => setRejectOpen(true)} disabled={loading || !plateNumber.trim()}
+                    className="h-11 border-rose-500/40 text-rose-400 hover:bg-rose-500/10">
+                    Từ chối
+                  </Button>
                 </div>
               </div>
+            )}
 
-              <div className="grid gap-1.5">
-                <label className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Loại xe</label>
+            {/* ── BƯỚC 1 — Nhận diện xe ── */}
+            {!multiCamMode && step === 1 && (
+              <div className="space-y-4">
                 <div className="flex gap-2 p-1 rounded-lg bg-muted border border-border">
                   <button
                     type="button"
-                    disabled={!allowedTypes.includes('CAR')}
-                    onClick={() => setVehicleType('car')}
-                    className={`flex-1 flex items-center justify-center gap-1.5 h-8 rounded-md text-xs font-bold transition-all ${vehicleType === 'car' ? 'bg-primary text-primary-foreground shadow' : 'text-muted-foreground hover:text-foreground disabled:opacity-30'}`}
+                    onClick={() => setIdentifyMode('plate')}
+                    className={`flex-1 flex items-center justify-center gap-1.5 h-9 rounded-md text-xs font-bold transition-all ${identifyMode === 'plate' ? 'bg-primary text-primary-foreground shadow' : 'text-muted-foreground hover:text-foreground'}`}
                   >
-                    <Car size={13} /> Ô tô
+                    <ScanLine size={13} /> Quét biển số (AI)
                   </button>
                   <button
                     type="button"
-                    disabled={!allowedTypes.includes('MOTORCYCLE')}
-                    onClick={() => setVehicleType('motorcycle')}
-                    className={`flex-1 flex items-center justify-center gap-1.5 h-8 rounded-md text-xs font-bold transition-all ${vehicleType === 'motorcycle' ? 'bg-primary text-primary-foreground shadow' : 'text-muted-foreground hover:text-foreground disabled:opacity-30'}`}
+                    onClick={() => setIdentifyMode('qr')}
+                    className={`flex-1 flex items-center justify-center gap-1.5 h-9 rounded-md text-xs font-bold transition-all ${identifyMode === 'qr' ? 'bg-primary text-primary-foreground shadow' : 'text-muted-foreground hover:text-foreground'}`}
                   >
-                    <Bike size={13} /> Xe máy
+                    <QrCode size={13} /> Quét QR
                   </button>
                 </div>
-                {plateTypeWarning && <p className="text-[11px] text-amber-400 flex items-center gap-1"><AlertCircle size={11} /> {plateTypeWarning}</p>}
-                {buildingSupportWarning && <p className="text-[11px] text-rose-400 flex items-center gap-1"><AlertCircle size={11} /> {buildingSupportWarning}</p>}
-                {vehicleTypeMismatch && (
-                  <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 p-2.5 text-[11px] text-rose-300 flex items-center justify-between gap-2">
-                    <span className="flex items-center gap-1">
-                      <AlertCircle size={12} /> Loại xe không khớp đăng ký (đã đăng ký: <strong>{plateAccountInfo?.registeredVehicleType === 'car' ? 'Ô tô' : 'Xe máy'}</strong>).
+
+                {identifyMode === 'plate' ? (
+                  <LivePlateCamera ref={plateCamRef} onDetected={handlePlateDetected} busy={loading} deviceId={assignment.plate} />
+                ) : (
+                  <LiveQRCamera ref={qrCamRef} onResult={handleResolveIdQr} deviceId={assignment.qr} />
+                )}
+
+                <div className="grid gap-1.5">
+                  <label className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Biển số xe (hoặc nhập tay)</label>
+                  <Input
+                    value={plateNumber}
+                    onChange={(e) => setPlateNumber(e.target.value)}
+                    onBlur={(e) => {
+                      const n = normalizePlate(e.target.value);
+                      if (n) setPlateNumber(n);
+                    }}
+                    placeholder="59G2-038.80"
+                    onKeyDown={(e) => { if (e.key === 'Enter' && plateNumber.trim().length >= 7 && !(checkInKind === 'standard' && !plateImage)) proceedFromIdentify(); }}
+                  />
+                  {vehicleBrand && (
+                    <span className="inline-flex w-fit items-center gap-1 rounded-full border border-sky-500/30 bg-sky-500/10 px-2.5 py-1 text-[11px] font-semibold text-sky-300">
+                      <Car size={11} /> Hãng xe: {vehicleBrand}
                     </span>
-                    <button type="button" onClick={() => setRejectOpen(true)} className="shrink-0 rounded-md bg-rose-500 px-2.5 py-1 text-[10px] font-bold text-white hover:bg-rose-400">
-                      Từ chối
-                    </button>
+                  )}
+                  {plateNumber.trim().length >= 7 && plateAccountInfo?.hasAccount && (
+                    <div className="mt-1 rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-2.5 flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                      <p className="text-xs text-emerald-400">
+                        Thành viên: <strong className="text-foreground">{plateAccountInfo.user?.fullName}</strong> ({plateAccountInfo.user?.email})
+                      </p>
+                    </div>
+                  )}
+                  {plateNumber.trim().length >= 7 && plateAccountInfo && !plateAccountInfo.hasAccount && (
+                    <div className="mt-1 rounded-lg border border-amber-500/20 bg-amber-500/10 p-2.5 flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full bg-amber-500" />
+                      <p className="text-xs text-amber-300">
+                        Biển số <strong className="text-foreground">{plateNumber.toUpperCase()}</strong> — <strong>Khách vãng lai</strong> (chưa có tài khoản).
+                      </p>
+                    </div>
+                  )}
+                  {/* Badge loại check-in đã nhận diện */}
+                  {plateNumber.trim().length >= 7 && checkInKind === 'package' && (
+                    <div className="mt-1 rounded-lg border border-amber-500/30 bg-amber-500/10 p-2.5 text-xs text-amber-300">
+                      🅿️ Xe có <strong>gói dài hạn</strong>{plateAccountInfo?.activePackage?.name ? ` "${plateAccountInfo.activePackage.name}"` : ''} — bước sau chụp chân dung &amp; chọn chỗ trống.
+                    </div>
+                  )}
+                  {plateNumber.trim().length >= 7 && checkInKind === 'reservation' && (
+                    <div className="mt-1 rounded-lg border border-sky-500/30 bg-sky-500/10 p-2.5 text-xs text-sky-300">
+                      📅 Xe có <strong>đặt chỗ</strong>{plateAccountInfo?.activeReservation?.code ? ` (mã ${plateAccountInfo.activeReservation.code})` : ''} — bước sau chụp chân dung để xác nhận.
+                    </div>
+                  )}
+                  {plateNumber.trim().length >= 7 && checkInKind === 'standard' && !plateImage && (
+                    <div className="mt-1 rounded-lg border border-rose-500/20 bg-rose-500/10 p-2.5 text-[11px] text-rose-300">
+                      Cần <strong>ảnh biển số</strong>: bấm “Chụp &amp; nhận diện” ở camera biển số (bắt buộc với khách vãng lai / user thường).
+                    </div>
+                  )}
+                </div>
+
+                <Button
+                  onClick={proceedFromIdentify}
+                  disabled={plateNumber.trim().length < 7 || !!buildingSupportWarning || (checkInKind === 'standard' && !plateImage)}
+                  className="w-full h-11 gap-2 bg-gradient-to-r from-orange-500 to-amber-400 text-slate-950 hover:brightness-110 disabled:opacity-60"
+                >
+                  Tiếp tục <ArrowRight size={16} />
+                </Button>
+              </div>
+            )}
+
+            {/* ── BƯỚC 2 — Chụp chân dung ── */}
+            {!multiCamMode && step === 2 && (
+              <div className="space-y-4">
+                <LivePortraitCamera ref={portraitCamRef} deviceId={assignment.portrait} />
+                {portraitImage && (
+                  <div className="flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-2 text-xs text-emerald-400">
+                    <UserSquare size={14} /> Đã có ảnh chân dung — có thể chụp lại nếu cần.
                   </div>
                 )}
+                <div className="flex gap-2">
+                  <Button type="button" variant="outline" onClick={() => setStep(1)} className="h-11 gap-1">
+                    <ArrowLeft size={16} /> Quay lại
+                  </Button>
+                  <Button onClick={capturePortraitAndNext} className="flex-1 h-11 gap-2 bg-gradient-to-r from-orange-500 to-amber-400 text-slate-950 hover:brightness-110">
+                    <UserSquare size={16} /> {portraitImage ? 'Chụp lại & tiếp tục' : 'Chụp chân dung & tiếp tục'}
+                  </Button>
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* Nút hành động */}
-            <div className="flex gap-2">
-              <Button
-                onClick={onCheckIn}
-                disabled={!plateNumber.trim() || loading || !!buildingSupportWarning}
-                className="flex-1 h-11 gap-2 bg-gradient-to-r from-orange-500 to-amber-400 text-slate-950 hover:brightness-110 disabled:opacity-60"
-              >
-                <ScanLine size={16} /> Check-in (xe vào)
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setRejectOpen(true)}
-                disabled={loading || !plateNumber.trim()}
-                className="h-11 border-rose-500/40 text-rose-400 hover:bg-rose-500/10"
-              >
-                Từ chối
-              </Button>
-            </div>
+            {/* ── BƯỚC 3 — Xác nhận & check-in ── */}
+            {!multiCamMode && step === 3 && (
+              <div className="space-y-5">
+                {/* Banner loại check-in đã nhận diện */}
+                {checkInKind === 'package' && (
+                  <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-2.5 text-xs text-amber-300">
+                    🅿️ Xe có gói dài hạn{plateAccountInfo?.activePackage?.name ? ` "${plateAccountInfo.activePackage.name}"` : ''} — chọn chỗ trống bên dưới rồi check-in.
+                  </div>
+                )}
+                {checkInKind === 'reservation' && (
+                  <div className="rounded-lg border border-sky-500/30 bg-sky-500/10 p-2.5 text-xs text-sky-300">
+                    📅 Xe có đặt chỗ{plateAccountInfo?.activeReservation?.code ? ` (mã ${plateAccountInfo.activeReservation.code})` : ''} — xác nhận để cho vào.
+                  </div>
+                )}
+
+                {/* Ảnh đã chụp — chân dung bắt buộc cho mọi loại; biển bắt buộc với vãng lai/user thường */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                      Ảnh biển số{checkInKind !== 'standard' ? ' (tuỳ chọn)' : ''}
+                    </p>
+                    <div className="aspect-[4/3] overflow-hidden rounded-lg border border-border bg-muted/40 flex items-center justify-center">
+                      {plateImage ? (
+                        <img src={plateImage} alt="Ảnh biển số" className="h-full w-full object-cover" />
+                      ) : (
+                        <ImageIcon size={20} className="text-muted-foreground/40" />
+                      )}
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Ảnh chân dung</p>
+                    <div className="aspect-[4/3] overflow-hidden rounded-lg border border-border bg-muted/40 flex items-center justify-center">
+                      {portraitImage ? (
+                        <img src={portraitImage} alt="Ảnh chân dung" className="h-full w-full object-cover" />
+                      ) : (
+                        <ImageIcon size={20} className="text-muted-foreground/40" />
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Biển số + tài khoản */}
+                <div className="grid gap-1.5">
+                  <label className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Biển số xe</label>
+                  <Input
+                    value={plateNumber}
+                    onChange={(e) => setPlateNumber(e.target.value)}
+                    onBlur={(e) => {
+                      const n = normalizePlate(e.target.value);
+                      if (n) setPlateNumber(n);
+                    }}
+                    placeholder="59G2-038.80"
+                  />
+                  {vehicleBrand && (
+                    <span className="inline-flex w-fit items-center gap-1 rounded-full border border-sky-500/30 bg-sky-500/10 px-2.5 py-1 text-[11px] font-semibold text-sky-300">
+                      <Car size={11} /> Hãng xe: {vehicleBrand}
+                    </span>
+                  )}
+                  {plateNumber.trim().length >= 7 && plateAccountInfo?.hasAccount && (
+                    <div className="mt-1 rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-2.5 flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                      <p className="text-xs text-emerald-400">
+                        Thành viên: <strong className="text-foreground">{plateAccountInfo.user?.fullName}</strong> ({plateAccountInfo.user?.email})
+                      </p>
+                    </div>
+                  )}
+                  {plateNumber.trim().length >= 7 && plateAccountInfo && !plateAccountInfo.hasAccount && (
+                    <div className="mt-1 rounded-lg border border-amber-500/20 bg-amber-500/10 p-2.5 flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full bg-amber-500" />
+                      <p className="text-xs text-amber-300">
+                        Biển số <strong className="text-foreground">{plateNumber.toUpperCase()}</strong> — <strong>Khách vãng lai</strong> (chưa có tài khoản).
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Loại xe + cảnh báo */}
+                <div className="grid gap-1.5">
+                  <label className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Loại xe</label>
+                  <div className="flex gap-2 p-1 rounded-lg bg-muted border border-border">
+                    <button
+                      type="button"
+                      disabled={!allowedTypes.includes('CAR')}
+                      onClick={() => setVehicleType('car')}
+                      className={`flex-1 flex items-center justify-center gap-1.5 h-8 rounded-md text-xs font-bold transition-all ${vehicleType === 'car' ? 'bg-primary text-primary-foreground shadow' : 'text-muted-foreground hover:text-foreground disabled:opacity-30'}`}
+                    >
+                      <Car size={13} /> Ô tô
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!allowedTypes.includes('MOTORCYCLE')}
+                      onClick={() => setVehicleType('motorcycle')}
+                      className={`flex-1 flex items-center justify-center gap-1.5 h-8 rounded-md text-xs font-bold transition-all ${vehicleType === 'motorcycle' ? 'bg-primary text-primary-foreground shadow' : 'text-muted-foreground hover:text-foreground disabled:opacity-30'}`}
+                    >
+                      <Bike size={13} /> Xe máy
+                    </button>
+                  </div>
+                  {plateTypeWarning && <p className="text-[11px] text-amber-400 flex items-center gap-1"><AlertCircle size={11} /> {plateTypeWarning}</p>}
+                  {buildingSupportWarning && <p className="text-[11px] text-rose-400 flex items-center gap-1"><AlertCircle size={11} /> {buildingSupportWarning}</p>}
+                  {vehicleTypeMismatch && (
+                    <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 p-2.5 text-[11px] text-rose-300 flex items-center justify-between gap-2">
+                      <span className="flex items-center gap-1">
+                        <AlertCircle size={12} /> Loại xe không khớp đăng ký (đã đăng ký: <strong>{plateAccountInfo?.registeredVehicleType === 'car' ? 'Ô tô' : 'Xe máy'}</strong>).
+                      </span>
+                      <button type="button" onClick={() => setRejectOpen(true)} className="shrink-0 rounded-md bg-rose-500 px-2.5 py-1 text-[10px] font-bold text-white hover:bg-rose-400">
+                        Từ chối
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Chọn ô đỗ: bắt buộc với gói dài hạn và check-in thường (khách vãng lai / user) */}
+                {needsSlotSelection && (
+                  <div className={`rounded-xl border p-3 space-y-2 ${hasActivePackage ? 'border-amber-500/30 bg-amber-500/10' : 'border-sky-500/30 bg-sky-500/10'}`}>
+                    <p className={`text-[11px] font-bold flex items-center gap-1 ${hasActivePackage ? 'text-amber-300' : 'text-sky-300'}`}>
+                      <AlertCircle size={12} />
+                      {hasActivePackage
+                        ? `Xe có gói dài hạn${plateAccountInfo?.activePackage?.name ? ` "${plateAccountInfo.activePackage.name}"` : ''}${plateAccountInfo?.activePackage?.maxHoursPerDay ? ` · free ${plateAccountInfo.activePackage.maxHoursPerDay}h/ngày` : ''} — chọn 1 chỗ đỗ trống:`
+                        : 'Chọn ô đỗ xe cho khách (bắt buộc nếu tòa nhà có slot):'}
+                    </p>
+                    <select
+                      value={selectedSlotId}
+                      onChange={(e) => setSelectedSlotId(e.target.value)}
+                      className={`h-10 w-full rounded-lg border border-white/10 bg-slate-950 px-3 text-sm font-semibold text-white outline-none ${hasActivePackage ? 'focus:border-amber-400/60' : 'focus:border-sky-400/60'}`}
+                    >
+                      <option value="">-- Chọn ô đỗ trống --</option>
+                      {freeSlots.map((s) => (
+                        <option key={s._id} value={s._id}>
+                          {s.code}{s.floor?.name || s.floor?.code ? ` · ${s.floor?.name || s.floor?.code}` : ''}
+                        </option>
+                      ))}
+                    </select>
+                    {freeSlots.length === 0 && (
+                      <p className="text-[11px] text-slate-400">Tòa nhà không có slot cố định — xe sẽ đỗ theo sức chứa chung.</p>
+                    )}
+                  </div>
+                )}
+
+                {/* Nhắc thiếu ảnh: chân dung bắt buộc mọi loại; biển bắt buộc với vãng lai/user thường */}
+                {(!portraitImage || (checkInKind === 'standard' && !plateImage)) && (
+                  <p className="text-[11px] text-rose-300 flex items-center gap-1">
+                    <AlertCircle size={12} /> Cần <strong>ảnh chân dung</strong>
+                    {checkInKind === 'standard' ? <> và <strong>ảnh biển số</strong></> : null} mới check-in được (quay lại bước trước để chụp).
+                  </p>
+                )}
+
+                {/* Nút hành động */}
+                <div className="flex gap-2">
+                  <Button type="button" variant="outline" onClick={() => setStep(2)} className="h-11 gap-1">
+                    <ArrowLeft size={16} /> Quay lại
+                  </Button>
+                  <Button
+                    onClick={onCheckIn}
+                    disabled={!plateNumber.trim() || loading || !!buildingSupportWarning || !portraitImage || (hasActivePackage && !selectedSlotId) || (checkInKind === 'standard' && !plateImage) || (checkInKind === 'standard' && freeSlots.length > 0 && !selectedSlotId)}
+                    className="flex-1 h-11 gap-2 bg-gradient-to-r from-orange-500 to-amber-400 text-slate-950 hover:brightness-110 disabled:opacity-60"
+                  >
+                    <ScanLine size={16} /> Check-in (xe vào)
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setRejectOpen(true)}
+                    disabled={loading || !plateNumber.trim()}
+                    className="h-11 border-rose-500/40 text-rose-400 hover:bg-rose-500/10"
+                  >
+                    Từ chối
+                  </Button>
+                </div>
+              </div>
+            )}
 
             {/* Phản hồi thao tác */}
             {opMessage && (
@@ -420,54 +816,77 @@ export function StaffOperationsPage() {
           </CardContent>
         </Card>
 
-        {/* Đặt chỗ trước + hướng dẫn */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Check-in đặt chỗ trước</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-xs text-muted-foreground">
-              Khách đặt chỗ trước có thể tự check-in tại cổng bằng cách quét QR phương tiện (không cần qua nhân viên).
-              Nhân viên cũng có thể nhập/quét mã đặt chỗ tại đây.
-            </p>
-            <div className="flex gap-2">
-              <Input
-                value={reservationCode}
-                onChange={(e) => setReservationCode(e.target.value)}
-                placeholder="Mã đặt chỗ / ID"
-                onKeyDown={(e) => e.key === 'Enter' && onCheckInReservation()}
-              />
-              <Button type="button" onClick={() => setIsQrModalOpen(true)} variant="secondary" className="shrink-0 gap-1.5">
-                Quét QR
-              </Button>
-              <Button
-                type="button"
-                onClick={onCheckInReservation}
-                disabled={!reservationCode.trim()}
-                className="shrink-0 bg-gradient-to-r from-orange-500 to-amber-400 text-slate-950 hover:brightness-110 disabled:opacity-60"
-              >
-                Check-in
-              </Button>
-            </div>
-            <div className="rounded-xl border border-border bg-card/50 p-4 text-xs text-muted-foreground">
-              <p className="font-semibold text-foreground mb-1">Xe ra / thanh toán</p>
-              Việc thu phí &amp; cho xe ra do nhân viên cổng ra thực hiện. Xem danh sách tại tab <Link to="/staff/parked" className="font-semibold text-primary hover:underline">“Xe đang đỗ”</Link>.
-            </div>
-          </CardContent>
-        </Card>
+        {/* Ghi chú: gói & đặt chỗ tự nhận diện khi quét — không cần nhập mã thủ công */}
+        <div className="rounded-xl border border-border bg-card/50 p-4 text-xs text-muted-foreground">
+          <p className="mb-1 flex items-center gap-1.5 font-semibold text-foreground">
+            <ScanLine size={13} className="text-primary" /> Gói &amp; đặt chỗ tự nhận diện
+          </p>
+          Xe <strong>mua gói</strong> hoặc <strong>đặt chỗ trước</strong> được hệ thống tự đối chiếu ngay khi quét biển số / QR ở bước 1 — không cần nhập mã thủ công.
+          Việc thu phí &amp; cho xe ra do nhân viên cổng ra thực hiện ở tab{' '}
+          <Link to="/staff/parked" className="font-semibold text-primary hover:underline">“Xe đang đỗ”</Link>.
+        </div>
       </section>
 
-      {/* QR Scanner Modal (mã đặt chỗ) */}
-      <QRCodeScannerModal
-        isOpen={isQrModalOpen}
-        onClose={() => setIsQrModalOpen(false)}
-        onScanSuccess={(code: string) => {
-          setReservationCode(code);
-          setIsQrModalOpen(false);
-          setOpMessage({ type: 'ok', text: `Đã quét mã đặt chỗ: ${code}` });
-        }}
-        title="Quét mã đặt chỗ"
-      />
+      {/* Cài đặt camera — gán thiết bị vật lý cho từng vai trò */}
+      {cameraSettingsOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+          <motion.div initial={{ scale: 0.92, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+            className="w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-2xl"
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-primary">Thiết bị</p>
+                <h3 className="text-xl font-semibold text-foreground">Cài đặt camera</h3>
+              </div>
+              <button onClick={() => setCameraSettingsOpen(false)} className="text-muted-foreground hover:text-foreground transition">✕</button>
+            </div>
+
+            <p className="mb-4 text-xs text-muted-foreground">
+              Khi có nhiều camera (biển số / chân dung / QR), gán mỗi vai trò vào một thiết bị riêng để
+              mở đồng thời và chụp đúng hình. Trên máy 1 webcam thì các vai trò dùng chung 1 thiết bị.
+            </p>
+
+            <div className="space-y-3">
+              {([
+                { role: 'plate' as CameraRole, label: 'Camera 1 · Biển số' },
+                { role: 'qr' as CameraRole, label: 'Camera 2 · QR' },
+                { role: 'portrait' as CameraRole, label: 'Camera 3 · Chân dung' },
+              ]).map(({ role, label }) => (
+                <div key={role} className="grid gap-1.5">
+                  <label className="text-xs font-semibold text-foreground">{label}</label>
+                  <select
+                    value={assignment[role] ?? ''}
+                    onChange={(e) => assign(role, e.target.value)}
+                    className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground outline-none focus:border-primary/50"
+                  >
+                    <option value="">— Tự động (mặc định) —</option>
+                    {devices.map((d, i) => (
+                      <option key={d.deviceId} value={d.deviceId}>
+                        {d.label || `Camera ${i + 1}`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ))}
+            </div>
+
+            {devices.length === 0 && (
+              <p className="mt-3 text-[11px] text-amber-400">
+                Chưa thấy thiết bị nào — bấm “Làm mới” và cấp quyền camera cho trình duyệt.
+              </p>
+            )}
+
+            <div className="mt-5 flex justify-between gap-2">
+              <Button type="button" variant="secondary" onClick={() => void requestAndRefresh()} className="gap-1.5 text-xs">
+                <Settings size={13} /> Làm mới danh sách
+              </Button>
+              <Button onClick={() => setCameraSettingsOpen(false)} className="bg-gradient-to-r from-orange-500 to-amber-400 text-slate-950 hover:brightness-110 text-xs">
+                Xong
+              </Button>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       {/* Từ chối check-in */}
       {rejectOpen && (
@@ -502,156 +921,67 @@ export function StaffOperationsPage() {
         </div>
       )}
 
-      {/* Modal đối chiếu thông tin biển số xe sau khi quét */}
-      {isPlateInfoModalOpen && scannedPlateInfo && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
+      {/* Modal: Thông tin tài khoản user từ QR scan */}
+      {userQrInfo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
           <motion.div
-            initial={{ scale: 0.92, opacity: 0 }}
+            initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: 'spring', damping: 25, stiffness: 350 }}
-            className="w-full max-w-md overflow-hidden rounded-2xl border border-border bg-card shadow-2xl"
+            className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl"
           >
-            {/* Header with status gradient */}
-            <div className={`px-6 py-4 flex items-center gap-3 border-b border-border bg-gradient-to-r ${
-              scannedPlateInfo.hasAccount
-                ? 'from-emerald-500/10 to-teal-500/10 text-emerald-400'
-                : 'from-amber-500/10 to-orange-500/10 text-amber-400'
-            }`}>
-              {scannedPlateInfo.hasAccount ? (
-                <ShieldCheck className="h-5 w-5 shrink-0" />
-              ) : (
-                <ShieldAlert className="h-5 w-5 shrink-0" />
-              )}
+            <div className="flex items-center justify-between mb-4">
               <div>
-                <p className="text-[9px] font-black uppercase tracking-[0.24em] opacity-80">
-                  {scannedPlateInfo.hasAccount ? 'Thành viên hệ thống' : 'Khách vãng lai'}
-                </p>
-                <h3 className="text-base font-bold text-foreground">
-                  {scannedPlateInfo.hasAccount ? 'Đối chiếu thành công' : 'Chưa liên kết tài khoản'}
-                </h3>
+                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-primary">Tài khoản đã quét</p>
+                <h3 className="text-lg font-semibold text-foreground">{userQrInfo.fullName}</h3>
+                <p className="text-xs text-muted-foreground">{userQrInfo.email}</p>
               </div>
+              <button onClick={() => setUserQrInfo(null)} className="text-muted-foreground hover:text-foreground transition">✕</button>
             </div>
 
-            <div className="p-6 space-y-5">
-              {/* Realistic Vehicle Plate Visualizer */}
-              <div className="flex justify-center">
-                <div className="relative border-4 border-slate-800 bg-white text-slate-900 px-6 py-2.5 rounded-xl font-mono font-black text-2xl tracking-widest shadow-lg flex flex-col items-center min-w-[200px] select-none before:content-[''] before:absolute before:inset-0.5 before:border before:border-slate-300 before:rounded-lg">
-                  <span className="text-[8px] font-sans font-black uppercase tracking-widest text-slate-400 border-b border-slate-100 w-full text-center pb-0.5 mb-1 z-10">
-                    VIỆT NAM
-                  </span>
-                  <span className="z-10 drop-shadow-[0_1px_1px_rgba(0,0,0,0.15)]">{scannedPlateInfo.plateNumber}</span>
-                </div>
+            {userQrInfo.walletBalance != null && (
+              <div className="mb-4 rounded-xl border border-violet-500/20 bg-violet-500/8 px-4 py-2.5 flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">Số dư ví</span>
+                <span className="font-mono font-bold text-violet-400">{userQrInfo.walletBalance.toLocaleString('vi-VN')} ₫</span>
               </div>
+            )}
 
-              {/* Status and Details */}
-              {scannedPlateInfo.hasAccount && scannedPlateInfo.user ? (
-                <div className="space-y-3">
-                  <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 space-y-3">
-                    <div className="flex items-center gap-3">
-                      <div className="rounded-full bg-emerald-500/15 p-2 text-emerald-400">
-                        <User size={16} />
-                      </div>
-                      <div>
-                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Họ và tên</p>
-                        <p className="text-sm font-semibold text-foreground">{scannedPlateInfo.user.fullName}</p>
-                      </div>
+            <div className="mb-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              Gói dài hạn đang hoạt động
+            </div>
+            {userQrInfo.activePackages.length === 0 ? (
+              <p className="rounded-xl border border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+                Khách chưa có gói dài hạn nào đang hoạt động.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {userQrInfo.activePackages.map((pkg) => (
+                  <div key={pkg.id} className="rounded-xl border border-emerald-500/20 bg-emerald-500/8 px-4 py-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-semibold text-emerald-400">{pkg.name}</span>
+                      {pkg.code && (
+                        <span className="rounded-md border border-emerald-500/20 px-1.5 py-0.5 text-[10px] font-mono text-emerald-500">{pkg.code}</span>
+                      )}
                     </div>
-
-                    <div className="flex items-center gap-3 border-t border-border/50 pt-2.5">
-                      <div className="rounded-full bg-emerald-500/15 p-2 text-emerald-400">
-                        <Mail size={16} />
-                      </div>
-                      <div>
-                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Email</p>
-                        <p className="text-sm font-semibold text-foreground truncate max-w-[240px]">{scannedPlateInfo.user.email}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-3 border-t border-border/50 pt-2.5">
-                      <div className="rounded-full bg-emerald-500/15 p-2 text-emerald-400">
-                        <Phone size={16} />
-                      </div>
-                      <div>
-                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Số điện thoại</p>
-                        <p className="text-sm font-semibold text-foreground">{scannedPlateInfo.user.phone || 'Chưa cập nhật'}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-3 border-t border-border/50 pt-2.5">
-                      <div className="rounded-full bg-emerald-500/15 p-2 text-emerald-400">
-                        <Wallet size={16} />
-                      </div>
-                      <div>
-                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Số dư ví</p>
-                        <p className="text-base font-black text-emerald-400">{scannedPlateInfo.user.walletBalance.toLocaleString('vi-VN')} đ</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 space-y-3 text-center">
-                  <p className="text-sm text-amber-200/90 leading-relaxed">
-                    Hệ thống không tìm thấy tài khoản thành viên nào được liên kết với biển số <strong className="text-amber-400 font-mono">{scannedPlateInfo.plateNumber}</strong>.
-                  </p>
-                  <p className="text-xs text-muted-foreground italic">
-                    Khách vãng lai — nhân viên xử lý check-in thủ công như bình thường.
-                  </p>
-                </div>
-              )}
-
-              {/* Active Session Status — xe đang đỗ → sang tab Xe đang đỗ */}
-              {scannedPlateInfo.activeSession && (
-                <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-3 flex gap-2.5 items-start">
-                  <div className="rounded-lg bg-rose-500/10 p-2 text-rose-400 shrink-0">
-                    <Calendar size={15} />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-rose-400">Xe đang đỗ trong bãi — nhân viên cổng ra sẽ cho xe ra</p>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">
-                      Vào lúc: {new Date(scannedPlateInfo.activeSession.entryTime).toLocaleString('vi-VN')}
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Biển số: <strong className="text-foreground font-mono">{pkg.plateNumber}</strong>
+                      {pkg.endDate && (
+                        <span className="ml-2 text-slate-500">
+                          · Hết hạn: {new Date(pkg.endDate).toLocaleDateString('vi-VN')}
+                        </span>
+                      )}
                     </p>
                   </div>
-                </div>
-              )}
-            </div>
+                ))}
+              </div>
+            )}
 
-            {/* Actions Footer */}
-            <div className="bg-muted/50 border-t border-border/80 px-6 py-4 flex gap-3">
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  setIsPlateInfoModalOpen(false);
-                  setScannedPlateInfo(null);
-                }}
-                className="flex-1 text-xs"
-              >
-                Đóng
-              </Button>
-
-              {scannedPlateInfo.activeSession ? (
-                <Link
-                  to="/staff/parked"
-                  className="flex-1 inline-flex h-10 items-center justify-center rounded-md bg-gradient-to-r from-orange-500 to-amber-400 text-xs font-bold text-slate-950"
-                >
-                  Xem xe đang đỗ
-                </Link>
-              ) : (
-                <Button
-                  onClick={async () => {
-                    setIsPlateInfoModalOpen(false);
-                    setScannedPlateInfo(null);
-                    await onCheckIn();
-                  }}
-                  disabled={!!buildingSupportWarning}
-                  className="flex-1 bg-gradient-to-r from-orange-500 to-amber-400 text-slate-950 font-bold text-xs"
-                >
-                  Check-in ngay
-                </Button>
-              )}
-            </div>
+            <Button onClick={() => setUserQrInfo(null)} className="mt-5 w-full" variant="secondary">
+              Đóng
+            </Button>
           </motion.div>
         </div>
       )}
+
     </motion.div>
   );
 }

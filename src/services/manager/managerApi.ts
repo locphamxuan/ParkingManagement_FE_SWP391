@@ -1,4 +1,5 @@
 import { api } from '@/services/client/apiClient';
+import type { Feedback } from '@/services/user/userApi';
 
 export interface ManagerBuilding {
   _id: string;
@@ -86,16 +87,11 @@ export interface LongTermPackage {
   code: string;
   durationDays: number;
   price: number;
-  reservedSlots: number;
   description?: string;
   /** Perks shown to users (e.g. "Miễn phí rửa xe", "Ưu tiên chỗ gần thang máy"). */
   benefits?: string[];
-  /** When true, subscribers get a dedicated reserved slot. */
-  allowDedicatedSlot?: boolean;
-  /** Số giờ đỗ miễn phí tối đa/ngày của gói (0 = không giới hạn). */
+  /** Số giờ đỗ miễn phí tối đa/ngày của gói (0 = không giới hạn). Gói floating: không giữ chỗ cố định. */
   maxHoursPerDay?: number;
-  /** Số ngày giữ slot cố định sau khi gói hết hạn (grace) trước khi thu hồi. */
-  graceDays?: number;
   isActive: boolean;
 }
 
@@ -107,12 +103,6 @@ export interface Subscription {
   startDate: string;
   endDate: string;
   status: 'pending' | 'active' | 'expired' | 'cancelled';
-  slot?: {
-    _id: string;
-    code: string;
-    floor?: string | { _id: string; code?: string; name?: string } | null;
-  } | string | null;
-  slotReleased?: boolean;
 }
 
 export interface ReservationPolicy {
@@ -127,6 +117,8 @@ export interface ReservationPolicy {
   maxDurationHours: number;
   /** % phụ phí phạt áp lên phần đỗ quá giờ đặt (overstay). 0 = không phạt. */
   overstayPenaltyPercent: number;
+  /** Số giờ trước giờ đặt mà khách còn được hủy. 0 = hủy bất kỳ lúc nào trước giờ đặt. */
+  cancellationCutoffHours: number;
   isActive: boolean;
 }
 
@@ -221,26 +213,6 @@ export interface DailyRevenueSettlement {
   createdAt: string;
 }
 
-export interface AdminSubscriptionPackage {
-  _id: string;
-  name: string;
-  price: number;
-  durationDays: number;
-  description?: string;
-  features?: string[];
-  isActive: boolean;
-  createdAt?: string;
-}
-
-export interface SubscriptionStatus {
-  active: boolean;
-  endDate: string | null;
-  startDate: string | null;
-  daysRemaining: number;
-  package: { _id: string; name: string; price: number; durationDays: number } | null;
-  packageName: string | null;
-}
-
 export interface WalletTopUpResult {
   checkoutUrl: string;
   qrCode: string;
@@ -329,9 +301,8 @@ export const managerApi = {
     remove: (b: string, id: string) => api.delete(path(b, `/packages/${id}`)),
     subscriptions: (b: string, q?: Record<string, string | undefined>) =>
       api.get<Wrap<{ items: Subscription[]; pagination: unknown }>>(path(b, '/subscriptions'), { query: q }),
-    /** Manager chủ động thu hồi slot cố định của một subscription. */
-    releaseSlot: (b: string, subscriptionId: string) =>
-      api.post<Wrap<{ item: Subscription }>>(path(b, `/subscriptions/${subscriptionId}/release-slot`), {}),
+    cancelSubscription: (b: string, id: string, reason?: string) =>
+      api.delete<Wrap<{ subscription: Subscription; refundAmount: number }>>(path(b, `/subscriptions/${id}`), { body: { reason } }),
   },
 
   reservationPolicy: {
@@ -383,17 +354,6 @@ export const managerApi = {
     listSettlements: (b: string, q?: Record<string, string | undefined>) =>
       api.get<Wrap<{ items: DailyRevenueSettlement[] }>>(path(b, '/wallet/settlements'), { query: q }),
 
-    /** Admin subscription packages a manager can buy (GET /wallet/subscription-packages). */
-    listSubscriptionPackages: (b: string) =>
-      api.get<Wrap<{ items: AdminSubscriptionPackage[] }>>(path(b, '/wallet/subscription-packages')),
-
-    /** Subscribe to an admin package, paying from the building wallet (POST /wallet/subscribe). */
-    subscribe: (b: string, packageId: string) =>
-      api.post<Wrap<{ wallet: BuildingWallet; package: AdminSubscriptionPackage; subscription: SubscriptionStatus }>>(
-        path(b, '/wallet/subscribe'),
-        { packageId }
-      ),
-
     /** PayOS top-up for the building wallet (POST /wallet/topup). */
     initiateTopup: (b: string, amount: number) =>
       api.post<Wrap<WalletTopUpResult>>(path(b, '/wallet/topup'), { amount }),
@@ -403,10 +363,12 @@ export const managerApi = {
       api.get<Wrap<{ status: string; credited: boolean }>>(path(b, `/wallet/topup/${orderCode}/verify`)),
   },
 
-  /** Building admin-subscription status — drives the dashboard gate (GET /subscription). */
-  getSubscriptionStatus: (b: string) =>
-    api.get<Wrap<SubscriptionStatus>>(path(b, '/subscription')),
-
+  feedbacks: {
+    list: (b: string, q?: Record<string, string | undefined>) =>
+      api.get<Wrap<{ items: Feedback[]; pagination?: { page: number; limit: number; total: number; totalPages: number } }>>(path(b, '/feedbacks'), { query: q }),
+    respond: (b: string, id: string, body: { staffReply: string; status?: string }) =>
+      api.patch<Wrap<{ item: Feedback }>>(path(b, `/feedbacks/${id}`), body),
+  },
 };
 
 export const unwrapItems = <T,>(payload: Wrap<{ items: T[] }> | Wrap<T[]> | undefined): T[] => {

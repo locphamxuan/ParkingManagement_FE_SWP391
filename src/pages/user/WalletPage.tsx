@@ -7,7 +7,6 @@ import {
   ArrowUpRight,
   CalendarClock,
   CheckCircle2,
-  CreditCard,
   Plus,
   QrCode,
   ReceiptText,
@@ -129,7 +128,7 @@ export default function WalletPage() {
   const [verifying, setVerifying] = useState(false);
   const qrCanvasRef = useRef<HTMLCanvasElement>(null);
   const [copiedField, setCopiedField] = useState<'account' | 'amount' | 'desc' | 'order' | null>(null);
-  const [pollCount, setPollCount] = useState(0);
+  const [, setPollCount] = useState(0);
 
   // Render QR Code onto canvas
   useEffect(() => {
@@ -174,7 +173,7 @@ export default function WalletPage() {
           refreshWallet();
           clearInterval(pollInterval);
         }
-      } catch (err) {
+      } catch {
         // silent fail - keep polling
       }
     };

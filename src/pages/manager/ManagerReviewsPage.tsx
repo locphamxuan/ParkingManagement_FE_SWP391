@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { DataTable, type DataColumn } from '@/components/common/DataTable';
 import { useBuildingContext } from '@/hooks/useBuildingContext';
-import { userApi } from '@/services/user/userApi';
+import { managerApi } from '@/services/manager/managerApi';
 import type { Feedback } from '@/services/user/userApi';
 import { Modal } from '@/components/ui/modal';
 
@@ -26,15 +26,14 @@ export function ManagerReviewsPage() {
   const [replying, setReplying] = useState(false);
 
   const refresh = useCallback(async () => {
+    if (!buildingId) return;
     setLoading(true);
     try {
-      const query: Record<string, string | undefined> = {
-        buildingId,
-      };
+      const query: Record<string, string | undefined> = {};
       if (statusFilter !== 'all') {
         query.status = statusFilter;
       }
-      const result = await userApi.feedbacks.listAll(query);
+      const result = await managerApi.feedbacks.list(buildingId, query);
       setReviews(result.data.items);
       setError(null);
     } catch (err) {
@@ -55,6 +54,10 @@ export function ManagerReviewsPage() {
   };
 
   const handleReplySubmit = async () => {
+    if (!buildingId) {
+      alert('Không tìm thấy thông tin tòa nhà');
+      return;
+    }
     if (!replyForm.staffReply.trim()) {
       alert('Vui lòng nhập phản hồi');
       return;
@@ -62,21 +65,10 @@ export function ManagerReviewsPage() {
 
     setReplying(true);
     try {
-      // Create a new FormData to send the reply
-      // Since userApi doesn't have a reply endpoint, we'll need to implement this via direct API call
-      const response = await fetch(
-        `/api/feedbacks/${replyForm.reviewId}/reply`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ staffReply: replyForm.staffReply.trim() }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Gửi phản hồi thất bại');
-      }
+      await managerApi.feedbacks.respond(buildingId, replyForm.reviewId, {
+        staffReply: replyForm.staffReply.trim(),
+        status: 'resolved',
+      });
 
       await refresh();
       setReplyModalOpen(false);
@@ -93,10 +85,10 @@ export function ManagerReviewsPage() {
     if (!searchTerm.trim()) return true;
     const searchLower = searchTerm.toLowerCase();
     return (
-      review.user.fullName.toLowerCase().includes(searchLower) ||
-      review.user.email.toLowerCase().includes(searchLower) ||
-      review.parkingSession.plateNumber.toLowerCase().includes(searchLower) ||
-      review.comment.toLowerCase().includes(searchLower)
+      (review.user?.fullName || '').toLowerCase().includes(searchLower) ||
+      (review.user?.email || '').toLowerCase().includes(searchLower) ||
+      (review.parkingSession?.plateNumber || '').toLowerCase().includes(searchLower) ||
+      (review.comment || '').toLowerCase().includes(searchLower)
     );
   });
 
@@ -106,8 +98,8 @@ export function ManagerReviewsPage() {
       title: 'Người dùng',
       render: (item) => (
         <div>
-          <p className="font-medium text-slate-100">{item.user.fullName}</p>
-          <p className="text-xs text-slate-400">{item.user.email}</p>
+          <p className="font-medium text-slate-100">{item.user?.fullName || 'Người dùng ẩn danh'}</p>
+          <p className="text-xs text-slate-400">{item.user?.email || 'N/A'}</p>
         </div>
       ),
     },
@@ -116,7 +108,7 @@ export function ManagerReviewsPage() {
       title: 'Biển số',
       render: (item) => (
         <span className="inline-block rounded bg-slate-800/50 px-2.5 py-1 font-mono text-sm text-amber-300">
-          {item.parkingSession.plateNumber}
+          {item.parkingSession?.plateNumber || 'N/A'}
         </span>
       ),
     },
@@ -151,11 +143,10 @@ export function ManagerReviewsPage() {
         const Icon = resolved ? CheckCircle : Clock;
         return (
           <span
-            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold border ${
-              resolved
+            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold border ${resolved
                 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25'
                 : 'bg-amber-500/10 text-amber-400 border-amber-500/25'
-            }`}
+              }`}
           >
             <Icon size={12} />
             {resolved ? 'Đã trả lời' : 'Chờ trả lời'}

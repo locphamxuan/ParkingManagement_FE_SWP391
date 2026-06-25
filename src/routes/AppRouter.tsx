@@ -3,8 +3,6 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { ScrollToTop } from '@/components/common/ScrollToTop';
 // Guards + layouts: eager (nhỏ, là khung luôn cần). Page: lazy để tách chunk.
 import { ProtectedRoute } from '@/routes/ProtectedRoute';
-import { ManagerProtectedRoute } from '@/routes/ManagerProtectedRoute';
-import { StaffProtectedRoute } from '@/routes/StaffProtectedRoute';
 import { AdminLayout } from '@/layouts/AdminLayout';
 import { ManagerLayout } from '@/layouts/ManagerLayout';
 import { StaffLayout } from '@/layouts/StaffLayout';
@@ -38,8 +36,7 @@ const ManagerGatesPage = lazy(() => import('@/pages/manager/ManagerGatesPage').t
 const ManagerSlotsPage = lazy(() => import('@/pages/manager/ManagerSlotsPage').then((m) => ({ default: m.ManagerSlotsPage })));
 const ManagerPricingPage = lazy(() => import('@/pages/manager/ManagerPricingPage').then((m) => ({ default: m.ManagerPricingPage })));
 const ManagerReservationPolicyPage = lazy(() => import('@/pages/manager/ManagerReservationPolicyPage').then((m) => ({ default: m.ManagerReservationPolicyPage })));
-const ManagerPackagesPage = lazy(() => import('@/pages/manager/ManagerPackagesPage').then((m) => ({ default: m.ManagerPackagesPage })));
-const ManagerSubscriptionsPage = lazy(() => import('@/pages/manager/ManagerSubscriptionsPage').then((m) => ({ default: m.ManagerSubscriptionsPage })));
+const ManagerPackagesHubPage = lazy(() => import('@/pages/manager/ManagerPackagesHubPage').then((m) => ({ default: m.ManagerPackagesHubPage })));
 const ManagerShiftManagementPage = lazy(() => import('@/pages/manager/ManagerShiftManagementPage').then((m) => ({ default: m.ManagerShiftManagementPage })));
 const ManagerOperatingHoursPage = lazy(() => import('@/pages/manager/ManagerOperatingHoursPage').then((m) => ({ default: m.ManagerOperatingHoursPage })));
 const ManagerStaffPage = lazy(() => import('@/pages/manager/ManagerStaffPage').then((m) => ({ default: m.ManagerStaffPage })));
@@ -63,8 +60,6 @@ const UsersPage = lazy(() => import('@/pages/admin/UsersPage').then((m) => ({ de
 const RevenueAnalyticsPage = lazy(() => import('@/pages/admin/RevenueAnalyticsPage').then((m) => ({ default: m.RevenueAnalyticsPage })));
 const AuditLogsPage = lazy(() => import('@/pages/admin/AuditLogsPage').then((m) => ({ default: m.AuditLogsPage })));
 const AdminProfilePage = lazy(() => import('@/pages/admin/AdminProfilePage').then((m) => ({ default: m.AdminProfilePage })));
-const SystemWalletPage = lazy(() => import('@/pages/admin/SystemWalletPage').then((m) => ({ default: m.SystemWalletPage })));
-const SubscriptionPackagesPage = lazy(() => import('@/pages/admin/SubscriptionPackagesPage').then((m) => ({ default: m.SubscriptionPackagesPage })));
 const ModulePlaceholderPage = lazy(() => import('@/pages/admin/ModulePlaceholderPage').then((m) => ({ default: m.ModulePlaceholderPage })));
 
 /** Fallback hiển thị khi chunk của page đang được tải. */
@@ -101,7 +96,7 @@ export function AppRouter() {
 
       <Route path="/manager/login" element={<Navigate to="/auth/login" replace />} />
       <Route path="/manager" element={<Navigate to="/manager/dashboard" replace />} />
-      <Route element={<ManagerProtectedRoute />}>
+      <Route element={<ProtectedRoute role="manager" />}>
         <Route path="/manager" element={<ManagerLayout />}>
           <Route index element={<ManagerDashboardPage />} />
           <Route path="dashboard" element={<ManagerDashboardPage />} />
@@ -113,8 +108,8 @@ export function AppRouter() {
           <Route path="slots" element={<ManagerSlotsPage />} />
           <Route path="price-policies" element={<ManagerPricingPage />} />
           <Route path="reservation-policy" element={<ManagerReservationPolicyPage />} />
-          <Route path="packages" element={<ManagerPackagesPage />} />
-          <Route path="subscriptions" element={<ManagerSubscriptionsPage />} />
+          <Route path="packages" element={<ManagerPackagesHubPage />} />
+          <Route path="subscriptions" element={<Navigate to="/manager/packages" replace />} />
           <Route path="shifts" element={<ManagerShiftManagementPage />} />
           <Route path="staff-shifts" element={<Navigate to="/manager/shifts" replace />} />
           <Route path="operating-hours" element={<ManagerOperatingHoursPage />} />
@@ -135,13 +130,13 @@ export function AppRouter() {
 
       <Route path="/staff/login" element={<Navigate to="/auth/login" replace />} />
       <Route path="/staff" element={<Navigate to="/staff/dashboard" replace />} />
-      <Route element={<StaffProtectedRoute />}>
+      <Route element={<ProtectedRoute role="staff" />}>
         <Route path="/staff" element={<StaffLayout />}>
           <Route index element={<StaffDashboardPage />} />
           <Route path="dashboard" element={<StaffDashboardPage />} />
           <Route path="operations" element={<StaffOperationsPage />} />
-          <Route path="checkout" element={<StaffParkedPage />} />
-          <Route path="parked" element={<StaffParkedPage readOnly />} />
+          <Route path="checkout" element={<StaffParkedPage view="scanner" />} />
+          <Route path="parked" element={<StaffParkedPage view="list" />} />
           <Route path="reservations" element={<StaffReservationsPage />} />
           <Route path="my-shifts" element={<StaffShiftsPage />} />
           <Route path="sessions" element={<StaffSessionsPage />} />
@@ -160,8 +155,6 @@ export function AppRouter() {
           <Route path="buildings" element={<BuildingsPage />} />
           <Route path="users" element={<UsersPage />} />
           <Route path="revenue-analytics" element={<RevenueAnalyticsPage />} />
-          <Route path="subscription-packages" element={<SubscriptionPackagesPage />} />
-          <Route path="wallet-governance" element={<SystemWalletPage />} />
           <Route path="audit-logs" element={<AuditLogsPage />} />
           <Route path="profile" element={<AdminProfilePage />} />
           <Route

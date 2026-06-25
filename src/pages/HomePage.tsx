@@ -13,9 +13,7 @@ import {
   Clock3,
   CreditCard,
   History,
-  Mail,
   MapPinned,
-  PhoneCall,
   ScanLine,
   ShieldCheck,
   Ticket,
@@ -25,6 +23,8 @@ import {
   ChevronDown,
   LogOut,
   X,
+  Mail,
+  PhoneCall,
 } from 'lucide-react';
 import type { LegacyModule } from '../data/mainFlow';
 import { AnimatedParkingMap3D } from '@/components/map/AnimatedParkingMap3D';
@@ -63,26 +63,26 @@ const moduleIcons: Record<string, LucideIcon> = {
 };
 
 const heroHighlights = [
-  { value: '24/7', label: 'Giám sát và hỗ trợ vận hành liên tục' },
-  { value: '01', label: 'Nền tảng thống nhất cho cư dân và ban quản lý' },
-  { value: '99.9%', label: 'Quy trình check-in, check-out rõ ràng' },
+  { value: '24/7', label: 'Giám sát vận hành và hỗ trợ liên tục' },
+  { value: '3', label: 'Vai trò: Quản lý · Nhân viên · Người dùng' },
+  { value: '4', label: 'Luồng check-in: Tài khoản, Đặt chỗ, Gói, Vãng lai' },
 ];
 
 const benefits = [
   {
     icon: Clock3,
-    title: 'Kiểm soát ra vào theo thời gian thực',
-    description: 'Theo dõi lượt xe, trạng thái bãi và phiên gửi ngay trên một màn hình vận hành trực quan.',
+    title: 'Giám sát ra vào theo thời gian thực',
+    description: 'Theo dõi lượt xe, trạng thái từng ô đỗ và phiên gửi xe ngay trên bảng điều hành dành cho nhân viên vận hành.',
   },
   {
     icon: BarChart3,
-    title: 'Báo cáo doanh thu rõ ràng',
-    description: 'Tập trung số liệu giao dịch, doanh thu và hiệu suất khai thác để quản lý dễ ra quyết định hơn.',
+    title: 'Doanh thu minh bạch, báo cáo tức thì',
+    description: 'Tổng hợp giao dịch, doanh thu ca và hiệu suất lấp đầy — quản lý có đủ dữ liệu để ra quyết định mỗi ngày.',
   },
   {
     icon: CarFront,
-    title: 'Trải nghiệm thân thiện cho người dùng',
-    description: 'Đăng nhập, theo dõi thông tin và mở rộng tính năng đặt chỗ, thanh toán, thông báo theo lộ trình.',
+    title: 'Đặt chỗ, gói dài hạn và ví điện tử',
+    description: 'Người dùng đặt chỗ trước, mua gói tháng, thanh toán qua ví và tra cứu lịch sử gửi xe — tất cả trên một tài khoản.',
   },
 ];
 
@@ -511,11 +511,11 @@ export default function HomePage({ modules, onOpenAuth, onViewProfile, onViewRes
                       transition={{ duration: 0.15, ease: "easeOut" }}
                       className="absolute right-0 mt-2 w-52 bg-slate-950/95 border border-white/10 rounded-2xl shadow-2xl py-2 backdrop-blur-xl z-50 overflow-hidden"
                     >
-                      <button
+<button
                         className="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-between"
                         onClick={() => { setMenuOpen(false); onViewProfile(); }}
                       >
-                        <span>Hồ sơ của tôi</span>
+                        <span className="flex items-center"><User size={12} className="inline-block mr-2" /> Hồ sơ của tôi</span>
                         {hasMissingInfo && (
                           <span className="flex h-2 w-2 rounded-full bg-rose-500 animate-pulse shadow-[0_0_6px_#f43f5e]" />
                         )}
@@ -550,6 +550,13 @@ export default function HomePage({ modules, onOpenAuth, onViewProfile, onViewRes
                         onClick={() => setMenuOpen(false)}
                       >
                         <MapPinned size={12} className="inline-block mr-2" /> Lịch sử gửi xe
+                      </a>
+                      <a
+                        href="/long-term-subscriptions"
+                        className="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-slate-800 text-slate-300 hover:text-white flex items-center"
+                        onClick={() => setMenuOpen(false)}
+                      >
+                        <Ticket size={12} className="inline-block mr-2" /> Gói dài hạn
                       </a>
                       <button className="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-slate-800 text-rose-400 hover:text-rose-300 border-t border-white/5 mt-1" onClick={onLogout}>
                         <LogOut size={12} className="inline-block mr-2" /> Đăng xuất
@@ -633,15 +640,15 @@ export default function HomePage({ modules, onOpenAuth, onViewProfile, onViewRes
             >
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500/10 border border-orange-500/20 mb-4 w-fit animate-pulse">
                 <span className="w-2 h-2 rounded-full bg-orange-500" />
-                <span className="text-[10px] font-black uppercase tracking-wider text-orange-400 font-mono">Platform Quản Trị Tương Lai</span>
+                <span className="text-[10px] font-black uppercase tracking-wider text-orange-400 font-mono">Hệ Thống Quản Lý Bãi Đỗ Xe</span>
               </div>
 
               <h1 className="text-4xl md:text-5xl font-black leading-[1.12] tracking-tight text-white">
-                Nền tảng kiểm soát <br />
-                <span className="bg-gradient-to-r from-orange-400 via-amber-400 to-purple-400 bg-clip-text text-transparent">Bãi đỗ xe thông minh</span>
+                Vận hành bãi đỗ xe <br />
+                <span className="bg-gradient-to-r from-orange-400 via-amber-400 to-purple-400 bg-clip-text text-transparent">thông minh & minh bạch</span>
               </h1>
               <p className="mt-5 text-sm text-slate-400 leading-relaxed max-w-lg font-semibold">
-                PBMS định nghĩa lại hoạt động vận hành tòa nhà. Giám sát ra vào thời gian thực, tự động hóa thanh toán, theo dõi công suất thông minh và cung cấp giải pháp 3D trực quan vượt trội.
+                PBMS số hóa toàn bộ quy trình vận hành bãi đỗ xe — từ check-in/out bằng QR và camera, đặt chỗ trước, gói dài hạn đến báo cáo doanh thu thời gian thực cho ban quản lý.
               </p>
               <div className="mt-8 flex flex-wrap gap-4 items-center">
                 {user ? (
@@ -705,10 +712,10 @@ export default function HomePage({ modules, onOpenAuth, onViewProfile, onViewRes
             >
               <div className="glass-premium glow-border-pulse p-8 rounded-3xl relative overflow-hidden shadow-2xl">
                 <div className="absolute -right-12 -top-12 h-36 w-36 rounded-full bg-[radial-gradient(circle_at_center,rgba(6,182,212,0.12),transparent_70%)] pointer-events-none blur-2xl" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-cyan-400 font-mono">Đặc Điểm Vượt Trội</span>
-                <h2 className="text-2xl md:text-3xl font-black mt-2 text-white">Quản lý tầng & slot thông minh</h2>
+                <span className="text-[10px] font-black uppercase tracking-widest text-cyan-400 font-mono">Hệ Thống PBMS</span>
+                <h2 className="text-2xl md:text-3xl font-black mt-2 text-white">Giải pháp vận hành bãi đỗ xe toàn diện</h2>
                 <p className="mt-3 text-sm text-slate-400 font-semibold leading-relaxed">
-                  Hệ thống lập bản đồ 3D thời gian thực. Giám sát chính xác từng vị trí đỗ (Slot) theo từng tầng (Floor), hiển thị trực quan trạng thái Trống/Đầy và tự động định tuyến xe thông minh.
+                  PBMS số hóa toàn bộ quy trình vận hành bãi đỗ xe — từ check-in/check-out, quản lý ô đỗ theo tầng, đặt chỗ trước đến gói dài hạn và báo cáo doanh thu. Được thiết kế cho ban quản lý tòa nhà và thân thiện với người dùng cuối.
                 </p>
                 <div className="mt-6 grid gap-4">
                   {benefits.map((benefit) => {
@@ -738,19 +745,19 @@ export default function HomePage({ modules, onOpenAuth, onViewProfile, onViewRes
             >
               <div className="glass-premium glow-border-pulse p-8 rounded-3xl relative overflow-hidden shadow-2xl">
                 <div className="absolute -left-12 -bottom-12 h-36 w-36 rounded-full bg-[radial-gradient(circle_at_center,rgba(249,115,22,0.1),transparent_70%)] pointer-events-none blur-2xl" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-orange-400 font-mono">Tự Động Hóa Check-In</span>
-                <h2 className="text-2xl md:text-3xl font-black mt-2 text-white">Kiểm soát ra vào tự động 24/7</h2>
+                <span className="text-[10px] font-black uppercase tracking-widest text-orange-400 font-mono">Quy Trình Check-In</span>
+                <h2 className="text-2xl md:text-3xl font-black mt-2 text-white">Kiểm soát ra vào theo từng luồng khách</h2>
                 <p className="mt-3 text-sm text-slate-400 font-semibold leading-relaxed">
-                  Nhận diện biển số, quét RFID thẻ thông minh và vận hành thanh chắn cổng soát vé (Gate) hoàn toàn tự động. Đẩy nhanh thời gian check-in/out xuống dưới 2 giây, giảm thiểu ùn tắc.
+                  Nhân viên cổng quét mã QR tài khoản hoặc biển số xe — hệ thống đối chiếu ngay lập tức và phân loại đúng luồng: tài khoản thường, đặt chỗ trước, gói dài hạn hoặc khách vãng lai. Camera chụp chân dung và biển số lưu lại để đối soát khi checkout.
                 </p>
 
                 {/* Floating highlight block */}
                 <div className="mt-6 p-5 rounded-2xl border border-orange-500/20 bg-orange-500/5 flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
-                    <span className="text-xs font-black text-orange-400 font-mono">RFID & PLATE RECOGNITION OK</span>
+                    <span className="text-xs font-black text-orange-400 font-mono">QR CODE & CAMERA SYSTEM ACTIVE</span>
                   </div>
-                  <span className="text-[10px] font-mono text-slate-500 uppercase tracking-widest font-black">GATEWAY ACTIVE</span>
+                  <span className="text-[10px] font-mono text-slate-500 uppercase tracking-widest font-black">CHECK-IN LIVE</span>
                 </div>
               </div>
             </motion.section>
@@ -797,9 +804,9 @@ export default function HomePage({ modules, onOpenAuth, onViewProfile, onViewRes
         <div className="max-w-6xl mx-auto px-4">
           <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-4">
             <div>
-              <span className="text-[10px] font-black uppercase tracking-widest text-orange-400 font-mono">Tính Năng Hệ Thống</span>
-              <h2 className="text-2xl md:text-3xl font-black mt-2 text-white">Các module giải pháp trọng tâm</h2>
-              <p className="text-sm text-slate-400 font-semibold mt-2">Đồng bộ dữ liệu đa phân khu, phân quyền linh hoạt theo luồng người dùng.</p>
+              <span className="text-[10px] font-black uppercase tracking-widest text-orange-400 font-mono">Tính Năng Chính</span>
+              <h2 className="text-2xl md:text-3xl font-black mt-2 text-white">Các tính năng trọng tâm</h2>
+              <p className="text-sm text-slate-400 font-semibold mt-2">Phân quyền rõ ràng theo vai trò — mỗi tính năng phục vụ đúng người, đúng lúc.</p>
             </div>
           </div>
 
@@ -822,9 +829,9 @@ export default function HomePage({ modules, onOpenAuth, onViewProfile, onViewRes
       <section id="dich-vu" className="py-20 relative z-10 bg-slate-950/40">
         <div className="max-w-6xl mx-auto px-4">
           <div className="text-center max-w-xl mx-auto mb-12">
-            <span className="text-[10px] font-black uppercase tracking-widest text-purple-400 font-mono">Dịch Vụ Gia Tăng</span>
-            <h2 className="text-2xl md:text-3xl font-black mt-2 text-white">Mở rộng theo lộ trình vận hành</h2>
-            <p className="text-sm text-slate-400 font-semibold mt-2">Đáp ứng đầy đủ sự gia tăng lưu lượng và quy mô quản lý bãi đỗ trong tương lai.</p>
+            <span className="text-[10px] font-black uppercase tracking-widest text-purple-400 font-mono">Lộ Trình Phát Triển</span>
+            <h2 className="text-2xl md:text-3xl font-black mt-2 text-white">Tính năng đang phát triển</h2>
+            <p className="text-sm text-slate-400 font-semibold mt-2">Các tính năng sắp ra mắt nhằm mở rộng năng lực quản lý và nâng cao trải nghiệm người dùng.</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">

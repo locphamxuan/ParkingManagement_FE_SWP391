@@ -2,12 +2,15 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 're
 import { QrCode, Loader2, CheckCircle2 } from 'lucide-react';
 import jsQR from 'jsqr';
 import type { LiveCameraHandle } from '@/components/staff/LivePlateCamera';
+import { videoConstraintFor } from '@/hooks/useCameraDevices';
 
 interface LiveQRCameraProps {
   /** Fired when a QR is decoded (account ID or vehicle PLT- token). */
   onResult: (code: string) => void;
   /** Pause detection (e.g. while a result modal is open). */
   paused?: boolean;
+  /** Thiết bị camera vật lý gán cho vai trò QR. */
+  deviceId?: string;
 }
 
 /**
@@ -18,7 +21,7 @@ interface LiveQRCameraProps {
  * without a QR scan.
  */
 export const LiveQRCamera = forwardRef<LiveCameraHandle, LiveQRCameraProps>(function LiveQRCamera(
-  { onResult, paused = false },
+  { onResult, paused = false, deviceId },
   ref,
 ) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -84,7 +87,9 @@ export const LiveQRCamera = forwardRef<LiveCameraHandle, LiveQRCameraProps>(func
 
     (async () => {
       try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+        await new Promise<void>((r) => setTimeout(r, 150));
+        if (cancelled) return;
+        stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraintFor(deviceId, 'environment') });
         if (cancelled) {
           stream.getTracks().forEach((t) => t.stop());
           return;
@@ -111,13 +116,13 @@ export const LiveQRCamera = forwardRef<LiveCameraHandle, LiveQRCameraProps>(func
       s?.getTracks().forEach((t) => t.stop());
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [deviceId]);
 
   return (
     <div className="rounded-xl border border-border bg-card/40 p-3 space-y-2.5">
       <div className="flex items-center gap-2">
         <QrCode size={15} className="text-sky-400" />
-        <p className="text-sm font-semibold text-foreground">Camera 3 · Quét QR (tài khoản / phương tiện)</p>
+        <p className="text-sm font-semibold text-foreground">Camera 2 · Quét QR (tài khoản / phương tiện)</p>
       </div>
 
       <div className="relative aspect-[4/3] overflow-hidden rounded-lg border border-white/10 bg-black/60">

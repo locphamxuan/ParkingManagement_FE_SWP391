@@ -67,6 +67,8 @@ export interface Reservation {
   refundPercent?: number;
   refundAmount?: number;
   estimatedFee?: number;
+  /** Snapshot: phải hủy trước giờ đặt ít nhất số giờ này (0 = không giới hạn). */
+  cancellationCutoffHours?: number;
   createdAt?: string;
   updatedAt?: string;
   parkingSession?: {
@@ -107,8 +109,6 @@ export interface LongTermPackage {
   vehicleType?: VehicleType | string | null;
   durationDays: number;
   price: number;
-  reservedSlots?: number;
-  allowDedicatedSlot?: boolean;
   /** Số giờ đỗ miễn phí tối đa/ngày (vượt sẽ tính phí theo giờ). 0 = không giới hạn. */
   maxHoursPerDay?: number;
   benefits?: string[];
@@ -129,14 +129,10 @@ export interface LongTermSubscription {
   building?: Building | { _id: string; name: string } | string;
   /** Backend stores a single plate per subscription. */
   plateNumber?: string;
-  /** Dedicated parking slot assigned to this subscription. */
-  slot?: ParkingSlot | null;
   startDate: string;
   endDate: string;
   status: 'pending' | 'active' | 'expired' | 'cancelled';
-  /** Đã thu hồi slot cố định sau grace (hoặc do manager) hay chưa. */
-  slotReleased?: boolean;
-  cancelReason?: 'change_slot' | 'change_vehicle' | 'no_longer_needed' | 'pricing_issue' | 'other' | null;
+  cancelReason?: 'change_vehicle' | 'no_longer_needed' | 'pricing_issue' | 'other' | null;
   cancelNote?: string | null;
   // ── Legacy/optional FE-only fields ──
   code?: string;
@@ -343,14 +339,14 @@ export const userApi = {
     get: (id: string) =>
       api.get<Wrap<{ subscription: LongTermSubscription }>>(`/users/long-term/subscriptions/${id}`),
 
-    /** Subscribe to a long-term package (BE expects { packageId, plateNumber, slotId?, startDate? }). */
-    create: (body: { packageId: string; plateNumber: string; slotId?: string; startDate?: string }) =>
+    /** Subscribe to a long-term package (BE expects { packageId, plateNumber, startDate? }). Gói floating: không chọn slot. */
+    create: (body: { packageId: string; plateNumber: string; startDate?: string }) =>
       api.post<Wrap<{ subscription: LongTermSubscription }>>(
         '/users/long-term/subscriptions',
         body
       ),
 
-    /** Renew (gia hạn) — cộng dồn endDate, trừ ví, giữ slot (POST /subscriptions/:id/renew). */
+    /** Renew (gia hạn) — cộng dồn endDate, trừ ví (POST /subscriptions/:id/renew). */
     renew: (id: string) =>
       api.post<Wrap<{ subscription: LongTermSubscription }>>(
         `/users/long-term/subscriptions/${id}/renew`,

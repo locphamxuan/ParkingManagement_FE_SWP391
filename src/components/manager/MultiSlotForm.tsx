@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
 import { CustomSelect } from '@/components/ui/select';
-import type { Floor, VehicleType } from '@/services/manager/managerApi';
+import type { Floor } from '@/services/manager/managerApi';
 
 export interface SlotFormRow {
   id: string;
@@ -32,7 +32,7 @@ const emptyRow = (): SlotFormRow => ({
   note: '',
 });
 
-export function MultiSlotForm({ isOpen, onClose, onSubmit, floors, loading = false }: MultiSlotFormProps) {
+export function MultiSlotForm({ isOpen, onClose, onSubmit, floors }: MultiSlotFormProps) {
   const [rows, setRows] = useState<SlotFormRow[]>([emptyRow()]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);

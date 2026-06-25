@@ -1,25 +1,18 @@
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   ArrowLeft,
-  Bike,
   Building2,
   CalendarClock,
-  Car,
-  CheckCircle2,
   Clock,
   MapPin,
   Package,
-  RefreshCw,
   ShieldCheck,
-  Sparkles,
   Timer,
   X,
-  XCircle,
   Zap,
 } from 'lucide-react';
-import { ParkingMap2D } from '@/components/map/ParkingMap2D';
 import { useAuth } from '@/hooks/useAuth';
 import { CustomSelect } from '@/components/ui/select';
 import {
@@ -29,22 +22,17 @@ import {
   type ParkingSlot as ApiParkingSlot,
   type FloorAvailability,
   type LongTermPackage,
-  type Reservation,
-  type LongTermSubscription,
 } from '@/services/user/userApi';
 
 import {
   type BookingMode,
   type VehicleKind,
   fmtMoney,
-  fmtTime,
   fmtShort,
-  isSameDay,
   normalizeVehicleTypeCode,
   isCarPackage,
   getMaxCalendarDate,
   packageCategory,
-  categoryLabels,
   categoryColors,
 } from '@/pages/user/reservationsHelper';
 
@@ -312,14 +300,6 @@ export default function ReservationsPage() {
     return Math.ceil(rate * durationHours);
   }, [mode, selectedPkg, selectedBuilding, selectedVehicleType, durationHours]);
 
-  const filteredPackages = useMemo(() => {
-    if (!selectedVehicleType) return packages;
-    return packages.filter((pkg) => {
-      const isCar = isCarPackage(pkg);
-      return selectedVehicleType === 'car' ? isCar : !isCar;
-    });
-  }, [packages, selectedVehicleType]);
-
   const plateOptions = useMemo(() => {
     if (!user) return [];
     const base = selectedVehicleType
@@ -359,10 +339,12 @@ export default function ReservationsPage() {
     }).map((s) => s.code);
   }, [slots, selectedVehicleType]);
 
-  const selectedFloorInfo = useMemo(() => floorsData.find((f) => f._id === selectedFloorIdModal) || null, [floorsData, selectedFloorIdModal]);
 
   const canSubmit = Boolean(
-    selectedBuildingId && selectedSlot && selectedPlate && startDateTime && endDateTime && !isSubmitting
+    mode === 'package'
+      // Gói floating: KHÔNG chọn slot (staff gán chỗ trống lúc check-in).
+      ? selectedBuildingId && selectedPkg && selectedPlate && startDateTime && !isSubmitting
+      : selectedBuildingId && selectedSlot && selectedPlate && startDateTime && endDateTime && !isSubmitting
   );
 
   /* ── Handlers ── */
@@ -425,7 +407,6 @@ export default function ReservationsPage() {
         const res = await userApi.longTermSubscriptions.create({
           packageId: selectedPkg._id,
           plateNumber: selectedPlate,
-          slotId: slots.find((s) => s.code === selectedSlot)?._id,
           startDate: startDateTime.toISOString(),
         });
         const data = (res as any)?.data;
@@ -673,30 +654,40 @@ export default function ReservationsPage() {
               )}
             </AnimatePresence>
 
-            {/* ── Slot Selection Button ── */}
-            <div className="rounded-3xl border border-white/[0.06] bg-white/[0.02] p-5">
-              <div className="flex items-center gap-2 mb-3">
-                <MapPin size={16} className="text-cyan-300/70" />
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300/70">Chọn chỗ đỗ</span>
-              </div>
+            {/* ── Slot Selection Button (chỉ cho đặt theo giờ) ── */}
+            {mode === 'hourly' ? (
+              <div className="rounded-3xl border border-white/[0.06] bg-white/[0.02] p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <MapPin size={16} className="text-cyan-300/70" />
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300/70">Chọn chỗ đỗ</span>
+                </div>
 
-              <div className="flex items-center gap-3">
-                <motion.button
-                  type="button"
-                  onClick={() => setShowSlotModal(true)}
-                  disabled={!selectedBuildingId}
-                  whileHover={{ scale: 1.01 }}
-                  whileTap={{ scale: 0.99 }}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-cyan-300/20 bg-cyan-300/5 px-4 py-4 text-sm font-black uppercase tracking-wider text-cyan-200 transition-all hover:bg-cyan-300/10 disabled:cursor-not-allowed disabled:border-slate-700 disabled:text-slate-500 disabled:bg-transparent"
-                >
-                  <MapPin size={16} /> Chọn chỗ đỗ
-                </motion.button>
-                <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] px-4 py-3 text-center min-w-[100px]">
-                  <p className="text-[9px] font-bold uppercase text-slate-500">Ô đỗ</p>
-                  <p className="mt-1 font-mono text-xl font-black text-orange-300">{selectedSlot || '—'}</p>
+                <div className="flex items-center gap-3">
+                  <motion.button
+                    type="button"
+                    onClick={() => setShowSlotModal(true)}
+                    disabled={!selectedBuildingId}
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.99 }}
+                    className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-cyan-300/20 bg-cyan-300/5 px-4 py-4 text-sm font-black uppercase tracking-wider text-cyan-200 transition-all hover:bg-cyan-300/10 disabled:cursor-not-allowed disabled:border-slate-700 disabled:text-slate-500 disabled:bg-transparent"
+                  >
+                    <MapPin size={16} /> Chọn chỗ đỗ
+                  </motion.button>
+                  <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] px-4 py-3 text-center min-w-[100px]">
+                    <p className="text-[9px] font-bold uppercase text-slate-500">Ô đỗ</p>
+                    <p className="mt-1 font-mono text-xl font-black text-orange-300">{selectedSlot || '—'}</p>
+                  </div>
                 </div>
               </div>
-            </div>
+            ) : (
+              <div className="rounded-3xl border border-amber-400/20 bg-amber-500/5 p-5">
+                <p className="text-[11px] text-amber-200/90">
+                  Gói cho phép đỗ <strong>miễn phí {selectedPkg?.maxHoursPerDay ? `${selectedPkg.maxHoursPerDay}h` : 'theo gói'}/ngày</strong>
+                  {' '}(vượt tính phí theo giá thường). Gói <strong>không giữ chỗ cố định</strong> — nhân viên xếp chỗ trống khi xe vào.
+                  Mỗi gói gắn với <strong>1 biển số</strong>. Muốn chắc chắn có chỗ vào giờ cụ thể, hãy dùng <strong>Đặt chỗ theo giờ</strong>.
+                </p>
+              </div>
+            )}
 
           </div>
 
