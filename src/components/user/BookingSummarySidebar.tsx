@@ -27,7 +27,7 @@ export function BookingSummarySidebar({
 }: BookingSummarySidebarProps) {
   return (
     <div className="lg:sticky lg:top-6 lg:self-start">
-      <div className="glass-panel rounded-3xl p-6">
+      <div className="glass-panel-dark rounded-3xl p-6">
         <div className="flex items-center gap-2 mb-5">
           <CalendarClock size={16} className="text-orange-300/70" />
           <span className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-300/70">

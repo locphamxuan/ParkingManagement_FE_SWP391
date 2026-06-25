@@ -497,7 +497,7 @@ export default function ReservationsPage() {
           {/* Left: Booking Form */}
           <div className="space-y-5">
             {/* Building + Vehicle + Plate */}
-            <div className="glass-panel rounded-3xl p-6">
+            <div className="glass-panel-dark rounded-3xl p-6">
               <div className="flex items-center gap-2 mb-4">
                 <Building2 size={16} className="text-cyan-300/70" />
                 <span className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300/70">Thông tin cơ bản</span>
@@ -565,7 +565,7 @@ export default function ReservationsPage() {
                   className="space-y-5"
                 >
                   {/* Date */}
-                  <div className="glass-panel rounded-3xl p-6">
+                  <div className="glass-panel-dark rounded-3xl p-6">
                     <div className="flex items-center gap-2 mb-4">
                       <CalendarClock size={16} className="text-orange-300/70" />
                       <span className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-300/70">Chọn ngày nhận xe</span>
@@ -577,7 +577,7 @@ export default function ReservationsPage() {
                   </div>
 
                   {/* Time */}
-                  <div className="glass-panel rounded-3xl p-6">
+                  <div className="glass-panel-dark rounded-3xl p-6">
                     <div className="flex items-center gap-2 mb-3">
                       <Clock size={16} className="text-orange-300/70" />
                       <span className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-300/70">Giờ nhận xe</span>
@@ -586,7 +586,7 @@ export default function ReservationsPage() {
                   </div>
 
                   {/* Duration */}
-                  <div className="glass-panel rounded-3xl p-6">
+                  <div className="glass-panel-dark rounded-3xl p-6">
                     <div className="flex items-center gap-2 mb-3">
                       <Timer size={16} className="text-orange-300/70" />
                       <span className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-300/70">Số giờ sử dụng</span>
@@ -602,7 +602,7 @@ export default function ReservationsPage() {
                   className="space-y-5"
                 >
                   {/* Package Cards */}
-                  <div className="glass-panel rounded-3xl p-6">
+                  <div className="glass-panel-dark rounded-3xl p-6">
                     <div className="flex items-center gap-2 mb-4">
                       <span className="text-[10px] font-black uppercase tracking-[0.2em] text-purple-300/70">Chọn gói dài hạn</span>
                     </div>
@@ -648,7 +648,7 @@ export default function ReservationsPage() {
 
                   {/* Package Date */}
                   {selectedPkg && (
-                    <div className="glass-panel rounded-3xl p-6">
+                    <div className="glass-panel-dark rounded-3xl p-6">
                       <div className="flex items-center gap-2 mb-4">
                         <CalendarClock size={16} className="text-purple-300/70" />
                         <span className="text-[10px] font-black uppercase tracking-[0.2em] text-purple-300/70">Ngày bắt đầu gói</span>
@@ -669,7 +669,7 @@ export default function ReservationsPage() {
 
             {/* ── Slot Selection Button (chỉ cho đặt theo giờ) ── */}
             {mode === 'hourly' ? (
-              <div className="glass-panel rounded-3xl p-6">
+              <div className="glass-panel-dark rounded-3xl p-6">
                 <div className="flex items-center gap-2 mb-3">
                   <MapPin size={16} className="text-cyan-300/70" />
                   <span className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300/70">Chọn chỗ đỗ</span>
@@ -693,7 +693,7 @@ export default function ReservationsPage() {
                 </div>
               </div>
             ) : (
-              <div className="glass-panel rounded-3xl border-amber-500/20 bg-amber-500/5 p-6 shadow-lg">
+              <div className="glass-panel-dark rounded-3xl border-amber-500/20 bg-amber-500/5 p-6 shadow-lg">
                 <p className="text-[11px] text-amber-200/90">
                   Gói cho phép đỗ <strong>miễn phí {selectedPkg?.maxHoursPerDay ? `${selectedPkg.maxHoursPerDay}h` : 'theo gói'}/ngày</strong>
                   {' '}(vượt tính phí theo giá thường). Gói <strong>không giữ chỗ cố định</strong> — nhân viên xếp chỗ trống khi xe vào.
