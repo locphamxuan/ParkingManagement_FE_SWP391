@@ -27,7 +27,7 @@ export function BookingSummarySidebar({
 }: BookingSummarySidebarProps) {
   return (
     <div className="lg:sticky lg:top-6 lg:self-start">
-      <div className="rounded-3xl border border-white/[0.06] bg-gradient-to-b from-white/[0.04] to-transparent p-5">
+      <div className="glass-panel rounded-3xl p-6">
         <div className="flex items-center gap-2 mb-5">
           <CalendarClock size={16} className="text-orange-300/70" />
           <span className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-300/70">
@@ -67,14 +67,14 @@ export function BookingSummarySidebar({
 
           <div className={`grid gap-2 ${mode === 'hourly' ? 'grid-cols-2' : 'grid-cols-1'}`}>
             {mode === 'hourly' && (
-              <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
+              <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3 shadow-inner">
                 <p className="text-[9px] font-bold uppercase text-slate-500">Ô đỗ</p>
                 <p className="mt-1 font-mono text-lg font-black text-orange-300">
                   {selectedSlot || '—'}
                 </p>
               </div>
             )}
-            <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
+            <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3 shadow-inner">
               <p className="text-[9px] font-bold uppercase text-slate-500">Biển số</p>
               <p className="mt-1 font-mono text-sm font-black text-cyan-200 truncate">
                 {selectedPlate || '—'}
@@ -82,13 +82,13 @@ export function BookingSummarySidebar({
             </div>
           </div>
 
-          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
+          <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3 shadow-inner">
             <p className="text-[9px] font-bold uppercase text-slate-500">Nhận bãi</p>
             <p className="mt-1 text-sm font-black text-white">
               {startDateTime ? fmtShort(startDateTime) : '—'}
             </p>
           </div>
-          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
+          <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3 shadow-inner">
             <p className="text-[9px] font-bold uppercase text-slate-500">Trả bãi</p>
             <p className="mt-1 text-sm font-black text-white">
               {endDateTime ? fmtShort(endDateTime) : '—'}

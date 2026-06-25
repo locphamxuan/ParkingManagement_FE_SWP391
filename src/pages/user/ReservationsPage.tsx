@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { CustomSelect } from '@/components/ui/select';
+import back1 from '@/assets/back1.webp';
+
 import {
   userApi,
   type Building,
@@ -430,7 +432,18 @@ export default function ReservationsPage() {
 
   /* ── Render ── */
   return (
-    <main className="min-h-screen bg-[#060a11] text-slate-100">
+    <main className="min-h-screen text-slate-100 relative isolate">
+      {/* Background Neon Glow Spheres and subtle background image */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10 bg-slate-950" aria-hidden="true">
+        <div 
+          className="absolute inset-0 opacity-[0.25] filter blur-[6px] bg-cover pointer-events-none"
+          style={{ backgroundImage: `url(${back1})`, backgroundPosition: 'center 85%' }}
+        />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(2,6,23,0.4)_0%,rgba(2,6,23,0.92)_100%)] pointer-events-none" />
+        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[55%] rounded-full bg-[radial-gradient(circle_at_center,hsla(24,95%,53%,0.06),transparent_55%)] blur-3xl" />
+        <div className="absolute top-[35%] right-[-15%] w-[60%] h-[60%] rounded-full bg-[radial-gradient(circle_at_center,hsla(263,90%,51%,0.05),transparent_55%)] blur-3xl" />
+        <div className="absolute bottom-[-10%] left-[20%] w-[50%] h-[50%] rounded-full bg-[radial-gradient(circle_at_center,hsla(142,76%,45%,0.03),transparent_50%)] blur-3xl" />
+      </div>
       <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
 
         {/* ── Header ── */}
@@ -452,7 +465,7 @@ export default function ReservationsPage() {
         </motion.div>
 
         {/* ── Tab Bar ── */}
-        <div className="mb-6 flex items-center gap-1 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-1.5">
+        <div className="mb-8 flex items-center gap-1 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-1.5 max-w-md md:max-w-lg w-full mx-auto shadow-xl">
           {[
             { key: 'hourly' as BookingMode, label: 'Đặt theo giờ', icon: <Timer size={14} /> },
             { key: 'package' as BookingMode, label: 'Đăng ký gói dài hạn', icon: <Package size={14} /> },
@@ -484,7 +497,7 @@ export default function ReservationsPage() {
           {/* Left: Booking Form */}
           <div className="space-y-5">
             {/* Building + Vehicle + Plate */}
-            <div className="rounded-3xl border border-white/[0.06] bg-white/[0.02] p-5">
+            <div className="glass-panel rounded-3xl p-6">
               <div className="flex items-center gap-2 mb-4">
                 <Building2 size={16} className="text-cyan-300/70" />
                 <span className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300/70">Thông tin cơ bản</span>
@@ -552,7 +565,7 @@ export default function ReservationsPage() {
                   className="space-y-5"
                 >
                   {/* Date */}
-                  <div className="rounded-3xl border border-white/[0.06] bg-white/[0.02] p-5">
+                  <div className="glass-panel rounded-3xl p-6">
                     <div className="flex items-center gap-2 mb-4">
                       <CalendarClock size={16} className="text-orange-300/70" />
                       <span className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-300/70">Chọn ngày nhận xe</span>
@@ -564,7 +577,7 @@ export default function ReservationsPage() {
                   </div>
 
                   {/* Time */}
-                  <div className="rounded-3xl border border-white/[0.06] bg-white/[0.02] p-5">
+                  <div className="glass-panel rounded-3xl p-6">
                     <div className="flex items-center gap-2 mb-3">
                       <Clock size={16} className="text-orange-300/70" />
                       <span className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-300/70">Giờ nhận xe</span>
@@ -573,7 +586,7 @@ export default function ReservationsPage() {
                   </div>
 
                   {/* Duration */}
-                  <div className="rounded-3xl border border-white/[0.06] bg-white/[0.02] p-5">
+                  <div className="glass-panel rounded-3xl p-6">
                     <div className="flex items-center gap-2 mb-3">
                       <Timer size={16} className="text-orange-300/70" />
                       <span className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-300/70">Số giờ sử dụng</span>
@@ -589,7 +602,7 @@ export default function ReservationsPage() {
                   className="space-y-5"
                 >
                   {/* Package Cards */}
-                  <div className="rounded-3xl border border-white/[0.06] bg-white/[0.02] p-5">
+                  <div className="glass-panel rounded-3xl p-6">
                     <div className="flex items-center gap-2 mb-4">
                       <span className="text-[10px] font-black uppercase tracking-[0.2em] text-purple-300/70">Chọn gói dài hạn</span>
                     </div>
@@ -635,7 +648,7 @@ export default function ReservationsPage() {
 
                   {/* Package Date */}
                   {selectedPkg && (
-                    <div className="rounded-3xl border border-white/[0.06] bg-white/[0.02] p-5">
+                    <div className="glass-panel rounded-3xl p-6">
                       <div className="flex items-center gap-2 mb-4">
                         <CalendarClock size={16} className="text-purple-300/70" />
                         <span className="text-[10px] font-black uppercase tracking-[0.2em] text-purple-300/70">Ngày bắt đầu gói</span>
@@ -656,7 +669,7 @@ export default function ReservationsPage() {
 
             {/* ── Slot Selection Button (chỉ cho đặt theo giờ) ── */}
             {mode === 'hourly' ? (
-              <div className="rounded-3xl border border-white/[0.06] bg-white/[0.02] p-5">
+              <div className="glass-panel rounded-3xl p-6">
                 <div className="flex items-center gap-2 mb-3">
                   <MapPin size={16} className="text-cyan-300/70" />
                   <span className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300/70">Chọn chỗ đỗ</span>
@@ -673,14 +686,14 @@ export default function ReservationsPage() {
                   >
                     <MapPin size={16} /> Chọn chỗ đỗ
                   </motion.button>
-                  <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] px-4 py-3 text-center min-w-[100px]">
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-center min-w-[100px] shadow-sm">
                     <p className="text-[9px] font-bold uppercase text-slate-500">Ô đỗ</p>
                     <p className="mt-1 font-mono text-xl font-black text-orange-300">{selectedSlot || '—'}</p>
                   </div>
                 </div>
               </div>
             ) : (
-              <div className="rounded-3xl border border-amber-400/20 bg-amber-500/5 p-5">
+              <div className="glass-panel rounded-3xl border-amber-500/20 bg-amber-500/5 p-6 shadow-lg">
                 <p className="text-[11px] text-amber-200/90">
                   Gói cho phép đỗ <strong>miễn phí {selectedPkg?.maxHoursPerDay ? `${selectedPkg.maxHoursPerDay}h` : 'theo gói'}/ngày</strong>
                   {' '}(vượt tính phí theo giá thường). Gói <strong>không giữ chỗ cố định</strong> — nhân viên xếp chỗ trống khi xe vào.
