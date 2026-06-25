@@ -5,6 +5,8 @@ import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
 import { useSearchParams } from 'react-router-dom';
 import { forgotPassword, resetPassword } from '@/services/authService';
 import { InteractiveParticleCanvas } from '@/components/common/InteractiveParticleCanvas';
+import back1 from '@/assets/back1.webp';
+
 
 const initialForm = {
   fullName: '',
@@ -430,10 +432,16 @@ export default function AuthPage({ mode, notice, onModeChange, onSubmit, isLoadi
       >
         {/* Left Interactive Promo Info Column */}
         <div 
-          className="p-8 bg-gradient-to-br from-orange-600/90 via-orange-600 to-amber-600/85 text-white flex flex-col justify-between relative overflow-hidden preserve-3d"
-          style={{ transformStyle: "preserve-3d" }}
+          className="p-8 text-white flex flex-col justify-between relative overflow-hidden preserve-3d bg-cover bg-no-repeat"
+          style={{ 
+            transformStyle: "preserve-3d",
+            backgroundImage: `url(${back1})`,
+            backgroundPosition: 'center 85%'
+          }}
         >
-          <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:16px_16px] pointer-events-none" />
+          {/* Subtle overlay to ensure text contrast and premium vibe */}
+          <div className="absolute inset-0 bg-slate-950/45 pointer-events-none z-0" />
+          <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:16px_16px] pointer-events-none z-0" />
           
           <div className="relative z-10" style={{ transform: "translateZ(30px)" }}>
             <h2 className="text-3xl font-black tracking-tight">{title}</h2>
@@ -591,7 +599,7 @@ export default function AuthPage({ mode, notice, onModeChange, onSubmit, isLoadi
         </div>
 
         {/* Right Input Form Column */}
-        <div className="p-8 flex flex-col justify-center bg-slate-900/10 backdrop-blur-md">
+        <div className="p-8 flex flex-col justify-center bg-white/[0.08] backdrop-blur-2xl border-l border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)] relative">
           {(localNotice || notice)?.message ? (
             <motion.div 
               initial={{ opacity: 0, y: -10 }}
@@ -638,7 +646,7 @@ export default function AuthPage({ mode, notice, onModeChange, onSubmit, isLoadi
                     setForgotEmail('');
                     setLocalNotice(null);
                   }}
-                  className="flex-1 h-11 rounded-xl border border-white/10 text-white font-black text-xs uppercase tracking-wider hover:bg-slate-900 transition-all"
+                  className="flex-1 h-11 rounded-xl border border-white/10 text-white font-black text-xs uppercase tracking-wider hover:bg-white/10 transition-all"
                 >
                   Quay lại
                 </button>
@@ -703,7 +711,7 @@ export default function AuthPage({ mode, notice, onModeChange, onSubmit, isLoadi
                     setResetToken(null);
                     setLocalNotice(null);
                   }}
-                  className="flex-1 h-11 rounded-xl border border-white/10 text-white font-black text-xs uppercase tracking-wider hover:bg-slate-900 transition-all"
+                  className="flex-1 h-11 rounded-xl border border-white/10 text-white font-black text-xs uppercase tracking-wider hover:bg-white/10 transition-all"
                 >
                   Hủy
                 </button>
