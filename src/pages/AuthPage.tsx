@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
 import type { FormEvent } from 'react';
-import { Home, X, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Home, X, AlertCircle, CheckCircle2, Eye, EyeOff } from 'lucide-react';
 import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
 import { useSearchParams } from 'react-router-dom';
 import { forgotPassword, resetPassword } from '@/services/authService';
@@ -52,6 +52,13 @@ export default function AuthPage({ mode, notice, onModeChange, onSubmit, isLoadi
   const [savedAccounts, setSavedAccounts] = useState<{ email: string }[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [resetToken, setResetToken] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  useEffect(() => {
+    setShowPassword(false);
+    setShowConfirmPassword(false);
+  }, [mode]);
   // Modal thông báo (thành công/thất bại) cho luồng quên & đặt lại mật khẩu.
   const [modal, setModal] = useState<{
     title: string;
@@ -676,30 +683,48 @@ export default function AuthPage({ mode, notice, onModeChange, onSubmit, isLoadi
                 <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono">
                   Mật khẩu mới
                 </label>
-                <input 
-                  type="password"
-                  autoComplete="new-password"
-                  value={resetPasswordForm.newPassword}
-                  onChange={(e) => setResetPasswordForm(s => ({ ...s, newPassword: e.target.value }))}
-                  required
-                  className="block w-full rounded-xl border border-white/10 bg-slate-950/60 text-white placeholder-slate-600 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 text-sm h-11 px-4 transition-all duration-300 outline-none shadow-[inset_0_1px_2px_rgba(0,0,0,0.4)] focus:shadow-[0_0_15px_rgba(249,115,22,0.15)] input-scan-focus"
-                  placeholder="Ít nhất 6 ký tự"
-                />
+                <div className="relative">
+                  <input 
+                    type={showPassword ? "text" : "password"}
+                    autoComplete="new-password"
+                    value={resetPasswordForm.newPassword}
+                    onChange={(e) => setResetPasswordForm(s => ({ ...s, newPassword: e.target.value }))}
+                    required
+                    className="block w-full rounded-xl border border-white/10 bg-slate-950/60 text-white placeholder-slate-600 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 text-sm h-11 pl-4 pr-11 transition-all duration-300 outline-none shadow-[inset_0_1px_2px_rgba(0,0,0,0.4)] focus:shadow-[0_0_15px_rgba(249,115,22,0.15)] input-scan-focus"
+                    placeholder="Ít nhất 6 ký tự"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+                  >
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
               </div>
 
               <div className="space-y-1.5">
                 <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono">
                   Xác nhận mật khẩu
                 </label>
-                <input 
-                  type="password"
-                  autoComplete="new-password"
-                  value={resetPasswordForm.confirmPassword}
-                  onChange={(e) => setResetPasswordForm(s => ({ ...s, confirmPassword: e.target.value }))}
-                  required
-                  className="block w-full rounded-xl border border-white/10 bg-slate-950/60 text-white placeholder-slate-600 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 text-sm h-11 px-4 transition-all duration-300 outline-none shadow-[inset_0_1px_2px_rgba(0,0,0,0.4)] focus:shadow-[0_0_15px_rgba(249,115,22,0.15)] input-scan-focus"
-                  placeholder="Nhập lại mật khẩu"
-                />
+                <div className="relative">
+                  <input 
+                    type={showConfirmPassword ? "text" : "password"}
+                    autoComplete="new-password"
+                    value={resetPasswordForm.confirmPassword}
+                    onChange={(e) => setResetPasswordForm(s => ({ ...s, confirmPassword: e.target.value }))}
+                    required
+                    className="block w-full rounded-xl border border-white/10 bg-slate-950/60 text-white placeholder-slate-600 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 text-sm h-11 pl-4 pr-11 transition-all duration-300 outline-none shadow-[inset_0_1px_2px_rgba(0,0,0,0.4)] focus:shadow-[0_0_15px_rgba(249,115,22,0.15)] input-scan-focus"
+                    placeholder="Nhập lại mật khẩu"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+                  >
+                    {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
               </div>
 
               <div className="flex gap-3 pt-3">
@@ -814,17 +839,26 @@ export default function AuthPage({ mode, notice, onModeChange, onSubmit, isLoadi
 
             <div className="space-y-1.5">
               <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono">Mật khẩu</label>
-              <input 
-                ref={passwordInputRef}
-                name="password" 
-                value={form.password} 
-                onChange={handleChange} 
-                type="password" 
-                required 
-                autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-                className="block w-full rounded-xl border border-white/10 bg-slate-950/60 text-white placeholder-slate-600 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 text-sm h-11 px-4 transition-all duration-300 outline-none shadow-[inset_0_1px_2px_rgba(0,0,0,0.4)] focus:shadow-[0_0_15px_rgba(249,115,22,0.15)] input-scan-focus"
-                placeholder="Ít nhất 6 ký tự" 
-              />
+              <div className="relative">
+                <input 
+                  ref={passwordInputRef}
+                  name="password" 
+                  value={form.password} 
+                  onChange={handleChange} 
+                  type={showPassword ? "text" : "password"} 
+                  required 
+                  autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                  className="block w-full rounded-xl border border-white/10 bg-slate-950/60 text-white placeholder-slate-600 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 text-sm h-11 pl-4 pr-11 transition-all duration-300 outline-none shadow-[inset_0_1px_2px_rgba(0,0,0,0.4)] focus:shadow-[0_0_15px_rgba(249,115,22,0.15)] input-scan-focus"
+                  placeholder="Ít nhất 6 ký tự" 
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
             </div>
 
             {mode === 'login' && (
@@ -842,15 +876,24 @@ export default function AuthPage({ mode, notice, onModeChange, onSubmit, isLoadi
             {mode === 'register' && (
               <div className="space-y-1.5 animate-fadeIn">
                 <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono">Xác nhận mật khẩu</label>
-                <input 
-                  name="confirmPassword" 
-                  value={form.confirmPassword} 
-                  onChange={handleChange} 
-                  type="password" 
-                  required 
-                  className="block w-full rounded-xl border border-white/10 bg-slate-950/60 text-white placeholder-slate-600 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 text-sm h-11 px-4 transition-all duration-300 outline-none shadow-[inset_0_1px_2px_rgba(0,0,0,0.4)] focus:shadow-[0_0_15px_rgba(249,115,22,0.15)] input-scan-focus"
-                  placeholder="Nhập lại mật khẩu" 
-                />
+                <div className="relative">
+                  <input 
+                    name="confirmPassword" 
+                    value={form.confirmPassword} 
+                    onChange={handleChange} 
+                    type={showConfirmPassword ? "text" : "password"} 
+                    required 
+                    className="block w-full rounded-xl border border-white/10 bg-slate-950/60 text-white placeholder-slate-600 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 text-sm h-11 pl-4 pr-11 transition-all duration-300 outline-none shadow-[inset_0_1px_2px_rgba(0,0,0,0.4)] focus:shadow-[0_0_15px_rgba(249,115,22,0.15)] input-scan-focus"
+                    placeholder="Nhập lại mật khẩu" 
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+                  >
+                    {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
               </div>
             )}
 
