@@ -147,14 +147,14 @@ export function ReservationHistoryTab() {
   return (
     <div className="space-y-4">
       {/* Tab Mode Switcher */}
-      <div className="flex border-b border-slate-100 pb-3 justify-center gap-3">
+      <div className="flex border-b border-white/5 pb-3 justify-center gap-3">
         <button
           type="button"
           onClick={() => setHistoryMode('hourly')}
           className={`flex-1 max-w-[200px] rounded-xl py-2 text-xs font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-1.5 border ${
             historyMode === 'hourly'
-              ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white border-transparent shadow-md shadow-orange-500/25'
-              : 'text-slate-500 hover:text-slate-800 border-slate-200 bg-slate-50'
+              ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white border-transparent shadow-md shadow-cyan-500/20'
+              : 'text-slate-400 hover:text-white border-white/10 bg-slate-900/40 backdrop-blur-sm'
           }`}
         >
           <Clock size={13} />
@@ -165,8 +165,8 @@ export function ReservationHistoryTab() {
           onClick={() => setHistoryMode('package')}
           className={`flex-1 max-w-[200px] rounded-xl py-2 text-xs font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-1.5 border ${
             historyMode === 'package'
-              ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white border-transparent shadow-md shadow-orange-500/25'
-              : 'text-slate-500 hover:text-slate-800 border-slate-200 bg-slate-50'
+              ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white border-transparent shadow-md shadow-cyan-500/20'
+              : 'text-slate-400 hover:text-white border-white/10 bg-slate-900/40 backdrop-blur-sm'
           }`}
         >
           <Package size={13} />
@@ -175,8 +175,8 @@ export function ReservationHistoryTab() {
       </div>
 
       {/* Filter Tabs & Refresh Button */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
-        <div className="flex items-center gap-1.5 rounded-xl bg-slate-100/50 border border-slate-200 p-1">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/5 pb-4">
+        <div className="flex items-center gap-1.5 rounded-xl bg-slate-950/60 border border-white/10 p-1 backdrop-blur-md">
           {historyMode === 'hourly'
             ? FILTER_TABS.map((tab) => (
                 <button
@@ -185,8 +185,8 @@ export function ReservationHistoryTab() {
                   onClick={() => setStatusFilter(tab.value)}
                   className={`rounded-lg px-4 py-1.5 text-xs font-bold transition-all duration-200 ${
                     statusFilter === tab.value
-                      ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md shadow-orange-500/25'
-                      : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100'
+                      ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-md shadow-cyan-500/20'
+                      : 'text-slate-400 hover:text-white hover:bg-white/5'
                   }`}
                 >
                   {tab.label}
@@ -199,8 +199,8 @@ export function ReservationHistoryTab() {
                   onClick={() => setPackageFilter(tab.value)}
                   className={`rounded-lg px-4 py-1.5 text-xs font-bold transition-all duration-200 ${
                     packageFilter === tab.value
-                      ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md shadow-orange-500/25'
-                      : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100'
+                      ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-md shadow-cyan-500/20'
+                      : 'text-slate-400 hover:text-white hover:bg-white/5'
                   }`}
                 >
                   {tab.label}
@@ -216,7 +216,7 @@ export function ReservationHistoryTab() {
               loadPackages(packagePage, packageFilter);
             }
           }}
-          className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:text-slate-900 transition-all hover:bg-slate-50 shadow-sm"
+          className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-slate-900/40 px-4 py-2 text-xs font-semibold text-slate-300 hover:text-white transition-all hover:bg-slate-800/80 shadow-sm backdrop-blur-sm"
         >
           <RefreshCw
             size={13}
