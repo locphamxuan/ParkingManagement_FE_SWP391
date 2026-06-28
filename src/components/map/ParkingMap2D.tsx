@@ -59,6 +59,35 @@ function MotorcycleSvg({ className = '' }: { className?: string }) {
   );
 }
 
+function TopDownCarSvg({ className = '' }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 40 80" fill="none" className={className} xmlns="http://www.w3.org/2000/svg">
+      <rect x="6" y="10" width="28" height="60" rx="6" fill="currentColor" />
+      <path d="M8 28 C 8 22, 32 22, 32 28 L 30 33 L 10 33 Z" fill="#090d16" />
+      <path d="M10 56 L 30 56 L 28 62 C 28 62, 12 62, 12 62 Z" fill="#090d16" />
+      <rect x="9" y="32" width="22" height="25" rx="3" fill="currentColor" opacity="0.8" />
+      <rect x="3" y="24" width="3" height="6" rx="1.5" fill="currentColor" />
+      <rect x="34" y="24" width="3" height="6" rx="1.5" fill="currentColor" />
+      <rect x="9" y="8" width="5" height="3" rx="1" fill="#fef08a" />
+      <rect x="26" y="8" width="5" height="3" rx="1" fill="#fef08a" />
+      <rect x="9" y="69" width="6" height="2" fill="#ef4444" />
+      <rect x="25" y="69" width="6" height="2" fill="#ef4444" />
+    </svg>
+  );
+}
+
+function TopDownMotorcycleSvg({ className = '' }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 40 80" fill="none" className={className} xmlns="http://www.w3.org/2000/svg">
+      <rect x="18" y="10" width="4" height="12" rx="2" fill="#1e293b" />
+      <path d="M8 25 L 32 25" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+      <path d="M14 26 C14 20, 26 20, 26 26 L 25 50 C25 56, 15 56, 15 50 Z" fill="currentColor" />
+      <path d="M16 42 L 24 42 L 22 62 L 18 62 Z" fill="#0f172a" />
+      <rect x="18" y="58" width="4" height="14" rx="2" fill="#1e293b" />
+    </svg>
+  );
+}
+
 /* ─── Status Helpers ───────────────────────────────────────────────────────── */
 
 function getDetailedStatus(
@@ -99,6 +128,22 @@ function slotTextColor(status: SlotDetailedStatus): string {
   return 'text-slate-400';
 }
 
+const getVehicleColor = (code: string) => {
+  const colors = [
+    'text-slate-200',  // White/Silver
+    'text-amber-500',  // Yellow/Orange
+    'text-rose-500',   // Red
+    'text-blue-500',   // Blue
+    'text-slate-400',  // Gray
+  ];
+  let hash = 0;
+  for (let i = 0; i < code.length; i++) {
+    hash = code.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % colors.length;
+  return colors[index];
+};
+
 /* ─── Slot Cell ────────────────────────────────────────────────────────────── */
 
 function SlotCell({
@@ -117,7 +162,8 @@ function SlotCell({
   const isClickable = interactive && status === 'available';
   const isOccupied = status === 'occupied' || status === 'reserved';
   const isSelected = status === 'selected';
-  const showVehicleIcon = isOccupied && slot.vehicleType;
+  const showVehicleIcon = isOccupied;
+  const vehicleType = slot.vehicleType || (slot.code.toLowerCase().includes('m') ? 'motorcycle' : 'car');
 
   return (
     <motion.button
@@ -128,8 +174,8 @@ function SlotCell({
       whileTap={isClickable && !is3D ? { scale: 0.95 } : {}}
       title={`${slot.code} — ${status === 'available' ? 'Trống' : status === 'selected' ? 'Đang chọn' : status === 'occupied' ? 'Đang sử dụng' : status === 'reserved' ? 'Đã giữ' : status === 'maintenance' ? 'Bảo trì' : 'Không phù hợp'}`}
       className={`
-        relative flex flex-col items-center justify-center rounded-xl border-2 transition-all duration-200
-        ${is3D ? 'h-12 w-14 sm:h-14 sm:w-16' : 'h-14 w-14 sm:h-16 sm:w-16'}
+        relative flex flex-col items-center justify-center rounded-xl border-2 transition-all duration-200 overflow-hidden
+        ${is3D ? 'h-12 w-14 sm:h-14 sm:w-16' : 'h-20 w-11 sm:h-22 sm:w-13'}
         ${slotBg(status)}
         ${isClickable ? 'cursor-pointer' : isSelected ? 'cursor-pointer' : 'cursor-default'}
         ${!isClickable && !isSelected ? (status === 'unsupported' ? 'opacity-20' : 'opacity-55') : ''}
@@ -138,33 +184,41 @@ function SlotCell({
     >
       {/* Vehicle Icon for occupied/reserved */}
       {showVehicleIcon ? (
-        <div className="flex flex-col items-center gap-0.5">
-          {slot.vehicleType === 'car' ? (
-            <CarSvg className="h-5 w-5 text-slate-300/80" />
-          ) : (
-            <MotorcycleSvg className="h-5 w-5 text-slate-300/80" />
-          )}
-          <span className={`text-[9px] font-bold ${slotTextColor(status)}`}>{slot.code}</span>
+        <div className="absolute inset-0 flex flex-col items-center justify-between p-1">
+          {/* Top-down vehicle SVG */}
+          <div className="w-full flex-1 flex items-center justify-center opacity-90 my-0.5">
+            {vehicleType === 'car' ? (
+              <TopDownCarSvg className={`h-full w-auto ${getVehicleColor(slot.code)}`} />
+            ) : (
+              <TopDownMotorcycleSvg className={`h-[90%] w-auto ${getVehicleColor(slot.code)}`} />
+            )}
+          </div>
+          {/* Slot Code Badge at bottom */}
+          <span className="w-full text-center bg-black/60 backdrop-blur-[1px] rounded text-[8px] sm:text-[9px] font-black tracking-wide text-white py-0.5 border border-white/5 shadow-sm">
+            {slot.code}
+          </span>
         </div>
       ) : (
-        <span className={`text-sm font-black ${slotTextColor(status)}`}>{slot.code}</span>
+        <span className={`text-xs sm:text-sm font-black uppercase tracking-wider ${slotTextColor(status)}`}>
+          {slot.code}
+        </span>
       )}
 
       {/* Vehicle type badge for available slots */}
       {status === 'available' && slot.vehicleType && (
-        <span className="absolute right-0.5 top-0.5 rounded bg-black/30 p-0.5">
+        <span className="absolute right-0.5 top-0.5 rounded bg-black/30 p-0.5 z-10">
           {slot.vehicleType === 'car' ? (
-            <CarSvg className="h-2.5 w-2.5 text-white/80" />
+            <CarSvg className="h-2 w-2 text-white/80" />
           ) : (
-            <MotorcycleSvg className="h-2.5 w-2.5 text-white/80" />
+            <MotorcycleSvg className="h-2 w-2 text-white/80" />
           )}
         </span>
       )}
 
       {/* Lock overlay for unsupported slots */}
       {status === 'unsupported' && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-xl pointer-events-none">
-          <Lock size={16} className="text-slate-400" />
+        <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-xl pointer-events-none z-10">
+          <Lock size={14} className="text-slate-400" />
         </div>
       )}
     </motion.button>
