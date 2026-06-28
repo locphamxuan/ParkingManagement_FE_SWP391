@@ -86,13 +86,24 @@ export default function ReservationsPage() {
   const [rows, setRows] = useState<Array<{ building: Building }>>([]);
   const [selectedBuildingId, setSelectedBuildingId] = useState('');
   const [vehicleTypesForBuilding, setVehicleTypesForBuilding] = useState<VehicleType[]>([]);
-  const [selectedVehicleType, setSelectedVehicleType] = useState<VehicleKind | ''>('');
+  const [selectedVehicleType, setSelectedVehicleType] = useState<VehicleKind | ''>(
+    () => (localStorage.getItem('pbms_selected_vehicle_type') as VehicleKind) || ''
+  );
+  const changeVehicleType = (val: VehicleKind | '') => {
+    setSelectedVehicleType(val);
+    if (val) {
+      localStorage.setItem('pbms_selected_vehicle_type', val);
+    } else {
+      localStorage.removeItem('pbms_selected_vehicle_type');
+    }
+  };
   const [floorsData, setFloorsData] = useState<FloorAvailability[]>([]);
   const [floorsError, setFloorsError] = useState<string>('');
   const [slots, setSlots] = useState<MappedSlot[]>([]);
   const [selectedFloorIdModal, setSelectedFloorIdModal] = useState('');
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [selectedPlate, setSelectedPlate] = useState('');
+
 
   /* ── Hourly state ── */
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -328,13 +339,12 @@ export default function ReservationsPage() {
       if (s.status !== 'available') return false;
       if (!s.reservable) return false;
 
-      // Prefix check: C for Car, M for Motorcycle
-      const firstChar = String(s.code).trim().charAt(0).toUpperCase();
-      if (selectedVehicleType === 'car' && firstChar === 'M') {
-        return true; // Motorcycle slot is unsupported for Cars
+      const cleanCode = String(s.code).toUpperCase();
+      if (selectedVehicleType === 'car' && cleanCode.includes('-M')) {
+        return true; 
       }
-      if (selectedVehicleType === 'motorcycle' && firstChar === 'C') {
-        return true; // Car slot is unsupported for Motorcycles
+      if (selectedVehicleType === 'motorcycle' && (cleanCode.includes('-A') || cleanCode.includes('-C'))) {
+        return true;
       }
 
       return s.vehicleType !== 'all' && s.vehicleType !== selectedVehicleType;
@@ -342,12 +352,8 @@ export default function ReservationsPage() {
   }, [slots, selectedVehicleType]);
 
 
-  const canSubmit = Boolean(
-    mode === 'package'
-      // Gói floating: KHÔNG chọn slot (staff gán chỗ trống lúc check-in).
-      ? selectedBuildingId && selectedPkg && selectedPlate && startDateTime && !isSubmitting
-      : selectedBuildingId && selectedSlot && selectedPlate && startDateTime && endDateTime && !isSubmitting
-  );
+  const canSubmit = Boolean(selectedBuildingId && !isSubmitting);
+
 
   /* ── Handlers ── */
   const handleBuildingChange = (id: string) => {
@@ -373,14 +379,43 @@ export default function ReservationsPage() {
   const handleConfirmBooking = async () => {
     setBookingError(null);
     setBookingSuccess(null);
-    if (!startDateTime || !endDateTime || !selectedPlate || !selectedBuildingId) return;
+
+    if (!selectedVehicleType) {
+      setBookingError('Vui lòng chọn loại xe (phương tiện) trước khi đặt chỗ.');
+      return;
+    }
+
+    if (!selectedPlate) {
+      setBookingError('Vui lòng chọn biển số xe.');
+      return;
+    }
 
     if (mode === 'hourly') {
+      if (!selectedSlot) {
+        setBookingError('Vui lòng chọn ô đỗ xe trên bản đồ.');
+        return;
+      }
+      if (!startDateTime || !endDateTime) {
+        setBookingError('Vui lòng chọn thời gian nhận bãi và trả bãi.');
+        return;
+      }
       if (startDateTime.getTime() < Date.now() - 5 * 60 * 1000) {
         setBookingError('Thời gian nhận bãi không được ở trong quá khứ. Vui lòng chọn thời gian khác.');
         return;
       }
+    } else {
+      if (!selectedPkg) {
+        setBookingError('Vui lòng chọn gói đỗ xe dài hạn.');
+        return;
+      }
+      if (!startDateTime) {
+        setBookingError('Vui lòng chọn ngày bắt đầu gói dài hạn.');
+        return;
+      }
     }
+
+    if (!selectedBuildingId) return;
+
 
     setIsSubmitting(true);
     try {
@@ -400,16 +435,16 @@ export default function ReservationsPage() {
           plateNumber: selectedPlate,
           vehicleTypeId: vt?._id,
           vehicleType: selectedVehicleType || undefined,
-          startTime: startDateTime.toISOString(),
-          endTime: endDateTime.toISOString(),
+          startTime: startDateTime!.toISOString(),
+          endTime: endDateTime!.toISOString(),
           slotId: slotRecord?._id,
         });
-        setBookingSuccess(`Đặt chỗ thành công! Ô ${selectedSlot} từ ${fmtShort(startDateTime)} đến ${fmtShort(endDateTime)}`);
+        setBookingSuccess(`Đặt chỗ thành công! Ô ${selectedSlot} từ ${fmtShort(startDateTime!)} đến ${fmtShort(endDateTime!)}`);
       } else if (selectedPkg) {
         const res = await userApi.longTermSubscriptions.create({
           packageId: selectedPkg._id,
           plateNumber: selectedPlate,
-          startDate: startDateTime.toISOString(),
+          startDate: startDateTime!.toISOString(),
         });
         const data = (res as any)?.data;
         if (data?.checkoutUrl) {
@@ -521,7 +556,7 @@ export default function ReservationsPage() {
                   <CustomSelect
                     value={selectedVehicleType}
                     onChange={(val) => {
-                      setSelectedVehicleType(val as VehicleKind | '');
+                      changeVehicleType(val as VehicleKind | '');
                       setSelectedSlot(null);
                       setSelectedPlate('');
                       setSelectedPkg(null);
@@ -537,7 +572,7 @@ export default function ReservationsPage() {
               </div>
 
               {/* Plate selection right below vehicle type */}
-              <div className="mt-4 relative z-10">
+              <div className={`mt-4 relative z-10 transition-all duration-200 ${!selectedVehicleType ? 'opacity-40 pointer-events-none' : ''}`}>
                 <div className="flex items-center gap-2 mb-2">
                   <Zap size={14} className="text-amber-300/70" />
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Biển số xe</span>
@@ -545,9 +580,9 @@ export default function ReservationsPage() {
                 <CustomSelect
                   value={selectedPlate}
                   onChange={setSelectedPlate}
-                  disabled={plateOptions.length === 0}
+                  disabled={!selectedVehicleType || plateOptions.length === 0}
                   options={[
-                    { value: '', label: plateOptions.length === 0 ? '-- Tất cả biển số xe phù hợp đều đã đặt chỗ --' : '-- Chọn biển số --' },
+                    { value: '', label: !selectedVehicleType ? '-- Vui lòng chọn loại xe trước --' : (plateOptions.length === 0 ? '-- Tất cả biển số xe phù hợp đều đã đặt chỗ --' : '-- Chọn biển số --') },
                     ...plateOptions.map((p) => ({
                       value: p.plateNumber,
                       label: `${p.plateNumber} — ${p.vehicleType === 'motorcycle' ? '🏍️ Xe máy' : '🚗 Ô tô'}`,
@@ -561,9 +596,14 @@ export default function ReservationsPage() {
             {/* ── Hourly Mode ── */}
             <AnimatePresence mode="wait">
               {mode === 'hourly' && (
-                <motion.div key="hourly" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-                  className="space-y-5"
+                <motion.div
+                  key="hourly"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className={`space-y-5 transition-all duration-200 ${!selectedVehicleType ? 'opacity-30 pointer-events-none' : ''}`}
                 >
+
                   {/* Date */}
                   <div className="glass-panel-dark rounded-3xl p-6">
                     <div className="flex items-center gap-2 mb-4">
@@ -598,8 +638,12 @@ export default function ReservationsPage() {
 
               {/* ── Package Mode ── */}
               {mode === 'package' && (
-                <motion.div key="package" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-                  className="space-y-5"
+                <motion.div
+                  key="package"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className={`space-y-5 transition-all duration-200 ${!selectedVehicleType ? 'opacity-30 pointer-events-none' : ''}`}
                 >
                   {/* Package Cards */}
                   <div className="glass-panel-dark rounded-3xl p-6">
@@ -634,7 +678,7 @@ export default function ReservationsPage() {
                                 setPkgStartDate(null);
                                 const nextType = isCar ? 'car' : 'motorcycle';
                                 if (selectedVehicleType !== nextType) {
-                                  setSelectedVehicleType(nextType);
+                                  changeVehicleType(nextType);
                                   setSelectedSlot(null);
                                   setSelectedPlate('');
                                 }
@@ -669,11 +713,12 @@ export default function ReservationsPage() {
 
             {/* ── Slot Selection Button (chỉ cho đặt theo giờ) ── */}
             {mode === 'hourly' ? (
-              <div className="glass-panel-dark rounded-3xl p-6">
+              <div className={`glass-panel-dark rounded-3xl p-6 transition-all duration-200 ${!selectedVehicleType ? 'opacity-30 pointer-events-none' : ''}`}>
                 <div className="flex items-center gap-2 mb-3">
                   <MapPin size={16} className="text-cyan-300/70" />
                   <span className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300/70">Chọn chỗ đỗ</span>
                 </div>
+
 
                 <div className="flex items-center gap-3">
                   <motion.button
