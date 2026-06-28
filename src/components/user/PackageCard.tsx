@@ -28,12 +28,19 @@ export function PackageCard({ pkg, isSelected, isLocked, cat, colors, onClick }:
     });
   }, []);
 
+  const lockedTooltip = isLocked
+    ? (isCarPackage(pkg)
+        ? 'Gói này dành cho xe ô tô. Bạn đang chọn loại xe máy.'
+        : 'Gói này dành cho xe máy. Bạn đang chọn loại xe ô tô.')
+    : undefined;
+
   return (
     <button
       type="button"
       onClick={isLocked ? undefined : onClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      title={lockedTooltip}
       className={`relative rounded-2xl border p-4 text-left transition-all duration-300 ${
         isLocked
           ? 'border-white/[0.04] bg-white/[0.01] opacity-40 cursor-not-allowed'
@@ -42,11 +49,11 @@ export function PackageCard({ pkg, isSelected, isLocked, cat, colors, onClick }:
             : `${colors.borderNormal} ${colors.bgNormal} ${colors.borderHover} ${colors.bgHover} ${colors.shadowHover} hover:scale-[1.02]`
       }`}
     >
-      {/* Lock overlay on hover when locked */}
-      {isLocked && isHovered && (
-        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center rounded-2xl bg-slate-950/70 backdrop-blur-[2px] pointer-events-none">
-          <Lock size={22} className="text-slate-400 mb-1" />
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Không phù hợp</span>
+      {/* Lock overlay when locked */}
+      {isLocked && (
+        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center rounded-2xl bg-slate-950/60 backdrop-blur-[1px] pointer-events-none transition-all duration-300">
+          <Lock size={20} className="text-slate-300 drop-shadow-[0_0_8px_rgba(0,0,0,0.5)] mb-1" />
+          <span className="text-[9px] font-black text-slate-300 uppercase tracking-wider">Không phù hợp</span>
         </div>
       )}
 
