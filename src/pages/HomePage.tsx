@@ -43,7 +43,7 @@ interface HomePageProps {
 
 const navigationLinks = [
   { label: 'Trang chủ', href: '#top' },
-  { label: 'Giới thiệu', href: '#gioi-thieu' },
+  { label: 'Giới thiệu', href: '#hero-intro' },
   { label: 'Giải pháp', href: '#giai-phap' },
   { label: 'Dịch vụ', href: '#dich-vu' },
   { label: 'Liên hệ', href: '#lien-he' },
@@ -703,7 +703,7 @@ export default function HomePage({ modules, onOpenAuth, onViewProfile, onViewRes
 
             {/* Story Deck Item 2: Giới thiệu & Quản lý tầng & slot */}
             <motion.section
-              id="gioi-thieu"
+              id="giai-phap"
               className="min-h-[70vh] flex flex-col justify-center scroll-mt-24"
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -800,7 +800,7 @@ export default function HomePage({ modules, onOpenAuth, onViewProfile, onViewRes
       </div>
 
       {/* Core Solutions Modules */}
-      <section id="giai-phap" className="py-20 relative z-10">
+      <section id="dich-vu" className="py-20 relative z-10">
         <div className="max-w-6xl mx-auto px-4">
           <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-4">
             <div>
@@ -826,7 +826,7 @@ export default function HomePage({ modules, onOpenAuth, onViewProfile, onViewRes
       </section>
 
       {/* Services Roadmap Section */}
-      <section id="dich-vu" className="py-20 relative z-10 bg-slate-950/40">
+      <section id="lo-trinh" className="py-20 relative z-10 bg-slate-950/40">
         <div className="max-w-6xl mx-auto px-4">
           <div className="text-center max-w-xl mx-auto mb-12">
             <span className="text-[10px] font-black uppercase tracking-widest text-purple-400 font-mono">Lộ Trình Phát Triển</span>
