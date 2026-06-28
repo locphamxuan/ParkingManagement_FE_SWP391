@@ -497,13 +497,13 @@ export default function ReservationsPage() {
           {/* Left: Booking Form */}
           <div className="space-y-5">
             {/* Building + Vehicle + Plate */}
-            <div className="glass-panel-dark rounded-3xl p-6">
+            <div className="glass-panel-dark rounded-3xl p-6 relative z-30">
               <div className="flex items-center gap-2 mb-4">
                 <Building2 size={16} className="text-cyan-300/70" />
                 <span className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300/70">Thông tin cơ bản</span>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 sm:grid-cols-2 relative z-20">
                 <div>
                   <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Tòa nhà</span>
                   <CustomSelect
@@ -537,7 +537,7 @@ export default function ReservationsPage() {
               </div>
 
               {/* Plate selection right below vehicle type */}
-              <div className="mt-4">
+              <div className="mt-4 relative z-10">
                 <div className="flex items-center gap-2 mb-2">
                   <Zap size={14} className="text-amber-300/70" />
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Biển số xe</span>
