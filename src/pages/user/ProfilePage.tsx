@@ -7,6 +7,7 @@ import { syncPlates, listPlates, type PlateRecord } from '@/services/licensePlat
 import { UserQRModal } from '@/components/modals/UserQRModal';
 import { PlateQRModal } from '@/components/modals/PlateQRModal';
 import { userApi } from '@/services/user/userApi';
+import { CustomSelect } from '@/components/ui/select';
 import { normalizePlate, isValidVietnamPlate, brandsForVehicleType } from '@/utils/plate';
 
 // ─── Vietnamese license plate validation (shared util — canonical 59G2-038.80) ─
@@ -60,6 +61,14 @@ export default function ProfilePage() {
   const [plateError, setPlateError] = useState<string | null>(null);
   const [plateSuccess, setPlateSuccess] = useState<string | null>(null);
   const plateInputRef = useRef<HTMLInputElement | null>(null);
+
+  const vehicleBrandOptions = useMemo(() => {
+    const list = brandsForVehicleType(vehicleType);
+    return [
+      { value: '', label: '— Chọn hãng xe (tuỳ chọn) —' },
+      ...list.map((b) => ({ value: b, label: b })),
+    ];
+  }, [vehicleType]);
 
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
@@ -623,19 +632,16 @@ export default function ProfilePage() {
 
                         <div className="flex items-center gap-3">
                           <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono shrink-0">Hãng xe:</span>
-                          <select
+                          <CustomSelect
                             value={vehicleBrand}
-                            onChange={(e) => {
-                              setVehicleBrand(e.target.value);
-                              if (e.target.value !== 'Khác') setCustomBrand('');
+                            onChange={(val) => {
+                              setVehicleBrand(val);
+                              if (val !== 'Khác') setCustomBrand('');
                             }}
-                            className="flex-1 rounded-xl border border-white/10 bg-slate-950/80 text-white text-sm h-10 px-3 outline-none transition-all duration-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20"
-                          >
-                            <option value="">— Chọn hãng xe (tuỳ chọn) —</option>
-                            {brandsForVehicleType(vehicleType).map((b) => (
-                              <option key={b} value={b}>{b}</option>
-                            ))}
-                          </select>
+                            options={vehicleBrandOptions}
+                            placeholder="— Chọn hãng xe (tuỳ chọn) —"
+                            className="flex-1 h-10 text-xs sm:text-sm font-semibold"
+                          />
                         </div>
 
                         {/* Custom brand input — shown when user picks "Khác" */}
