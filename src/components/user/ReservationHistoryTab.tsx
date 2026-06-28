@@ -147,14 +147,14 @@ export function ReservationHistoryTab() {
   return (
     <div className="space-y-4">
       {/* Tab Mode Switcher */}
-      <div className="flex border-b border-white/5 pb-3 justify-center gap-3">
+      <div className="flex border-b border-slate-100 pb-3 justify-center gap-3">
         <button
           type="button"
           onClick={() => setHistoryMode('hourly')}
           className={`flex-1 max-w-[200px] rounded-xl py-2 text-xs font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-1.5 border ${
             historyMode === 'hourly'
-              ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 border-transparent shadow-md shadow-orange-500/10'
-              : 'text-slate-400 hover:text-white border-white/5 bg-white/[0.02]'
+              ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white border-transparent shadow-md shadow-orange-500/25'
+              : 'text-slate-500 hover:text-slate-800 border-slate-200 bg-slate-50'
           }`}
         >
           <Clock size={13} />
@@ -165,8 +165,8 @@ export function ReservationHistoryTab() {
           onClick={() => setHistoryMode('package')}
           className={`flex-1 max-w-[200px] rounded-xl py-2 text-xs font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-1.5 border ${
             historyMode === 'package'
-              ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 border-transparent shadow-md shadow-orange-500/10'
-              : 'text-slate-400 hover:text-white border-white/5 bg-white/[0.02]'
+              ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white border-transparent shadow-md shadow-orange-500/25'
+              : 'text-slate-500 hover:text-slate-800 border-slate-200 bg-slate-50'
           }`}
         >
           <Package size={13} />
@@ -175,8 +175,8 @@ export function ReservationHistoryTab() {
       </div>
 
       {/* Filter Tabs & Refresh Button */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/5 pb-4">
-        <div className="flex items-center gap-1.5 rounded-xl bg-white/[0.02] border border-white/5 p-1">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
+        <div className="flex items-center gap-1.5 rounded-xl bg-slate-100/50 border border-slate-200 p-1">
           {historyMode === 'hourly'
             ? FILTER_TABS.map((tab) => (
                 <button
@@ -185,8 +185,8 @@ export function ReservationHistoryTab() {
                   onClick={() => setStatusFilter(tab.value)}
                   className={`rounded-lg px-4 py-1.5 text-xs font-bold transition-all duration-200 ${
                     statusFilter === tab.value
-                      ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-lg shadow-orange-500/20'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.03]'
+                      ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md shadow-orange-500/25'
+                      : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100'
                   }`}
                 >
                   {tab.label}
@@ -199,8 +199,8 @@ export function ReservationHistoryTab() {
                   onClick={() => setPackageFilter(tab.value)}
                   className={`rounded-lg px-4 py-1.5 text-xs font-bold transition-all duration-200 ${
                     packageFilter === tab.value
-                      ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-lg shadow-orange-500/20'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.03]'
+                      ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md shadow-orange-500/25'
+                      : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100'
                   }`}
                 >
                   {tab.label}
@@ -216,7 +216,7 @@ export function ReservationHistoryTab() {
               loadPackages(packagePage, packageFilter);
             }
           }}
-          className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold text-slate-300 hover:text-white transition-all hover:bg-white/10"
+          className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:text-slate-900 transition-all hover:bg-slate-50 shadow-sm"
         >
           <RefreshCw
             size={13}
@@ -228,12 +228,12 @@ export function ReservationHistoryTab() {
 
       {/* Errors display */}
       {historyMode === 'hourly' && error && (
-        <div className="rounded-xl border border-rose-500/25 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
+        <div className="rounded-xl border border-rose-500/25 bg-rose-500/10 px-4 py-3 text-sm text-rose-600 font-bold">
           {error}
         </div>
       )}
       {historyMode === 'package' && packageError && (
-        <div className="rounded-xl border border-rose-500/25 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
+        <div className="rounded-xl border border-rose-500/25 bg-rose-500/10 px-4 py-3 text-sm text-rose-600 font-bold">
           {packageError}
         </div>
       )}
@@ -241,11 +241,11 @@ export function ReservationHistoryTab() {
       {/* Content Rendering */}
       {historyMode === 'hourly' ? (
         loading ? (
-          <div className="py-12 text-center text-sm text-slate-400">Đang tải dữ liệu...</div>
+          <div className="py-12 text-center text-sm text-slate-500">Đang tải dữ liệu...</div>
         ) : items.length === 0 ? (
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-10 text-center">
-            <CalendarClock size={32} className="mx-auto mb-3 text-slate-600 animate-pulse" />
-            <p className="text-sm font-semibold text-slate-400">Bạn chưa có lịch sử đặt chỗ nào.</p>
+          <div className="rounded-2xl border border-slate-200 bg-white/40 p-10 text-center">
+            <CalendarClock size={32} className="mx-auto mb-3 text-slate-400 animate-pulse" />
+            <p className="text-sm font-semibold text-slate-500">Bạn chưa có lịch sử đặt chỗ nào.</p>
           </div>
         ) : (
           <div className="space-y-4 max-h-[55vh] overflow-y-auto pr-1">
@@ -260,7 +260,7 @@ export function ReservationHistoryTab() {
               return (
                 <div
                   key={r._id}
-                  className={`relative rounded-2xl border-l-[3px] border-y border-r border-white/[0.05] bg-white/[0.01] p-4 transition-all duration-300 hover:border-r-white/10 hover:border-y-white/10 hover:bg-white/[0.03] hover:shadow-[0_8px_30px_rgb(0,0,0,0.3)] group ${statusColorClass}`}
+                  className={`relative rounded-2xl border-l-[4px] border-y border-r border-white/10 bg-white/[0.02] p-4 transition-all duration-300 hover:border-slate-600 hover:bg-white/[0.04] hover:shadow-[0_8px_30px_rgba(6,182,212,0.06)] hover:translate-x-1 group ${statusColorClass}`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -274,7 +274,7 @@ export function ReservationHistoryTab() {
                           {r.plateNumber}
                         </span>
                       </div>
-                      <p className="mt-1.5 text-xs font-medium text-slate-400 flex items-center gap-1">
+                      <p className="mt-1.5 text-xs font-medium text-slate-300 flex items-center gap-1">
                         <Building2 size={12} className="text-slate-500" />
                         {(r.building as any)?.name ?? '—'}
                       </p>
@@ -402,11 +402,11 @@ export function ReservationHistoryTab() {
         )
       ) : (
         packageLoading ? (
-          <div className="py-12 text-center text-sm text-slate-400">Đang tải dữ liệu...</div>
+          <div className="py-12 text-center text-sm text-slate-500">Đang tải dữ liệu...</div>
         ) : packageItems.length === 0 ? (
           <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-10 text-center">
             <Package size={32} className="mx-auto mb-3 text-slate-600 animate-pulse" />
-            <p className="text-sm font-semibold text-slate-400">Bạn chưa đăng ký gói dài hạn nào.</p>
+            <p className="text-sm font-semibold text-slate-500">Bạn chưa đăng ký gói dài hạn nào.</p>
           </div>
         ) : (
           <div className="space-y-4 max-h-[55vh] overflow-y-auto pr-1">
@@ -420,7 +420,7 @@ export function ReservationHistoryTab() {
               return (
                 <div
                   key={sub._id}
-                  className={`relative rounded-2xl border-l-[3px] border-y border-r border-white/[0.05] bg-white/[0.01] p-4 transition-all duration-300 hover:border-r-white/10 hover:border-y-white/10 hover:bg-white/[0.03] hover:shadow-[0_8px_30px_rgb(0,0,0,0.3)] group ${statusBorderColor}`}
+                  className={`relative rounded-2xl border-l-[4px] border-y border-r border-white/10 bg-white/[0.02] p-4 transition-all duration-300 hover:border-slate-600 hover:bg-white/[0.04] hover:shadow-[0_8px_30px_rgba(249,115,22,0.06)] hover:translate-x-1 group ${statusBorderColor}`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -433,7 +433,7 @@ export function ReservationHistoryTab() {
                           {sub.plateNumber ?? '—'}
                         </span>
                       </div>
-                      <p className="mt-1.5 text-xs font-medium text-slate-400 flex items-center gap-1">
+                      <p className="mt-1.5 text-xs font-medium text-slate-300 flex items-center gap-1">
                         <Building2 size={12} className="text-slate-500" />
                         Mã gói: {sub.package?.code ?? '—'}
                       </p>
@@ -471,7 +471,7 @@ export function ReservationHistoryTab() {
                     </div>
                     <div>
                       <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Giờ miễn phí</p>
-                      <p className="mt-1 text-xs font-medium text-cyan-300">
+                      <p className="mt-1 text-xs font-medium text-cyan-400">
                         {sub.package?.maxHoursPerDay ? `${sub.package.maxHoursPerDay}h/ngày` : 'Không giới hạn'}
                       </p>
                     </div>
@@ -486,23 +486,23 @@ export function ReservationHistoryTab() {
       {/* Pagination */}
       {historyMode === 'hourly' ? (
         totalPages > 1 && (
-          <div className="flex items-center justify-center gap-2 pt-2 border-t border-white/5 mt-2">
+          <div className="flex items-center justify-center gap-2 pt-2 border-t border-slate-100 mt-2">
             <button
               type="button"
               disabled={page <= 1 || loading}
               onClick={() => load(page - 1)}
-              className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-300 hover:text-white disabled:opacity-40"
+              className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 hover:text-slate-900 disabled:opacity-40 shadow-sm"
             >
               ← Trước
             </button>
-            <span className="text-xs text-slate-400">
+            <span className="text-xs text-slate-500 font-bold">
               Trang {page} / {totalPages}
             </span>
             <button
               type="button"
               disabled={page >= totalPages || loading}
               onClick={() => load(page + 1)}
-              className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-300 hover:text-white disabled:opacity-40"
+              className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 hover:text-slate-900 disabled:opacity-40 shadow-sm"
             >
               Sau →
             </button>
@@ -510,23 +510,23 @@ export function ReservationHistoryTab() {
         )
       ) : (
         packageTotalPages > 1 && (
-          <div className="flex items-center justify-center gap-2 pt-2 border-t border-white/5 mt-2">
+          <div className="flex items-center justify-center gap-2 pt-2 border-t border-slate-100 mt-2">
             <button
               type="button"
               disabled={packagePage <= 1 || packageLoading}
               onClick={() => loadPackages(packagePage - 1)}
-              className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-300 hover:text-white disabled:opacity-40"
+              className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 hover:text-slate-900 disabled:opacity-40 shadow-sm"
             >
               ← Trước
             </button>
-            <span className="text-xs text-slate-400">
+            <span className="text-xs text-slate-500 font-bold">
               Trang {packagePage} / {packageTotalPages}
             </span>
             <button
               type="button"
               disabled={packagePage >= packageTotalPages || packageLoading}
               onClick={() => loadPackages(packagePage + 1)}
-              className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-300 hover:text-white disabled:opacity-40"
+              className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 hover:text-slate-900 disabled:opacity-40 shadow-sm"
             >
               Sau →
             </button>

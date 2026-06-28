@@ -30,7 +30,8 @@ import {
 import type { LegacyModule } from '../data/mainFlow';
 import { notificationApi } from '@/services/notificationApi';
 import back1 from '@/assets/back1.webp';
-import back3 from '@/assets/back3.png';
+import homeBg from '@/assets/back3.png';
+import footerBg from '@/assets/footer.png';
 import carGarage from '@/assets/white_car_garage.png';
 
 interface HomePageProps {
@@ -135,30 +136,30 @@ function HotSpot({ title, desc, style, delay = 0 }: {
 
 const CARD_THEMES = {
   cyan: {
-    borderGradient: 'linear-gradient(270deg, #06b6d4, #10b981, #3b82f6, #06b6d4)', // Cyan, Emerald, Blue, Cyan
-    glow: 'rgba(6,182,212,0.18), rgba(16,185,129,0.08)',
-    glowColor: 'rgba(6,182,212,0.12)',
-    boxShadowHover: '0 15px 35px rgba(6, 182, 212, 0.25), 0 0 25px rgba(59, 130, 246, 0.15), inset 0 0 15px rgba(6, 182, 212, 0.15)',
-    boxShadowActive: '0 0 25px rgba(6, 182, 212, 0.15)',
-    iconBg: 'bg-cyan-500/10 text-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.1)]',
-    iconBgHover: 'bg-cyan-500/20 text-cyan-300 shadow-[0_0_15px_rgba(6,182,212,0.3)] scale-110',
-    buttonBg: 'bg-gradient-to-r from-cyan-500 to-emerald-500 text-slate-950 hover:shadow-[0_0_15px_rgba(6,182,212,0.2)] border-0',
-    buttonHoverGlow: '0 0 15px rgba(6,182,212,0.3)',
-    sheenGradient: 'linear-gradient(115deg, transparent 35%, rgba(6, 182, 212, 0.08) 45%, rgba(255, 255, 255, 0.25) 50%, rgba(16, 185, 129, 0.1) 55%, transparent 65%)',
-    particleColors: ['#06b6d4', '#10b981', '#3b82f6', '#ffffff', '#67e8f9', '#34d399']
+    borderGradient: 'linear-gradient(270deg, #ffffff, #94a3b8, #ffffff)', // Pure White, Silver, Pure White
+    glow: 'rgba(255,255,255,0.15), rgba(148,163,184,0.05)',
+    glowColor: 'rgba(255,255,255,0.1)',
+    boxShadowHover: '0 12px 30px rgba(255, 255, 255, 0.15), 0 0 20px rgba(255, 255, 255, 0.08), inset 0 0 10px rgba(255, 255, 255, 0.1)',
+    boxShadowActive: '0 0 15px rgba(255, 255, 255, 0.1)',
+    iconBg: 'bg-white/10 text-white shadow-[0_0_10px_rgba(255,255,255,0.05)]',
+    iconBgHover: 'bg-white/20 text-white shadow-[0_0_15px_rgba(255,255,255,0.25)] scale-110',
+    buttonBg: 'bg-white text-slate-950 hover:bg-slate-200 transition-all font-black border-0',
+    buttonHoverGlow: '0 0 12px rgba(255,255,255,0.25)',
+    sheenGradient: 'linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, 0.05) 45%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0.05) 55%, transparent 65%)',
+    particleColors: ['#ffffff', '#cbd5e1', '#e2e8f0', '#94a3b8']
   },
   orange: {
-    borderGradient: 'linear-gradient(270deg, #f97316, #fbbf24, #a78bfa, #ec4899, #f43f5e, #f97316)',
-    glow: 'rgba(249,115,22,0.18), rgba(168,85,247,0.08)',
-    glowColor: 'rgba(249,115,22,0.12)',
-    boxShadowHover: '0 15px 35px rgba(249, 115, 22, 0.25), 0 0 25px rgba(168, 85, 247, 0.15), inset 0 0 15px rgba(249, 115, 22, 0.15)',
-    boxShadowActive: '0 0 25px rgba(249,115,22,0.15)',
-    iconBg: 'bg-orange-500/10 text-orange-400 shadow-[0_0_10px_rgba(249,115,22,0.1)]',
-    iconBgHover: 'bg-orange-500/20 text-orange-300 shadow-[0_0_15px_rgba(249,115,22,0.3)] scale-110',
-    buttonBg: 'bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 hover:shadow-[0_0_15px_rgba(249,115,22,0.2)] border-0',
-    buttonHoverGlow: '0 0 15px rgba(249,115,22,0.3)',
-    sheenGradient: 'linear-gradient(115deg, transparent 35%, rgba(255, 215, 0, 0.08) 45%, rgba(255, 255, 255, 0.25) 50%, rgba(249, 115, 22, 0.1) 55%, transparent 65%)',
-    particleColors: ['#ffd700', '#f97316', '#fbbf24', '#ffffff', '#ffb700', '#f43f5e']
+    borderGradient: 'linear-gradient(270deg, #94a3b8, #475569, #94a3b8)', // Silver, Slate, Silver
+    glow: 'rgba(148,163,184,0.15), rgba(71,85,105,0.05)',
+    glowColor: 'rgba(148,163,184,0.1)',
+    boxShadowHover: '0 12px 30px rgba(148, 163, 184, 0.15), 0 0 20px rgba(71, 85, 105, 0.08), inset 0 0 10px rgba(148, 163, 184, 0.1)',
+    boxShadowActive: '0 0 15px rgba(148, 163, 184, 0.1)',
+    iconBg: 'bg-white/10 text-white shadow-[0_0_10px_rgba(255,255,255,0.05)]',
+    iconBgHover: 'bg-white/20 text-white shadow-[0_0_15px_rgba(255,255,255,0.25)] scale-110',
+    buttonBg: 'border border-white/20 bg-white/5 text-white hover:bg-white hover:text-slate-950 transition-all font-black',
+    buttonHoverGlow: '0 0 12px rgba(148,163,184,0.25)',
+    sheenGradient: 'linear-gradient(115deg, transparent 35%, rgba(148, 163, 184, 0.05) 45%, rgba(255, 255, 255, 0.15) 50%, rgba(148, 163, 184, 0.05) 55%, transparent 65%)',
+    particleColors: ['#ffffff', '#cbd5e1', '#e2e8f0', '#94a3b8']
   }
 };
 
@@ -233,7 +234,7 @@ function ModuleCard({
             inset: 0,
             background: CARD_THEMES[colorTheme].borderGradient,
             backgroundSize: '400% 400%',
-            opacity: 1, // Always fully visible
+            opacity: isHovered ? 0.85 : 0.15,
             borderRadius: '16px',
             pointerEvents: 'none',
           }}
@@ -336,7 +337,7 @@ function ModuleCard({
             </div>
             <div>
               <h3 className="font-black text-xs text-white tracking-tight uppercase">{module.title}</h3>
-              <span className={`text-[8px] font-black uppercase tracking-wider font-mono px-2 py-0.5 rounded ${module.available ? 'bg-emerald-500/10 text-emerald-400' : 'bg-slate-800 text-slate-500'
+              <span className={`text-[8px] font-black uppercase tracking-wider font-mono px-2 py-0.5 rounded ${module.available ? 'border border-white/25 bg-white/15 text-white' : 'bg-slate-800 text-slate-500'
                 }`}>
                 {module.available ? 'AVAILABLE' : 'ROADMAPPED'}
               </span>
@@ -435,7 +436,7 @@ export default function HomePage({ modules, onOpenAuth, onViewProfile, onViewRes
         {/* Dark teal abstract background */}
         <div
           className="absolute inset-0 opacity-[0.70] bg-cover bg-center pointer-events-none"
-          style={{ backgroundImage: `url(${back3})` }}
+          style={{ backgroundImage: `url(${homeBg})` }}
         />
         {/* Radial dark gradient overlay */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(13,26,26,0.1)_0%,rgba(13,26,26,0.60)_100%)] pointer-events-none" />
@@ -794,8 +795,8 @@ export default function HomePage({ modules, onOpenAuth, onViewProfile, onViewRes
       <section id="giai-phap" className="py-20 relative z-10">
         <div className="max-w-6xl mx-auto px-4">
           <div className="glass-premium glow-border-pulse p-8 rounded-3xl relative overflow-hidden shadow-2xl">
-            <div className="absolute -right-12 -top-12 h-36 w-36 rounded-full bg-[radial-gradient(circle_at_center,rgba(6,182,212,0.12),transparent_70%)] pointer-events-none blur-2xl" />
-            <span className="text-[10px] font-black uppercase tracking-widest text-cyan-400 font-mono">Hệ Thống PBMS</span>
+            <div className="absolute -right-12 -top-12 h-36 w-36 rounded-full bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.06),transparent_70%)] pointer-events-none blur-2xl" />
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 font-mono">Hệ Thống PBMS</span>
             <h2 className="text-2xl md:text-3xl font-black mt-2 text-white">Giải pháp vận hành bãi đỗ xe toàn diện</h2>
             <p className="mt-3 text-sm text-slate-400 font-semibold leading-relaxed max-w-3xl">
               PBMS số hóa toàn bộ quy trình vận hành bãi đỗ xe — từ check-in/check-out, quản lý ô đỗ theo tầng, đặt chỗ trước đến gói dài hạn và báo cáo doanh thu. Được thiết kế cho ban quản lý tòa nhà và thân thiện với người dùng cuối.
@@ -804,8 +805,8 @@ export default function HomePage({ modules, onOpenAuth, onViewProfile, onViewRes
               {benefits.map((benefit) => {
                 const Icon = benefit.icon;
                 return (
-                  <div key={benefit.title} className="flex gap-4 p-4 rounded-2xl border border-white/5 bg-slate-950/40 hover:border-cyan-500/20 transition-all duration-300">
-                    <div className="p-2 h-fit rounded-lg bg-cyan-500/10 text-cyan-400"><Icon size={16} /></div>
+                  <div key={benefit.title} className="flex gap-4 p-4 rounded-2xl border border-white/5 bg-slate-950/40 hover:border-white/20 transition-all duration-300">
+                    <div className="p-2 h-fit rounded-lg bg-white/10 text-white"><Icon size={16} /></div>
                     <div>
                       <h4 className="text-xs font-black text-white">{benefit.title}</h4>
                       <p className="text-[11px] text-slate-400 mt-1 font-semibold leading-relaxed">{benefit.description}</p>
@@ -823,7 +824,7 @@ export default function HomePage({ modules, onOpenAuth, onViewProfile, onViewRes
         <div className="max-w-6xl mx-auto px-4">
           <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-4">
             <div>
-              <span className="text-[10px] font-black uppercase tracking-widest text-cyan-400 font-mono">Tính Năng Chính</span>
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 font-mono">Tính Năng Chính</span>
               <h2 className="text-2xl md:text-3xl font-black mt-2 text-white">Các tính năng trọng tâm</h2>
               <p className="text-sm text-slate-400 font-semibold mt-2">Phân quyền rõ ràng theo vai trò — mỗi tính năng phục vụ đúng người, đúng lúc.</p>
             </div>
@@ -848,8 +849,8 @@ export default function HomePage({ modules, onOpenAuth, onViewProfile, onViewRes
       <section id="lo-trinh" className="py-20 relative z-10 bg-slate-950/40">
         <div className="max-w-6xl mx-auto px-4">
           <div className="text-center max-w-xl mx-auto mb-12">
-            <span className="text-[10px] font-black uppercase tracking-widest text-purple-400 font-mono">Lộ Trình Phát Triển</span>
-            <h2 className="text-2xl md:text-3xl font-black mt-2 text-white">Tính năng đang phát triển</h2>
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 font-mono">Lộ Trình Phát Triển</span>
+            <h2 className="text-2xl md:text-3xl font-black mt-2 text-cyan-400">Tính năng đang phát triển</h2>
             <p className="text-sm text-slate-400 font-semibold mt-2">Các tính năng sắp ra mắt nhằm mở rộng năng lực quản lý và nâng cao trải nghiệm người dùng.</p>
           </div>
 
@@ -863,16 +864,16 @@ export default function HomePage({ modules, onOpenAuth, onViewProfile, onViewRes
                   whileInView={{ opacity: 1, scale: 1 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.35, delay: index * 0.1 }}
-                  className="p-5 rounded-2xl border border-white/5 bg-slate-900/20 backdrop-blur-md flex flex-col justify-between min-h-[140px] hover:border-purple-500/20 hover:shadow-[0_0_20px_rgba(168,85,247,0.06)] transition-all duration-300"
+                  className="p-5 rounded-2xl border border-white/5 bg-slate-900/20 backdrop-blur-md flex flex-col justify-between min-h-[140px] hover:border-white/20 hover:shadow-[0_0_20px_rgba(255,255,255,0.06)] transition-all duration-300"
                 >
                   <div className="flex gap-4">
-                    <div className="p-3 h-fit rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400">
+                    <div className="p-3 h-fit rounded-xl bg-white/10 border border-white/15 text-white">
                       <Icon size={22} />
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
                         <h3 className="font-black text-sm text-white tracking-tight">{module.title}</h3>
-                        <span className="text-[8px] font-black uppercase font-mono tracking-wider bg-purple-500/10 text-purple-300 px-1.5 py-0.5 rounded">NEXT PHASE</span>
+                        <span className="text-[8px] font-black uppercase font-mono tracking-wider border border-white/25 bg-white/15 text-white px-1.5 py-0.5 rounded">NEXT PHASE</span>
                       </div>
                       <p className="mt-2 text-xs text-slate-400 leading-relaxed font-semibold">{module.description}</p>
                     </div>
@@ -1034,8 +1035,8 @@ function PremiumCTABanner({ user, onViewProfile }: PremiumCTABannerProps) {
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-cyan-500/8 rounded-full blur-[120px] pointer-events-none" />
 
       <div className="max-w-6xl mx-auto px-4">
-        <TiltCard className="group p-8 md:p-12 border border-white/10 hover:border-cyan-500/30 shadow-2xl shadow-cyan-950/10 bg-slate-900/40 relative">
-          <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none rounded-3xl" />
+        <TiltCard className="group p-8 md:p-12 border border-white/5 hover:border-white/10 shadow-2xl bg-black relative">
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.01)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.01)_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none rounded-3xl" />
 
           <div className="relative flex flex-col md:flex-row items-center justify-between gap-8 z-20">
             <div className="text-center md:text-left">
@@ -1111,6 +1112,11 @@ function PremiumFooter({ user, onViewProfile, navigationLinks }: PremiumFooterPr
 
   return (
     <footer id="lien-he" className="bg-slate-950 py-20 relative z-10 overflow-hidden">
+      {/* Footer background image */}
+      <div
+        className="absolute inset-0 opacity-[0.35] bg-cover bg-center pointer-events-none"
+        style={{ backgroundImage: `url(${footerBg})` }}
+      />
       <div className="absolute bottom-0 left-1/4 w-[600px] h-[400px] bg-cyan-500/5 rounded-full blur-[140px] pointer-events-none" />
 
       <div className="max-w-6xl mx-auto px-4">

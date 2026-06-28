@@ -29,33 +29,33 @@ export function BookingSummarySidebar({
     <div className="lg:sticky lg:top-6 lg:self-start">
       <div className="glass-panel-white rounded-3xl p-6">
         <div className="flex items-center gap-2 mb-5">
-          <CalendarClock size={16} className="text-orange-500" />
-          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-600">
+          <CalendarClock size={16} className="text-orange-400" />
+          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-300/70">
             Tóm tắt đặt chỗ
           </span>
         </div>
 
         <div className="space-y-3">
           <div className="flex justify-between text-xs">
-            <span className="font-bold text-slate-500">Tòa nhà</span>
-            <span className="font-black text-slate-800">{selectedBuildingName || '—'}</span>
+            <span className="font-bold text-slate-400">Tòa nhà</span>
+            <span className="font-black text-white">{selectedBuildingName || '—'}</span>
           </div>
           <div className="flex justify-between text-xs">
-            <span className="font-bold text-slate-500">Chế độ</span>
-            <span className="font-black text-slate-800">
+            <span className="font-bold text-slate-400">Chế độ</span>
+            <span className="font-black text-white">
               {mode === 'hourly' ? 'Theo giờ' : selectedPkgName || 'Gói dài hạn'}
             </span>
           </div>
           <div className="flex justify-between text-xs">
-            <span className="font-bold text-slate-500">Loại xe</span>
-            <span className="font-black text-slate-800 flex items-center gap-1.5">
+            <span className="font-bold text-slate-400">Loại xe</span>
+            <span className="font-black text-white flex items-center gap-1.5">
               {selectedVehicleType === 'motorcycle' ? (
                 <>
-                  <Bike size={12} className="text-purple-500" /> Xe máy
+                  <Bike size={12} className="text-purple-300" /> Xe máy
                 </>
               ) : selectedVehicleType === 'car' ? (
                 <>
-                  <Car size={12} className="text-cyan-600" /> Ô tô
+                  <Car size={12} className="text-cyan-300" /> Ô tô
                 </>
               ) : (
                 '—'
@@ -63,41 +63,41 @@ export function BookingSummarySidebar({
             </span>
           </div>
 
-          <div className="h-px bg-slate-200" />
+          <div className="h-px bg-white/[0.06]" />
 
           <div className={`grid gap-2 ${mode === 'hourly' ? 'grid-cols-2' : 'grid-cols-1'}`}>
             {mode === 'hourly' && (
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 shadow-inner">
-                <p className="text-[9px] font-bold uppercase text-slate-400">Ô đỗ</p>
-                <p className="mt-1 font-mono text-lg font-black text-orange-500">
+              <div className="rounded-xl border border-white/5 bg-white/[0.02] p-3 shadow-inner">
+                <p className="text-[9px] font-bold uppercase text-slate-500">Ô đỗ</p>
+                <p className="mt-1 font-mono text-lg font-black text-orange-400">
                   {selectedSlot || '—'}
                 </p>
               </div>
             )}
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 shadow-inner">
-              <p className="text-[9px] font-bold uppercase text-slate-400">Biển số</p>
-              <p className="mt-1 font-mono text-sm font-black text-slate-700 truncate">
+            <div className="rounded-xl border border-white/5 bg-white/[0.02] p-3 shadow-inner">
+              <p className="text-[9px] font-bold uppercase text-slate-500">Biển số</p>
+              <p className="mt-1 font-mono text-sm font-black text-cyan-200 truncate">
                 {selectedPlate || '—'}
               </p>
             </div>
           </div>
 
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 shadow-inner">
-            <p className="text-[9px] font-bold uppercase text-slate-400">Nhận bãi</p>
-            <p className="mt-1 text-sm font-black text-slate-800">
+          <div className="rounded-xl border border-white/5 bg-white/[0.02] p-3 shadow-inner">
+            <p className="text-[9px] font-bold uppercase text-slate-500">Nhận bãi</p>
+            <p className="mt-1 text-sm font-black text-white">
               {startDateTime ? fmtShort(startDateTime) : '—'}
             </p>
           </div>
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 shadow-inner">
-            <p className="text-[9px] font-bold uppercase text-slate-400">Trả bãi</p>
-            <p className="mt-1 text-sm font-black text-slate-800">
+          <div className="rounded-xl border border-white/5 bg-white/[0.02] p-3 shadow-inner">
+            <p className="text-[9px] font-bold uppercase text-slate-500">Trả bãi</p>
+            <p className="mt-1 text-sm font-black text-white">
               {endDateTime ? fmtShort(endDateTime) : '—'}
             </p>
           </div>
 
-          <div className="flex items-center justify-between rounded-xl border border-emerald-300/40 bg-emerald-50 p-3">
-            <span className="text-xs font-bold text-emerald-700">Số tiền</span>
-            <span className="font-mono text-sm font-black text-emerald-600">
+          <div className="flex items-center justify-between rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3">
+            <span className="text-xs font-bold text-emerald-400">Số tiền</span>
+            <span className="font-mono text-sm font-black text-emerald-300">
               {estimatedAmount ? fmtMoney(estimatedAmount) : '—'}
             </span>
           </div>

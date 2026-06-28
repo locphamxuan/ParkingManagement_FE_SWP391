@@ -498,7 +498,7 @@ export default function ReservationsPage() {
         </motion.div>
 
         {/* ── Tab Bar ── */}
-        <div className="mb-8 flex items-center gap-1 rounded-2xl border border-white/30 bg-white/20 backdrop-blur-sm p-1.5 max-w-md md:max-w-lg w-full mx-auto shadow-xl">
+        <div className="mb-8 flex items-center gap-1 rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-md p-1.5 max-w-md md:max-w-lg w-full mx-auto shadow-xl">
           {[
             { key: 'hourly' as BookingMode, label: 'Đặt theo giờ', icon: <Timer size={14} /> },
             { key: 'package' as BookingMode, label: 'Đăng ký gói dài hạn', icon: <Package size={14} /> },
@@ -514,7 +514,7 @@ export default function ReservationsPage() {
               }}
               className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-3 text-xs font-black uppercase tracking-wider transition-all duration-200 ${mode === tab.key
                 ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 shadow-[0_0_16px_rgba(249,115,22,0.3)]'
-                : 'text-slate-700 hover:text-slate-900'
+                : 'text-slate-400 hover:text-white'
                 }`}
             >
               {tab.icon} {tab.label}
@@ -532,13 +532,13 @@ export default function ReservationsPage() {
             {/* Building + Vehicle + Plate */}
             <div className="glass-panel-white rounded-3xl p-6 relative z-30">
               <div className="flex items-center gap-2 mb-4">
-                <Building2 size={16} className="text-slate-500" />
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Thông tin cơ bản</span>
+                <Building2 size={16} className="text-cyan-400" />
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-400">Thông tin cơ bản</span>
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2 relative z-20">
                 <div>
-                  <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Tòa nhà</span>
+                  <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-400">Tòa nhà</span>
                   <CustomSelect
                     value={selectedBuildingId}
                     onChange={handleBuildingChange}
@@ -550,7 +550,7 @@ export default function ReservationsPage() {
                   />
                 </div>
                 <div>
-                  <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Loại xe</span>
+                  <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-400">Loại xe</span>
                   <CustomSelect
                     value={selectedVehicleType}
                     onChange={(val) => {
@@ -576,7 +576,7 @@ export default function ReservationsPage() {
                 )}
                 <div className="flex items-center gap-2 mb-2">
                   <Zap size={14} className="text-amber-500" />
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Biển số xe</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Biển số xe</span>
                 </div>
                 <CustomSelect
                   value={selectedPlate}
@@ -856,23 +856,23 @@ export default function ReservationsPage() {
               exit={{ scale: 0.95, opacity: 0, y: 15 }}
               transition={{ type: "spring", duration: 0.4 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-3xl border border-white/10 bg-slate-950/95 p-6 shadow-[0_0_80px_rgba(0,0,0,0.8),_inset_0_1px_1px_rgba(255,255,255,0.1)] flex flex-col"
+              className="relative max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-3xl glass-panel-white p-6 shadow-[0_12px_40px_rgba(0,0,0,0.15)] flex flex-col"
             >
               {/* Modal Header */}
-              <div className="mb-6 flex items-center justify-between border-b border-white/5 pb-4">
+              <div className="mb-6 flex items-center justify-between border-b border-slate-100 pb-4">
                 <div className="flex items-center gap-3">
-                  <div className="rounded-xl bg-cyan-500/10 p-2 border border-cyan-500/20 shadow-[0_0_15px_rgba(6,182,212,0.15)]">
-                    <CalendarClock size={20} className="text-cyan-400" />
+                  <div className="rounded-xl bg-orange-500/10 p-2 border border-orange-500/20 shadow-[0_0_15px_rgba(249,115,22,0.15)]">
+                    <CalendarClock size={20} className="text-orange-500" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-black text-white tracking-wide">Lịch sử đặt chỗ</h2>
+                    <h2 className="text-lg font-black text-slate-800 tracking-wide">Lịch sử đặt chỗ</h2>
                     <p className="text-[10px] text-slate-500 font-semibold tracking-wider uppercase mt-0.5">Theo dõi & Quản lý các lượt đỗ xe</p>
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => setShowHistory(false)}
-                  className="rounded-full border border-white/5 bg-white/[0.02] p-2 text-slate-400 hover:text-white hover:bg-white/10 hover:rotate-90 transition-all duration-300"
+                  className="rounded-full border border-slate-200 bg-slate-100 p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-200 hover:rotate-90 transition-all duration-300"
                 >
                   <X size={18} />
                 </button>

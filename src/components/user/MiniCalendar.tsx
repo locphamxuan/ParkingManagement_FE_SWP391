@@ -49,13 +49,13 @@ export function MiniCalendar({ selectedDate, onSelect, maxDate }: MiniCalendarPr
   const nextMonth = () => setViewMonth(new Date(year, month + 1, 1));
 
   return (
-    <div className="mx-auto max-w-[400px] w-full rounded-2xl border border-white/[0.06] bg-[#0c1220]/45 p-4 shadow-xl">
+    <div className="mx-auto max-w-[400px] w-full bg-transparent p-0">
       {/* Month nav */}
       <div className="mb-4 flex items-center justify-between">
         <button
           type="button"
           onClick={prevMonth}
-          className="rounded-lg p-1.5 text-slate-400 hover:bg-white/5 hover:text-white transition duration-200"
+          className="rounded-lg p-1.5 text-slate-400 hover:bg-white/10 hover:text-white transition duration-200"
         >
           <ChevronLeft size={16} />
         </button>
@@ -65,7 +65,7 @@ export function MiniCalendar({ selectedDate, onSelect, maxDate }: MiniCalendarPr
         <button
           type="button"
           onClick={nextMonth}
-          className="rounded-lg p-1.5 text-slate-400 hover:bg-white/5 hover:text-white transition duration-200"
+          className="rounded-lg p-1.5 text-slate-400 hover:bg-white/10 hover:text-white transition duration-200"
         >
           <ChevronRight size={16} />
         </button>
@@ -102,7 +102,7 @@ export function MiniCalendar({ selectedDate, onSelect, maxDate }: MiniCalendarPr
                 isSelected
                   ? 'bg-orange-500 text-slate-950 font-black shadow-[0_4px_12px_rgba(249,115,22,0.4)] scale-105'
                   : disabled
-                    ? 'text-slate-700 opacity-25 cursor-not-allowed'
+                    ? 'text-slate-600 opacity-40 cursor-not-allowed'
                     : isToday
                       ? 'border border-orange-500/40 bg-orange-500/5 text-orange-400 hover:bg-orange-500/10'
                       : 'text-slate-300 hover:bg-white/[0.08] hover:text-white'

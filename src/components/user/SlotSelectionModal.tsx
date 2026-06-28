@@ -63,7 +63,7 @@ export function SlotSelectionModal({
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
             onClick={(e) => e.stopPropagation()}
-            className="relative max-h-[90vh] w-full max-w-5xl overflow-auto rounded-3xl border border-slate-700/60 bg-[#080d17] p-4 shadow-[0_30px_120px_rgba(0,0,0,0.55)] sm:p-6"
+            className="relative max-h-[90vh] w-full max-w-5xl overflow-auto rounded-3xl glass-panel-white p-4 shadow-[0_12px_40px_rgba(0,0,0,0.18)] sm:p-6"
           >
             <ParkingMap2D
               interactive
@@ -85,14 +85,14 @@ export function SlotSelectionModal({
               className="w-full bg-transparent p-0 border-none rounded-none shadow-none"
               placeholder={
                 !selectedFloorIdModal ? (
-                  <div className="flex flex-col items-center justify-center py-20 text-slate-400">
-                    <MapPin size={36} className="text-slate-600 mb-3 animate-pulse" />
-                    <span className="text-sm font-medium">Vui lòng chọn tầng để hiển thị sơ đồ ô đỗ</span>
+                  <div className="flex flex-col items-center justify-center py-20 text-slate-500">
+                    <MapPin size={36} className="text-slate-400 mb-3 animate-pulse" />
+                    <span className="text-sm font-semibold">Vui lòng chọn tầng để hiển thị sơ đồ ô đỗ</span>
                   </div>
                 ) : isLoadingSlots ? (
-                  <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+                  <div className="flex flex-col items-center justify-center py-20 text-slate-500">
                     <div className="h-8 w-8 animate-spin rounded-full border-2 border-orange-500 border-t-transparent mb-3" />
-                    <span className="text-sm font-medium">Đang tải danh sách ô đỗ...</span>
+                    <span className="text-sm font-semibold">Đang tải danh sách ô đỗ...</span>
                   </div>
                 ) : null
               }
@@ -126,7 +126,7 @@ export function SlotSelectionModal({
                   )}
                 </div>
                 {selectedVehicleType && (
-                  <div className="rounded-xl border border-white/5 bg-white/[0.02] px-4 py-2.5 text-xs text-slate-400 flex items-center gap-2 max-w-md">
+                  <div className="rounded-xl border border-slate-200 bg-white/70 px-4 py-2.5 text-xs text-slate-600 flex items-center gap-2 max-w-md shadow-sm">
                     <span>
                       Bản đồ đang lọc theo <strong>{selectedVehicleType === 'car' ? 'Ô tô' : 'Xe máy'}</strong>. Các
                       ô đỗ không phù hợp sẽ tự động mờ đi.
