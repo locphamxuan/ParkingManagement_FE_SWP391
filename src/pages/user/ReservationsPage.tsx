@@ -16,7 +16,7 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import { CustomSelect } from '@/components/ui/select';
 import back1 from '@/assets/back1.webp';
-import back3 from '@/assets/back3.webp';
+import back3 from '@/assets/back3.png';
 
 import {
   userApi,
@@ -339,7 +339,7 @@ export default function ReservationsPage() {
     return slots.filter((s) => {
       const cleanCode = String(s.code).toUpperCase();
       if (selectedVehicleType === 'car' && cleanCode.includes('-M')) {
-        return true; 
+        return true;
       }
       if (selectedVehicleType === 'motorcycle' && (cleanCode.includes('-A') || cleanCode.includes('-C'))) {
         return true;
@@ -468,7 +468,7 @@ export default function ReservationsPage() {
     <main className="min-h-screen text-slate-100 relative isolate">
       {/* Background */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10 bg-[#0d1a1a]" aria-hidden="true">
-        <div 
+        <div
           className="absolute inset-0 opacity-[0.70] bg-cover bg-center pointer-events-none"
           style={{ backgroundImage: `url(${back3})` }}
         />

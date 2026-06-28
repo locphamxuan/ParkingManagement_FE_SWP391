@@ -30,7 +30,7 @@ import {
 import type { LegacyModule } from '../data/mainFlow';
 import { notificationApi } from '@/services/notificationApi';
 import back1 from '@/assets/back1.webp';
-import back3 from '@/assets/back3.webp';
+import back3 from '@/assets/back3.png';
 import carGarage from '@/assets/white_car_garage.png';
 
 interface HomePageProps {
@@ -162,17 +162,17 @@ const CARD_THEMES = {
   }
 };
 
-function ModuleCard({ 
-  module, 
-  index, 
-  onViewProfile, 
+function ModuleCard({
+  module,
+  index,
+  onViewProfile,
   onAction,
   colorTheme = 'orange'
-}: { 
-  module: any; 
-  index: number; 
-  onViewProfile: () => void; 
-  onAction: (module: any) => void; 
+}: {
+  module: any;
+  index: number;
+  onViewProfile: () => void;
+  onAction: (module: any) => void;
   colorTheme?: 'orange' | 'cyan';
 }) {
   const [isHovered, setIsHovered] = useState(false);
@@ -205,18 +205,17 @@ function ModuleCard({
       transition={{ duration: 0.4, delay: index * 0.08 }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      whileHover={module.available ? { 
-        scale: 1.03, 
-        y: -4, 
+      whileHover={module.available ? {
+        scale: 1.03,
+        y: -4,
         boxShadow: CARD_THEMES[colorTheme].boxShadowHover,
       } : { scale: 1.01 }}
-      className={`rounded-2xl p-[1px] relative overflow-hidden transition-all duration-300 ${
-        module.available
-          ? isHovered 
-            ? colorTheme === 'cyan' ? 'shadow-[0_0_25px_rgba(6,182,212,0.2)]' : 'shadow-[0_0_25px_rgba(249,115,22,0.2)]'
-            : 'bg-white/10'
-          : 'bg-white/5 opacity-75'
-      }`}
+      className={`rounded-2xl p-[1px] relative overflow-hidden transition-all duration-300 ${module.available
+        ? isHovered
+          ? colorTheme === 'cyan' ? 'shadow-[0_0_25px_rgba(6,182,212,0.2)]' : 'shadow-[0_0_25px_rgba(249,115,22,0.2)]'
+          : 'bg-white/10'
+        : 'bg-white/5 opacity-75'
+        }`}
     >
       {/* The moving gradient border layer (only visible on hover for available modules) */}
       {module.available && (
@@ -242,11 +241,10 @@ function ModuleCard({
       )}
 
       {/* Main Inner Card Content */}
-      <div className={`p-5 rounded-[15px] backdrop-blur-md flex flex-col justify-between h-[228px] w-full relative z-10 overflow-hidden ${
-        module.available
-          ? 'bg-gradient-to-b from-slate-900/90 to-slate-950/95'
-          : 'bg-slate-900/10'
-      }`}>
+      <div className={`p-5 rounded-[15px] backdrop-blur-md flex flex-col justify-between h-[228px] w-full relative z-10 overflow-hidden ${module.available
+        ? 'bg-gradient-to-b from-slate-900/90 to-slate-950/95'
+        : 'bg-slate-900/10'
+        }`}>
         {/* Luxurious Ambient Background Glow */}
         <div
           className="absolute inset-0 pointer-events-none transition-opacity duration-500"
@@ -290,23 +288,23 @@ function ModuleCard({
               return (
                 <motion.div
                   key={p.id}
-                  initial={{ 
-                    opacity: 0, 
-                    x: `${p.startX}%`, 
-                    y: -10, 
+                  initial={{
+                    opacity: 0,
+                    x: `${p.startX}%`,
+                    y: -10,
                     scale: 0,
-                    rotate: 0 
+                    rotate: 0
                   }}
-                  animate={{ 
-                    opacity: [0, 1, 0.7, 1, 0.4, 0], 
+                  animate={{
+                    opacity: [0, 1, 0.7, 1, 0.4, 0],
                     x: [`${p.startX}%`, `${p.startX + p.drift / 2}%`, `${p.startX + p.drift}%`],
-                    y: 240, 
+                    y: 240,
                     scale: [0, 1.4, 0.8, 1.3, 0.6, 0],
                     rotate: [0, 180, 360, 540, 720]
                   }}
-                  transition={{ 
-                    duration: p.duration, 
-                    repeat: Infinity, 
+                  transition={{
+                    duration: p.duration,
+                    repeat: Infinity,
                     delay: p.delay,
                     ease: "linear"
                   }}
@@ -328,13 +326,12 @@ function ModuleCard({
 
         <div className="relative z-20">
           <div className="flex items-center gap-3">
-            <div className={`p-2.5 rounded-lg transition-all duration-300 ${
-              module.available 
-                ? isHovered
-                  ? CARD_THEMES[colorTheme].iconBgHover
-                  : CARD_THEMES[colorTheme].iconBg
-                : 'bg-slate-800 text-slate-500'
-            }`}>
+            <div className={`p-2.5 rounded-lg transition-all duration-300 ${module.available
+              ? isHovered
+                ? CARD_THEMES[colorTheme].iconBgHover
+                : CARD_THEMES[colorTheme].iconBg
+              : 'bg-slate-800 text-slate-500'
+              }`}>
               <Icon size={20} className="transition-transform duration-300" />
             </div>
             <div>
@@ -354,8 +351,8 @@ function ModuleCard({
             whileHover={module.available ? { scale: 1.02, boxShadow: CARD_THEMES[colorTheme].buttonHoverGlow } : {}}
             whileTap={module.available ? { scale: 0.98 } : {}}
             className={`w-full py-2.5 px-4 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors duration-200 ${module.available
-                ? CARD_THEMES[colorTheme].buttonBg
-                : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-white/5'
+              ? CARD_THEMES[colorTheme].buttonBg
+              : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-white/5'
               }`}
             onClick={() => { if (module.id === 'profile') return onViewProfile(); onAction(module); }}
             disabled={!module.available}
@@ -436,7 +433,7 @@ export default function HomePage({ modules, onOpenAuth, onViewProfile, onViewRes
       {/* Background — fixed so they never cause scroll issues */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10 bg-[#0d1a1a]" aria-hidden="true">
         {/* Dark teal abstract background */}
-        <div 
+        <div
           className="absolute inset-0 opacity-[0.70] bg-cover bg-center pointer-events-none"
           style={{ backgroundImage: `url(${back3})` }}
         />
@@ -449,11 +446,10 @@ export default function HomePage({ modules, onOpenAuth, onViewProfile, onViewRes
 
 
       {/* Cyber Header Navigation */}
-      <header className={`sticky top-0 z-40 transition-all duration-500 border-b ${
-        scrolled 
-          ? 'bg-slate-950/85 backdrop-blur-xl border-cyan-500/10 shadow-[0_10px_30px_-10px_rgba(0,0,0,0.8),0_1px_0_0_rgba(6,182,212,0.15)] py-2.5' 
-          : 'bg-transparent border-transparent py-4'
-      }`}>
+      <header className={`sticky top-0 z-40 transition-all duration-500 border-b ${scrolled
+        ? 'bg-slate-950/85 backdrop-blur-xl border-cyan-500/10 shadow-[0_10px_30px_-10px_rgba(0,0,0,0.8),0_1px_0_0_rgba(6,182,212,0.15)] py-2.5'
+        : 'bg-transparent border-transparent py-4'
+        }`}>
         {/* Top edge glowing gradient border */}
         <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-blue-600 via-cyan-400 to-purple-600 opacity-60 pointer-events-none" />
 
@@ -785,10 +781,10 @@ export default function HomePage({ modules, onOpenAuth, onViewProfile, onViewRes
           {/* Slider nav buttons */}
           <div className="absolute bottom-6 right-32 flex items-center gap-2">
             <button type="button" className="w-8 h-8 rounded-full border border-white/20 bg-white/5 backdrop-blur-sm flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-all">
-              <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6"/></svg>
+              <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6" /></svg>
             </button>
             <button type="button" className="w-8 h-8 rounded-full border border-white/20 bg-white/5 backdrop-blur-sm flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-all">
-              <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
+              <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6" /></svg>
             </button>
           </div>
         </div>
@@ -947,7 +943,7 @@ function TiltCard({ children, className = '', glowColor = 'rgba(249,115,22,0.12)
       controlsY.stop();
     };
   }, [isHovered, x, y]);
-  
+
   function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
     setIsHovered(true);
     const rect = e.currentTarget.getBoundingClientRect();
@@ -955,7 +951,7 @@ function TiltCard({ children, className = '', glowColor = 'rgba(249,115,22,0.12)
     const height = rect.height;
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
-    
+
     x.set(mouseX / width);
     y.set(mouseY / height);
 
@@ -993,9 +989,9 @@ function TiltCard({ children, className = '', glowColor = 'rgba(249,115,22,0.12)
           background: borderBg,
         }}
       />
-      
+
       {/* Card Content body */}
-      <div 
+      <div
         className="h-full w-full rounded-[23px] bg-slate-950/85 backdrop-blur-xl p-8 md:p-12 relative overflow-hidden"
         style={{ transformStyle: 'preserve-3d' }}
       >
@@ -1036,11 +1032,11 @@ function PremiumCTABanner({ user, onViewProfile }: PremiumCTABannerProps) {
   return (
     <section className="py-20 relative z-10 overflow-hidden bg-slate-950">
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-cyan-500/8 rounded-full blur-[120px] pointer-events-none" />
-      
+
       <div className="max-w-6xl mx-auto px-4">
         <TiltCard className="group p-8 md:p-12 border border-white/10 hover:border-cyan-500/30 shadow-2xl shadow-cyan-950/10 bg-slate-900/40 relative">
           <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none rounded-3xl" />
-          
+
           <div className="relative flex flex-col md:flex-row items-center justify-between gap-8 z-20">
             <div className="text-center md:text-left">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-[10px] font-black uppercase tracking-wider font-mono">
@@ -1055,7 +1051,7 @@ function PremiumCTABanner({ user, onViewProfile }: PremiumCTABannerProps) {
                 Quản lý tối ưu, đặt chỗ tức thì và giám sát thời gian thực. Nâng tầm giá trị cho bãi đỗ xe của tòa nhà bạn.
               </p>
             </div>
-            
+
             <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto shrink-0 justify-center">
               <motion.a
                 whileHover={{ scale: 1.03, boxShadow: '0 0 25px rgba(6,182,212,0.4)' }}
@@ -1065,7 +1061,7 @@ function PremiumCTABanner({ user, onViewProfile }: PremiumCTABannerProps) {
               >
                 Tạo tài khoản
               </motion.a>
-              
+
               {user ? (
                 <motion.button
                   whileHover={{ scale: 1.03, borderColor: 'rgba(6,182,212,0.4)' }}
@@ -1116,11 +1112,11 @@ function PremiumFooter({ user, onViewProfile, navigationLinks }: PremiumFooterPr
   return (
     <footer id="lien-he" className="bg-slate-950 py-20 relative z-10 overflow-hidden">
       <div className="absolute bottom-0 left-1/4 w-[600px] h-[400px] bg-cyan-500/5 rounded-full blur-[140px] pointer-events-none" />
-      
+
       <div className="max-w-6xl mx-auto px-4">
         <TiltCard className="group border border-white/5 shadow-2xl relative">
           <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.01)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.01)_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none rounded-[23px]" />
-          
+
           <div className="relative z-20 grid md:grid-cols-3 gap-10 lg:gap-16 pb-12" style={{ transformStyle: 'preserve-3d' }}>
             {/* Col 1: Platform Info */}
             <div className="space-y-6" style={{ transform: 'translateZ(30px)' }}>
@@ -1181,7 +1177,7 @@ function PremiumFooter({ user, onViewProfile, navigationLinks }: PremiumFooterPr
               <h4 className="font-black text-white text-xs uppercase tracking-wider font-mono border-l-2 border-cyan-500 pl-3">
                 Truy cập hệ thống
               </h4>
-              
+
               <div className="flex flex-wrap gap-2.5">
                 <motion.a
                   whileHover={{ scale: 1.03, backgroundColor: '#06b6d4', color: '#020617', boxShadow: '0 0 15px rgba(6,182,212,0.3)' }}
@@ -1191,7 +1187,7 @@ function PremiumFooter({ user, onViewProfile, navigationLinks }: PremiumFooterPr
                 >
                   Đăng nhập
                 </motion.a>
-                
+
                 <motion.a
                   whileHover={{ scale: 1.03, borderColor: 'rgba(255,255,255,0.25)', backgroundColor: 'rgba(255,255,255,0.02)' }}
                   whileTap={{ scale: 0.98 }}
