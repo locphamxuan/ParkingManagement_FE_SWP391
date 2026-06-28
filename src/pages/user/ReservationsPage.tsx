@@ -572,7 +572,10 @@ export default function ReservationsPage() {
               </div>
 
               {/* Plate selection right below vehicle type */}
-              <div className={`mt-4 relative z-10 transition-all duration-200 ${!selectedVehicleType ? 'opacity-40 pointer-events-none' : ''}`}>
+              <div className={`mt-4 relative z-10 transition-all duration-200 ${!selectedVehicleType ? 'opacity-40' : ''}`}>
+                {!selectedVehicleType && (
+                  <div className="absolute inset-0 bg-transparent cursor-not-allowed z-20" title="Vui lòng chọn loại xe (phương tiện) trước khi chọn biển số." />
+                )}
                 <div className="flex items-center gap-2 mb-2">
                   <Zap size={14} className="text-amber-300/70" />
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Biển số xe</span>
@@ -601,11 +604,14 @@ export default function ReservationsPage() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
-                  className={`space-y-5 transition-all duration-200 ${!selectedVehicleType ? 'opacity-30 pointer-events-none' : ''}`}
+                  className={`space-y-5 transition-all duration-200 ${!selectedVehicleType ? 'opacity-30' : ''}`}
                 >
 
                   {/* Date */}
-                  <div className="glass-panel-dark rounded-3xl p-6">
+                  <div className="glass-panel-dark rounded-3xl p-6 relative">
+                    {!selectedVehicleType && (
+                      <div className="absolute inset-0 bg-transparent cursor-not-allowed z-20" title="Vui lòng chọn loại xe (phương tiện) trước khi chọn ngày nhận xe." />
+                    )}
                     <div className="flex items-center gap-2 mb-4">
                       <CalendarClock size={16} className="text-orange-300/70" />
                       <span className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-300/70">Chọn ngày nhận xe</span>
@@ -617,7 +623,10 @@ export default function ReservationsPage() {
                   </div>
 
                   {/* Time */}
-                  <div className="glass-panel-dark rounded-3xl p-6">
+                  <div className="glass-panel-dark rounded-3xl p-6 relative">
+                    {!selectedVehicleType && (
+                      <div className="absolute inset-0 bg-transparent cursor-not-allowed z-20" title="Vui lòng chọn loại xe (phương tiện) trước khi chọn giờ nhận xe." />
+                    )}
                     <div className="flex items-center gap-2 mb-3">
                       <Clock size={16} className="text-orange-300/70" />
                       <span className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-300/70">Giờ nhận xe</span>
@@ -626,7 +635,10 @@ export default function ReservationsPage() {
                   </div>
 
                   {/* Duration */}
-                  <div className="glass-panel-dark rounded-3xl p-6">
+                  <div className="glass-panel-dark rounded-3xl p-6 relative">
+                    {!selectedVehicleType && (
+                      <div className="absolute inset-0 bg-transparent cursor-not-allowed z-20" title="Vui lòng chọn loại xe (phương tiện) trước khi chọn thời gian đỗ." />
+                    )}
                     <div className="flex items-center gap-2 mb-3">
                       <Timer size={16} className="text-orange-300/70" />
                       <span className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-300/70">Số giờ sử dụng</span>
@@ -636,6 +648,7 @@ export default function ReservationsPage() {
                 </motion.div>
               )}
 
+
               {/* ── Package Mode ── */}
               {mode === 'package' && (
                 <motion.div
@@ -643,10 +656,13 @@ export default function ReservationsPage() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
-                  className={`space-y-5 transition-all duration-200 ${!selectedVehicleType ? 'opacity-30 pointer-events-none' : ''}`}
+                  className={`space-y-5 transition-all duration-200 ${!selectedVehicleType ? 'opacity-30' : ''}`}
                 >
                   {/* Package Cards */}
-                  <div className="glass-panel-dark rounded-3xl p-6">
+                  <div className="glass-panel-dark rounded-3xl p-6 relative">
+                    {!selectedVehicleType && (
+                      <div className="absolute inset-0 bg-transparent cursor-not-allowed z-20" title="Vui lòng chọn loại xe (phương tiện) trước khi chọn gói dài hạn." />
+                    )}
                     <div className="flex items-center gap-2 mb-4">
                       <span className="text-[10px] font-black uppercase tracking-[0.2em] text-purple-300/70">Chọn gói dài hạn</span>
                     </div>
@@ -692,7 +708,10 @@ export default function ReservationsPage() {
 
                   {/* Package Date */}
                   {selectedPkg && (
-                    <div className="glass-panel-dark rounded-3xl p-6">
+                    <div className="glass-panel-dark rounded-3xl p-6 relative">
+                      {!selectedVehicleType && (
+                        <div className="absolute inset-0 bg-transparent cursor-not-allowed z-20" title="Vui lòng chọn loại xe (phương tiện) trước khi chọn ngày bắt đầu gói." />
+                      )}
                       <div className="flex items-center gap-2 mb-4">
                         <CalendarClock size={16} className="text-purple-300/70" />
                         <span className="text-[10px] font-black uppercase tracking-[0.2em] text-purple-300/70">Ngày bắt đầu gói</span>
@@ -713,11 +732,15 @@ export default function ReservationsPage() {
 
             {/* ── Slot Selection Button (chỉ cho đặt theo giờ) ── */}
             {mode === 'hourly' ? (
-              <div className={`glass-panel-dark rounded-3xl p-6 transition-all duration-200 ${!selectedVehicleType ? 'opacity-30 pointer-events-none' : ''}`}>
+              <div className={`glass-panel-dark rounded-3xl p-6 transition-all duration-200 relative ${!selectedVehicleType ? 'opacity-30' : ''}`}>
+                {!selectedVehicleType && (
+                  <div className="absolute inset-0 bg-transparent cursor-not-allowed z-20" title="Vui lòng chọn loại xe (phương tiện) trước khi chọn ô đỗ." />
+                )}
                 <div className="flex items-center gap-2 mb-3">
                   <MapPin size={16} className="text-cyan-300/70" />
                   <span className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300/70">Chọn chỗ đỗ</span>
                 </div>
+
 
 
                 <div className="flex items-center gap-3">
