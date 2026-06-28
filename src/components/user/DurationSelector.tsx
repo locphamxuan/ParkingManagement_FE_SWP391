@@ -15,7 +15,7 @@ export function DurationSelector({ hours, onSelect }: DurationSelectorProps) {
           onClick={() => onSelect(h)}
           className={`rounded-xl px-3 py-2 text-xs font-bold transition-all duration-150 ${
             hours === h
-              ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-[0_0_10px_rgba(6,182,212,0.25)]'
+              ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 shadow-[0_0_10px_rgba(249,115,22,0.25)]'
               : 'border border-white/[0.06] bg-white/[0.02] text-slate-400 hover:border-cyan-300/25 hover:text-white'
           }`}
         >

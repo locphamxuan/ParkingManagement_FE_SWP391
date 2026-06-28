@@ -16,6 +16,7 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import { CustomSelect } from '@/components/ui/select';
 import back1 from '@/assets/back1.webp';
+import back3 from '@/assets/back3.webp';
 
 import {
   userApi,
@@ -465,16 +466,16 @@ export default function ReservationsPage() {
   /* ── Render ── */
   return (
     <main className="min-h-screen text-slate-100 relative isolate">
-      {/* Background Neon Glow Spheres and subtle background image */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10 bg-slate-950" aria-hidden="true">
+      {/* Background */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10 bg-[#0d1a1a]" aria-hidden="true">
         <div 
-          className="absolute inset-0 opacity-[0.25] filter blur-[6px] bg-cover pointer-events-none"
-          style={{ backgroundImage: `url(${back1})`, backgroundPosition: 'center 85%' }}
+          className="absolute inset-0 opacity-[0.70] bg-cover bg-center pointer-events-none"
+          style={{ backgroundImage: `url(${back3})` }}
         />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(2,6,23,0.4)_0%,rgba(2,6,23,0.92)_100%)] pointer-events-none" />
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[55%] rounded-full bg-[radial-gradient(circle_at_center,hsla(210,95%,53%,0.06),transparent_55%)] blur-3xl" />
-        <div className="absolute top-[35%] right-[-15%] w-[60%] h-[60%] rounded-full bg-[radial-gradient(circle_at_center,hsla(263,90%,51%,0.05),transparent_55%)] blur-3xl" />
-        <div className="absolute bottom-[-10%] left-[20%] w-[50%] h-[50%] rounded-full bg-[radial-gradient(circle_at_center,hsla(142,76%,45%,0.03),transparent_50%)] blur-3xl" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(13,26,26,0.1)_0%,rgba(13,26,26,0.60)_100%)] pointer-events-none" />
+        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[55%] rounded-full bg-[radial-gradient(circle_at_center,hsla(180,70%,30%,0.08),transparent_55%)] blur-3xl" />
+        <div className="absolute top-[35%] right-[-15%] w-[60%] h-[60%] rounded-full bg-[radial-gradient(circle_at_center,hsla(195,80%,25%,0.06),transparent_55%)] blur-3xl" />
+        <div className="absolute bottom-[-10%] left-[20%] w-[50%] h-[50%] rounded-full bg-[radial-gradient(circle_at_center,hsla(170,60%,20%,0.04),transparent_50%)] blur-3xl" />
       </div>
       <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
 
@@ -489,7 +490,7 @@ export default function ReservationsPage() {
           </button>
           <div className="flex gap-2">
             <button type="button" onClick={() => setShowHistory(true)}
-              className="inline-flex items-center gap-2 rounded-xl border border-cyan-500/20 bg-cyan-500/5 px-4 py-2 text-xs font-black uppercase tracking-wider text-cyan-400 transition hover:border-cyan-400/40 hover:bg-cyan-500/10 hover:text-cyan-300"
+              className="inline-flex items-center gap-2 rounded-xl border border-orange-500/20 bg-orange-500/5 px-4 py-2 text-xs font-black uppercase tracking-wider text-orange-400 transition hover:border-orange-400/40 hover:bg-orange-500/10 hover:text-orange-300"
             >
               <CalendarClock size={14} /> Lịch sử
             </button>
@@ -497,7 +498,7 @@ export default function ReservationsPage() {
         </motion.div>
 
         {/* ── Tab Bar ── */}
-        <div className="mb-8 flex items-center gap-1 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-1.5 max-w-md md:max-w-lg w-full mx-auto shadow-xl">
+        <div className="mb-8 flex items-center gap-1 rounded-2xl border border-white/30 bg-white/20 backdrop-blur-sm p-1.5 max-w-md md:max-w-lg w-full mx-auto shadow-xl">
           {[
             { key: 'hourly' as BookingMode, label: 'Đặt theo giờ', icon: <Timer size={14} /> },
             { key: 'package' as BookingMode, label: 'Đăng ký gói dài hạn', icon: <Package size={14} /> },
@@ -512,8 +513,8 @@ export default function ReservationsPage() {
                 setBookingSuccess(null);
               }}
               className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-3 text-xs font-black uppercase tracking-wider transition-all duration-200 ${mode === tab.key
-                ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-[0_0_16px_rgba(59,130,246,0.3)]'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 shadow-[0_0_16px_rgba(249,115,22,0.3)]'
+                : 'text-slate-700 hover:text-slate-900'
                 }`}
             >
               {tab.icon} {tab.label}
@@ -529,10 +530,10 @@ export default function ReservationsPage() {
           {/* Left: Booking Form */}
           <div className="space-y-5">
             {/* Building + Vehicle + Plate */}
-            <div className="glass-panel-dark rounded-3xl p-6 relative z-30">
+            <div className="glass-panel-white rounded-3xl p-6 relative z-30">
               <div className="flex items-center gap-2 mb-4">
-                <Building2 size={16} className="text-cyan-300/70" />
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300/70">Thông tin cơ bản</span>
+                <Building2 size={16} className="text-slate-500" />
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Thông tin cơ bản</span>
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2 relative z-20">
@@ -574,7 +575,7 @@ export default function ReservationsPage() {
                   <div className="absolute inset-0 bg-transparent cursor-not-allowed z-20" title="Vui lòng chọn loại xe (phương tiện) trước khi chọn biển số." />
                 )}
                 <div className="flex items-center gap-2 mb-2">
-                  <Zap size={14} className="text-amber-300/70" />
+                  <Zap size={14} className="text-amber-500" />
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Biển số xe</span>
                 </div>
                 <CustomSelect
@@ -605,7 +606,7 @@ export default function ReservationsPage() {
                 >
 
                   {/* Date */}
-                  <div className="glass-panel-dark rounded-3xl p-6 relative">
+                  <div className="glass-panel-white rounded-3xl p-6 relative">
                     {!selectedVehicleType && (
                       <div className="absolute inset-0 bg-transparent cursor-not-allowed z-20" title="Vui lòng chọn loại xe (phương tiện) trước khi chọn ngày nhận xe." />
                     )}
@@ -620,7 +621,7 @@ export default function ReservationsPage() {
                   </div>
 
                   {/* Time */}
-                  <div className="glass-panel-dark rounded-3xl p-6 relative">
+                  <div className="glass-panel-white rounded-3xl p-6 relative">
                     {!selectedVehicleType && (
                       <div className="absolute inset-0 bg-transparent cursor-not-allowed z-20" title="Vui lòng chọn loại xe (phương tiện) trước khi chọn giờ nhận xe." />
                     )}
@@ -632,7 +633,7 @@ export default function ReservationsPage() {
                   </div>
 
                   {/* Duration */}
-                  <div className="glass-panel-dark rounded-3xl p-6 relative">
+                  <div className="glass-panel-white rounded-3xl p-6 relative">
                     {!selectedVehicleType && (
                       <div className="absolute inset-0 bg-transparent cursor-not-allowed z-20" title="Vui lòng chọn loại xe (phương tiện) trước khi chọn thời gian đỗ." />
                     )}
@@ -656,7 +657,7 @@ export default function ReservationsPage() {
                   className={`space-y-5 transition-all duration-200 ${!selectedVehicleType ? 'opacity-30' : ''}`}
                 >
                   {/* Package Cards */}
-                  <div className="glass-panel-dark rounded-3xl p-6 relative">
+                  <div className="glass-panel-white rounded-3xl p-6 relative">
                     {!selectedVehicleType && (
                       <div className="absolute inset-0 bg-transparent cursor-not-allowed z-20" title="Vui lòng chọn loại xe (phương tiện) trước khi chọn gói dài hạn." />
                     )}
@@ -705,7 +706,7 @@ export default function ReservationsPage() {
 
                   {/* Package Date */}
                   {selectedPkg && (
-                    <div className="glass-panel-dark rounded-3xl p-6 relative">
+                    <div className="glass-panel-white rounded-3xl p-6 relative">
                       {!selectedVehicleType && (
                         <div className="absolute inset-0 bg-transparent cursor-not-allowed z-20" title="Vui lòng chọn loại xe (phương tiện) trước khi chọn ngày bắt đầu gói." />
                       )}
@@ -729,7 +730,7 @@ export default function ReservationsPage() {
 
             {/* ── Slot Selection Button (chỉ cho đặt theo giờ) ── */}
             {mode === 'hourly' ? (
-              <div className={`glass-panel-dark rounded-3xl p-6 transition-all duration-200 relative ${!selectedVehicleType ? 'opacity-30' : ''}`}>
+              <div className={`glass-panel-white rounded-3xl p-6 transition-all duration-200 relative ${!selectedVehicleType ? 'opacity-50' : ''}`}>
                 {!selectedVehicleType && (
                   <div className="absolute inset-0 bg-transparent cursor-not-allowed z-20" title="Vui lòng chọn loại xe (phương tiện) trước khi chọn ô đỗ." />
                 )}
@@ -758,7 +759,7 @@ export default function ReservationsPage() {
                 </div>
               </div>
             ) : (
-              <div className="glass-panel-dark rounded-3xl border-blue-500/20 bg-blue-500/5 p-6 shadow-lg">
+              <div className="glass-panel-white rounded-3xl border border-blue-500/20 bg-blue-500/5 p-6 shadow-lg">
                 <p className="text-[11px] text-cyan-200/90">
                   Gói cho phép đỗ <strong>miễn phí {selectedPkg?.maxHoursPerDay ? `${selectedPkg.maxHoursPerDay}h` : 'theo gói'}/ngày</strong>
                   {' '}(vượt tính phí theo giá thường). Gói <strong>không giữ chỗ cố định</strong> — nhân viên xếp chỗ trống khi xe vào.
@@ -806,7 +807,7 @@ export default function ReservationsPage() {
               onClick={handleConfirmBooking}
               whileHover={canSubmit ? { scale: 1.02 } : {}}
               whileTap={canSubmit ? { scale: 0.98 } : {}}
-              className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 px-6 py-3 text-sm font-black uppercase tracking-wider text-white shadow-[0_0_24px_rgba(59,130,246,0.35)] transition-all disabled:cursor-not-allowed disabled:from-slate-700 disabled:to-slate-700 disabled:text-slate-400 disabled:shadow-none"
+              className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 px-6 py-3 text-sm font-black uppercase tracking-wider text-slate-950 shadow-[0_0_24px_rgba(249,115,22,0.35)] transition-all disabled:cursor-not-allowed disabled:from-slate-700 disabled:to-slate-700 disabled:text-slate-400 disabled:shadow-none"
             >
               <ShieldCheck size={16} />
               {isSubmitting ? 'Đang xử lý...' : mode === 'hourly' ? 'Xác nhận đặt chỗ' : 'Mua gói'}
