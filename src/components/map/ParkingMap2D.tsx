@@ -160,7 +160,7 @@ function SlotCell({
   is3D: boolean;
 }) {
   const isClickable = interactive && status === 'available';
-  const isOccupied = status === 'occupied' || status === 'reserved';
+  const isOccupied = status === 'occupied' || status === 'reserved' || (status === 'unsupported' && slot.status !== 'available');
   const isSelected = status === 'selected';
   const showVehicleIcon = isOccupied;
   const effectiveVehicleType = slot.vehicleType || (slot.code.toLowerCase().includes('m') ? 'motorcycle' : 'car');

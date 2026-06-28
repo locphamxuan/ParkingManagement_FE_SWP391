@@ -336,9 +336,6 @@ export default function ReservationsPage() {
   const unsupportedSlotCodes = useMemo(() => {
     if (!selectedVehicleType) return [];
     return slots.filter((s) => {
-      if (s.status !== 'available') return false;
-      if (!s.reservable) return false;
-
       const cleanCode = String(s.code).toUpperCase();
       if (selectedVehicleType === 'car' && cleanCode.includes('-M')) {
         return true; 
