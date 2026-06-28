@@ -472,7 +472,7 @@ export default function ReservationsPage() {
           style={{ backgroundImage: `url(${back1})`, backgroundPosition: 'center 85%' }}
         />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(2,6,23,0.4)_0%,rgba(2,6,23,0.92)_100%)] pointer-events-none" />
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[55%] rounded-full bg-[radial-gradient(circle_at_center,hsla(24,95%,53%,0.06),transparent_55%)] blur-3xl" />
+        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[55%] rounded-full bg-[radial-gradient(circle_at_center,hsla(210,95%,53%,0.06),transparent_55%)] blur-3xl" />
         <div className="absolute top-[35%] right-[-15%] w-[60%] h-[60%] rounded-full bg-[radial-gradient(circle_at_center,hsla(263,90%,51%,0.05),transparent_55%)] blur-3xl" />
         <div className="absolute bottom-[-10%] left-[20%] w-[50%] h-[50%] rounded-full bg-[radial-gradient(circle_at_center,hsla(142,76%,45%,0.03),transparent_50%)] blur-3xl" />
       </div>
@@ -483,13 +483,13 @@ export default function ReservationsPage() {
           className="mb-6 flex flex-col gap-3 border-b border-white/[0.06] pb-5 sm:flex-row sm:items-center sm:justify-between"
         >
           <button type="button" onClick={() => navigate('/')}
-            className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2 text-xs font-black uppercase tracking-wider text-slate-300 transition hover:border-orange-300/30 hover:text-orange-200"
+            className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2 text-xs font-black uppercase tracking-wider text-slate-300 transition hover:border-cyan-300/30 hover:text-cyan-200"
           >
             <ArrowLeft size={14} /> Trang chủ
           </button>
           <div className="flex gap-2">
             <button type="button" onClick={() => setShowHistory(true)}
-              className="inline-flex items-center gap-2 rounded-xl border border-yellow-500/20 bg-yellow-500/5 px-4 py-2 text-xs font-black uppercase tracking-wider text-yellow-400 transition hover:border-yellow-400/40 hover:bg-yellow-500/10 hover:text-yellow-300"
+              className="inline-flex items-center gap-2 rounded-xl border border-cyan-500/20 bg-cyan-500/5 px-4 py-2 text-xs font-black uppercase tracking-wider text-cyan-400 transition hover:border-cyan-400/40 hover:bg-cyan-500/10 hover:text-cyan-300"
             >
               <CalendarClock size={14} /> Lịch sử
             </button>
@@ -512,7 +512,7 @@ export default function ReservationsPage() {
                 setBookingSuccess(null);
               }}
               className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-3 text-xs font-black uppercase tracking-wider transition-all duration-200 ${mode === tab.key
-                ? 'bg-gradient-to-r from-orange-500 to-amber-400 text-slate-950 shadow-[0_0_16px_rgba(249,115,22,0.2)]'
+                ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-[0_0_16px_rgba(59,130,246,0.3)]'
                 : 'text-slate-400 hover:text-white'
                 }`}
             >
@@ -610,8 +610,8 @@ export default function ReservationsPage() {
                       <div className="absolute inset-0 bg-transparent cursor-not-allowed z-20" title="Vui lòng chọn loại xe (phương tiện) trước khi chọn ngày nhận xe." />
                     )}
                     <div className="flex items-center gap-2 mb-4">
-                      <CalendarClock size={16} className="text-orange-300/70" />
-                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-300/70">Chọn ngày nhận xe</span>
+                      <CalendarClock size={16} className="text-cyan-300/70" />
+                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300/70">Chọn ngày nhận xe</span>
                     </div>
                     <MiniCalendar selectedDate={selectedDate} onSelect={setSelectedDate} maxDate={maxCalDate} />
                     <p className="mt-2 text-[10px] font-semibold text-slate-500">
@@ -625,8 +625,8 @@ export default function ReservationsPage() {
                       <div className="absolute inset-0 bg-transparent cursor-not-allowed z-20" title="Vui lòng chọn loại xe (phương tiện) trước khi chọn giờ nhận xe." />
                     )}
                     <div className="flex items-center gap-2 mb-3">
-                      <Clock size={16} className="text-orange-300/70" />
-                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-300/70">Giờ nhận xe</span>
+                      <Clock size={16} className="text-cyan-300/70" />
+                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300/70">Giờ nhận xe</span>
                     </div>
                     <TimeScroller selected={selectedTime} onSelect={setSelectedTime} />
                   </div>
@@ -637,8 +637,8 @@ export default function ReservationsPage() {
                       <div className="absolute inset-0 bg-transparent cursor-not-allowed z-20" title="Vui lòng chọn loại xe (phương tiện) trước khi chọn thời gian đỗ." />
                     )}
                     <div className="flex items-center gap-2 mb-3">
-                      <Timer size={16} className="text-orange-300/70" />
-                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-300/70">Số giờ sử dụng</span>
+                      <Timer size={16} className="text-cyan-300/70" />
+                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300/70">Số giờ sử dụng</span>
                     </div>
                     <DurationSelector hours={durationHours} onSelect={setDurationHours} />
                   </div>
@@ -753,13 +753,13 @@ export default function ReservationsPage() {
                   </motion.button>
                   <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-center min-w-[100px] shadow-sm">
                     <p className="text-[9px] font-bold uppercase text-slate-500">Ô đỗ</p>
-                    <p className="mt-1 font-mono text-xl font-black text-orange-300">{selectedSlot || '—'}</p>
+                    <p className="mt-1 font-mono text-xl font-black text-cyan-300">{selectedSlot || '—'}</p>
                   </div>
                 </div>
               </div>
             ) : (
-              <div className="glass-panel-dark rounded-3xl border-amber-500/20 bg-amber-500/5 p-6 shadow-lg">
-                <p className="text-[11px] text-amber-200/90">
+              <div className="glass-panel-dark rounded-3xl border-blue-500/20 bg-blue-500/5 p-6 shadow-lg">
+                <p className="text-[11px] text-cyan-200/90">
                   Gói cho phép đỗ <strong>miễn phí {selectedPkg?.maxHoursPerDay ? `${selectedPkg.maxHoursPerDay}h` : 'theo gói'}/ngày</strong>
                   {' '}(vượt tính phí theo giá thường). Gói <strong>không giữ chỗ cố định</strong> — nhân viên xếp chỗ trống khi xe vào.
                   Mỗi gói gắn với <strong>1 biển số</strong>. Muốn chắc chắn có chỗ vào giờ cụ thể, hãy dùng <strong>Đặt chỗ theo giờ</strong>.
@@ -806,7 +806,7 @@ export default function ReservationsPage() {
               onClick={handleConfirmBooking}
               whileHover={canSubmit ? { scale: 1.02 } : {}}
               whileTap={canSubmit ? { scale: 0.98 } : {}}
-              className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-400 px-6 py-3 text-sm font-black uppercase tracking-wider text-slate-950 shadow-[0_0_24px_rgba(249,115,22,0.3)] transition-all disabled:cursor-not-allowed disabled:from-slate-700 disabled:to-slate-700 disabled:text-slate-400 disabled:shadow-none"
+              className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 px-6 py-3 text-sm font-black uppercase tracking-wider text-white shadow-[0_0_24px_rgba(59,130,246,0.35)] transition-all disabled:cursor-not-allowed disabled:from-slate-700 disabled:to-slate-700 disabled:text-slate-400 disabled:shadow-none"
             >
               <ShieldCheck size={16} />
               {isSubmitting ? 'Đang xử lý...' : mode === 'hourly' ? 'Xác nhận đặt chỗ' : 'Mua gói'}
@@ -847,7 +847,7 @@ export default function ReservationsPage() {
             onClick={() => setShowHistory(false)}
           >
             {/* Background glowing flare */}
-            <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[350px] h-[350px] rounded-full bg-orange-500/10 blur-[120px] pointer-events-none" />
+            <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[350px] h-[350px] rounded-full bg-cyan-500/10 blur-[120px] pointer-events-none" />
 
             <motion.div
               initial={{ scale: 0.95, opacity: 0, y: 15 }}
@@ -860,8 +860,8 @@ export default function ReservationsPage() {
               {/* Modal Header */}
               <div className="mb-6 flex items-center justify-between border-b border-white/5 pb-4">
                 <div className="flex items-center gap-3">
-                  <div className="rounded-xl bg-orange-500/10 p-2 border border-orange-500/20 shadow-[0_0_15px_rgba(249,115,22,0.15)]">
-                    <CalendarClock size={20} className="text-orange-400" />
+                  <div className="rounded-xl bg-cyan-500/10 p-2 border border-cyan-500/20 shadow-[0_0_15px_rgba(6,182,212,0.15)]">
+                    <CalendarClock size={20} className="text-cyan-400" />
                   </div>
                   <div>
                     <h2 className="text-lg font-black text-white tracking-wide">Lịch sử đặt chỗ</h2>

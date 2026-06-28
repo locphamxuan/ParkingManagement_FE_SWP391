@@ -100,17 +100,17 @@ export function MiniCalendar({ selectedDate, onSelect, maxDate }: MiniCalendarPr
               onClick={() => onSelect(cellDate)}
               className={`relative aspect-square w-full rounded-xl text-xs font-bold transition-all duration-200 flex items-center justify-center ${
                 isSelected
-                  ? 'bg-orange-500 text-slate-950 font-black shadow-[0_4px_12px_rgba(249,115,22,0.4)] scale-105'
+                  ? 'bg-cyan-500 text-slate-950 font-black shadow-[0_4px_12px_rgba(6,182,212,0.4)] scale-105'
                   : disabled
                     ? 'text-slate-700 opacity-25 cursor-not-allowed'
                     : isToday
-                      ? 'border border-orange-500/40 bg-orange-500/5 text-orange-400 hover:bg-orange-500/10'
+                      ? 'border border-cyan-500/40 bg-cyan-500/5 text-cyan-400 hover:bg-cyan-500/10'
                       : 'text-slate-300 hover:bg-white/[0.08] hover:text-white'
               }`}
             >
               {day}
               {isToday && !isSelected && (
-                <span className="absolute bottom-1.5 left-1/2 h-1.5 w-1.5 -translate-x-1/2 rounded-full bg-orange-400" />
+                <span className="absolute bottom-1.5 left-1/2 h-1.5 w-1.5 -translate-x-1/2 rounded-full bg-cyan-400" />
               )}
             </button>
           );

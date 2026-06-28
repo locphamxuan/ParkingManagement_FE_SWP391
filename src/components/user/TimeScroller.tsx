@@ -80,7 +80,7 @@ export function TimeScroller({ selected, onSelect }: TimeScrollerProps) {
               <ChevronDown
                 size={16}
                 className={`text-slate-500 transition-transform duration-200 ${
-                  isOpen ? 'rotate-180 text-orange-400' : ''
+                  isOpen ? 'rotate-180 text-cyan-400' : ''
                 }`}
               />
             </button>
@@ -95,8 +95,8 @@ export function TimeScroller({ selected, onSelect }: TimeScrollerProps) {
                       onClick={() => onSelect(t)}
                       className={`rounded-xl py-2.5 text-xs font-bold transition-all duration-200 ${
                         isSelected
-                          ? 'bg-orange-500 text-slate-950 font-black shadow-[0_4px_12px_rgba(249,115,22,0.3)] scale-105'
-                          : 'border border-white/[0.06] bg-white/[0.02] text-slate-400 hover:border-orange-300/30 hover:text-white'
+                          ? 'bg-cyan-500 text-slate-950 font-black shadow-[0_4px_12px_rgba(6,182,212,0.3)] scale-105'
+                          : 'border border-white/[0.06] bg-white/[0.02] text-slate-400 hover:border-cyan-300/30 hover:text-white'
                       }`}
                     >
                       {t}
