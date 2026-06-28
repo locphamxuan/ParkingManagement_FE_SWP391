@@ -427,28 +427,28 @@ export default function HomePage({ modules, onOpenAuth, onViewProfile, onViewRes
         />
         {/* Radial dark gradient overlay to ensure text readability in the center */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(2,6,23,0.3)_0%,rgba(2,6,23,0.85)_100%)] pointer-events-none" />
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[55%] rounded-full bg-[radial-gradient(circle_at_center,hsla(24,95%,53%,0.08),transparent_55%)] blur-3xl" />
+        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[55%] rounded-full bg-[radial-gradient(circle_at_center,hsla(210,95%,53%,0.08),transparent_55%)] blur-3xl" />
         <div className="absolute top-[35%] right-[-15%] w-[60%] h-[60%] rounded-full bg-[radial-gradient(circle_at_center,hsla(263,90%,51%,0.07),transparent_55%)] blur-3xl" />
-        <div className="absolute bottom-[-10%] left-[20%] w-[50%] h-[50%] rounded-full bg-[radial-gradient(circle_at_center,hsla(142,76%,45%,0.04),transparent_50%)] blur-3xl" />
+        <div className="absolute bottom-[-10%] left-[20%] w-[50%] h-[50%] rounded-full bg-[radial-gradient(circle_at_center,hsla(180,76%,45%,0.04),transparent_50%)] blur-3xl" />
       </div>
 
 
       {/* Cyber Header Navigation */}
       <header className={`sticky top-0 z-40 transition-all duration-500 border-b ${
         scrolled 
-          ? 'bg-slate-950/85 backdrop-blur-xl border-orange-500/10 shadow-[0_10px_30px_-10px_rgba(0,0,0,0.8),0_1px_0_0_rgba(249,115,22,0.15)] py-2.5' 
+          ? 'bg-slate-950/85 backdrop-blur-xl border-cyan-500/10 shadow-[0_10px_30px_-10px_rgba(0,0,0,0.8),0_1px_0_0_rgba(6,182,212,0.15)] py-2.5' 
           : 'bg-transparent border-transparent py-4'
       }`}>
         {/* Top edge glowing gradient border */}
-        <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-orange-500 via-amber-400 to-purple-600 opacity-60 pointer-events-none" />
+        <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-blue-600 via-cyan-400 to-purple-600 opacity-60 pointer-events-none" />
 
         <div className="max-w-6xl mx-auto px-4 flex items-center justify-between">
           <a href="#top" aria-label="PBMS Trang chủ" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 grid place-items-center shadow-[0_0_15px_rgba(249,115,22,0.3)] transition-all duration-300 group-hover:scale-105 group-hover:shadow-[0_0_20px_rgba(249,115,22,0.5)] group-hover:rotate-6">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-500 grid place-items-center shadow-[0_0_15px_rgba(6,182,212,0.3)] transition-all duration-300 group-hover:scale-105 group-hover:shadow-[0_0_20px_rgba(6,182,212,0.5)] group-hover:rotate-6">
               <span className="w-2.5 h-2.5 bg-slate-950 rounded-full" />
             </div>
             <div>
-              <strong className="block text-lg font-black tracking-tight bg-gradient-to-r from-orange-400 via-amber-400 to-orange-500 bg-clip-text text-transparent group-hover:brightness-110 transition-all duration-300">PBMS Parking</strong>
+              <strong className="block text-lg font-black tracking-tight bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-500 bg-clip-text text-transparent group-hover:brightness-110 transition-all duration-300">PBMS Parking</strong>
               <span className="text-[10px] uppercase font-mono tracking-widest text-slate-500 font-extrabold block">Cloud Management</span>
             </div>
           </a>
@@ -461,7 +461,7 @@ export default function HomePage({ modules, onOpenAuth, onViewProfile, onViewRes
                 className="text-sm font-bold text-slate-400 hover:text-white relative py-1.5 transition-colors duration-300 group"
               >
                 {link.label}
-                <span className="absolute bottom-0 left-0 w-full h-[2px] bg-gradient-to-r from-orange-500 to-amber-400 scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left" />
+                <span className="absolute bottom-0 left-0 w-full h-[2px] bg-gradient-to-r from-blue-600 to-cyan-500 scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left" />
               </a>
             ))}
           </nav>
@@ -469,7 +469,7 @@ export default function HomePage({ modules, onOpenAuth, onViewProfile, onViewRes
           <div className="flex items-center gap-5">
             <div className="text-right hidden sm:block group cursor-pointer">
               <span className="text-[9px] uppercase font-mono tracking-widest text-slate-500 font-black block">Hỗ trợ 24/7</span>
-              <strong className="text-xs font-black text-slate-300 group-hover:text-orange-400 transition-colors duration-300">1900 636 447</strong>
+              <strong className="text-xs font-black text-slate-300 group-hover:text-cyan-400 transition-colors duration-300">1900 636 447</strong>
             </div>
 
             {user ? (
@@ -478,10 +478,10 @@ export default function HomePage({ modules, onOpenAuth, onViewProfile, onViewRes
                   type="button"
                   aria-expanded={menuOpen}
                   onClick={() => setMenuOpen((v) => !v)}
-                  className="inline-flex items-center gap-2 px-4 py-1.5 rounded-xl bg-slate-900/80 backdrop-blur-sm border border-white/5 hover:border-orange-500/30 text-white transition-all duration-300 shadow-lg hover:shadow-orange-500/5"
+                  className="inline-flex items-center gap-2 px-4 py-1.5 rounded-xl bg-slate-900/80 backdrop-blur-sm border border-white/5 hover:border-cyan-500/30 text-white transition-all duration-300 shadow-lg hover:shadow-cyan-500/5"
                 >
-                  <div className="w-5 h-5 rounded-full bg-orange-500/10 border border-orange-500/20 flex items-center justify-center">
-                    <User size={10} className="text-orange-400" />
+                  <div className="w-5 h-5 rounded-full bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center">
+                    <User size={10} className="text-cyan-400" />
                   </div>
                   <span className="text-xs font-extrabold tracking-tight">{user.fullName ?? user.email}</span>
                   <ChevronDown size={12} className="text-slate-400 transition-transform duration-300" style={{ transform: menuOpen ? 'rotate(180deg)' : 'rotate(0deg)' }} />
@@ -511,7 +511,7 @@ export default function HomePage({ modules, onOpenAuth, onViewProfile, onViewRes
                       transition={{ duration: 0.15, ease: "easeOut" }}
                       className="absolute right-0 mt-2 w-52 bg-slate-950/95 border border-white/10 rounded-2xl shadow-2xl py-2 backdrop-blur-xl z-50 overflow-hidden"
                     >
-<button
+                      <button
                         className="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-between"
                         onClick={() => { setMenuOpen(false); onViewProfile(); }}
                       >
@@ -568,9 +568,9 @@ export default function HomePage({ modules, onOpenAuth, onViewProfile, onViewRes
             ) : (
               <motion.button
                 onClick={() => onOpenAuth('login')}
-                whileHover={{ scale: 1.05, boxShadow: '0 0 15px rgba(249,115,22,0.45)' }}
+                whileHover={{ scale: 1.05, boxShadow: '0 0 15px rgba(59,130,246,0.45)' }}
                 whileTap={{ scale: 0.95 }}
-                className="px-4 py-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider transition-all duration-300"
+                className="px-4 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-[0_0_15px_rgba(59,130,246,0.3)] font-black text-xs uppercase tracking-wider transition-all duration-300"
               >
                 Đăng nhập
               </motion.button>
