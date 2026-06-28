@@ -163,7 +163,7 @@ function SlotCell({
   const isOccupied = status === 'occupied' || status === 'reserved';
   const isSelected = status === 'selected';
   const showVehicleIcon = isOccupied;
-  const vehicleType = slot.vehicleType || (slot.code.toLowerCase().includes('m') ? 'motorcycle' : 'car');
+  const effectiveVehicleType = slot.vehicleType || (slot.code.toLowerCase().includes('m') ? 'motorcycle' : 'car');
 
   return (
     <motion.button
@@ -187,7 +187,7 @@ function SlotCell({
         <div className="absolute inset-0 flex flex-col items-center justify-between p-1">
           {/* Top-down vehicle SVG */}
           <div className="w-full flex-1 flex items-center justify-center opacity-90 my-0.5">
-            {vehicleType === 'car' ? (
+            {effectiveVehicleType === 'car' ? (
               <TopDownCarSvg className={`h-full w-auto ${getVehicleColor(slot.code)}`} />
             ) : (
               <TopDownMotorcycleSvg className={`h-[90%] w-auto ${getVehicleColor(slot.code)}`} />
@@ -205,9 +205,9 @@ function SlotCell({
       )}
 
       {/* Vehicle type badge for available slots */}
-      {status === 'available' && slot.vehicleType && (
+      {status === 'available' && (
         <span className="absolute right-0.5 top-0.5 rounded bg-black/30 p-0.5 z-10">
-          {slot.vehicleType === 'car' ? (
+          {effectiveVehicleType === 'car' ? (
             <CarSvg className="h-2 w-2 text-white/80" />
           ) : (
             <MotorcycleSvg className="h-2 w-2 text-white/80" />
