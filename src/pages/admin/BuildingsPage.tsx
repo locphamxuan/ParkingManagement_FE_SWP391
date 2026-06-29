@@ -18,6 +18,7 @@ import {
   revokeStaffFromBuilding,
   revokeManagerFromBuilding,
   assignManagerToBuilding,
+  assignStaffToBuilding,
 } from '@/services/admin/adminCrud';
 import {
   adminApi,
@@ -67,6 +68,10 @@ export function BuildingsPage() {
   const [unassignedManagers, setUnassignedManagers] = useState<AdminUser[]>([]);
   const [isLoadingManagers, setIsLoadingManagers] = useState(false);
 
+  const [unassignedStaff, setUnassignedStaff] = useState<AdminUser[]>([]);
+  const [isLoadingStaff, setIsLoadingStaff] = useState(false);
+  const [showAddStaffForm, setShowAddStaffForm] = useState(false);
+
   const [pendingDeleteMember, setPendingDeleteMember] = useState<AdminUser | null>(null);
   const [isDeletingMember, setIsDeletingMember] = useState(false);
 
@@ -111,6 +116,8 @@ export function BuildingsPage() {
     setIsMembersLoading(true);
     setMembersError(null);
     setUnassignedManagers([]);
+    setUnassignedStaff([]);
+    setShowAddStaffForm(false);
     try {
       const res = await adminApi.buildings.getMembers(bid);
       const manager = res.data?.manager ?? null;
@@ -120,6 +127,25 @@ export function BuildingsPage() {
         manager,
         staff: res.data?.staff ?? [],
       });
+
+      // Fetch unassigned staff
+      setIsLoadingStaff(true);
+      try {
+        const userRes = await adminApi.users.list({ role: 'staff', limit: '200' });
+        const raw = userRes as unknown as { data?: { items?: AdminUser[] } | AdminUser[] };
+        const list =
+          (raw?.data as { items?: AdminUser[] })?.items ??
+          (Array.isArray(raw?.data) ? (raw.data as AdminUser[]) : []);
+        const unassigned = list.filter(
+          (u) => !u.assignedBuildings || u.assignedBuildings.length === 0
+        );
+        setUnassignedStaff(unassigned);
+      } catch (err) {
+        console.error('Không thể tải danh sách nhân viên:', err);
+      } finally {
+        setIsLoadingStaff(false);
+      }
+
       if (!manager) {
         setIsLoadingManagers(true);
         try {
@@ -160,6 +186,27 @@ export function BuildingsPage() {
       await refresh();
     } catch (err) {
       setMembersError(err instanceof Error ? err.message : 'Không thể gán quản lý');
+    } finally {
+      setIsMembersLoading(false);
+    }
+  };
+
+  const handleAssignStaff = async (staffId: string) => {
+    if (!token || !membersState) return;
+    setIsMembersLoading(true);
+    setMembersError(null);
+    try {
+      await assignStaffToBuilding(token, membersState.buildingId, staffId);
+      const res = await adminApi.buildings.getMembers(membersState.buildingId);
+      setMembersState({
+        ...membersState,
+        manager: res.data?.manager ?? null,
+        staff: res.data?.staff ?? [],
+      });
+      setUnassignedStaff((prev) => prev.filter((s) => s._id !== staffId));
+      await refresh();
+    } catch (err) {
+      setMembersError(err instanceof Error ? err.message : 'Không thể gán nhân viên');
     } finally {
       setIsMembersLoading(false);
     }
@@ -476,9 +523,49 @@ export function BuildingsPage() {
                 </section>
 
                 <section>
-                  <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                    Nhân viên ({membersState.staff.length})
-                  </h3>
+                  <div className="mb-2 flex items-center justify-between">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                      Nhân viên ({membersState.staff.length})
+                    </h3>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs font-semibold text-blue-500 hover:text-blue-600 hover:bg-blue-500/10 px-2.5 rounded-lg flex items-center gap-1"
+                      onClick={() => setShowAddStaffForm(!showAddStaffForm)}
+                    >
+                      {showAddStaffForm ? 'Đóng' : '+ Thêm Staff'}
+                    </Button>
+                  </div>
+
+                  {showAddStaffForm && (
+                    <div className="mb-3 space-y-3 rounded-xl border border-dashed border-border p-4 bg-muted/20 animate-in fade-in slide-in-from-top-2 duration-200">
+                      <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Chọn nhân viên để gán:</p>
+                      {isLoadingStaff ? (
+                        <p className="text-xs text-muted-foreground font-mono animate-pulse">Đang tải danh sách nhân viên chưa được gán...</p>
+                      ) : unassignedStaff.length === 0 ? (
+                        <p className="text-xs text-amber-500 font-medium">Không có nhân viên nào chưa được gán tòa nhà.</p>
+                      ) : (
+                        <div className="max-h-40 overflow-y-auto space-y-1.5 pr-1">
+                          {unassignedStaff.map((s) => (
+                            <div key={s._id} className="flex items-center justify-between rounded-lg border border-border bg-background p-2.5 text-xs">
+                              <div className="min-w-0 flex-1 pr-2">
+                                <p className="font-semibold text-foreground truncate">{s.fullName}</p>
+                                <p className="text-[10px] text-muted-foreground truncate">{s.email}</p>
+                              </div>
+                              <Button
+                                size="sm"
+                                className="h-7 text-[11px] px-3 font-semibold"
+                                onClick={() => handleAssignStaff(s._id)}
+                              >
+                                Gán
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {membersState.staff.length === 0 ? (
                     <p className="text-sm text-muted-foreground italic">Chưa có nhân viên</p>
                   ) : (
