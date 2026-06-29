@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { ConfirmModal } from '@/components/modals/ConfirmModal';
+import { Pencil, Lock, Unlock, Trash2, User, Mail, Phone, Shield, Building2 } from 'lucide-react';
 import { DataTable, type DataColumn } from '@/components/common/DataTable';
 import { ModalForm } from '@/components/modals/ModalForm';
 import { SearchFilterBar } from '@/components/common/SearchFilterBar';
@@ -195,16 +196,32 @@ export function UsersPage() {
       key: 'actions',
       title: 'Hành động',
       render: (row) => (
-        <div className="flex flex-wrap gap-2">
-          <Button variant="ghost" size="sm" onClick={() => openEditModal(row)}>
-            Sửa
-          </Button>
-          <Button variant="secondary" size="sm" onClick={() => toggleStatus(row)}>
-            {row.status === 'active' ? 'Khóa' : 'Mở'}
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => setPendingDeleteUser(row)}>
-            Xóa
-          </Button>
+        <div className="flex items-center gap-1.5 flex-nowrap">
+          <button
+            onClick={() => openEditModal(row)}
+            className="w-9 h-9 flex items-center justify-center rounded-xl bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 hover:scale-[1.08] active:scale-95 hover:shadow-[0_0_10px_rgba(245,158,11,0.15)] transition-all duration-200"
+            title="Sửa"
+          >
+            <Pencil size={16} />
+          </button>
+          <button
+            onClick={() => toggleStatus(row)}
+            className={`w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-200 hover:scale-[1.08] active:scale-95 ${
+              row.status === 'active'
+                ? 'bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 hover:shadow-[0_0_10px_rgba(244,63,94,0.15)]'
+                : 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 hover:shadow-[0_0_10px_rgba(16,185,129,0.15)]'
+            }`}
+            title={row.status === 'active' ? 'Khóa tài khoản' : 'Mở khóa tài khoản'}
+          >
+            {row.status === 'active' ? <Lock size={16} /> : <Unlock size={16} />}
+          </button>
+          <button
+            onClick={() => setPendingDeleteUser(row)}
+            className="w-9 h-9 flex items-center justify-center rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:scale-[1.08] active:scale-95 hover:shadow-[0_0_10px_rgba(239,68,68,0.15)] transition-all duration-200"
+            title="Xóa"
+          >
+            <Trash2 size={16} />
+          </button>
         </div>
       ),
     },
@@ -236,20 +253,65 @@ export function UsersPage() {
         title="Cập nhật người dùng"
         onSubmit={saveUpdate}
       >
-        <div className="grid gap-3 md:grid-cols-2">
-          <Input
-            placeholder="Họ tên"
-            value={form.fullName}
-            onChange={(e) => setForm((prev) => ({ ...prev, fullName: e.target.value }))}
-          />
-          <Input placeholder="Email" value={form.email} disabled />
-          <Input
-            placeholder="Số điện thoại"
-            value={form.phone}
-            onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))}
-          />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-2">
+          {/* Họ tên */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+              Họ tên <span className="text-orange-500 font-extrabold">*</span>
+            </label>
+            <div className="relative group">
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-orange-500 transition-colors pointer-events-none">
+                <User className="w-4 h-4" />
+              </span>
+              <input
+                type="text"
+                placeholder="Nhập họ và tên"
+                value={form.fullName}
+                onChange={(e) => setForm((prev) => ({ ...prev, fullName: e.target.value }))}
+                className="h-11 w-full pl-10 pr-4 rounded-xl border border-white/10 bg-slate-950/40 text-sm text-slate-100 placeholder-slate-500 outline-none transition-all duration-300 focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20"
+              />
+            </div>
+          </div>
+
+          {/* Số điện thoại */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+              Số điện thoại <span className="text-orange-500 font-extrabold">*</span>
+            </label>
+            <div className="relative group">
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-orange-500 transition-colors pointer-events-none">
+                <Phone className="w-4 h-4" />
+              </span>
+              <input
+                type="text"
+                placeholder="Nhập số điện thoại"
+                value={form.phone}
+                onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))}
+                className="h-11 w-full pl-10 pr-4 rounded-xl border border-white/10 bg-slate-950/40 text-sm text-slate-100 placeholder-slate-500 outline-none transition-all duration-300 focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20"
+              />
+            </div>
+          </div>
+
+          {/* Email (Disabled) */}
+          <div className="space-y-1.5 md:col-span-2">
+            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+              Địa chỉ Email
+            </label>
+            <div className="relative opacity-60">
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none">
+                <Mail className="w-4 h-4" />
+              </span>
+              <input
+                type="email"
+                placeholder="Email"
+                value={form.email}
+                disabled
+                className="h-11 w-full pl-10 pr-4 rounded-xl border border-white/10 bg-slate-950/20 text-sm text-slate-400 outline-none cursor-not-allowed"
+              />
+            </div>
+          </div>
         </div>
-        {isSaving ? <p className="text-xs text-muted-foreground">Đang lưu...</p> : null}
+        {isSaving ? <p className="text-xs text-orange-500 animate-pulse mt-3 font-semibold">Đang lưu thay đổi...</p> : null}
       </ModalForm>
 
       {/* Create User Modal */}
@@ -261,32 +323,91 @@ export function UsersPage() {
         title="Tạo người dùng"
         onSubmit={saveCreate}
       >
-        <div className="grid gap-3 md:grid-cols-2">
-          <Input
-            placeholder="Họ tên"
-            value={form.fullName}
-            onChange={(e) => setForm((prev) => ({ ...prev, fullName: e.target.value }))}
-          />
-          <Input
-            placeholder="Email"
-            value={form.email}
-            onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
-          />
-          <Input
-            placeholder="Mật khẩu"
-            type="password"
-            value={form.password}
-            onChange={(e) => setForm((prev) => ({ ...prev, password: e.target.value }))}
-          />
-          <Input
-            placeholder="Số điện thoại"
-            value={form.phone}
-            onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))}
-          />
-          <div className="grid gap-1.5">
-            <label className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Vai trò</label>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-2">
+          {/* Họ tên */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+              Họ tên <span className="text-orange-500 font-extrabold">*</span>
+            </label>
+            <div className="relative group">
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-orange-500 transition-colors pointer-events-none">
+                <User className="w-4 h-4" />
+              </span>
+              <input
+                type="text"
+                placeholder="Họ tên người dùng"
+                value={form.fullName}
+                onChange={(e) => setForm((prev) => ({ ...prev, fullName: e.target.value }))}
+                className="h-11 w-full pl-10 pr-4 rounded-xl border border-white/10 bg-slate-950/40 text-sm text-slate-100 placeholder-slate-500 outline-none transition-all duration-300 focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20"
+              />
+            </div>
+          </div>
+
+          {/* Số điện thoại */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+              Số điện thoại <span className="text-orange-500 font-extrabold">*</span>
+            </label>
+            <div className="relative group">
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-orange-500 transition-colors pointer-events-none">
+                <Phone className="w-4 h-4" />
+              </span>
+              <input
+                type="text"
+                placeholder="Số điện thoại"
+                value={form.phone}
+                onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))}
+                className="h-11 w-full pl-10 pr-4 rounded-xl border border-white/10 bg-slate-950/40 text-sm text-slate-100 placeholder-slate-500 outline-none transition-all duration-300 focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20"
+              />
+            </div>
+          </div>
+
+          {/* Email */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+              Địa chỉ Email <span className="text-orange-500 font-extrabold">*</span>
+            </label>
+            <div className="relative group">
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-orange-500 transition-colors pointer-events-none">
+                <Mail className="w-4 h-4" />
+              </span>
+              <input
+                type="email"
+                placeholder="Nhập email đăng nhập"
+                value={form.email}
+                onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
+                className="h-11 w-full pl-10 pr-4 rounded-xl border border-white/10 bg-slate-950/40 text-sm text-slate-100 placeholder-slate-500 outline-none transition-all duration-300 focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20"
+              />
+            </div>
+          </div>
+
+          {/* Mật khẩu */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+              Mật khẩu <span className="text-orange-500 font-extrabold">*</span>
+            </label>
+            <div className="relative group">
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-orange-500 transition-colors pointer-events-none">
+                <Lock className="w-4 h-4" />
+              </span>
+              <input
+                type="password"
+                placeholder="Nhập mật khẩu"
+                value={form.password}
+                onChange={(e) => setForm((prev) => ({ ...prev, password: e.target.value }))}
+                className="h-11 w-full pl-10 pr-4 rounded-xl border border-white/10 bg-slate-950/40 text-sm text-slate-100 placeholder-slate-500 outline-none transition-all duration-300 focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20"
+              />
+            </div>
+          </div>
+
+          {/* Vai trò */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+              <Shield className="w-3.5 h-3.5 text-orange-500" />
+              Vai trò <span className="text-orange-500 font-extrabold">*</span>
+            </label>
             <CustomSelect
-              className="h-10"
+              className="h-11 rounded-xl border-white/10 bg-slate-950/40 text-sm text-slate-100 outline-none"
               value={form.role}
               onChange={(val) =>
                 setForm((prev) => ({ ...prev, role: val as typeof prev.role, buildingId: '' }))
@@ -298,13 +419,16 @@ export function UsersPage() {
               ]}
             />
           </div>
+
+          {/* Tòa nhà phụ trách */}
           {(form.role === 'staff' || form.role === 'manager') && (
-            <div className="grid gap-1.5">
-              <label className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                Tòa nhà phụ trách <span className="text-red-500">*</span>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                <Building2 className="w-3.5 h-3.5 text-orange-500" />
+                Tòa nhà phụ trách <span className="text-orange-500 font-extrabold">*</span>
               </label>
               <CustomSelect
-                className="h-10"
+                className="h-11 rounded-xl border-white/10 bg-slate-950/40 text-sm text-slate-100 outline-none"
                 value={form.buildingId}
                 onChange={(val) => setForm((prev) => ({ ...prev, buildingId: val }))}
                 placeholder="-- Chọn tòa nhà --"
@@ -320,12 +444,12 @@ export function UsersPage() {
           )}
         </div>
         {(form.role === 'staff' || form.role === 'manager') && (
-          <p className="mt-2 text-[11px] text-muted-foreground">
-            {form.role === 'staff' ? 'Nhân viên' : 'Quản lý'} sẽ được gán vào tòa nhà đã chọn ngay khi tạo.
+          <p className="mt-3 text-[11px] text-slate-400 italic">
+            💡 {form.role === 'staff' ? 'Nhân viên' : 'Quản lý'} sẽ được gán vào tòa nhà đã chọn ngay khi tạo.
             Tài khoản loại này không hiển thị ở danh sách “Người dùng”.
           </p>
         )}
-        {isSaving ? <p className="text-xs text-muted-foreground">Đang tạo...</p> : null}
+        {isSaving ? <p className="text-xs text-orange-500 animate-pulse mt-3 font-semibold">Đang tạo người dùng...</p> : null}
       </ModalForm>
 
       <ConfirmModal

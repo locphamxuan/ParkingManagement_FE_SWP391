@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Eye, Users } from 'lucide-react';
+import { Eye, Users, Building2, Hash, MapPin, Layers, Coins, Pencil, Pause, Play, Trash2 } from 'lucide-react';
 import { ConfirmModal } from '@/components/modals/ConfirmModal';
 import { DataTable, type DataColumn } from '@/components/common/DataTable';
 import { ModalForm } from '@/components/modals/ModalForm';
@@ -386,32 +386,46 @@ export function BuildingsPage() {
       key: 'actions',
       title: 'Hành động',
       render: (row) => (
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant="secondary"
-            size="sm"
-            className="gap-1"
+        <div className="flex items-center gap-1.5 flex-nowrap">
+          <button
             onClick={() => openViewDetail(row)}
+            className="w-9 h-9 flex items-center justify-center rounded-xl bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 hover:scale-[1.08] active:scale-95 hover:shadow-[0_0_10px_rgba(59,130,246,0.15)] transition-all duration-200"
+            title="Chi tiết"
           >
-            <Eye size={12} /> Chi tiết
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            className="gap-1"
+            <Eye size={16} />
+          </button>
+          <button
             onClick={() => openViewMembers(row)}
+            className="w-9 h-9 flex items-center justify-center rounded-xl bg-violet-500/10 text-violet-400 hover:bg-violet-500/20 hover:scale-[1.08] active:scale-95 hover:shadow-[0_0_10px_rgba(139,92,246,0.15)] transition-all duration-200"
+            title="Thành viên"
           >
-            <Users size={12} /> Thành viên
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => openEditModal(row)}>
-            Sửa
-          </Button>
-          <Button variant="secondary" size="sm" onClick={() => toggleBuildingStatus(row)}>
-            {row.status === 'active' ? 'Ngưng' : 'Kích hoạt'}
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => removeBuildingById(row)}>
-            Xóa
-          </Button>
+            <Users size={16} />
+          </button>
+          <button
+            onClick={() => openEditModal(row)}
+            className="w-9 h-9 flex items-center justify-center rounded-xl bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 hover:scale-[1.08] active:scale-95 hover:shadow-[0_0_10px_rgba(245,158,11,0.15)] transition-all duration-200"
+            title="Sửa"
+          >
+            <Pencil size={16} />
+          </button>
+          <button
+            onClick={() => toggleBuildingStatus(row)}
+            className={`w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-200 hover:scale-[1.08] active:scale-95 ${
+              row.status === 'active'
+                ? 'bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 hover:shadow-[0_0_10px_rgba(244,63,94,0.15)]'
+                : 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 hover:shadow-[0_0_10px_rgba(16,185,129,0.15)]'
+            }`}
+            title={row.status === 'active' ? 'Ngưng hoạt động' : 'Kích hoạt'}
+          >
+            {row.status === 'active' ? <Pause size={16} /> : <Play size={16} />}
+          </button>
+          <button
+            onClick={() => removeBuildingById(row)}
+            className="w-9 h-9 flex items-center justify-center rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:scale-[1.08] active:scale-95 hover:shadow-[0_0_10px_rgba(239,68,68,0.15)] transition-all duration-200"
+            title="Xóa"
+          >
+            <Trash2 size={16} />
+          </button>
         </div>
       ),
     },
@@ -685,51 +699,107 @@ export function BuildingsPage() {
         title={selectedBuilding ? 'Sửa tòa nhà' : 'Tạo tòa nhà'}
         onSubmit={saveBuilding}
       >
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Tên tòa nhà</label>
-            <Input
-              placeholder="Nhập tên tòa nhà"
-              value={form.name}
-              onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-            />
-          </div>
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Mã tòa nhà</label>
-            <Input
-              placeholder="Nhập mã tòa nhà"
-              value={form.code}
-              onChange={(e) => setForm((prev) => ({ ...prev, code: e.target.value }))}
-            />
-          </div>
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Địa chỉ</label>
-            <Input
-              placeholder="Nhập địa chỉ"
-              value={form.address}
-              onChange={(e) => setForm((prev) => ({ ...prev, address: e.target.value }))}
-            />
-          </div>
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Số tầng</label>
-            <Input
-              placeholder="Nhập số tầng"
-              value={form.floors}
-              onChange={(e) => setForm((prev) => ({ ...prev, floors: e.target.value }))}
-            />
-          </div>
-          {!selectedBuilding ? (
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Giá theo giờ (VND)</label>
-              <Input
-                placeholder="Nhập giá theo giờ"
-                value={form.hourlyRate}
-                onChange={(e) => setForm((prev) => ({ ...prev, hourlyRate: e.target.value }))}
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-5 py-2">
+          {/* Tên tòa nhà */}
+          <div className="space-y-2 md:col-span-4">
+            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+              Tên tòa nhà <span className="text-orange-500 font-extrabold">*</span>
+            </label>
+            <div className="relative group">
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-orange-500 transition-colors pointer-events-none">
+                <Building2 className="w-4 h-4" />
+              </span>
+              <input
+                type="text"
+                placeholder="Nhập tên tòa nhà (ví dụ: FPT Building)"
+                value={form.name}
+                onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+                className="h-11 w-full pl-10 pr-4 rounded-xl border border-white/10 bg-slate-950/40 text-sm text-slate-100 placeholder-slate-500 outline-none transition-all duration-300 focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20"
               />
+            </div>
+          </div>
+
+          {/* Mã tòa nhà */}
+          <div className="space-y-2 md:col-span-2">
+            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+              Mã tòa nhà <span className="text-orange-500 font-extrabold">*</span>
+            </label>
+            <div className="relative group">
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-orange-500 transition-colors pointer-events-none">
+                <Hash className="w-4 h-4" />
+              </span>
+              <input
+                type="text"
+                placeholder="Ví dụ: F001"
+                value={form.code}
+                onChange={(e) => setForm((prev) => ({ ...prev, code: e.target.value }))}
+                className="h-11 w-full pl-10 pr-4 rounded-xl border border-white/10 bg-slate-950/40 text-sm text-slate-100 placeholder-slate-500 outline-none transition-all duration-300 focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20 font-mono"
+              />
+            </div>
+          </div>
+
+          {/* Địa chỉ */}
+          <div className="space-y-2 md:col-span-6">
+            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+              Địa chỉ <span className="text-orange-500 font-extrabold">*</span>
+            </label>
+            <div className="relative group">
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-orange-500 transition-colors pointer-events-none">
+                <MapPin className="w-4 h-4" />
+              </span>
+              <input
+                type="text"
+                placeholder="Nhập địa chỉ chi tiết tòa nhà"
+                value={form.address}
+                onChange={(e) => setForm((prev) => ({ ...prev, address: e.target.value }))}
+                className="h-11 w-full pl-10 pr-4 rounded-xl border border-white/10 bg-slate-950/40 text-sm text-slate-100 placeholder-slate-500 outline-none transition-all duration-300 focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20"
+              />
+            </div>
+          </div>
+
+          {/* Số tầng */}
+          <div className="space-y-2 md:col-span-3">
+            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+              Số tầng <span className="text-orange-500 font-extrabold">*</span>
+            </label>
+            <div className="relative group">
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-orange-500 transition-colors pointer-events-none">
+                <Layers className="w-4 h-4" />
+              </span>
+              <input
+                type="number"
+                min="1"
+                placeholder="Nhập số tầng"
+                value={form.floors}
+                onChange={(e) => setForm((prev) => ({ ...prev, floors: e.target.value }))}
+                className="h-11 w-full pl-10 pr-4 rounded-xl border border-white/10 bg-slate-950/40 text-sm text-slate-100 placeholder-slate-500 outline-none transition-all duration-300 focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20"
+              />
+            </div>
+          </div>
+
+          {/* Giá theo giờ */}
+          {!selectedBuilding ? (
+            <div className="space-y-2 md:col-span-3">
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                Giá theo giờ (VND) <span className="text-orange-500 font-extrabold">*</span>
+              </label>
+              <div className="relative group">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-orange-500 transition-colors pointer-events-none">
+                  <Coins className="w-4 h-4" />
+                </span>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="Nhập giá vé theo giờ"
+                  value={form.hourlyRate}
+                  onChange={(e) => setForm((prev) => ({ ...prev, hourlyRate: e.target.value }))}
+                  className="h-11 w-full pl-10 pr-4 rounded-xl border border-white/10 bg-slate-950/40 text-sm text-slate-100 placeholder-slate-500 outline-none transition-all duration-300 focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20"
+                />
+              </div>
             </div>
           ) : null}
         </div>
-        {isSaving ? <p className="text-xs text-muted-foreground">Đang lưu...</p> : null}
+        {isSaving ? <p className="text-xs text-orange-500 animate-pulse mt-3 font-semibold">Đang lưu dữ liệu...</p> : null}
       </ModalForm>
 
       <ConfirmModal
