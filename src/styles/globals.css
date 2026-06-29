@@ -531,5 +531,126 @@ select:disabled {
   filter: drop-shadow(0 0 8px rgba(245, 158, 11, 0.5));
 }
 
+/* ============================================================ */
+/* SAND EFFECT — Hourglass-style falling sand animation         */
+/* ============================================================ */
+
+/* Base btn-sand — visible border so user knows it's clickable  */
+.btn-sand {
+  position: relative;
+  overflow: hidden;
+  z-index: 1;
+  isolation: isolate;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+  background-color: rgba(255, 255, 255, 0.07) !important;
+  transition: color 0.35s ease, box-shadow 0.35s ease;
+  cursor: pointer;
+}
+
+/* ── LAYER 1: falling sand stream (hourglass drip, top → bottom) ── */
+.btn-sand::before {
+  content: '';
+  position: absolute;
+  top: -4px;           /* starts just above the button */
+  left: 50%;
+  transform: translateX(-50%);
+  width: 6px;
+  height: 0;
+  background: var(--sand-stream, rgba(255,255,255,0.9));
+  border-radius: 0 0 50% 50%;
+  opacity: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* ── LAYER 2: rising sand pile (accumulates from bottom) with SVG sand texture ── */
+.btn-sand::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 0;
+  background: 
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.16'/%3E%3C/svg%3E"),
+    var(--sand-fill, linear-gradient(to top, #f97316, #fbbf24));
+  border-radius: inherit;
+  z-index: -2;
+  pointer-events: none;
+}
+
+/* ── ON HOVER: trigger both animations ── */
+.btn-sand:hover {
+  border-color: transparent !important;
+  background-color: transparent !important;
+}
+
+/* Sand stream falls from top to bottom */
+.btn-sand:hover::before {
+  animation: hourglass-stream 0.55s cubic-bezier(0.4, 0, 0.6, 1) forwards;
+}
+
+/* Sand pile rises from bottom, delayed slightly so stream "lands" first */
+.btn-sand:hover::after {
+  animation: hourglass-fill 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.08s forwards;
+}
+
+/* ── ACTIVE STATE: already fully filled ── */
+.btn-sand.btn-sand-active {
+  border-color: transparent !important;
+  background-color: transparent !important;
+  color: #020617 !important;
+}
+.btn-sand.btn-sand-active::after {
+  height: 100%;
+}
+
+/* ── COLOR THEMES (All using gorgeous sand yellow / golden sand colors) ── */
+.btn-sand-cyan {
+  --sand-stream: rgba(234, 179, 8, 0.95);
+  --sand-fill: linear-gradient(to top, #b45309, #d97706, #f59e0b, #fef08a);
+  color: #ffffff;
+}
+.btn-sand-cyan:hover {
+  color: #020617 !important;
+  box-shadow: 0 0 24px rgba(245, 158, 11, 0.45);
+}
+
+.btn-sand-orange {
+  --sand-stream: rgba(245, 158, 11, 0.95);
+  --sand-fill: linear-gradient(to top, #b45309, #d97706, #f59e0b, #fef08a);
+  color: #ffffff;
+}
+.btn-sand-orange:hover {
+  color: #020617 !important;
+  box-shadow: 0 0 24px rgba(245, 158, 11, 0.45);
+}
+
+.btn-sand-dark {
+  --sand-stream: rgba(255, 255, 255, 0.7);
+  --sand-fill: linear-gradient(to top, rgba(255,255,255,0.06), rgba(255,255,255,0.16));
+  color: #94a3b8;
+}
+.btn-sand-dark:hover {
+  color: #ffffff !important;
+  box-shadow: none;
+}
+
+/* ── KEYFRAMES ── */
+
+/* Hourglass stream: a thin bar drops from the top of the button to the bottom */
+@keyframes hourglass-stream {
+  0%   { height: 0;    top: 0;    opacity: 0; }
+  10%  { opacity: 1; }
+  50%  { height: 100%; top: 0;    opacity: 0.9; }
+  90%  { height: 100%; top: 0;    opacity: 0.6; }
+  100% { height: 100%; top: 0;    opacity: 0; }
+}
+
+/* Sand pile rises: grows from 0% height at the bottom up to full */
+@keyframes hourglass-fill {
+  0%   { height: 0%; }
+  100% { height: 100%; }
+}
 
 

@@ -29,16 +29,16 @@ interface AuthPageProps {
 
 const promoPoints = [
   {
-    title: 'Dễ sử dụng',
-    text: 'Biểu mẫu sáng rõ, thao tác nhanh và đồng bộ màu sắc với landing page trang chủ.',
+    title: 'Easy to use',
+    text: 'Clear forms, fast operation, and matching color scheme with the landing page.',
   },
   {
-    title: 'Đúng bối cảnh',
-    text: 'Hình nền bãi đỗ xe và tông màu cam kem giúp nhận diện rõ đây là hệ thống parking.',
+    title: 'Contextual Design',
+    text: 'Parking lot background and amber tones clearly identify the system theme.',
   },
   {
-    title: 'An tâm truy cập',
-    text: 'Thông tin tài khoản và các luồng đăng nhập, đăng ký được trình bày ngắn gọn, dễ theo dõi.',
+    title: 'Secure Access',
+    text: 'Your account info and all flows are structured securely and are easy to track.',
   },
 ];
 
@@ -159,18 +159,18 @@ export default function AuthPage({ mode, notice, onModeChange, onSubmit, isLoadi
   const rotateX = useTransform(springY, [0, 1], [8, -8]);
 
   const title = useMemo(() => {
-    if (mode === 'reset-password') return 'Đặt lại mật khẩu';
-    if (mode === 'forgot-password') return 'Khôi phục mật khẩu';
-    return mode === 'login' ? 'Đăng nhập vào PBMS' : 'Tạo tài khoản PBMS';
+    if (mode === 'reset-password') return 'Reset Password';
+    if (mode === 'forgot-password') return 'Recover Password';
+    return mode === 'login' ? 'Login to PBMS' : 'Create PBMS Account';
   }, [mode]);
   const description = useMemo(() => {
     if (mode === 'reset-password')
-      return 'Nhập mật khẩu mới của bạn để hoàn tất quá trình đặt lại mật khẩu.';
+      return 'Enter your new password to complete the reset process.';
     if (mode === 'forgot-password')
-      return 'Nhập địa chỉ email liên kết với tài khoản của bạn để nhận link đặt lại mật khẩu.';
+      return 'Enter the email address associated with your account to receive a reset link.';
     return mode === 'login'
-      ? 'Đăng nhập để tiếp tục sử dụng hệ thống quản lý bãi đỗ xe, theo dõi thông tin và truy cập các chức năng cần thiết.'
-      : 'Tạo tài khoản mới để bắt đầu sử dụng nền tảng quản lý bãi đỗ xe với giao diện đồng nhất cùng trang chủ.';
+      ? 'Log in to continue using the smart parking management system.'
+      : 'Create a new account to start using the smart parking platform.';
   }, [mode]);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -184,7 +184,7 @@ export default function AuthPage({ mode, notice, onModeChange, onSubmit, isLoadi
 
     if (mode === 'register') {
       if (form.password !== form.confirmPassword) {
-        setLocalNotice({ message: 'Mật khẩu xác nhận không khớp!', type: 'error' });
+        setLocalNotice({ message: 'Confirm password does not match!', type: 'error' });
         return;
       }
 
@@ -192,7 +192,7 @@ export default function AuthPage({ mode, notice, onModeChange, onSubmit, isLoadi
       const phoneRegex = /^0[0-9]{9}$/;
       if (!phoneRegex.test(phoneTrimmed)) {
         setLocalNotice({
-          message: 'Số điện thoại phải bắt đầu bằng số 0 và có đúng 10 chữ số!',
+          message: 'Phone number must start with 0 and contain exactly 10 digits!',
           type: 'error',
         });
         return;
@@ -223,7 +223,7 @@ export default function AuthPage({ mode, notice, onModeChange, onSubmit, isLoadi
       } catch (err) {
         // BE xử lý lockout (423 ACCOUNT_LOCKED) + sai mật khẩu — hiển thị message của BE.
         setLocalNotice({
-          message: err instanceof Error ? err.message : 'Đăng nhập thất bại',
+          message: err instanceof Error ? err.message : 'Login failed',
           type: 'error',
         });
       }
@@ -237,23 +237,23 @@ export default function AuthPage({ mode, notice, onModeChange, onSubmit, isLoadi
     const email = forgotEmail.trim();
     
     if (!email) {
-      setLocalNotice({ message: 'Vui lòng nhập email của bạn!', type: 'error' });
+      setLocalNotice({ message: 'Please enter your email!', type: 'error' });
       return;
     }
 
     // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      setLocalNotice({ message: 'Email không hợp lệ!', type: 'error' });
+      setLocalNotice({ message: 'Invalid email address!', type: 'error' });
       return;
     }
 
     try {
       await forgotPassword(email);
       setModal({
-        title: 'Đã gửi email khôi phục',
+        title: 'Recovery Email Sent',
         message:
-          'Nếu email này có trong hệ thống, chúng tôi đã gửi link đặt lại mật khẩu. Vui lòng kiểm tra hộp thư (kể cả thư mục spam). Link có hiệu lực trong 15 phút.',
+          'If this email exists in our system, we have sent a reset password link. Please check your inbox (including spam folder). The link is valid for 15 minutes.',
         type: 'success',
         next: () => {
           setForgotEmail('');
@@ -263,8 +263,8 @@ export default function AuthPage({ mode, notice, onModeChange, onSubmit, isLoadi
       });
     } catch (error) {
       setModal({
-        title: 'Gửi email thất bại',
-        message: error instanceof Error ? error.message : 'Gửi email thất bại. Vui lòng thử lại.',
+        title: 'Failed to Send Email',
+        message: error instanceof Error ? error.message : 'Failed to send email. Please try again.',
         type: 'error',
       });
     }
@@ -275,7 +275,7 @@ export default function AuthPage({ mode, notice, onModeChange, onSubmit, isLoadi
     setLocalNotice(null);
 
     if (!resetToken) {
-      setLocalNotice({ message: 'Link đặt lại mật khẩu không hợp lệ hoặc đã hết hạn!', type: 'error' });
+      setLocalNotice({ message: 'Invalid or expired password reset link!', type: 'error' });
       return;
     }
 
@@ -284,19 +284,19 @@ export default function AuthPage({ mode, notice, onModeChange, onSubmit, isLoadi
 
     // Validation: Mật khẩu không được bỏ trống
     if (!newPassword || !confirmPassword) {
-      setLocalNotice({ message: 'Vui lòng nhập mật khẩu!', type: 'error' });
+      setLocalNotice({ message: 'Please enter password!', type: 'error' });
       return;
     }
 
     // Validation: Độ dài mật khẩu >= 6
     if (newPassword.length < 6) {
-      setLocalNotice({ message: 'Mật khẩu phải có ít nhất 6 ký tự!', type: 'error' });
+      setLocalNotice({ message: 'Password must be at least 6 characters!', type: 'error' });
       return;
     }
 
     // Validation: Mật khẩu và xác nhận phải trùng khớp
     if (newPassword !== confirmPassword) {
-      setLocalNotice({ message: 'Mật khẩu xác nhận không khớp!', type: 'error' });
+      setLocalNotice({ message: 'Confirm password does not match!', type: 'error' });
       return;
     }
 
@@ -308,8 +308,8 @@ export default function AuthPage({ mode, notice, onModeChange, onSubmit, isLoadi
       localStorage.removeItem('pbms.forgotEmail_pending');
 
       setModal({
-        title: 'Đặt lại mật khẩu thành công',
-        message: 'Mật khẩu của bạn đã được cập nhật. Vui lòng đăng nhập bằng mật khẩu mới.',
+        title: 'Password Reset Successfully',
+        message: 'Your password has been updated. Please log in with your new password.',
         type: 'success',
         next: () => {
           setResetPasswordForm({ newPassword: '', confirmPassword: '' });
@@ -320,11 +320,11 @@ export default function AuthPage({ mode, notice, onModeChange, onSubmit, isLoadi
       });
     } catch (error) {
       setModal({
-        title: 'Đặt lại mật khẩu thất bại',
+        title: 'Failed to Reset Password',
         message:
           error instanceof Error
             ? error.message
-            : 'Đặt lại mật khẩu thất bại. Vui lòng thử lại hoặc yêu cầu link mới.',
+            : 'Failed to reset password. Please try again or request a new link.',
         type: 'error',
       });
     }
@@ -625,9 +625,9 @@ export default function AuthPage({ mode, notice, onModeChange, onSubmit, isLoadi
           {mode === 'forgot-password' ? (
             <form onSubmit={handleForgotPassword} className="space-y-4">
               <div className="space-y-2 mb-4">
-                <h3 className="text-sm font-bold text-foreground">Nhập email để khôi phục mật khẩu</h3>
+                <h3 className="text-sm font-bold text-foreground">Recover Password</h3>
                 <p className="text-xs text-slate-400">
-                  Chúng tôi sẽ gửi link đặt lại mật khẩu đến email của bạn.
+                  We will send a reset password link to your email.
                 </p>
               </div>
 
@@ -655,7 +655,7 @@ export default function AuthPage({ mode, notice, onModeChange, onSubmit, isLoadi
                   }}
                   className="flex-1 h-11 rounded-xl border border-white/10 text-white font-black text-xs uppercase tracking-wider hover:bg-white/10 transition-all"
                 >
-                  Quay lại
+                  Back
                 </button>
                 <motion.button 
                   type="submit"
@@ -664,7 +664,7 @@ export default function AuthPage({ mode, notice, onModeChange, onSubmit, isLoadi
                   whileTap={{ scale: 0.96 }}
                   className="flex-1 h-11 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider hover:shadow-[0_0_25px_rgba(249,115,22,0.45)] disabled:opacity-50 transition-all"
                 >
-                  {isLoading ? 'Đang gửi...' : 'Gửi link đặt lại'}
+                  {isLoading ? 'Sending...' : 'Send reset link'}
                 </motion.button>
               </div>
             </form>
@@ -673,15 +673,15 @@ export default function AuthPage({ mode, notice, onModeChange, onSubmit, isLoadi
               {/* Hidden email field: helps browser associate the new password with the right account */}
               <input type="hidden" autoComplete="username" value={forgotEmail || ''} />
               <div className="space-y-2 mb-4">
-                <h3 className="text-sm font-bold text-foreground">Nhập mật khẩu mới</h3>
+                <h3 className="text-sm font-bold text-foreground">Enter new password</h3>
                 <p className="text-xs text-slate-400">
-                  Mật khẩu phải có ít nhất 6 ký tự.
+                  Password must be at least 6 characters.
                 </p>
               </div>
 
               <div className="space-y-1.5">
                 <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono">
-                  Mật khẩu mới
+                  New password
                 </label>
                 <div className="relative">
                   <input 
@@ -691,7 +691,7 @@ export default function AuthPage({ mode, notice, onModeChange, onSubmit, isLoadi
                     onChange={(e) => setResetPasswordForm(s => ({ ...s, newPassword: e.target.value }))}
                     required
                     className="block w-full rounded-xl border border-white/10 bg-slate-950/60 text-white placeholder-slate-600 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 text-sm h-11 pl-4 pr-11 transition-all duration-300 outline-none shadow-[inset_0_1px_2px_rgba(0,0,0,0.4)] focus:shadow-[0_0_15px_rgba(249,115,22,0.15)] input-scan-focus"
-                    placeholder="Ít nhất 6 ký tự"
+                    placeholder="At least 6 characters"
                   />
                   <button
                     type="button"
@@ -705,7 +705,7 @@ export default function AuthPage({ mode, notice, onModeChange, onSubmit, isLoadi
 
               <div className="space-y-1.5">
                 <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono">
-                  Xác nhận mật khẩu
+                  Confirm Password
                 </label>
                 <div className="relative">
                   <input 
@@ -715,7 +715,7 @@ export default function AuthPage({ mode, notice, onModeChange, onSubmit, isLoadi
                     onChange={(e) => setResetPasswordForm(s => ({ ...s, confirmPassword: e.target.value }))}
                     required
                     className="block w-full rounded-xl border border-white/10 bg-slate-950/60 text-white placeholder-slate-600 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 text-sm h-11 pl-4 pr-11 transition-all duration-300 outline-none shadow-[inset_0_1px_2px_rgba(0,0,0,0.4)] focus:shadow-[0_0_15px_rgba(249,115,22,0.15)] input-scan-focus"
-                    placeholder="Nhập lại mật khẩu"
+                    placeholder="Retype password"
                   />
                   <button
                     type="button"
@@ -738,7 +738,7 @@ export default function AuthPage({ mode, notice, onModeChange, onSubmit, isLoadi
                   }}
                   className="flex-1 h-11 rounded-xl border border-white/10 text-white font-black text-xs uppercase tracking-wider hover:bg-white/10 transition-all"
                 >
-                  Hủy
+                  Cancel
                 </button>
                 <motion.button 
                   type="submit"
@@ -747,7 +747,7 @@ export default function AuthPage({ mode, notice, onModeChange, onSubmit, isLoadi
                   whileTap={{ scale: 0.96 }}
                   className="flex-1 h-11 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider hover:shadow-[0_0_25px_rgba(249,115,22,0.45)] disabled:opacity-50 transition-all"
                 >
-                  {isLoading ? 'Đang xử lý...' : 'Đặt lại mật khẩu'}
+                  {isLoading ? 'Processing...' : 'Reset Password'}
                 </motion.button>
               </div>
             </form>
@@ -756,18 +756,18 @@ export default function AuthPage({ mode, notice, onModeChange, onSubmit, isLoadi
             {mode === 'register' && (
               <>
                 <div className="space-y-1.5">
-                  <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono">Họ và tên</label>
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono">Full Name</label>
                   <input 
                     name="fullName" 
                     value={form.fullName} 
                     onChange={handleChange} 
                     required
                     className="block w-full rounded-xl border border-white/10 bg-slate-950/60 text-white placeholder-slate-600 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 text-sm h-11 px-4 transition-all duration-300 outline-none shadow-[inset_0_1px_2px_rgba(0,0,0,0.4)] focus:shadow-[0_0_15px_rgba(249,115,22,0.15)] input-scan-focus"
-                    placeholder="Nguyễn Văn A" 
+                    placeholder="John Doe" 
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono">Số điện thoại</label>
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono">Phone Number</label>
                   <input 
                     name="phone" 
                     value={form.phone} 
@@ -814,7 +814,7 @@ export default function AuthPage({ mode, notice, onModeChange, onSubmit, isLoadi
                   className="absolute left-0 right-0 top-[68px] z-50 rounded-xl border border-white/10 bg-slate-950/95 shadow-2xl backdrop-blur-md overflow-hidden py-1.5 animate-fadeIn"
                 >
                   <div className="px-3.5 py-1.5 border-b border-white/5 text-[9px] font-mono text-slate-500 tracking-wider uppercase font-black">
-                    Tài khoản đã lưu
+                    Saved Accounts
                   </div>
                   {savedAccounts.map((acc) => (
                     <div
@@ -827,7 +827,7 @@ export default function AuthPage({ mode, notice, onModeChange, onSubmit, isLoadi
                         type="button"
                         onMouseDown={(e) => deleteSavedAccount(e, acc.email)}
                         className="p-1 rounded text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all duration-200"
-                        title="Xóa tài khoản này"
+                        title="Delete this account"
                       >
                         <X size={12} className="stroke-[3]" />
                       </button>
@@ -838,7 +838,7 @@ export default function AuthPage({ mode, notice, onModeChange, onSubmit, isLoadi
             </div>
 
             <div className="space-y-1.5">
-              <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono">Mật khẩu</label>
+              <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono">Password</label>
               <div className="relative">
                 <input 
                   ref={passwordInputRef}
@@ -849,7 +849,7 @@ export default function AuthPage({ mode, notice, onModeChange, onSubmit, isLoadi
                   required 
                   autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
                   className="block w-full rounded-xl border border-white/10 bg-slate-950/60 text-white placeholder-slate-600 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 text-sm h-11 pl-4 pr-11 transition-all duration-300 outline-none shadow-[inset_0_1px_2px_rgba(0,0,0,0.4)] focus:shadow-[0_0_15px_rgba(249,115,22,0.15)] input-scan-focus"
-                  placeholder="Ít nhất 6 ký tự" 
+                  placeholder="At least 6 characters" 
                 />
                 <button
                   type="button"
@@ -868,14 +868,14 @@ export default function AuthPage({ mode, notice, onModeChange, onSubmit, isLoadi
                   onClick={() => onModeChange('forgot-password')}
                   className="text-xs font-semibold text-slate-400 hover:text-orange-400 transition-colors"
                 >
-                  Quên mật khẩu?
+                  Forgot password?
                 </button>
               </div>
             )}
 
             {mode === 'register' && (
               <div className="space-y-1.5 animate-fadeIn">
-                <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono">Xác nhận mật khẩu</label>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono">Confirm Password</label>
                 <div className="relative">
                   <input 
                     name="confirmPassword" 
@@ -884,7 +884,7 @@ export default function AuthPage({ mode, notice, onModeChange, onSubmit, isLoadi
                     type={showConfirmPassword ? "text" : "password"} 
                     required 
                     className="block w-full rounded-xl border border-white/10 bg-slate-950/60 text-white placeholder-slate-600 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 text-sm h-11 pl-4 pr-11 transition-all duration-300 outline-none shadow-[inset_0_1px_2px_rgba(0,0,0,0.4)] focus:shadow-[0_0_15px_rgba(249,115,22,0.15)] input-scan-focus"
-                    placeholder="Nhập lại mật khẩu" 
+                    placeholder="Retype password" 
                   />
                   <button
                     type="button"
@@ -906,10 +906,10 @@ export default function AuthPage({ mode, notice, onModeChange, onSubmit, isLoadi
                 className="w-full h-11 rounded-xl text-slate-950 font-black text-xs uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:shadow-[0_0_25px_rgba(249,115,22,0.45)] disabled:opacity-50"
               >
                 {isLoading
-                  ? 'Đang xử lý...'
+                  ? 'Processing...'
                   : mode === 'login'
-                  ? 'Đăng nhập'
-                  : 'Tạo tài khoản'}
+                  ? 'Login'
+                  : 'Register'}
               </motion.button>
               
               <div className="text-center">
@@ -918,7 +918,7 @@ export default function AuthPage({ mode, notice, onModeChange, onSubmit, isLoadi
                   onClick={() => onModeChange(mode === 'login' ? 'register' : 'login')} 
                   className="text-xs font-bold text-slate-400 hover:text-orange-400 underline transition-colors"
                 >
-                  {mode === 'login' ? 'Tạo tài khoản mới' : 'Đã có tài khoản? Đăng nhập'}
+                  {mode === 'login' ? 'Create new account' : 'Already have an account? Login'}
                 </button>
               </div>
 
@@ -928,7 +928,7 @@ export default function AuthPage({ mode, notice, onModeChange, onSubmit, isLoadi
                   <div className="flex items-center my-3">
                     <div className="flex-1 h-px bg-white/10" />
                     <span className="px-3 text-[9px] font-mono text-slate-500 tracking-widest uppercase font-black">
-                      Hoặc đăng nhập bằng
+                      Or sign in with
                     </span>
                     <div className="flex-1 h-px bg-white/10" />
                   </div>
@@ -938,7 +938,7 @@ export default function AuthPage({ mode, notice, onModeChange, onSubmit, isLoadi
                     {/* Google */}
                     <button
                       type="button"
-                      onClick={() => alert('Đăng nhập bằng Google đang được xử lý...')}
+                      onClick={() => alert('Google login is coming soon...')}
                       className="w-11 h-11 rounded-2xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] hover:border-white/20 transition-all flex items-center justify-center hover:scale-105 active:scale-95 shadow-md group"
                     >
                       <svg className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" viewBox="0 0 24 24">
@@ -964,7 +964,7 @@ export default function AuthPage({ mode, notice, onModeChange, onSubmit, isLoadi
                     {/* Facebook */}
                     <button
                       type="button"
-                      onClick={() => alert('Đăng nhập bằng Facebook đang được xử lý...')}
+                      onClick={() => alert('Facebook login is coming soon...')}
                       className="w-11 h-11 rounded-2xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] hover:border-white/20 transition-all flex items-center justify-center hover:scale-105 active:scale-95 shadow-md group"
                     >
                       <svg className="w-5 h-5 text-[#1877F2] fill-[#1877F2] group-hover:scale-110 transition-transform duration-200" viewBox="0 0 24 24">
@@ -975,7 +975,7 @@ export default function AuthPage({ mode, notice, onModeChange, onSubmit, isLoadi
                     {/* GitHub */}
                     <button
                       type="button"
-                      onClick={() => alert('Đăng nhập bằng GitHub đang được xử lý...')}
+                      onClick={() => alert('GitHub login is coming soon...')}
                       className="w-11 h-11 rounded-2xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] hover:border-white/20 transition-all flex items-center justify-center hover:scale-105 active:scale-95 shadow-md group"
                     >
                       <svg className="w-5 h-5 text-white fill-white group-hover:scale-110 transition-transform duration-200" viewBox="0 0 24 24">
@@ -986,7 +986,7 @@ export default function AuthPage({ mode, notice, onModeChange, onSubmit, isLoadi
                     {/* LinkedIn */}
                     <button
                       type="button"
-                      onClick={() => alert('Đăng nhập bằng LinkedIn đang được xử lý...')}
+                      onClick={() => alert('LinkedIn login is coming soon...')}
                       className="w-11 h-11 rounded-2xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] hover:border-white/20 transition-all flex items-center justify-center hover:scale-105 active:scale-95 shadow-md group"
                     >
                       <svg className="w-5 h-5 text-[#0A66C2] fill-[#0A66C2] group-hover:scale-110 transition-transform duration-200" viewBox="0 0 24 24">
@@ -1002,7 +1002,7 @@ export default function AuthPage({ mode, notice, onModeChange, onSubmit, isLoadi
         </div>
       </motion.div>
 
-      {/* Modal thông báo (quên/đặt lại mật khẩu) */}
+      {/* Notification modal (forgot/reset password) */}
       {modal ? (
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/70 backdrop-blur-md px-4"
@@ -1019,7 +1019,7 @@ export default function AuthPage({ mode, notice, onModeChange, onSubmit, isLoadi
               type="button"
               onClick={closeModal}
               className="absolute right-3.5 top-3.5 rounded-full p-1.5 text-slate-400 hover:bg-white/10 hover:text-white transition-colors"
-              aria-label="Đóng"
+              aria-label="Close"
             >
               <X size={16} />
             </button>
@@ -1050,7 +1050,7 @@ export default function AuthPage({ mode, notice, onModeChange, onSubmit, isLoadi
                   : 'border border-white/10 text-white hover:bg-slate-800'
               }`}
             >
-              Đã hiểu
+              Got it
             </button>
           </motion.div>
         </div>

@@ -7,7 +7,7 @@ import { useLongTermSubscriptions, useCancelSubscription, useRenewSubscription }
 import type { LongTermSubscription } from '@/services/user/userApi';
 import { packageStatusLabel, packageStatusBadgeClass } from '@/utils/packageStatus';
 
-const currency = new Intl.NumberFormat('vi-VN', {
+const currency = new Intl.NumberFormat('en-US', {
   style: 'currency',
   currency: 'VND',
   maximumFractionDigits: 0,
@@ -20,7 +20,7 @@ function formatMoney(value: number): string {
 function formatDate(value: string): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString('vi-VN');
+  return date.toLocaleDateString('en-US');
 }
 
 export default function LongTermSubscriptionsPage() {
@@ -45,14 +45,14 @@ export default function LongTermSubscriptionsPage() {
   const [cancelError, setCancelError] = useState<string | null>(null);
 
   const handleRenew = async (item: LongTermSubscription) => {
-    if (!window.confirm(`Gia hạn gói "${item.package.name}" cho biển ${item.plateNumber}? Phí sẽ trừ từ ví.`)) return;
+    if (!window.confirm(`Renew subscription "${item.package.name}" for plate ${item.plateNumber}? The fee will be deducted from your wallet.`)) return;
     setMessage(null);
     try {
       await renew(item._id);
       await refreshSubscriptions();
-      setMessage({ type: 'success', text: 'Gia hạn thành công.' });
+      setMessage({ type: 'success', text: 'Renewed successfully.' });
     } catch (err) {
-      setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Gia hạn thất bại' });
+      setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to renew' });
     }
   };
 
@@ -82,7 +82,7 @@ export default function LongTermSubscriptionsPage() {
             className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-slate-950 px-4 py-2 text-xs font-black uppercase tracking-wider text-orange-300 hover:border-orange-400/50"
           >
             <ArrowLeft size={14} />
-            Trang chủ
+            Home
           </button>
         </motion.div>
 
@@ -93,15 +93,15 @@ export default function LongTermSubscriptionsPage() {
           className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
         >
           <div>
-            <h1 className="text-3xl font-black text-white md:text-4xl">Gói dài hạn của bạn</h1>
-            <p className="mt-2 text-sm font-semibold text-slate-400">Quản lý, gia hạn và theo dõi các gói đang sử dụng</p>
+            <h1 className="text-3xl font-black text-white md:text-4xl">Your Subscriptions</h1>
+            <p className="mt-2 text-sm font-semibold text-slate-400">Manage, renew, and track your active subscriptions</p>
           </div>
           <button
             type="button"
             onClick={() => navigate('/reservations', { state: { mode: 'package' } })}
             className="inline-flex items-center gap-2 rounded-xl border border-orange-500/30 bg-orange-500/10 px-5 py-2.5 text-xs font-black uppercase tracking-wider text-orange-300 hover:bg-orange-500/20 transition-all shrink-0"
           >
-            <CheckCircle2 size={14} /> Mua gói mới
+            <CheckCircle2 size={14} /> Buy New Package
           </button>
         </motion.div>
 
@@ -124,7 +124,7 @@ export default function LongTermSubscriptionsPage() {
           <div className="mb-4 flex items-center justify-between">
             <h2 className="flex items-center gap-2 text-sm font-black uppercase tracking-wider text-white">
               <Building2 size={16} className="text-cyan-300" />
-              Gói đang sử dụng
+              Active Packages
             </h2>
             <span className="rounded-full bg-slate-950 px-2 py-1 text-[11px] font-bold text-slate-400">
               {subscriptions.length}
@@ -135,7 +135,7 @@ export default function LongTermSubscriptionsPage() {
             {isLoadingSubscriptions ? (
               <div className="rounded-xl border border-white/10 bg-slate-950/60 p-4 text-center">
                 <Loader2 size={16} className="animate-spin mx-auto text-orange-300 mb-2" />
-                <p className="text-xs font-semibold text-slate-400">Đang tải dữ liệu...</p>
+                <p className="text-xs font-semibold text-slate-400">Loading data...</p>
               </div>
             ) : subscriptionsError ? (
               <div className="rounded-xl border border-rose-400/30 bg-rose-500/10 p-4 text-center">
@@ -169,12 +169,12 @@ export default function LongTermSubscriptionsPage() {
 
                     {typeof item.package.maxHoursPerDay === 'number' && item.package.maxHoursPerDay > 0 && (
                       <p className="mt-1 text-[10px] text-slate-400">
-                        Giờ miễn phí: <span className="font-bold text-slate-200">{item.package.maxHoursPerDay}h/ngày</span>
+                        Free hours: <span className="font-bold text-slate-200">{item.package.maxHoursPerDay}h/day</span>
                       </p>
                     )}
                     {item.status === 'expired' && (
                       <p className="mt-2 text-[10px] text-amber-400/90 leading-relaxed border-t border-white/5 pt-1.5">
-                        Gói đã hết hạn — đang tính phí theo giờ. Gia hạn để tiếp tục ưu đãi giờ đỗ.
+                        Package expired — hourly rates apply. Renew to continue receiving parking benefits.
                       </p>
                     )}
 
@@ -185,7 +185,7 @@ export default function LongTermSubscriptionsPage() {
                         onClick={() => handleRenew(item)}
                         className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl border border-emerald-500/20 bg-emerald-500/10 hover:bg-emerald-500/20 px-3 py-1.5 text-xs font-black uppercase tracking-wider text-emerald-300 transition-all active:scale-95 disabled:opacity-60"
                       >
-                        <RefreshCw size={12} /> {isRenewing ? 'Đang gia hạn...' : 'Gia hạn'}
+                        <RefreshCw size={12} /> {isRenewing ? 'Renewing...' : 'Renew'}
                       </button>
                     )}
 
@@ -195,13 +195,13 @@ export default function LongTermSubscriptionsPage() {
                         onClick={() => setCancellingSub(item)}
                         className="mt-2 w-full rounded-xl border border-rose-500/20 bg-rose-500/10 hover:bg-rose-500/20 px-3 py-1.5 text-xs font-black uppercase tracking-wider text-rose-400 transition-all active:scale-95"
                       >
-                        Hủy gói
+                        Cancel Package
                       </button>
                     )}
 
                     {isPendingOrActive && !canCancel && (
                       <p className="mt-2 text-[10px] text-slate-400/80 italic leading-relaxed border-t border-white/5 pt-1.5">
-                        Quá thời hạn tự hủy (3 ngày). Vui lòng liên hệ Admin để hỗ trợ.
+                        Self-cancellation period (3 days) has passed. Please contact Admin for support.
                       </p>
                     )}
                   </div>
@@ -209,7 +209,7 @@ export default function LongTermSubscriptionsPage() {
               })
             ) : (
               <p className="rounded-xl border border-white/10 bg-slate-950/60 p-4 text-center text-xs font-semibold text-slate-500">
-                Chưa có đăng ký gói dài hạn.
+                No active subscriptions found.
               </p>
             )}
           </div>
@@ -221,32 +221,32 @@ export default function LongTermSubscriptionsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
           <div className="w-full max-w-lg rounded-3xl border border-white/10 bg-slate-900 p-6 shadow-2xl space-y-6">
             <div>
-              <h3 className="text-lg font-black text-white">Xác nhận hủy gói dài hạn</h3>
-              <p className="text-xs text-slate-400 mt-1">Gói: {cancellingSub.package.name} ({cancellingSub.package.code})</p>
+              <h3 className="text-lg font-black text-white">Confirm Package Cancellation</h3>
+              <p className="text-xs text-slate-400 mt-1">Package: {cancellingSub.package.name} ({cancellingSub.package.code})</p>
             </div>
 
             <div className="rounded-2xl border border-rose-500/20 bg-rose-500/10 p-4 space-y-2 text-xs font-semibold text-rose-300">
               <p>
-                Gói dài hạn này sẽ được hủy. Bạn sẽ được hoàn lại 95% giá gói (tương đương{' '}
+                This subscription will be cancelled. You will receive a 95% refund (equivalent to{' '}
                 <span className="font-black text-rose-400">
                   {formatMoney((cancellingSub.price ?? cancellingSub.package.price) * 0.95)}
                 </span>
-                ) vào ví cá nhân.
+                ) back to your wallet.
               </p>
               <p className="text-[10px] text-rose-300/80 italic">
-                (*) Hệ thống khấu trừ 5% phí hủy gói, bao gồm: phí dịch vụ tiện ích, phí quản lý hệ thống và chi phí vận hành bãi đỗ.
+                (*) A 5% cancellation fee will be deducted for utility fees, system management, and parking lot operations.
               </p>
             </div>
 
             <div className="space-y-4">
               <div>
-                <span className="text-xs font-bold uppercase text-slate-400 block mb-2">Lý do hủy</span>
+                <span className="text-xs font-bold uppercase text-slate-400 block mb-2">Reason for Cancellation</span>
                 <div className="space-y-2">
                   {[
-                    { value: 'change_vehicle', label: '🔄 Thay đổi phương tiện / biển số xe' },
-                    { value: 'no_longer_needed', label: '🏢 Không còn nhu cầu đỗ xe ở đây' },
-                    { value: 'pricing_issue', label: '💸 Giá gói không còn phù hợp' },
-                    { value: 'other', label: '⚠️ Lý do khác' },
+                    { value: 'change_vehicle', label: '🔄 Vehicle / license plate change' },
+                    { value: 'no_longer_needed', label: '🏢 No longer need parking here' },
+                    { value: 'pricing_issue', label: '💸 Subscription price no longer suitable' },
+                    { value: 'other', label: '⚠️ Other reason' },
                   ].map((opt) => (
                     <label
                       key={opt.value}
@@ -275,15 +275,15 @@ export default function LongTermSubscriptionsPage() {
 
               <div>
                 <span className="text-xs font-bold uppercase text-slate-400 block mb-1">
-                  Ghi chú chi tiết {cancelReason === 'other' && <span className="text-rose-400">*</span>}
+                  Detailed Note {cancelReason === 'other' && <span className="text-rose-400">*</span>}
                 </span>
                 <textarea
                   value={cancelNote}
                   onChange={(e) => setCancelNote(e.target.value)}
                   placeholder={
                     cancelReason === 'other'
-                      ? 'Vui lòng nhập lý do hủy chi tiết tại đây (bắt buộc)...'
-                      : 'Nhập ghi chú thêm nếu có...'
+                      ? 'Please enter detailed cancellation reason here (required)...'
+                      : 'Enter additional notes if any...'
                   }
                   rows={3}
                   className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2 text-xs font-semibold text-white outline-none focus:border-orange-400/60 placeholder-slate-600 resize-none"
@@ -309,7 +309,7 @@ export default function LongTermSubscriptionsPage() {
                 disabled={isCancelling}
                 className="px-4 py-2.5 rounded-xl border border-white/10 bg-slate-950 text-xs font-black uppercase tracking-wider text-slate-400 hover:text-white transition-all active:scale-95 disabled:opacity-50"
               >
-                Quay lại
+                Back
               </button>
               <button
                 type="button"
@@ -321,13 +321,13 @@ export default function LongTermSubscriptionsPage() {
                     await refreshSubscriptions();
                     setMessage({
                       type: 'success',
-                      text: 'Hủy gói dài hạn thành công! Số tiền hoàn lại (95%) đã được cộng vào ví tài khoản.',
+                      text: 'Package cancelled successfully! The refund (95%) has been credited to your wallet.',
                     });
                     setCancellingSub(null);
                     setCancelReason('change_vehicle');
                     setCancelNote('');
                   } catch (err) {
-                    setCancelError(err instanceof Error ? err.message : 'Lỗi khi hủy gói dài hạn.');
+                    setCancelError(err instanceof Error ? err.message : 'Error cancelling package.');
                   }
                 }}
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-xs font-black uppercase tracking-wider text-white transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
@@ -335,10 +335,10 @@ export default function LongTermSubscriptionsPage() {
                 {isCancelling ? (
                   <>
                     <Loader2 size={12} className="animate-spin mr-2" />
-                    Đang xử lý...
+                    Processing...
                   </>
                 ) : (
-                  'Xác nhận hủy'
+                  'Confirm Cancel'
                 )}
               </button>
             </div>

@@ -664,18 +664,18 @@ export default function ReviewsPage() {
               <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500/15 border border-emerald-500/20 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.15)]">
                 <CheckCircle size={32} />
               </div>
-              <p className="font-black text-white text-base">Cảm ơn đánh giá của bạn!</p>
-              <p className="text-xs text-slate-400 font-semibold">Ý kiến đóng góp đã được gửi lên hệ thống và đang chờ phê duyệt.</p>
+              <p className="font-black text-white text-base">Thank you for your review!</p>
+              <p className="text-xs text-slate-400 font-semibold">Your feedback has been submitted to the system and is pending approval.</p>
             </div>
           ) : (
             <form onSubmit={handleSubmitFeedback} className="space-y-4">
               <p className="text-xs text-slate-400">
-                Ý kiến của bạn giúp chúng tôi cải thiện chất lượng bãi đỗ xe tốt hơn mỗi ngày.
+                Your feedback helps us improve our parking lot quality every day.
               </p>
 
               {/* Sessions Select */}
               <div className="space-y-1.5 relative">
-                <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono">Chọn lượt gửi xe đã hoàn thành</label>
+                <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono">Select completed parking session</label>
                 <div className="relative">
                   <button
                     type="button"
@@ -687,9 +687,9 @@ export default function ReviewsPage() {
                   >
                     <span className="font-semibold text-slate-200">
                       {selectedSession ? (
-                        `${selectedSession.plateNumber} tại ${selectedSession.building.name} (Check-out: ${fmtTime(selectedSession.checkOut)})`
+                        `${selectedSession.plateNumber} at ${selectedSession.building.name} (Check-out: ${fmtTime(selectedSession.checkOut)})`
                       ) : (
-                        'Chọn lượt gửi xe đã hoàn thành'
+                        'Select completed parking session'
                       )}
                     </span>
                     <ChevronDown size={14} className={`text-slate-400 transition-transform duration-200 ${dropdownOpen ? 'transform rotate-180' : ''}`} />
@@ -711,7 +711,7 @@ export default function ReviewsPage() {
                               : 'text-slate-350 hover:text-white'
                           }`}
                         >
-                          <span className="font-semibold">{s.plateNumber} tại {s.building.name}</span>
+                          <span className="font-semibold">{s.plateNumber} at {s.building.name}</span>
                           <span className="text-[10px] opacity-75 font-mono text-slate-400">Check-out: {fmtTime(s.checkOut)}</span>
                         </button>
                       ))}
@@ -722,7 +722,7 @@ export default function ReviewsPage() {
 
               {/* Stars Input */}
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono">Mức độ hài lòng</label>
+                <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono">Satisfaction Level</label>
                 <div className="flex gap-1.5 py-1">
                   {Array.from({ length: 5 }).map((_, i) => {
                     const index = i + 1;
@@ -746,25 +746,25 @@ export default function ReviewsPage() {
                     );
                   })}
                   <span className="ml-3 font-mono font-black text-orange-400 self-center text-xs">
-                    {ratingInput} / 5 sao
+                    {ratingInput} / 5 stars
                   </span>
                 </div>
               </div>
 
               {/* Comment Input */}
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono">Nội dung đánh giá</label>
+                <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono">Review Comment</label>
                 <textarea
                   value={commentInput}
                   onChange={(e) => setCommentInput(e.target.value)}
-                  placeholder="Nhập trải nghiệm, đóng góp ý kiến của bạn về chỗ đỗ, thái độ nhân viên..."
+                  placeholder="Enter your experience, feedback about the spot, staff attitude..."
                   rows={4}
                   required
                   maxLength={1000}
                   className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 text-xs text-white placeholder:text-slate-650 focus:border-orange-500 focus:outline-none transition-all resize-none"
                 />
                 <div className="text-right text-[9px] font-mono text-slate-500">
-                  {commentInput.length} / 1000 ký tự
+                  {commentInput.length} / 1000 characters
                 </div>
               </div>
 
@@ -784,14 +784,14 @@ export default function ReviewsPage() {
                   disabled={submitting}
                   className="rounded-xl px-5 py-2.5 font-bold text-xs border border-white/10 bg-transparent text-white hover:bg-white/5 transition-all cursor-pointer"
                 >
-                  Hủy
+                  Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
                   className="rounded-xl px-5 py-2.5 font-bold text-xs bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 hover:shadow-[0_0_20px_rgba(249,115,22,0.35)] transition-all cursor-pointer"
                 >
-                  {submitting ? 'Đang gửi...' : 'Gửi đánh giá'}
+                  {submitting ? 'Submitting...' : 'Submit Review'}
                 </button>
               </div>
             </form>

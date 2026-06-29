@@ -14,12 +14,12 @@ import { fmtMoney, fmtTime } from '@/pages/user/reservationsHelper';
 import { packageStatusLabel, packageStatusBadgeClass } from '@/utils/packageStatus';
 
 const HOURLY_LABELS: Record<string, string> = {
-  pending: 'Chờ thanh toán',
-  confirmed: 'Đã đặt',
-  checked_in: 'Đang sử dụng',
-  completed: 'Hoàn thành',
-  expired: 'Hết hạn',
-  cancelled: 'Đã hủy',
+  pending: 'Pending Payment',
+  confirmed: 'Reserved',
+  checked_in: 'Active',
+  completed: 'Completed',
+  expired: 'Expired',
+  cancelled: 'Cancelled',
 };
 
 const HOURLY_COLORS: Record<string, string> = {
@@ -48,19 +48,19 @@ const cancelCutoffPassed = (r: { startTime?: string; cancellationCutoffHours?: n
 };
 
 const FILTER_TABS = [
-  { value: 'all', label: 'Tất cả' },
-  { value: 'confirmed', label: 'Đã đặt' },
-  { value: 'checked_in', label: 'Đang sử dụng' },
-  { value: 'completed', label: 'Hoàn thành' },
-  { value: 'cancelled', label: 'Đã hủy' },
-  { value: 'expired', label: 'Hết hạn' },
+  { value: 'all', label: 'All' },
+  { value: 'confirmed', label: 'Reserved' },
+  { value: 'checked_in', label: 'Active' },
+  { value: 'completed', label: 'Completed' },
+  { value: 'cancelled', label: 'Cancelled' },
+  { value: 'expired', label: 'Expired' },
 ];
 
 const PACKAGE_FILTER_TABS = [
-  { value: 'all', label: 'Tất cả' },
-  { value: 'active', label: 'Đang hoạt động' },
-  { value: 'expired', label: 'Hết hạn' },
-  { value: 'cancelled', label: 'Đã hủy' },
+  { value: 'all', label: 'All' },
+  { value: 'active', label: 'Active' },
+  { value: 'expired', label: 'Expired' },
+  { value: 'cancelled', label: 'Cancelled' },
 ];
 
 export function ReservationHistoryTab() {
@@ -95,7 +95,7 @@ export function ReservationHistoryTab() {
           setTotalPages(raw?.pagination?.totalPages ?? 1);
           setPage(p);
         })
-        .catch((err) => setError(err instanceof Error ? err.message : 'Tải lịch sử thất bại'))
+        .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load history'))
         .finally(() => setLoading(false));
     },
     [statusFilter]
@@ -113,7 +113,7 @@ export function ReservationHistoryTab() {
           setPackageTotalPages(raw?.pagination?.totalPages ?? 1);
           setPackagePage(p);
         })
-        .catch((err) => setPackageError(err instanceof Error ? err.message : 'Tải danh sách gói dài hạn thất bại'))
+        .catch((err) => setPackageError(err instanceof Error ? err.message : 'Failed to load long-term subscriptions'))
         .finally(() => setPackageLoading(false));
     },
     [packageFilter]
@@ -132,13 +132,13 @@ export function ReservationHistoryTab() {
   }, [loadPackages, packageFilter, historyMode]);
 
   const handleCancel = async (id: string) => {
-    if (!window.confirm('Bạn có chắc muốn hủy đặt chỗ này?')) return;
+    if (!window.confirm('Are you sure you want to cancel this reservation?')) return;
     setCancellingId(id);
     try {
       await userApi.reservations.cancel(id);
       setItems((prev) => prev.map((r) => (r._id === id ? { ...r, status: 'cancelled' } : r)));
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Hủy đặt chỗ thất bại');
+      alert(err instanceof Error ? err.message : 'Failed to cancel reservation.');
     } finally {
       setCancellingId(null);
     }
@@ -158,7 +158,7 @@ export function ReservationHistoryTab() {
           }`}
         >
           <Clock size={13} />
-          Đặt theo giờ
+          Hourly
         </button>
         <button
           type="button"
@@ -170,7 +170,7 @@ export function ReservationHistoryTab() {
           }`}
         >
           <Package size={13} />
-          Gói dài hạn
+          Long-term
         </button>
       </div>
 
@@ -222,7 +222,7 @@ export function ReservationHistoryTab() {
             size={13}
             className={(historyMode === 'hourly' ? loading : packageLoading) ? 'animate-spin' : ''}
           />{' '}
-          Làm mới
+          Refresh
         </button>
       </div>
 
@@ -241,11 +241,11 @@ export function ReservationHistoryTab() {
       {/* Content Rendering */}
       {historyMode === 'hourly' ? (
         loading ? (
-          <div className="py-12 text-center text-sm text-slate-500">Đang tải dữ liệu...</div>
+          <div className="py-12 text-center text-sm text-slate-500">Loading data...</div>
         ) : items.length === 0 ? (
-          <div className="rounded-2xl border border-slate-200 bg-white/40 p-10 text-center">
-            <CalendarClock size={32} className="mx-auto mb-3 text-slate-400 animate-pulse" />
-            <p className="text-sm font-semibold text-slate-500">Bạn chưa có lịch sử đặt chỗ nào.</p>
+          <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-10 text-center shadow-inner backdrop-blur-md">
+            <CalendarClock size={32} className="mx-auto mb-3 text-slate-600 animate-pulse" />
+            <p className="text-sm font-semibold text-slate-400">No reservation history found.</p>
           </div>
         ) : (
           <div className="space-y-4 max-h-[55vh] overflow-y-auto pr-1">
@@ -285,10 +285,10 @@ export function ReservationHistoryTab() {
                       {(r.status === 'pending' || r.status === 'confirmed') && (
                         cancelCutoffPassed(r) ? (
                           <span
-                            title={`Phải hủy trước giờ đặt ít nhất ${r.cancellationCutoffHours} giờ`}
+                            title={`Must cancel at least ${r.cancellationCutoffHours} hours before check-in`}
                             className="rounded-lg border border-slate-500/30 bg-slate-500/10 px-2.5 py-1 text-[11px] font-bold text-slate-400"
                           >
-                            Quá hạn hủy
+                            Cancellation cutoff passed
                           </span>
                         ) : (
                           <button
@@ -298,7 +298,7 @@ export function ReservationHistoryTab() {
                             className="flex items-center gap-1 rounded-lg border border-rose-500/30 bg-rose-500/10 px-2.5 py-1 text-xs font-bold text-rose-400 hover:bg-rose-500/20 hover:border-rose-500/50 transition-all disabled:opacity-50"
                           >
                             <XCircle size={12} />
-                            {cancellingId === r._id ? 'Đang hủy...' : 'Hủy'}
+                            {cancellingId === r._id ? 'Cancelling...' : 'Cancel'}
                           </button>
                         )
                       )}
@@ -307,26 +307,26 @@ export function ReservationHistoryTab() {
 
                   <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5 border-t border-white/[0.03] pt-4">
                     <div>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Vị trí đỗ</p>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Parking Slot</p>
                       <p className="mt-1 text-sm font-bold text-slate-200">{(r.slot as any)?.code ?? '—'}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Bắt đầu</p>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Start</p>
                       <p className="mt-1 text-xs font-medium text-slate-300">{fmtTime(r.startTime)}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Kết thúc</p>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">End</p>
                       <p className="mt-1 text-xs font-medium text-slate-300">{r.endTime ? fmtTime(r.endTime) : '—'}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Tiền cọc</p>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Deposit</p>
                       <p className={`mt-1 text-sm font-black ${r.fee ? 'text-emerald-400' : 'text-slate-500'}`}>
                         {fmtMoney(r.fee)}
                       </p>
                     </div>
                     <div>
                       <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
-                        Còn lại phải trả
+                        Remaining Due
                       </p>
                       <p className="mt-1 text-sm font-black text-orange-400">
                         {fmtMoney(
@@ -345,22 +345,22 @@ export function ReservationHistoryTab() {
                       <div className="flex items-center gap-1.5 border-b border-white/[0.04] pb-2 mb-2">
                         <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />
                         <h5 className="text-[10px] font-bold uppercase tracking-wider text-cyan-400">
-                          Phiên gửi xe thực tế
+                          Actual Parking Session
                         </h5>
                       </div>
                       <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 text-xs">
                         <div>
-                          <span className="text-slate-500 text-[10px] block">Giờ vào:</span>
+                          <span className="text-slate-500 text-[10px] block">Entry Time:</span>
                           <span className="text-slate-300 font-medium">{fmtTime(r.parkingSession.entryTime)}</span>
                         </div>
                         <div>
-                          <span className="text-slate-500 text-[10px] block">Giờ ra:</span>
+                          <span className="text-slate-500 text-[10px] block">Exit Time:</span>
                           <span className="text-slate-300 font-medium">
                             {r.parkingSession.exitTime ? fmtTime(r.parkingSession.exitTime) : '—'}
                           </span>
                         </div>
                         <div className="flex flex-col justify-center">
-                          <span className="text-slate-500 text-[10px] block">Thanh toán thêm:</span>
+                          <span className="text-slate-500 text-[10px] block">Additional payment:</span>
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <span
                               className={`font-black ${
@@ -376,7 +376,7 @@ export function ReservationHistoryTab() {
                                   : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
                               }`}
                             >
-                              {r.parkingSession.paymentStatus === 'paid' ? 'Đã trả' : 'Chưa trả'}
+                              {r.parkingSession.paymentStatus === 'paid' ? 'Paid' : 'Unpaid'}
                             </span>
                           </div>
                         </div>
@@ -388,10 +388,10 @@ export function ReservationHistoryTab() {
                     <div className="mt-3 flex items-center justify-between border-t border-white/[0.03] pt-3 text-[10px] text-slate-500">
                       <div className="flex items-center gap-1">
                         <Clock size={10} className="text-slate-600" />
-                        <span>Đặt lúc: {fmtTime(r.createdAt)}</span>
+                        <span>Booked at: {fmtTime(r.createdAt)}</span>
                       </div>
                       {r.updatedAt && r.updatedAt !== r.createdAt && (
-                        <span>Cập nhật: {fmtTime(r.updatedAt)}</span>
+                        <span>Updated: {fmtTime(r.updatedAt)}</span>
                       )}
                     </div>
                   )}
@@ -402,11 +402,11 @@ export function ReservationHistoryTab() {
         )
       ) : (
         packageLoading ? (
-          <div className="py-12 text-center text-sm text-slate-500">Đang tải dữ liệu...</div>
+          <div className="py-12 text-center text-sm text-slate-500">Loading data...</div>
         ) : packageItems.length === 0 ? (
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-10 text-center">
+          <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-10 text-center shadow-inner backdrop-blur-md">
             <Package size={32} className="mx-auto mb-3 text-slate-600 animate-pulse" />
-            <p className="text-sm font-semibold text-slate-500">Bạn chưa đăng ký gói dài hạn nào.</p>
+            <p className="text-sm font-semibold text-slate-400">No long-term subscriptions found.</p>
           </div>
         ) : (
           <div className="space-y-4 max-h-[55vh] overflow-y-auto pr-1">
@@ -426,7 +426,7 @@ export function ReservationHistoryTab() {
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-mono text-sm font-black text-orange-400 tracking-wider">
-                          {sub.package?.name ?? 'Gói dài hạn'}
+                          {sub.package?.name ?? 'Long-term Sub'}
                         </span>
                         <span className="rounded-lg border border-amber-500/20 bg-amber-500/5 px-2 py-0.5 text-xs font-bold text-amber-400 tracking-wide flex items-center gap-1 shadow-sm">
                           <Car size={12} className="opacity-80" />
@@ -435,7 +435,7 @@ export function ReservationHistoryTab() {
                       </div>
                       <p className="mt-1.5 text-xs font-medium text-slate-300 flex items-center gap-1">
                         <Building2 size={12} className="text-slate-500" />
-                        Mã gói: {sub.package?.code ?? '—'}
+                        Package code: {sub.package?.code ?? '—'}
                       </p>
                     </div>
 
@@ -452,27 +452,27 @@ export function ReservationHistoryTab() {
 
                   <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 border-t border-white/[0.03] pt-4">
                     <div>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Ngày bắt đầu</p>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Start Date</p>
                       <p className="mt-1 text-xs font-medium text-slate-300">
-                        {new Date(sub.startDate).toLocaleDateString('vi-VN')}
+                        {new Date(sub.startDate).toLocaleDateString('en-US')}
                       </p>
                     </div>
                     <div>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Ngày hết hạn</p>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Expiration Date</p>
                       <p className="mt-1 text-xs font-medium text-slate-300">
-                        {new Date(sub.endDate).toLocaleDateString('vi-VN')}
+                        {new Date(sub.endDate).toLocaleDateString('en-US')}
                       </p>
                     </div>
                     <div>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Giá gói</p>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Price</p>
                       <p className="mt-1 text-sm font-black text-emerald-400">
                         {fmtMoney(sub.price ?? sub.package?.price ?? 0)}
                       </p>
                     </div>
                     <div>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Giờ miễn phí</p>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Free Hours</p>
                       <p className="mt-1 text-xs font-medium text-cyan-400">
-                        {sub.package?.maxHoursPerDay ? `${sub.package.maxHoursPerDay}h/ngày` : 'Không giới hạn'}
+                        {sub.package?.maxHoursPerDay ? `${sub.package.maxHoursPerDay}h/day` : 'Unlimited'}
                       </p>
                     </div>
                   </div>
@@ -486,49 +486,49 @@ export function ReservationHistoryTab() {
       {/* Pagination */}
       {historyMode === 'hourly' ? (
         totalPages > 1 && (
-          <div className="flex items-center justify-center gap-2 pt-2 border-t border-slate-100 mt-2">
+          <div className="flex items-center justify-center gap-2 pt-2 border-t border-white/5 mt-2">
             <button
               type="button"
               disabled={page <= 1 || loading}
               onClick={() => load(page - 1)}
-              className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 hover:text-slate-900 disabled:opacity-40 shadow-sm"
+              className="rounded-xl border border-white/10 bg-slate-900/40 px-3.5 py-1.5 text-xs text-slate-300 hover:text-white hover:bg-slate-800 transition-all disabled:opacity-40 disabled:pointer-events-none active:scale-95"
             >
-              ← Trước
+              ← Prev
             </button>
-            <span className="text-xs text-slate-500 font-bold">
-              Trang {page} / {totalPages}
+            <span className="text-xs text-slate-400 font-bold">
+              Page {page} / {totalPages}
             </span>
             <button
               type="button"
               disabled={page >= totalPages || loading}
               onClick={() => load(page + 1)}
-              className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 hover:text-slate-900 disabled:opacity-40 shadow-sm"
+              className="rounded-xl border border-white/10 bg-slate-900/40 px-3.5 py-1.5 text-xs text-slate-300 hover:text-white hover:bg-slate-800 transition-all disabled:opacity-40 disabled:pointer-events-none active:scale-95"
             >
-              Sau →
+              Next →
             </button>
           </div>
         )
       ) : (
         packageTotalPages > 1 && (
-          <div className="flex items-center justify-center gap-2 pt-2 border-t border-slate-100 mt-2">
+          <div className="flex items-center justify-center gap-2 pt-2 border-t border-white/5 mt-2">
             <button
               type="button"
               disabled={packagePage <= 1 || packageLoading}
               onClick={() => loadPackages(packagePage - 1)}
-              className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 hover:text-slate-900 disabled:opacity-40 shadow-sm"
+              className="rounded-xl border border-white/10 bg-slate-900/40 px-3.5 py-1.5 text-xs text-slate-300 hover:text-white hover:bg-slate-800 transition-all disabled:opacity-40 disabled:pointer-events-none active:scale-95"
             >
-              ← Trước
+              ← Prev
             </button>
-            <span className="text-xs text-slate-500 font-bold">
-              Trang {packagePage} / {packageTotalPages}
+            <span className="text-xs text-slate-400 font-bold">
+              Page {packagePage} / {packageTotalPages}
             </span>
             <button
               type="button"
               disabled={packagePage >= packageTotalPages || packageLoading}
               onClick={() => loadPackages(packagePage + 1)}
-              className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 hover:text-slate-900 disabled:opacity-40 shadow-sm"
+              className="rounded-xl border border-white/10 bg-slate-900/40 px-3.5 py-1.5 text-xs text-slate-300 hover:text-white hover:bg-slate-800 transition-all disabled:opacity-40 disabled:pointer-events-none active:scale-95"
             >
-              Sau →
+              Next →
             </button>
           </div>
         )

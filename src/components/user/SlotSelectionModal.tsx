@@ -87,12 +87,12 @@ export function SlotSelectionModal({
                 !selectedFloorIdModal ? (
                   <div className="flex flex-col items-center justify-center py-20 text-slate-500">
                     <MapPin size={36} className="text-slate-400 mb-3 animate-pulse" />
-                    <span className="text-sm font-semibold">Vui lòng chọn tầng để hiển thị sơ đồ ô đỗ</span>
+                    <span className="text-sm font-semibold">Please select a floor to view the parking layout</span>
                   </div>
                 ) : isLoadingSlots ? (
                   <div className="flex flex-col items-center justify-center py-20 text-slate-500">
                     <div className="h-8 w-8 animate-spin rounded-full border-2 border-orange-500 border-t-transparent mb-3" />
-                    <span className="text-sm font-semibold">Đang tải danh sách ô đỗ...</span>
+                    <span className="text-sm font-semibold">Loading parking slots...</span>
                   </div>
                 ) : null
               }
@@ -101,7 +101,7 @@ export function SlotSelectionModal({
               <div className="mb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
                 <div className="flex-1">
                   <span className="mb-2 block text-[10px] font-bold uppercase tracking-widest text-slate-500">
-                    Khu vực / Tầng
+                    Zone / Floor
                   </span>
                   {floorsError ? (
                     <div className="p-3 bg-red-50 border border-red-200 rounded-md text-red-700 text-sm">
@@ -115,21 +115,21 @@ export function SlotSelectionModal({
                         setSelectedSlot(null);
                       }}
                       options={[
-                        { value: '', label: '-- Chọn tầng --' },
+                        { value: '', label: '-- Select floor --' },
                         ...floorsData.map((f) => ({
                           value: f._id,
-                          label: `Tầng ${f.code || f.name || ''} (${f.availableSlots}/${f.totalSlots})`,
+                          label: `Floor ${f.code || f.name || ''} (${f.availableSlots}/${f.totalSlots})`,
                         })),
                       ]}
-                      placeholder="-- Chọn tầng --"
+                      placeholder="-- Select floor --"
                     />
                   )}
                 </div>
                 {selectedVehicleType && (
-                  <div className="rounded-xl border border-slate-200 bg-white/70 px-4 py-2.5 text-xs text-slate-600 flex items-center gap-2 max-w-md shadow-sm">
+                  <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 px-4 py-2.5 text-xs text-cyan-300 flex items-center gap-2 max-w-md shadow-[0_0_15px_rgba(6,182,212,0.05)]">
                     <span>
-                      Bản đồ đang lọc theo <strong>{selectedVehicleType === 'car' ? 'Ô tô' : 'Xe máy'}</strong>. Các
-                      ô đỗ không phù hợp sẽ tự động mờ đi.
+                      Map is currently filtered by <strong>{selectedVehicleType === 'car' ? 'Car' : 'Motorcycle'}</strong>.
+                      Non-matching slots will be dimmed.
                     </span>
                   </div>
                 )}

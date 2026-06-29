@@ -17,14 +17,14 @@ export const CAR_BRANDS = [
   'Toyota', 'Honda', 'Hyundai', 'Kia', 'Mazda', 'Ford', 'Mitsubishi',
   'VinFast', 'Suzuki', 'Nissan', 'Isuzu', 'Chevrolet', 'Mercedes-Benz',
   'BMW', 'Audi', 'Lexus', 'Peugeot', 'Daewoo',
-  'Khác',
+  'Other',
 ] as const;
 
 /** Popular motorcycle makes on Vietnamese roads. */
 export const MOTORCYCLE_BRANDS = [
   'Honda', 'Yamaha', 'Suzuki', 'SYM', 'Piaggio', 'Vespa', 'VinFast',
   'Kymco', 'Detech', 'Espero',
-  'Khác',
+  'Other',
 ] as const;
 
 /** Return the brand list matching a vehicle type (defaults to car list). */

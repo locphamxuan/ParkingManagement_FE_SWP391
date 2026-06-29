@@ -22,7 +22,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { userApi, type UserWallet, type UserWalletTransaction } from '@/services/user/userApi';
 import QRCode from 'qrcode';
 
-const currency = new Intl.NumberFormat('vi-VN', {
+const currency = new Intl.NumberFormat('en-US', {
   style: 'currency',
   currency: 'VND',
   maximumFractionDigits: 0,
@@ -30,20 +30,20 @@ const currency = new Intl.NumberFormat('vi-VN', {
 
 const fmtMoney = (n: number) => currency.format(n);
 const fmtTime = (s: string) =>
-  new Date(s).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' });
+  new Date(s).toLocaleString('en-US', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' });
 
 const TX_REASON_LABELS: Record<string, string> = {
   // Backend reason codes (from WalletTransaction model)
-  payos_topup: 'Nạp ví (PayOS)',
-  topup: 'Nạp ví',
-  reservation_fee: 'Phí đặt chỗ trước',
-  parking_checkout: 'Phí gửi xe',
-  parking_fee: 'Phí gửi xe',
-  reservation_refund: 'Hoàn tiền đặt chỗ',
-  refund: 'Hoàn tiền',
-  long_term_subscription: 'Gói dài hạn',
-  wallet_payment: 'Thanh toán ví',
-  admin_credit: 'Điều chỉnh số dư',
+  payos_topup: 'Wallet Deposit (PayOS)',
+  topup: 'Wallet Deposit',
+  reservation_fee: 'Reservation Fee',
+  parking_checkout: 'Parking Fee',
+  parking_fee: 'Parking Fee',
+  reservation_refund: 'Reservation Refund',
+  refund: 'Refund',
+  long_term_subscription: 'Long-term Subscription',
+  wallet_payment: 'Wallet Payment',
+  admin_credit: 'Admin Credit Adjustment',
 };
 
 const TOP_UP_OPTIONS = [50_000, 100_000, 200_000, 500_000];
@@ -168,7 +168,7 @@ export default function WalletPage() {
         const res = await userApi.wallet.verifyTopup(pendingTopUp.orderCode);
         const status = (res as { data?: { status: string } })?.data?.status;
         if (status === 'success' || status === 'PAID') {
-          setMessage({ type: 'ok', text: `Đã nạp ${fmtMoney(pendingTopUp.amount)} vào ví thành công.` });
+          setMessage({ type: 'ok', text: `Successfully deposited ${fmtMoney(pendingTopUp.amount)} into your wallet.` });
           setPendingTopUp(null);
           refreshWallet();
           clearInterval(pollInterval);
@@ -231,7 +231,7 @@ export default function WalletPage() {
       const data = (res as { data?: PendingTopUp })?.data;
       if (data) setPendingTopUp({ ...data, amount });
     } catch (err) {
-      setMessage({ type: 'err', text: err instanceof Error ? err.message : 'Không thể khởi tạo nạp ví.' });
+      setMessage({ type: 'err', text: err instanceof Error ? err.message : 'Failed to initiate deposit.' });
     } finally {
       setIsSubmitting(false);
     }
@@ -241,11 +241,11 @@ export default function WalletPage() {
     setCustomError(null);
     const amount = parseInt(customAmount, 10);
     if (!customAmount.trim() || Number.isNaN(amount) || amount <= 0) {
-      setCustomError('Vui lòng nhập số tiền hợp lệ.');
+      setCustomError('Please enter a valid amount.');
       return;
     }
     if (amount < 10_000) {
-      setCustomError('Số tiền tối thiểu là 10.000 đ.');
+      setCustomError('Minimum amount is 10,000 VND.');
       return;
     }
     setCustomAmount('');
@@ -259,14 +259,14 @@ export default function WalletPage() {
       const res = await userApi.wallet.verifyTopup(pendingTopUp.orderCode);
       const status = (res as { data?: { status: string } })?.data?.status;
       if (status === 'success' || status === 'PAID') {
-        setMessage({ type: 'ok', text: `Đã nạp ${fmtMoney(pendingTopUp.amount)} vào ví thành công.` });
+        setMessage({ type: 'ok', text: `Successfully deposited ${fmtMoney(pendingTopUp.amount)} into your wallet.` });
         setPendingTopUp(null);
         await refreshWallet();
       } else {
-        setMessage({ type: 'err', text: 'Chưa nhận được thanh toán. Vui lòng hoàn tất giao dịch và thử lại.' });
+        setMessage({ type: 'err', text: 'Payment not received yet. Please complete the transaction and try again.' });
       }
     } catch (err) {
-      setMessage({ type: 'err', text: err instanceof Error ? err.message : 'Xác nhận thất bại.' });
+      setMessage({ type: 'err', text: err instanceof Error ? err.message : 'Verification failed.' });
     } finally {
       setVerifying(false);
     }
@@ -314,7 +314,7 @@ export default function WalletPage() {
             onClick={() => navigate('/')}
             className="inline-flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-2.5 text-xs font-black uppercase tracking-wider text-orange-400 transition-all duration-300 hover:border-orange-500/40 hover:bg-orange-500/10 active:scale-95"
           >
-            <ArrowLeft size={14} /> Trang chủ
+            <ArrowLeft size={14} /> Home
           </button>
           <div className="flex items-center gap-2">
             <button
@@ -322,20 +322,20 @@ export default function WalletPage() {
               onClick={() => navigate('/reservations')}
               className="inline-flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-2.5 text-xs font-black uppercase tracking-wider text-cyan-400 transition-all duration-300 hover:border-cyan-500/40 hover:bg-cyan-500/10 active:scale-95"
             >
-              <CalendarClock size={14} /> Đặt chỗ
+              <CalendarClock size={14} /> Pre-booking
             </button>
             <button
               type="button"
               onClick={() => navigate('/profile')}
               className="inline-flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-2.5 text-xs font-black uppercase tracking-wider text-orange-400 transition-all duration-300 hover:border-orange-500/40 hover:bg-orange-500/10 active:scale-95"
             >
-              <User size={14} /> Hồ sơ
+              <User size={14} /> Profile
             </button>
             <button
               type="button"
               onClick={refreshWallet}
               className="inline-flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.02] px-3.5 py-2.5 text-xs text-slate-400 transition-all duration-300 hover:text-white hover:bg-white/[0.05] active:scale-90"
-              title="Làm mới số dư"
+              title="Refresh Balance"
             >
               <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />
             </button>
@@ -360,8 +360,8 @@ export default function WalletPage() {
               {/* Card Header */}
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.24em] text-orange-400">Ví PBMS</p>
-                  <p className="mt-0.5 text-xs font-medium text-slate-400">Hệ thống gửi xe thông minh</p>
+                  <p className="text-[10px] font-black uppercase tracking-[0.24em] text-orange-400">PBMS Wallet</p>
+                  <p className="mt-0.5 text-xs font-medium text-slate-400">Smart Parking System</p>
                 </div>
                 {/* Contactless payment design and metallic chip */}
                 <div className="flex items-center gap-3">
@@ -378,7 +378,7 @@ export default function WalletPage() {
 
               {/* Balance Amount */}
               <div className="mt-8">
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Số dư khả dụng</p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Available Balance</p>
                 <h1 className="mt-2 text-4xl sm:text-5xl font-black bg-gradient-to-r from-white via-amber-100 to-yellow-200 bg-clip-text text-transparent drop-shadow-[0_2px_10px_rgba(251,191,36,0.15)] font-mono tracking-tight">
                   {isLoading ? (
                     <span className="inline-block h-10 w-48 animate-pulse rounded-md bg-white/10" />
@@ -403,7 +403,7 @@ export default function WalletPage() {
                     <ArrowDownLeft size={16} />
                   </div>
                   <div>
-                    <p className="text-[9px] font-black uppercase tracking-wider text-slate-500">Tổng tiền vào</p>
+                    <p className="text-[9px] font-black uppercase tracking-wider text-slate-500">Total Inflow</p>
                     <p className="mt-0.5 text-base font-bold text-emerald-400">{fmtMoney(totalCredit)}</p>
                   </div>
                 </div>
@@ -412,7 +412,7 @@ export default function WalletPage() {
                     <ArrowUpRight size={16} />
                   </div>
                   <div>
-                    <p className="text-[9px] font-black uppercase tracking-wider text-slate-500">Tổng tiền ra</p>
+                    <p className="text-[9px] font-black uppercase tracking-wider text-slate-500">Total Outflow</p>
                     <p className="mt-0.5 text-base font-bold text-orange-400">{fmtMoney(totalDebit)}</p>
                   </div>
                 </div>
@@ -429,7 +429,7 @@ export default function WalletPage() {
           >
             <div>
               <h2 className="mb-4 flex items-center gap-2 text-sm font-black uppercase tracking-wider text-white">
-                <Plus size={16} className="text-emerald-400" /> Nạp tiền ví nhanh
+                <Plus size={16} className="text-emerald-400" /> Quick Deposit
               </h2>
 
               {/* Fast choices grid */}
@@ -465,7 +465,7 @@ export default function WalletPage() {
                         setCustomAmount(e.target.value);
                         setCustomError(null);
                       }}
-                      placeholder="Nhập số tiền tùy chỉnh"
+                      placeholder="Enter custom amount"
                       className="w-full rounded-xl border border-white/[0.08] bg-white/[0.01] px-4 py-3 text-sm font-semibold text-white placeholder-slate-500 outline-none transition-all duration-300 focus:border-orange-500/40 focus:bg-white/[0.03] focus:ring-1 focus:ring-orange-500/20"
                     />
                     <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-500">đ</span>
@@ -496,7 +496,7 @@ export default function WalletPage() {
                 className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-orange-500 via-amber-500 to-amber-600 text-sm font-black uppercase tracking-wider text-slate-950 shadow-[0_4px_20px_rgba(249,115,22,0.2)] transition-all duration-300 hover:brightness-110 active:scale-98 disabled:opacity-50"
               >
                 <QrCode size={16} />
-                {isSubmitting ? 'Đang khởi tạo...' : `NẠP TIỀN (${fmtMoney(selectedAmount)})`}
+                {isSubmitting ? 'Initializing...' : `DEPOSIT (${fmtMoney(selectedAmount)})`}
               </button>
 
               {message && (
@@ -518,7 +518,7 @@ export default function WalletPage() {
         <section className="rounded-3xl border border-white/[0.06] bg-white/[0.02] p-6 shadow-glass backdrop-blur-xl">
           <div className="mb-6 flex flex-wrap items-center justify-between gap-4 border-b border-white/[0.06] pb-5">
             <h2 className="flex items-center gap-2 text-sm font-black uppercase tracking-wider text-white">
-              <ReceiptText size={16} className="text-cyan-400" /> Lịch sử giao dịch
+              <ReceiptText size={16} className="text-cyan-400" /> Transaction History
             </h2>
 
             {/* Sliding Pill Tab Filter */}
@@ -540,7 +540,7 @@ export default function WalletPage() {
                         transition={{ type: 'spring', stiffness: 380, damping: 30 }}
                       />
                     )}
-                    <span className="relative z-10">{f === 'all' ? 'Tất cả' : f === 'credit' ? 'Tiền vào' : 'Tiền ra'}</span>
+                    <span className="relative z-10">{f === 'all' ? 'All' : f === 'credit' ? 'Inflow' : 'Outflow'}</span>
                   </button>
                 );
               })}
@@ -552,12 +552,12 @@ export default function WalletPage() {
             {isLoading ? (
               <div className="py-12 text-center text-sm text-slate-500">
                 <RefreshCw size={24} className="mx-auto animate-spin text-slate-600 mb-2" />
-                Đang tải dữ liệu...
+                Loading data...
               </div>
             ) : filteredTx.length === 0 ? (
               <div className="rounded-2xl border border-white/[0.05] bg-white/[0.01] p-12 text-center">
                 <WalletCards size={36} className="mx-auto text-slate-700 mb-3" />
-                <p className="text-sm font-bold text-slate-500">Chưa ghi nhận giao dịch nào trong khoảng thời gian này.</p>
+                <p className="text-sm font-bold text-slate-500">No transactions recorded in this period.</p>
               </div>
             ) : (
               filteredTx.map((tx) => {
@@ -594,7 +594,7 @@ export default function WalletPage() {
                       <p className={`text-base font-black ${isCredit ? 'text-emerald-400' : 'text-orange-400'}`}>
                         {isCredit ? '+' : '-'}{fmtMoney(tx.amount)}
                       </p>
-                      <p className="mt-1 text-[11px] font-semibold text-slate-500">Số dư sau GD: {fmtMoney(tx.balanceAfter)}</p>
+                      <p className="mt-1 text-[11px] font-semibold text-slate-500">Balance after: {fmtMoney(tx.balanceAfter)}</p>
                     </div>
                   </motion.div>
                 );
@@ -626,8 +626,8 @@ export default function WalletPage() {
               {/* Modal Header */}
               <div className="flex items-center justify-between border-b border-white/[0.06] bg-gradient-to-r from-orange-500/10 to-amber-500/10 px-6 py-4">
                 <div>
-                  <p className="font-mono text-[9px] font-black uppercase tracking-[0.2em] text-orange-400">Thanh toán PayOS</p>
-                  <h2 className="text-base font-black text-white">Nạp tiền vào ví điện tử</h2>
+                  <p className="font-mono text-[9px] font-black uppercase tracking-[0.2em] text-orange-400">PayOS Payment</p>
+                  <h2 className="text-base font-black text-white">Deposit Funds to Wallet</h2>
                 </div>
                 <button
                   type="button"
@@ -642,7 +642,7 @@ export default function WalletPage() {
               {/* Scrollable Content wrapper */}
               <div className="p-6 overflow-y-auto space-y-6 flex-1">
                 <p className="text-xs text-slate-400 text-center leading-relaxed max-w-md mx-auto">
-                  Mở ứng dụng Ngân hàng (Mobile Banking) hỗ trợ quét mã QR bên dưới, hoặc sao chép thông tin chi tiết để chuyển khoản hoàn tất giao dịch.
+                  Open your Mobile Banking app that supports scanning QR code below, or copy the details to make the transfer to complete the transaction.
                 </p>
 
                 {/* QR Code and Detail tables side by side */}
@@ -668,14 +668,14 @@ export default function WalletPage() {
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
                         <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-orange-500"></span>
                       </span>
-                      Hệ thống đang chờ giao dịch...
+                      Waiting for transaction...
                     </div>
                   </div>
 
                   {/* Transfer Details Form */}
                   {(() => {
                     const qrInfo = parseVietQR(pendingTopUp.qrCode);
-                    const bankName = qrInfo ? BANK_BIN_MAP[qrInfo.bankBin] || `Ngân hàng (BIN: ${qrInfo.bankBin})` : 'MB Bank (TMCP Quân Đội)';
+                    const bankName = qrInfo ? BANK_BIN_MAP[qrInfo.bankBin] || `Bank (BIN: ${qrInfo.bankBin})` : 'MB Bank (TMCP Quân Đội)';
                     const accNo = qrInfo?.accountNumber || 'VQRQAJNOG7846';
                     const accName = qrInfo?.accountName || 'PHAM XUAN LOC';
 
@@ -683,19 +683,19 @@ export default function WalletPage() {
                       <div className="flex flex-col justify-between space-y-4 rounded-2xl bg-white/[0.02] border border-white/[0.05] p-5">
                         {/* Detail item row */}
                         <div className="flex flex-col">
-                          <span className="text-[9px] font-black uppercase tracking-wider text-slate-500 font-mono mb-0.5">Ngân hàng thụ hưởng</span>
+                          <span className="text-[9px] font-black uppercase tracking-wider text-slate-500 font-mono mb-0.5">Beneficiary Bank</span>
                           <span className="text-xs font-bold text-white">{bankName}</span>
                         </div>
 
                         <div className="flex flex-col border-t border-white/[0.04] pt-2">
-                          <span className="text-[9px] font-black uppercase tracking-wider text-slate-500 font-mono mb-0.5">Số tài khoản</span>
+                          <span className="text-[9px] font-black uppercase tracking-wider text-slate-500 font-mono mb-0.5">Account Number</span>
                           <div className="flex items-center justify-between gap-2">
                             <span className="text-sm font-mono text-cyan-400 font-black tracking-wide">{accNo}</span>
                             <button
                               type="button"
                               onClick={() => handleCopy(accNo, 'account')}
                               className="p-1.5 hover:bg-white/[0.08] active:scale-90 rounded-lg transition-all duration-200 flex-shrink-0 border border-white/[0.05] bg-white/[0.02]"
-                              title="Sao chép số tài khoản"
+                              title="Copy account number"
                             >
                               {copiedField === 'account' ? (
                                 <CheckCircle2 size={13} className="text-emerald-400" />
@@ -707,19 +707,19 @@ export default function WalletPage() {
                         </div>
 
                         <div className="flex flex-col border-t border-white/[0.04] pt-2">
-                          <span className="text-[9px] font-black uppercase tracking-wider text-slate-500 font-mono mb-0.5">Chủ tài khoản</span>
+                          <span className="text-[9px] font-black uppercase tracking-wider text-slate-500 font-mono mb-0.5">Account Owner</span>
                           <span className="text-xs font-bold text-white font-mono uppercase">{accName}</span>
                         </div>
 
                         <div className="flex flex-col border-t border-white/[0.04] pt-2">
-                          <span className="text-[9px] font-black uppercase tracking-wider text-slate-500 font-mono mb-0.5">Số tiền</span>
+                          <span className="text-[9px] font-black uppercase tracking-wider text-slate-500 font-mono mb-0.5">Amount</span>
                           <div className="flex items-center justify-between gap-2">
                             <span className="text-sm font-mono text-orange-400 font-black tracking-wide">{fmtMoney(pendingTopUp.amount)}</span>
                             <button
                               type="button"
                               onClick={() => handleCopy(pendingTopUp.amount.toString(), 'amount')}
                               className="p-1.5 hover:bg-white/[0.08] active:scale-90 rounded-lg transition-all duration-200 flex-shrink-0 border border-white/[0.05] bg-white/[0.02]"
-                              title="Sao chép số tiền"
+                              title="Copy amount"
                             >
                               {copiedField === 'amount' ? (
                                 <CheckCircle2 size={13} className="text-emerald-400" />
@@ -731,14 +731,14 @@ export default function WalletPage() {
                         </div>
 
                         <div className="flex flex-col border-t border-white/[0.04] pt-2">
-                          <span className="text-[9px] font-black uppercase tracking-wider text-slate-500 font-mono mb-0.5">Nội dung chuyển khoản</span>
+                          <span className="text-[9px] font-black uppercase tracking-wider text-slate-500 font-mono mb-0.5">Transfer Description</span>
                           <div className="flex items-center justify-between gap-2">
-                            <span className="text-xs font-mono text-slate-200 font-bold break-all">Nap vi PBMS</span>
+                            <span className="text-xs font-mono text-slate-200 font-bold break-all">Wallet Deposit</span>
                             <button
                               type="button"
-                              onClick={() => handleCopy('Nap vi PBMS', 'desc')}
+                              onClick={() => handleCopy('Wallet Deposit', 'desc')}
                               className="p-1.5 hover:bg-white/[0.08] active:scale-90 rounded-lg transition-all duration-200 flex-shrink-0 border border-white/[0.05] bg-white/[0.02]"
-                              title="Sao chép nội dung chuyển khoản"
+                              title="Copy transfer description"
                             >
                               {copiedField === 'desc' ? (
                                 <CheckCircle2 size={13} className="text-emerald-400" />
@@ -757,7 +757,7 @@ export default function WalletPage() {
                 <div className="rounded-2xl border border-amber-500/10 bg-amber-500/[0.02] p-4 text-slate-400 flex items-start gap-3 shadow-inner">
                   <AlertCircle size={16} className="text-amber-400 shrink-0 mt-0.5 animate-pulse" />
                   <p className="text-[10px] leading-relaxed font-medium">
-                    <strong className="text-amber-300">Chú ý:</strong> Vui lòng thực hiện quét QR hoặc nhập chính xác thông tin chuyển khoản (bao gồm cả <strong className="text-white">Số tiền</strong> và <strong className="text-white">Nội dung</strong>) để hệ thống tự động nhận diện và ghi nhận số dư của bạn ngay lập tức.
+                    <strong className="text-amber-300">Note:</strong> Please scan the QR code or enter the exact transfer details (including both <strong className="text-white">Amount</strong> and <strong className="text-white">Description</strong>) so the system can automatically verify and credit your balance instantly.
                   </p>
                 </div>
               </div>
@@ -769,7 +769,7 @@ export default function WalletPage() {
                   onClick={() => window.open(pendingTopUp.checkoutUrl, '_blank', 'noopener')}
                   className="flex-1 h-12 rounded-2xl border border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.06] text-white font-bold text-xs uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-2 active:scale-95 shadow-sm"
                 >
-                  <ExternalLink size={14} /> Mở trang thanh toán
+                  <ExternalLink size={14} /> Open payment page
                 </button>
                 <div className="flex gap-3 flex-1">
                   <button
@@ -778,7 +778,7 @@ export default function WalletPage() {
                     disabled={verifying}
                     className="flex-1 h-12 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 hover:brightness-110 shadow-[0_0_20px_rgba(249,115,22,0.25)] text-slate-950 font-black text-xs uppercase tracking-wider transition-all duration-300 active:scale-95 disabled:opacity-50"
                   >
-                    {verifying ? 'Đang xác thực...' : 'Kiểm tra lại'}
+                    {verifying ? 'Verifying...' : 'Check Status'}
                   </button>
                   <button
                     type="button"
@@ -786,7 +786,7 @@ export default function WalletPage() {
                     disabled={verifying}
                     className="h-12 px-5 rounded-2xl border border-white/[0.08] bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 font-bold text-xs transition-all duration-300 active:scale-95"
                   >
-                    Đóng
+                    Close
                   </button>
                 </div>
               </div>
