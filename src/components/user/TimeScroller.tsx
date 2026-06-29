@@ -55,10 +55,10 @@ export function TimeScroller({ selected, onSelect }: TimeScrollerProps) {
     });
 
     return [
-      { id: 'morning', label: '☀️ Sáng (06:00 - 11:30)', slots: morning },
-      { id: 'afternoon', label: '🌤️ Trưa - Chiều (12:00 - 17:30)', slots: afternoon },
-      { id: 'evening', label: '🌙 Tối (18:00 - 23:30)', slots: evening },
-      { id: 'night', label: '🌌 Đêm (00:00 - 05:30)', slots: night },
+      { id: 'morning', label: '☀️ Morning (06:00 - 11:30)', slots: morning },
+      { id: 'afternoon', label: '🌤️ Afternoon (12:00 - 17:30)', slots: afternoon },
+      { id: 'evening', label: '🌙 Evening (18:00 - 23:30)', slots: evening },
+      { id: 'night', label: '🌌 Night (00:00 - 05:30)', slots: night },
     ];
   }, []);
 

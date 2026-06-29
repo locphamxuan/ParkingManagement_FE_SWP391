@@ -30,8 +30,8 @@ export function PackageCard({ pkg, isSelected, isLocked, cat, colors, onClick }:
 
   const lockedTooltip = isLocked
     ? (isCarPackage(pkg)
-        ? 'Gói này dành cho xe ô tô. Bạn đang chọn loại xe máy.'
-        : 'Gói này dành cho xe máy. Bạn đang chọn loại xe ô tô.')
+        ? 'This package is for cars. You have selected motorcycle.'
+        : 'This package is for motorcycles. You have selected car.')
     : undefined;
 
   return (
@@ -53,7 +53,7 @@ export function PackageCard({ pkg, isSelected, isLocked, cat, colors, onClick }:
       {isLocked && (
         <div className="absolute inset-0 z-30 flex flex-col items-center justify-center rounded-2xl bg-slate-950/80 backdrop-blur-[2px] pointer-events-none transition-all duration-300">
           <Lock size={20} className="text-slate-400 drop-shadow-[0_0_8px_rgba(0,0,0,0.5)] mb-1" />
-          <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Không phù hợp</span>
+          <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Incompatible</span>
         </div>
       )}
 
@@ -94,7 +94,7 @@ export function PackageCard({ pkg, isSelected, isLocked, cat, colors, onClick }:
       <span
         className={`absolute -top-2.5 right-4 rounded-full bg-gradient-to-r ${colors.accent} px-2.5 py-0.5 text-[8px] font-black uppercase tracking-wider text-white shadow-[0_0_12px_rgba(251,191,36,0.15)] animate-pulse z-10`}
       >
-        {cat === 'weekly' ? 'Tiết kiệm' : cat === 'monthly' ? 'Phổ biến' : '💎 VIP GIÁ TỐT'}
+        {cat === 'weekly' ? 'Saver' : cat === 'monthly' ? 'Popular' : '💎 Best Value VIP'}
       </span>
       <span className={`text-[9px] font-black uppercase tracking-wider ${colors.text} relative z-10`}>
         {categoryLabels[cat]}
@@ -111,7 +111,7 @@ export function PackageCard({ pkg, isSelected, isLocked, cat, colors, onClick }:
         )}
         <span>{pkg.name}</span>
       </h4>
-      <p className="mt-1 text-xs text-slate-400 relative z-10">{pkg.durationDays} ngày</p>
+      <p className="mt-1 text-xs text-slate-400 relative z-10">{pkg.durationDays} days</p>
       {pkg.description && (
         <p className="mt-1.5 text-[10px] leading-relaxed text-slate-400/80 italic relative z-10 border-t border-white/[0.06] pt-1.5">
           {pkg.description}
@@ -129,7 +129,7 @@ export function PackageCard({ pkg, isSelected, isLocked, cat, colors, onClick }:
           isSelected ? 'border-emerald-500/35 bg-emerald-500/10 text-emerald-300' : 'border-emerald-500/20 bg-emerald-500/5 text-emerald-400'
         }`}
       >
-        <ShieldCheck size={10} /> Chỗ cố định
+        <ShieldCheck size={10} /> Fixed slot
       </span>
       {isSelected && (
         <motion.div initial={{ scale: 0, rotate: -45 }} animate={{ scale: 1, rotate: 0 }} className="absolute right-3 top-3 z-20">

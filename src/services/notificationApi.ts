@@ -22,18 +22,18 @@ export interface AppNotification {
   createdAt: string;
 }
 
-/** Nhãn ngắn theo loại thông báo (dùng chung cho chuông + trang thông báo). */
+/** Short label by notification type (used for notification bell and notifications page). */
 export const NOTIFICATION_TYPE_LABEL: Record<AppNotificationType, string> = {
-  checkin_rejected: 'Từ chối vào',
-  checkout_rejected: 'Từ chối ra',
-  subscription_expiring: 'Gói sắp hết hạn',
-  subscription_expired: 'Gói đã hết hạn',
-  subscription_slot_released: 'Thu hồi chỗ đỗ',
-  subscription_overage: 'Vượt giờ gói',
-  reservation_expired: 'Đặt chỗ hết hạn',
-  reservation_overstay: 'Đậu quá giờ',
-  feedback_reply: 'Phản hồi đánh giá',
-  general: 'Thông báo',
+  checkin_rejected: 'Check-in Rejected',
+  checkout_rejected: 'Check-out Rejected',
+  subscription_expiring: 'Sub Expiring',
+  subscription_expired: 'Sub Expired',
+  subscription_slot_released: 'Slot Released',
+  subscription_overage: 'Sub Overage',
+  reservation_expired: 'Reservation Expired',
+  reservation_overstay: 'Reservation Overstay',
+  feedback_reply: 'Feedback Reply',
+  general: 'General',
 };
 
 type Wrap<T> = { data?: T };

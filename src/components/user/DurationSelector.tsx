@@ -19,7 +19,7 @@ export function DurationSelector({ hours, onSelect }: DurationSelectorProps) {
               : 'border border-white/[0.06] bg-white/[0.02] text-slate-400 hover:border-cyan-300/25 hover:text-white'
           }`}
         >
-          {h} giờ
+          {h} {h === 1 ? 'hour' : 'hours'}
         </button>
       ))}
     </div>
