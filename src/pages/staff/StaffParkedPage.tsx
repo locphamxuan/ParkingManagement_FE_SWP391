@@ -166,7 +166,7 @@ export function StaffParkedPage({ view = 'list' }: { view?: 'scanner' | 'list' }
   // chân dung (Camera 1) chụp riêng lúc cho xe ra.
   const handleResolveIdQr = async (code: string) => {
     try {
-      const res = await staffApi.resolveQr(code);
+      const res = await staffApi.resolveQr(code, buildingId);
       const data = (res as {
         data?: {
           kind: 'plate' | 'user';

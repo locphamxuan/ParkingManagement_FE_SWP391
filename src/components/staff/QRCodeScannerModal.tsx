@@ -58,15 +58,11 @@ export function QRCodeScannerModal({
           videoRef.current.srcObject = stream;
           // Ensure video plays and metadata is loaded
           videoRef.current.onloadedmetadata = () => {
-            videoRef.current?.play().catch((e) => {
-              console.error('Play error:', e);
-            });
+            videoRef.current?.play().catch(() => undefined);
             startScanning();
           };
           // Fallback: try to play immediately in case metadata is already loaded
-          videoRef.current.play().catch((e) => {
-            console.error('Immediate play error:', e);
-          });
+          videoRef.current.play().catch(() => undefined);
         }
       } catch (err) {
         const message =

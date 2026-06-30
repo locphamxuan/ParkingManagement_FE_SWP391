@@ -47,14 +47,14 @@ export default function UserDashboardPage() {
     ])
       .then(([walletRes, resRes, histRes]) => {
         // Backend returns { data: { walletBalance } }; tolerate a legacy { wallet } shape too.
-        const walletData = (walletRes as any)?.data;
-        const balance = walletData?.walletBalance ?? walletData?.wallet?.balance ?? 0;
+        const walletData = walletRes.data as { wallet?: { balance?: number }; walletBalance?: number };
+        const balance = walletData.walletBalance ?? walletData.wallet?.balance ?? 0;
         setWallet({ balance } as UserWallet);
 
-        const reservItems = (resRes as any)?.data?.items ?? [];
+        const reservItems = resRes.data.items ?? [];
         setReservations(reservItems);
 
-        const histItems: ParkingHistory[] = (histRes as any)?.data?.items ?? [];
+        const histItems: ParkingHistory[] = histRes.data.items ?? [];
         const active = histItems.find((s) => s.status === 'active') ?? null;
         setActiveSession(active);
       })

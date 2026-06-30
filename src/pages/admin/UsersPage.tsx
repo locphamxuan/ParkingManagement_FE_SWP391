@@ -14,7 +14,7 @@ import {
   deleteAdminUser,
   updateAdminUser,
   updateAdminUserStatus,
-} from '@/services/admin/adminCrud';
+} from '@/services/admin/adminApi';
 import { useAuth } from '@/hooks/useAuth';
 import type { UserRecord } from '@/types';
 

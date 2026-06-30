@@ -13,12 +13,13 @@ import {
   type Floor,
   type ParkingSlot,
   type VehicleType,
+  type Zone,
 } from '@/services/manager/managerApi';
 
 interface FormState {
   code: string;
   floor: string;
-  vehicleType: string;
+  zone: string;
   status: ParkingSlot['status'];
   reservable: boolean;
   note: string;
@@ -27,7 +28,7 @@ interface FormState {
 const empty: FormState = {
   code: '',
   floor: '',
-  vehicleType: '',
+  zone: '',
   status: 'available',
   reservable: true,
   note: '',
@@ -170,6 +171,7 @@ export function ManagerSlotsPage() {
   const [items, setItems] = useState<ParkingSlot[]>([]);
   const [floors, setFloors] = useState<Floor[]>([]);
   const [vehicleTypes, setVehicleTypes] = useState<VehicleType[]>([]);
+  const [zones, setZones] = useState<Zone[]>([]);
   const [floorFilter, setFloorFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [loading, setLoading] = useState(true);
@@ -189,17 +191,19 @@ export function ManagerSlotsPage() {
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      const [slotsRes, floorsRes, vtRes] = await Promise.all([
+      const [slotsRes, floorsRes, vtRes, zonesRes] = await Promise.all([
         managerApi.slots.list(buildingId, {
           floor: floorFilter || undefined,
           status: statusFilter || undefined,
         }),
         managerApi.floors.list(buildingId),
         managerApi.vehicleTypes.list(buildingId),
+        managerApi.zones.list(buildingId),
       ]);
       setItems(slotsRes.data.items);
       setFloors(floorsRes.data.items);
       setVehicleTypes(vtRes.data.items);
+      setZones(zonesRes.data.items);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Tải thất bại');
@@ -241,16 +245,12 @@ export function ManagerSlotsPage() {
 
   const openEdit = (row: ParkingSlot) => {
     const floorId = typeof row.floor === 'string' ? row.floor : row.floor._id;
-    const vtId = !row.vehicleType
-      ? ''
-      : typeof row.vehicleType === 'string'
-        ? row.vehicleType
-        : row.vehicleType._id;
+    const zoneId = !row.zone ? '' : typeof row.zone === 'string' ? row.zone : row.zone._id;
     setEditing(row);
     setForm({
       code: row.code,
       floor: floorId,
-      vehicleType: vtId,
+      zone: zoneId,
       status: row.status,
       reservable: row.reservable,
       note: row.note ?? '',
@@ -258,23 +258,31 @@ export function ManagerSlotsPage() {
     setModalOpen(true);
   };
 
+  // Zones filtered by the floor currently selected in the edit form.
+  const zonesForFloor = useMemo(
+    () => zones.filter((z) => {
+      const zFloorId = typeof z.floor === 'string' ? z.floor : (z.floor as Floor)._id;
+      return zFloorId === form.floor;
+    }),
+    [zones, form.floor],
+  );
+
   const onSubmit = async () => {
-    if (!form.floor) {
-      alert('Chọn tầng trước');
-      return;
-    }
+    if (!form.floor) { alert('Chọn tầng trước'); return; }
+    if (!form.zone) { alert('Chọn dãy (zone) trước'); return; }
     const payload = {
       code: form.code.trim().toUpperCase(),
       floor: form.floor,
+      zone: form.zone,
       status: form.status,
       reservable: form.reservable,
       note: form.note.trim(),
     };
     try {
       if (editing) {
-        await managerApi.slots.update(buildingId, editing._id, payload as Partial<ParkingSlot>);
+        await managerApi.slots.update(buildingId, editing._id, payload);
       } else {
-        await managerApi.slots.create(buildingId, payload as Partial<ParkingSlot> & { floor: string });
+        await managerApi.slots.create(buildingId, payload);
       }
       setModalOpen(false);
       refresh();
@@ -295,14 +303,14 @@ export function ManagerSlotsPage() {
 
   const onMultiSlotSubmit = async (rows: SlotFormRow[]) => {
     for (const row of rows) {
-      const payload = {
+      await managerApi.slots.create(buildingId, {
         code: row.code.trim().toUpperCase(),
         floor: row.floor,
+        zone: row.zone,
         status: row.status,
         reservable: row.reservable,
         note: row.note.trim(),
-      };
-      await managerApi.slots.create(buildingId, payload as Partial<ParkingSlot> & { floor: string });
+      });
     }
     refresh();
   };
@@ -328,14 +336,28 @@ export function ManagerSlotsPage() {
       },
     },
     {
-      key: 'vehicleType',
-      title: 'Loại xe (theo tầng)',
+      key: 'zone',
+      title: 'Dãy',
       render: (row) => {
-        const id = typeof row.floor === 'string' ? row.floor : row.floor._id;
-        const fl = floorMap.get(id);
-        const types = (fl?.allowedVehicleTypes ?? []) as Array<{ code?: string } | string>;
-        if (!types.length) return 'Mọi loại';
-        return types.map((t) => (typeof t === 'object' ? t.code : t)).filter(Boolean).join(', ');
+        if (!row.zone) return '—';
+        if (typeof row.zone === 'string') {
+          const z = zones.find((z) => z._id === row.zone);
+          return z ? z.code : '—';
+        }
+        return row.zone.code;
+      },
+    },
+    {
+      key: 'vehicleType',
+      title: 'Loại xe',
+      render: (row) => {
+        const vt = row.vehicleType;
+        if (!vt) return '—';
+        if (typeof vt === 'string') {
+          const found = vehicleTypes.find((v) => v._id === vt);
+          return found ? found.code : '—';
+        }
+        return (vt as VehicleType).code;
       },
     },
     {
@@ -649,21 +671,32 @@ export function ManagerSlotsPage() {
             <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono">Tầng</label>
             <CustomSelect
               value={form.floor}
-              onChange={(val) => setForm((f) => ({ ...f, floor: val }))}
+              onChange={(val) => setForm((f) => ({ ...f, floor: val, zone: '' }))}
               options={[
                 { value: '', label: 'Chọn tầng' },
-                ...floors.map((fl) => ({
-                  value: fl._id,
-                  label: fl.code,
-                })),
+                ...floors.map((fl) => ({ value: fl._id, label: fl.code })),
               ]}
               placeholder="Chọn tầng..."
             />
           </div>
           <div className="grid gap-1.5 sm:col-span-2">
-            <p className="rounded-xl border border-sky-500/20 bg-sky-500/5 px-3 py-2 text-[11px] text-sky-300">
-              Loại xe của ô đỗ <strong>tự lấy theo loại xe cho phép của tầng</strong> (cấu hình ở tab Tầng), không cần set ở đây.
-            </p>
+            <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono">Dãy (Zone) *</label>
+            {!form.floor ? (
+              <p className="text-xs text-slate-500 rounded border border-white/8 px-3 py-2">Chọn tầng trước để xem danh sách dãy.</p>
+            ) : zonesForFloor.length === 0 ? (
+              <p className="text-xs text-amber-400 rounded border border-amber-500/20 px-3 py-2">
+                Tầng này chưa có dãy nào. Hãy tạo dãy ở tab <strong>Dãy</strong> trước.
+              </p>
+            ) : (
+              <CustomSelect
+                value={form.zone}
+                onChange={(val) => setForm((f) => ({ ...f, zone: val }))}
+                options={[
+                  { value: '', label: '-- Chọn dãy --' },
+                  ...zonesForFloor.map((z) => ({ value: z._id, label: `${z.code}${z.name ? ` — ${z.name}` : ''}` })),
+                ]}
+              />
+            )}
           </div>
           <div className="grid gap-1.5">
             <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono">Trạng thái</label>
@@ -702,6 +735,7 @@ export function ManagerSlotsPage() {
         onClose={() => setMultiSlotModalOpen(false)}
         onSubmit={onMultiSlotSubmit}
         floors={floors}
+        zones={zones}
       />
     </div>
   );

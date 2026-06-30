@@ -161,8 +161,9 @@ export default function ParkingHistoryPage() {
         ) : (
           <div className="space-y-3">
             {filtered.map((session) => {
-              const floor = (session.slot as any)?.floor;
-              const floorLabel = floor?.code ?? floor?.name;
+              const rawFloor = session.slot?.floor;
+              const floorObj = typeof rawFloor === 'object' && rawFloor !== null ? rawFloor : null;
+              const floorLabel = floorObj?.code ?? floorObj?.name;
               const slotCode = session.slot?.code;
 
               return (

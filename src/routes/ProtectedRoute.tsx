@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import type { AuthSession } from '@/services/authService';
@@ -18,34 +17,10 @@ const fallbackFor = (userRole: UserRole): string => {
 
 export function ProtectedRoute({ role }: ProtectedRouteProps) {
   const location = useLocation();
-  const { token, user, refresh } = useAuth();
-  const [refreshing, setRefreshing] = useState<boolean>(Boolean(token) && !user);
-
-  useEffect(() => {
-    let mounted = true;
-    if (token && !user) {
-      setRefreshing(true);
-      refresh()
-        .catch(() => undefined)
-        .finally(() => {
-          if (mounted) setRefreshing(false);
-        });
-    }
-    return () => {
-      mounted = false;
-    };
-  }, [token, user, refresh]);
+  const { token, user } = useAuth();
 
   if (!token) {
     return <Navigate to="/auth/login" replace state={{ from: location.pathname }} />;
-  }
-
-  if (refreshing) {
-    return (
-      <div className="flex min-h-screen items-center justify-center text-sm text-muted-foreground">
-        Đang xác thực phiên...
-      </div>
-    );
   }
 
   if (!user) {

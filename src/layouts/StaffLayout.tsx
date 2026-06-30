@@ -20,6 +20,15 @@ import { useAssignedGates } from '@/hooks/staff/useAssignedGates';
 import { staffApi, extractBuildings, type StaffBuilding } from '@/services/staff/staffApi';
 import { cn } from '@/utils/cn';
 
+const BASE_PAGE_TITLE: Record<string, string> = {
+  '': 'Tổng quan',
+  dashboard: 'Tổng quan',
+  operations: 'Check-in xe vào',
+  checkout: 'Check-out xe ra',
+  parked: 'Xe đang đỗ',
+  reservations: 'Đặt chỗ trước',
+  'my-shifts': 'Ca làm việc của tôi',
+  incidents: 'Quản lý sự cố',
 const pageTitle: Record<string, string> = {
   '': 'Overview',
   dashboard: 'Overview',
@@ -46,6 +55,14 @@ export function StaffLayout() {
   // cả hai loại nhân viên, nhưng chỉ nhân viên gate ra mới thao tác thanh toán.
   const navItems = useMemo(
     () => [
+      { to: '', label: 'Tổng quan', icon: LayoutDashboard, end: true },
+      ...(showCheckIn ? [{ to: 'operations', label: 'Check-in xe vào', icon: ScanLine }] : []),
+      ...(showCheckOut ? [{ to: 'checkout', label: 'Check-out xe ra', icon: LogOut }] : []),
+      { to: 'parked', label: 'Xe đang đỗ', icon: Car },
+      { to: 'reservations', label: 'Đặt chỗ trước', icon: CalendarCheck2 },
+      { to: 'my-shifts', label: 'Ca làm việc', icon: CalendarClock },
+      ...(showCheckIn || showCheckOut ? [{ to: 'sessions', label: showCheckOut ? 'Doanh thu ca' : 'Lịch sử xe vào', icon: showCheckOut ? Wallet : Car }] : []),
+      { to: 'incidents', label: 'Sự cố', icon: ShieldAlert },
       { to: '', label: 'Overview', icon: LayoutDashboard, end: true },
       ...(showCheckIn ? [{ to: 'operations', label: 'Vehicle Check-in', icon: ScanLine }] : []),
       ...(showCheckOut ? [{ to: 'checkout', label: 'Vehicle Check-out', icon: LogOut }] : []),
@@ -76,6 +93,9 @@ export function StaffLayout() {
     return tail.split('/')[0];
   }, [location.pathname]);
 
+  const title = slug === 'sessions'
+    ? (showCheckOut ? 'Doanh thu ca' : 'Lịch sử xe vào')
+    : (BASE_PAGE_TITLE[slug] ?? 'Nhân viên');
   const title = pageTitle[slug] ?? 'Staff';
   const selectedBuilding = buildings.find((b) => b._id === selectedBuildingId);
   const isProfileRoute = Boolean(useMatch('/staff/profile'));

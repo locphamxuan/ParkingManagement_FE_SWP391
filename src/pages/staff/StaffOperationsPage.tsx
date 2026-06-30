@@ -22,8 +22,11 @@ import { useAssignedGates } from '@/hooks/staff/useAssignedGates';
 import { LivePlateCamera, type PlateScanResult, type LiveCameraHandle } from '@/components/staff/LivePlateCamera';
 import { LiveQRCamera } from '@/components/staff/LiveQRCamera';
 import { LivePortraitCamera } from '@/components/staff/LivePortraitCamera';
-import { useCameraDevices, type CameraRole } from '@/hooks/useCameraDevices';
+import { useCameraDevices } from '@/hooks/useCameraDevices';
 import { normalizePlate } from '@/utils/plate';
+import { CameraSetupModal } from '@/components/staff/CameraSetupModal';
+import { RejectModal } from '@/components/staff/RejectModal';
+import { UserQrInfoModal, type UserQrInfo } from '@/components/staff/UserQrInfoModal';
 
 type VehicleKind = 'car' | 'motorcycle';
 type OperationMode = 'check-in' | 'check-out';
@@ -79,12 +82,7 @@ export function StaffOperationsPage() {
   const [rejectOpen, setRejectOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   // QR user scan: thông tin tài khoản + gói đang hoạt động
-  const [userQrInfo, setUserQrInfo] = useState<{
-    fullName: string;
-    email: string;
-    walletBalance?: number;
-    activePackages: { id: string; name: string; code: string | null; plateNumber: string; endDate?: string }[];
-  } | null>(null);
+  const [userQrInfo, setUserQrInfo] = useState<UserQrInfo | null>(null);
 
   // Both vehicle types supported by default (staff can always override)
   const allowedTypes = ALLOWED_TYPES;
@@ -216,7 +214,7 @@ export function StaffOperationsPage() {
   // dung do camera chân dung (Camera 1) chụp riêng lúc check-in.
   const handleResolveIdQr = async (code: string) => {
     try {
-      const res = await staffApi.resolveQr(code);
+      const res = await staffApi.resolveQr(code, buildingId);
       const data = (res as {
         data?: {
           kind: 'plate' | 'user';
@@ -426,7 +424,7 @@ export function StaffOperationsPage() {
                     onChange={(e) => setPlateNumber(e.target.value)}
                     onBlur={(e) => { const n = normalizePlate(e.target.value); if (n) setPlateNumber(n); }}
                     placeholder="59G2-038.80"
-                    onKeyDown={(e) => { if (e.key === 'Enter' && !(!plateNumber.trim() || loading || !!buildingSupportWarning || (hasActivePackage && !selectedSlotId))) onCheckIn(); }}
+                    onKeyDown={(e) => { if (e.key === 'Enter' && !(!plateNumber.trim() || loading || !!buildingSupportWarning || (hasActivePackage && !selectedSlotId) || (checkInKind === 'standard' && !plateImage) || (checkInKind === 'standard' && freeSlots.length > 0 && !selectedSlotId))) onCheckIn(); }}
                   />
                   {vehicleBrand && (
                     <span className="inline-flex w-fit items-center gap-1 rounded-full border border-sky-500/30 bg-sky-500/10 px-2.5 py-1 text-[11px] font-semibold text-sky-300">
@@ -827,6 +825,28 @@ export function StaffOperationsPage() {
         </div>
       </section>
 
+      <CameraSetupModal
+        open={cameraSettingsOpen}
+        onClose={() => setCameraSettingsOpen(false)}
+        devices={devices}
+        assignment={assignment}
+        assign={assign}
+        requestAndRefresh={requestAndRefresh}
+      />
+
+      <RejectModal
+        open={rejectOpen}
+        onClose={() => { setRejectOpen(false); setRejectReason(''); }}
+        plateNumber={plateNumber}
+        rejectReason={rejectReason}
+        onReasonChange={setRejectReason}
+        onConfirm={onReject}
+      />
+
+      <UserQrInfoModal
+        info={userQrInfo}
+        onClose={() => setUserQrInfo(null)}
+      />
       {/* Camera Settings — gán thiết bị vật lý cho từng vai trò */}
       {cameraSettingsOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">

@@ -151,6 +151,7 @@ export interface LicensePlate {
   vehicleType: UserVehicleType;
   isDefault: boolean;
   qrCode?: string;
+  brand?: string | null;
 }
 
 export interface UserProfile {

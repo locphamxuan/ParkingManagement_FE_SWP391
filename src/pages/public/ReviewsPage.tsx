@@ -100,7 +100,7 @@ export default function ReviewsPage() {
         const items = res.data?.items || [];
         setBuildings(items.map((b) => ({ _id: b._id, name: b.name })));
       })
-      .catch((err) => console.error('Failed to load buildings', err));
+      .catch(() => undefined);
   }, []);
 
   // Load reviews list

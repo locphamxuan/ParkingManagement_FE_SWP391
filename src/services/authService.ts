@@ -1,4 +1,5 @@
 import { requestJson } from '@/services/client/apiClient';
+import { saveForgotEmail, clearForgotEmail } from '@/services/client/storage';
 
 export interface LoginInput {
   email: string;
@@ -12,7 +13,7 @@ interface ApiUser {
   role: 'admin' | 'manager' | 'staff' | 'user';
   assignedBuildings?: Array<{ _id?: string } | string>;
   phone?: string;
-  licensePlates?: Array<{ _id?: string; plateNumber?: string; vehicleType?: string } | string>;
+  licensePlates?: Array<{ _id?: string; plateNumber?: string; vehicleType?: string; brand?: string | null; isDefault?: boolean } | string>;
 }
 
 interface ApiAuthResponse {
@@ -70,11 +71,11 @@ function mapAuthSession(payload: ApiAuthResponse): AuthSession {
             return { plateNumber: item, vehicleType: 'car' as const, brand: null, isDefault: false };
           }
           return {
-            _id: (item as any)?._id ? String((item as any)._id) : undefined,
-            plateNumber: item?.plateNumber || '',
-            vehicleType: (item as any)?.vehicleType === 'motorcycle' ? ('motorcycle' as const) : ('car' as const),
-            brand: (item as any)?.brand ?? null,
-            isDefault: Boolean((item as any)?.isDefault),
+            _id: item._id ? String(item._id) : undefined,
+            plateNumber: item.plateNumber || '',
+            vehicleType: item.vehicleType === 'motorcycle' ? ('motorcycle' as const) : ('car' as const),
+            brand: item.brand ?? null,
+            isDefault: Boolean(item.isDefault),
           };
         })
         .filter((item) => Boolean(item.plateNumber))
@@ -187,7 +188,7 @@ export async function forgotPassword(email: string): Promise<{ message: string }
   }
 
   // Store email for reset password step
-  localStorage.setItem('pbms.forgotEmail_pending', email.trim().toLowerCase());
+  saveForgotEmail(email.trim().toLowerCase());
 
   return { message: payload.message };
 }
@@ -204,7 +205,7 @@ export async function resetPassword(token: string, newPassword: string): Promise
   }
 
   // Clear stored email after successful reset
-  localStorage.removeItem('pbms.forgotEmail_pending');
+  clearForgotEmail();
 
   return { message: payload.message };
 }

@@ -7,6 +7,23 @@ import { ADMIN_EMAIL_FALLBACK } from '@/utils/constants';
 import { useManagerBuildings } from '@/hooks/useManagerBuildings';
 
 const titles: Record<string, string> = {
+  '/manager': 'Bảng điều khiển Manager',
+  '/manager/dashboard': 'Báo cáo quản lý',
+  '/manager/buildings': 'Quản lý tòa nhà',
+  '/manager/vehicle-types': 'Loại xe',
+  '/manager/floors': 'Tầng',
+  '/manager/gates': 'Cổng',
+  '/manager/zones': 'Dãy (Zone)',
+  '/manager/slots': 'Chỗ đỗ',
+  '/manager/operating-hours': 'Giờ hoạt động',
+  '/manager/price-policies': 'Chính sách giá',
+  '/manager/reservation-policy': 'Chính sách đặt chỗ',
+  '/manager/packages': 'Quản lý gói',
+  '/manager/shifts': 'Ca trực & Gán ca',
+  '/manager/reviews': 'Xem đánh giá',
+  '/manager/wallet': 'Ví tòa nhà',
+  '/manager/profile': 'Xem hồ sơ',
+  '/manager/settings': 'Cài đặt',
   '/manager': 'Manager Dashboard',
   '/manager/dashboard': 'Management report',
   '/manager/buildings': 'Building Management',
