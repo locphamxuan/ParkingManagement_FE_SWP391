@@ -42,6 +42,21 @@ const modules = [
   { to: 'staff', label: 'Nhân viên', icon: User },
   { to: 'reviews', label: 'Xem đánh giá', icon: MessageSquare },
   { to: 'wallet', label: 'Ví tòa nhà', icon: Wallet },
+=======
+  { to: '', label: 'Overall', icon: LayoutDashboard },
+  { to: 'buildings', label: 'Building', icon: Building2 },
+  { to: 'vehicle-types', label: 'Vehicle Type', icon: Truck },
+  { to: 'floors', label: 'Floor', icon: ClipboardList },
+  { to: 'gates', label: 'Gate', icon: Flag },
+  { to: 'slots', label: 'Slot', icon: Square },
+  { to: 'operating-hours', label: 'Operating Hour', icon: Clock },
+  { to: 'price-policies', label: 'Price Policy', icon: SlidersHorizontal },
+  { to: 'reservation-policy', label: 'Reservation Policy', icon: MapPin },
+  { to: 'packages', label: 'Package', icon: Package },
+  { to: 'shifts', label: 'Shilf', icon: Users },
+  { to: 'staff', label: 'Staff', icon: User },
+  { to: 'reviews', label: 'Review', icon: MessageSquare },
+  { to: 'wallet', label: 'Wallet', icon: Wallet },
 ] as const;
 
 export function ManagerSidebar({ collapsed, onToggle }: ManagerSidebarProps) {

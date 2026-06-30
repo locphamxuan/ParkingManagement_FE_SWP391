@@ -9,7 +9,7 @@ interface LiveQRCameraProps {
   onResult: (code: string) => void;
   /** Pause detection (e.g. while a result modal is open). */
   paused?: boolean;
-  /** Thiết bị camera vật lý gán cho vai trò QR. */
+  /** Devices camera vật lý gán cho vai trò QR. */
   deviceId?: string;
 }
 
@@ -105,7 +105,7 @@ export const LiveQRCamera = forwardRef<LiveCameraHandle, LiveQRCameraProps>(func
         }
         setError(null);
       } catch {
-        if (!cancelled) setError('Không thể truy cập camera QR. Vui lòng cấp quyền.');
+        if (!cancelled) setError('Unable to access the QR camera. Please grant permission.');
       }
     })();
 
@@ -122,7 +122,7 @@ export const LiveQRCamera = forwardRef<LiveCameraHandle, LiveQRCameraProps>(func
     <div className="rounded-xl border border-border bg-card/40 p-3 space-y-2.5">
       <div className="flex items-center gap-2">
         <QrCode size={15} className="text-sky-400" />
-        <p className="text-sm font-semibold text-foreground">Camera 2 · Quét QR (tài khoản / phương tiện)</p>
+        <p className="text-sm font-semibold text-foreground">Camera 2 · QR Scan (Account / Vehicle)</p>
       </div>
 
       <div className="relative aspect-[4/3] overflow-hidden rounded-lg border border-white/10 bg-black/60">
@@ -181,7 +181,7 @@ export const LiveQRCamera = forwardRef<LiveCameraHandle, LiveQRCameraProps>(func
       </div>
 
       <p className="text-center text-[11px] text-muted-foreground">
-        {paused ? 'Đang tạm dừng quét…' : 'Hướng mã QR vào khung — hệ thống tự nhận diện'}
+        {paused ? 'Scanning paused...' : 'Point the QR code at the frame. The system will detect it automatically.'}
       </p>
 
       <canvas ref={canvasRef} className="hidden" />

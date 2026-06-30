@@ -13,11 +13,11 @@ const fmtDate = (s?: string | null) =>
   s ? new Date(s).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
 
 const METHOD_LABELS: Record<string, string> = {
-  cash: 'Tiền mặt',
-  wallet: 'Trừ ví',
-  qr: 'Chuyển khoản',
-  payos: 'Chuyển khoản',
-  card: 'Thẻ',
+  cash: 'Cash',
+  wallet: 'Wallet',
+  qr: 'Bank Transfer',
+  payos: 'Bank Transfer',
+  card: 'Card',
 };
 
 function CheckInHistory({ buildingId }: { buildingId: string }) {
@@ -33,7 +33,7 @@ function CheckInHistory({ buildingId }: { buildingId: string }) {
       const res = await staffApi.sessions.myCheckIns(buildingId);
       setItems(res.data?.items ?? []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Tải lịch sử thất bại');
+      setError(err instanceof Error ? err.message : 'Failed to load history');
     } finally {
       setLoading(false);
     }
@@ -51,14 +51,14 @@ function CheckInHistory({ buildingId }: { buildingId: string }) {
         <div className="flex items-center gap-2">
           <Car size={18} className="text-primary" />
           <div>
-            <h2 className="text-base font-semibold text-foreground">Lịch sử xe vào</h2>
+            <h2 className="text-base font-semibold text-foreground">Check-in History</h2>
             <p className="text-xs text-muted-foreground">
-              Các lượt xe bạn đã cho vào — hôm nay {fmtDate(new Date().toISOString())}
+              Vehicles you checked in today {fmtDate(new Date().toISOString())}
             </p>
           </div>
         </div>
         <Button variant="secondary" size="sm" onClick={refresh} className="gap-1.5">
-          <RefreshCw size={13} className={loading ? 'animate-spin' : ''} /> Làm mới
+          <RefreshCw size={13} className={loading ? 'animate-spin' : ''} /> Refresh
         </Button>
       </div>
 
@@ -69,7 +69,7 @@ function CheckInHistory({ buildingId }: { buildingId: string }) {
       <div className="grid gap-2 sm:grid-cols-2">
         <Card className="border border-primary/25 bg-primary/5">
           <CardContent className="p-5">
-            <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Tổng lượt xe vào</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Total Check-ins</p>
             <p className="mt-2 text-3xl font-black text-primary">{loading ? '—' : items.length}</p>
           </CardContent>
         </Card>
@@ -78,7 +78,7 @@ function CheckInHistory({ buildingId }: { buildingId: string }) {
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm">
-            <Car size={14} className="text-primary" /> Các lượt xe vào hôm nay
+            <Car size={14} className="text-primary" /> Today's Check-ins
             <span className="ml-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
               {items.length}
             </span>
@@ -86,11 +86,11 @@ function CheckInHistory({ buildingId }: { buildingId: string }) {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <p className="py-6 text-center text-sm text-muted-foreground">Đang tải...</p>
+            <p className="py-6 text-center text-sm text-muted-foreground">Loading...</p>
           ) : items.length === 0 ? (
             <div className="py-8 text-center">
               <Car size={28} className="mx-auto mb-2 text-muted-foreground/40" />
-              <p className="text-sm text-muted-foreground">Chưa có lượt xe vào nào trong ca hôm nay.</p>
+              <p className="text-sm text-muted-foreground">No vehicle check-ins in today's shift.</p>
             </div>
           ) : (
             <div className="grid gap-2">
@@ -108,13 +108,14 @@ function CheckInHistory({ buildingId }: { buildingId: string }) {
                   <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
                     <span className="flex items-center gap-1 text-muted-foreground">
                       <MapPin size={11} className="text-primary" />
-                      Cổng vào: <strong className="text-foreground ml-1">{s.entryGate?.code ?? '—'}</strong>
+                      Entry Gate: <strong className="text-foreground ml-1">{s.entryGate?.code ?? '—'}</strong>
                     </span>
                     <span className="text-muted-foreground">
                       Tầng: <strong className="text-foreground">{s.slot?.floor?.name ?? s.slot?.floor?.code ?? '—'}</strong>
+                      Floor: <strong className="text-foreground">{(s.slot as any)?.floor?.name ?? (s.slot as any)?.floor?.code ?? '—'}</strong>
                     </span>
                     <span className="text-muted-foreground">
-                      Ô đỗ: <strong className="text-foreground">{s.slot?.code ?? '—'}</strong>
+                      Slot: <strong className="text-foreground">{s.slot?.code ?? '—'}</strong>
                     </span>
                   </div>
                 </div>
@@ -146,7 +147,7 @@ export function StaffSessionsPage() {
       const res = await staffApi.sessions.myShiftRevenue(buildingId);
       setData((res as { data?: ShiftRevenueSummary })?.data ?? null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Tải doanh thu ca thất bại');
+      setError(err instanceof Error ? err.message : 'Failed to load shift revenue');
     } finally {
       setLoading(false);
     }
@@ -166,9 +167,9 @@ export function StaffSessionsPage() {
 
   // Check-out staff: show revenue summary
   const stats = [
-    { label: 'Tiền mặt', value: data?.byMethod.cash ?? 0, icon: Banknote, border: 'border-emerald-500/20 bg-emerald-500/5', color: 'text-emerald-500' },
-    { label: 'Trừ ví', value: data?.byMethod.wallet ?? 0, icon: Wallet, border: 'border-violet-500/20 bg-violet-500/5', color: 'text-violet-500' },
-    { label: 'Chuyển khoản / QR', value: data?.byMethod.online ?? 0, icon: QrCode, border: 'border-sky-500/20 bg-sky-500/5', color: 'text-sky-500' },
+    { label: 'Cash', value: data?.byMethod.cash ?? 0, icon: Banknote, border: 'border-emerald-500/20 bg-emerald-500/5', color: 'text-emerald-500' },
+    { label: 'Wallet', value: data?.byMethod.wallet ?? 0, icon: Wallet, border: 'border-violet-500/20 bg-violet-500/5', color: 'text-violet-500' },
+    { label: 'Bank Transfer / QR', value: data?.byMethod.online ?? 0, icon: QrCode, border: 'border-sky-500/20 bg-sky-500/5', color: 'text-sky-500' },
   ];
 
   return (
@@ -177,14 +178,14 @@ export function StaffSessionsPage() {
         <div className="flex items-center gap-2">
           <CircleDollarSign size={18} className="text-primary" />
           <div>
-            <h2 className="text-base font-semibold text-foreground">Doanh thu ca</h2>
+            <h2 className="text-base font-semibold text-foreground">Shift Revenue</h2>
             <p className="text-xs text-muted-foreground">
-              Tiền bạn đã thu khi cho xe ra — hôm nay {fmtDate(data?.date)}
+              Payments collected during check-out today {fmtDate(data?.date)}
             </p>
           </div>
         </div>
         <Button variant="secondary" size="sm" onClick={refresh} className="gap-1.5">
-          <RefreshCw size={13} className={loading ? 'animate-spin' : ''} /> Làm mới
+          <RefreshCw size={13} className={loading ? 'animate-spin' : ''} /> Refresh
         </Button>
       </div>
 
@@ -195,13 +196,13 @@ export function StaffSessionsPage() {
       <div className="grid gap-3 sm:grid-cols-2">
         <Card className="border border-primary/25 bg-primary/5">
           <CardContent className="p-5">
-            <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Tổng đã thu hôm nay</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Total Collected Today</p>
             <p className="mt-2 text-3xl font-black text-primary">{loading ? '—' : fmtMoney(data?.total)}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-5">
-            <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Số lượt cho xe ra</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Check-outs</p>
             <p className="mt-2 text-3xl font-black text-foreground">{loading ? '—' : (data?.count ?? 0)}</p>
           </CardContent>
         </Card>
@@ -227,7 +228,7 @@ export function StaffSessionsPage() {
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm">
-            <Car size={14} className="text-primary" /> Các lượt đã thu
+            <Car size={14} className="text-primary" /> Collected Payments
             <span className="ml-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
               {data?.items.length ?? 0}
             </span>
@@ -235,11 +236,11 @@ export function StaffSessionsPage() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <p className="py-6 text-center text-sm text-muted-foreground">Đang tải...</p>
+            <p className="py-6 text-center text-sm text-muted-foreground">Loading...</p>
           ) : !data || data.items.length === 0 ? (
             <div className="py-8 text-center">
               <CircleDollarSign size={28} className="mx-auto mb-2 text-muted-foreground/40" />
-              <p className="text-sm text-muted-foreground">Chưa thu khoản nào trong ca hôm nay.</p>
+              <p className="text-sm text-muted-foreground">No payments collected in today's shift.</p>
             </div>
           ) : (
             <div className="grid gap-2">

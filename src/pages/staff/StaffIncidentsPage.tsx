@@ -30,9 +30,9 @@ interface IncidentRow {
 }
 
 const SEVERITY_LABELS: Record<string, string> = {
-  medium: 'Trung bình',
+  medium: 'Medium',
   high: 'Cao',
-  critical: 'Nghiêm trọng',
+  critical: 'Critical',
 };
 
 const SEVERITY_STYLES: Record<string, string> = {
@@ -56,7 +56,7 @@ export function StaffIncidentsPage() {
 
   const mapIncident = (item: StaffIncident, index: number): IncidentRow => ({
     id: item.code || item._id || `INC-${1000 + index}`,
-    type: item.type || 'Sự cố',
+    type: item.type || 'Incidents',
     building: item.building?.code || item.building?.name || building?.code || '---',
     severity: item.severity || 'medium',
     status: (item.status as IncidentStatus) || 'open',
@@ -68,7 +68,7 @@ export function StaffIncidentsPage() {
           month: '2-digit',
         })
       : '---',
-    note: item.note || 'Chưa có ghi chú',
+    note: item.note || 'No notes',
   });
 
   const refresh = useCallback(() => {
@@ -81,7 +81,7 @@ export function StaffIncidentsPage() {
         setItems(apiItems.map(mapIncident));
       })
       .catch((err) => {
-        setError(err instanceof Error ? err.message : 'Tải dữ liệu sự cố thất bại');
+        setError(err instanceof Error ? err.message : 'Failed to load incidents');
         setItems([]);
       })
       .finally(() => setLoading(false));
@@ -99,13 +99,13 @@ export function StaffIncidentsPage() {
         note: incidentNote.trim() || undefined,
         buildingId: buildingId || undefined,
       });
-      setIncidentMessage({ type: 'ok', text: 'Tạo sự cố thành công.' });
+      setIncidentMessage({ type: 'ok', text: 'Incident created successfully.' });
       setIncidentType('');
       setIncidentTarget('');
       setIncidentNote('');
       refresh();
     } catch (err) {
-      setIncidentMessage({ type: 'err', text: err instanceof Error ? err.message : 'Tạo sự cố thất bại' });
+      setIncidentMessage({ type: 'err', text: err instanceof Error ? err.message : 'Failed to create incident' });
     } finally {
       setIsCreating(false);
     }
@@ -146,27 +146,27 @@ export function StaffIncidentsPage() {
       <Card className="overflow-hidden">
         <CardHeader className="border-b border-border/70 bg-secondary/30">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle>Tổng quan sự cố </CardTitle>
-            <p className="text-xs text-muted-foreground">{activeCount} sự cố cần theo dõi</p>
+            <CardTitle>Incident Overview</CardTitle>
+            <p className="text-xs text-muted-foreground">{activeCount} incidents need attention</p>
           </div>
         </CardHeader>
         <CardContent className="p-4 sm:p-5">
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
             {[
               {
-                label: 'Tổng số',
+                label: 'Total',
                 value: counts.total,
                 icon: ShieldAlert,
                 tone: 'border-slate-400/15 bg-slate-500/10 text-slate-200',
               },
               {
-                label: 'Đang mở',
+                label: 'Open',
                 value: counts.open,
                 icon: AlertTriangle,
                 tone: 'border-amber-400/25 bg-amber-500/10 text-amber-300',
               },
               {
-                label: 'Đang xử lý',
+                label: 'In Progress',
                 value: counts.investigating,
                 icon: Clock3,
                 tone: 'border-sky-400/25 bg-sky-500/10 text-sky-300',
@@ -178,7 +178,7 @@ export function StaffIncidentsPage() {
                 tone: 'border-rose-400/25 bg-rose-500/10 text-rose-300',
               },
               {
-                label: 'Đã giải quyết',
+                label: 'Resolved',
                 value: counts.resolved,
                 icon: CheckCircle2,
                 tone: 'border-emerald-400/25 bg-emerald-500/10 text-emerald-300',
@@ -212,8 +212,8 @@ export function StaffIncidentsPage() {
       <Card className="overflow-hidden">
         <CardHeader className="border-b border-border/70 bg-secondary/30">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle>Báo cáo sự cố nhanh</CardTitle>
-            <p className="text-xs text-muted-foreground">Tạo phiếu mới ngay khi phát hiện tại cổng hoặc khu vực</p>
+            <CardTitle>Quick Incident Report</CardTitle>
+            <p className="text-xs text-muted-foreground">Create a new ticket as soon as an issue is found at a gate or area</p>
           </div>
         </CardHeader>
         <CardContent className="p-4 sm:p-5">
@@ -221,19 +221,19 @@ export function StaffIncidentsPage() {
             <Input
               value={incidentType}
               onChange={(e) => setIncidentType(e.target.value)}
-              placeholder="Loại sự cố: mất vé, rào chắn hỏng, đỗ sai..."
+              placeholder="Incident type: lost ticket, broken barrier, wrong parking..."
               className="h-11 bg-background/60"
             />
             <Input
               value={incidentTarget}
               onChange={(e) => setIncidentTarget(e.target.value)}
-              placeholder="Biển số / cổng / khu vực"
+              placeholder="License plate / gate / area"
               className="h-11 bg-background/60"
             />
             <Input
               value={incidentNote}
               onChange={(e) => setIncidentNote(e.target.value)}
-              placeholder="Ghi chú ban đầu"
+              placeholder="Initial note"
               className="h-11 bg-background/60"
             />
             <Button
@@ -242,7 +242,7 @@ export function StaffIncidentsPage() {
               disabled={isCreating || !incidentType.trim()}
               className="h-11 gap-2 bg-gradient-to-r from-emerald-500 to-cyan-400 px-5 text-slate-950 hover:brightness-110 disabled:opacity-60"
             >
-              <Plus size={14} /> Tạo phiếu
+              <Plus size={14} /> Create Ticket
             </Button>
           </div>
           {incidentMessage && (
@@ -263,11 +263,11 @@ export function StaffIncidentsPage() {
         <div className="rounded-xl border border-amber-400/20 bg-amber-500/10 p-4 text-sm text-amber-300">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="font-semibold text-foreground">Không thể tải dữ liệu sự cố</p>
+              <p className="font-semibold text-foreground">Unable to load incident data</p>
               <p className="mt-1">{error}</p>
             </div>
             <Button onClick={refresh} variant="secondary" className="gap-2">
-              <RefreshCcw size={14} /> Thử lại
+              <RefreshCcw size={14} /> Retry
             </Button>
           </div>
         </div>
@@ -277,9 +277,9 @@ export function StaffIncidentsPage() {
         <CardHeader className="border-b border-border/70 bg-secondary/30">
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
             <div>
-              <CardTitle>Danh sách sự cố ({filtered.length})</CardTitle>
+              <CardTitle>Incident List ({filtered.length})</CardTitle>
               <p className="mt-1 text-xs text-muted-foreground">
-                Ưu tiên xử lý các phiếu nghiêm trọng và đang leo thang trước.
+                Prioritize critical and escalated tickets first.
               </p>
             </div>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -291,7 +291,7 @@ export function StaffIncidentsPage() {
                 <Input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Tìm theo ID, loại, ghi chú..."
+                  placeholder="Search by ID, type, note..."
                   className="h-10 bg-background/60 pl-9"
                 />
               </div>
@@ -305,10 +305,10 @@ export function StaffIncidentsPage() {
                   onChange={(e) => setSeverity(e.target.value)}
                   className="h-10 w-full rounded-md border border-border bg-background/60 pl-9 pr-8 text-sm text-foreground outline-none transition focus:ring-2 focus:ring-ring sm:w-44"
                 >
-                  <option value="all">Tất cả mức độ</option>
-                  <option value="medium">Trung bình</option>
+                  <option value="all">All Severities</option>
+                  <option value="medium">Medium</option>
                   <option value="high">Cao</option>
-                  <option value="critical">Nghiêm trọng</option>
+                  <option value="critical">Critical</option>
                 </select>
               </div>
             </div>
@@ -317,13 +317,13 @@ export function StaffIncidentsPage() {
         <CardContent className="p-4 sm:p-5">
           {loading ? (
             <div className="rounded-lg border border-border/70 bg-background/35 p-8 text-center text-sm text-muted-foreground">
-              Đang tải sự cố...
+              Loading incidents...
             </div>
           ) : filtered.length === 0 ? (
             <div className="rounded-lg border border-border/70 bg-background/35 p-8 text-center">
               <CheckCircle2 className="mx-auto text-emerald-300" size={24} />
-              <p className="mt-3 text-sm font-semibold text-foreground">Không tìm thấy sự cố nào</p>
-              <p className="mt-1 text-sm text-muted-foreground">Thử đổi từ khóa tìm kiếm hoặc mức độ lọc.</p>
+              <p className="mt-3 text-sm font-semibold text-foreground">No incidents found</p>
+              <p className="mt-1 text-sm text-muted-foreground">Try changing the search keyword or severity filter.</p>
             </div>
           ) : (
             <div className="grid gap-3">
@@ -357,7 +357,7 @@ export function StaffIncidentsPage() {
                         {incident.building}
                       </div>
                       <Button variant="secondary" size="sm" className="gap-1.5 text-xs">
-                        Chi tiết <ArrowRight size={13} />
+                        Details <ArrowRight size={13} />
                       </Button>
                     </div>
                   </div>
@@ -371,20 +371,20 @@ export function StaffIncidentsPage() {
       <section className="grid gap-3 md:grid-cols-3">
         {[
           {
-            label: 'Mở',
-            description: 'Sự cố mới cần ghi nhận và phân loại.',
+            label: 'Open',
+            description: 'New incidents need to be recorded and classified.',
             icon: AlertTriangle,
             tone: 'border-amber-400/20 bg-amber-500/10 text-amber-300',
           },
           {
-            label: 'Đang xử lý',
-            description: 'Nhân viên đang kiểm tra tại hiện trường.',
+            label: 'In Progress',
+            description: 'Staff are checking on site.',
             icon: ShieldAlert,
             tone: 'border-sky-400/20 bg-sky-500/10 text-sky-300',
           },
           {
-            label: 'Đã giải quyết',
-            description: 'Đã xử lý xong và có thể đối soát lại.',
+            label: 'Resolved',
+            description: 'Resolved and ready for review.',
             icon: CheckCircle2,
             tone: 'border-emerald-400/20 bg-emerald-500/10 text-emerald-300',
           },

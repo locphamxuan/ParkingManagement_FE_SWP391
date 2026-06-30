@@ -19,7 +19,7 @@ interface LivePlateCameraProps {
   onDetected: (result: PlateScanResult) => void;
   /** Disable the capture button while the parent is busy. */
   busy?: boolean;
-  /** Thiết bị camera vật lý gán cho vai trò này (nếu có nhiều camera). */
+  /** Devices camera vật lý gán cho vai trò này (nếu có nhiều camera). */
   deviceId?: string;
 }
 
@@ -46,7 +46,7 @@ export const LivePlateCamera = forwardRef<LiveCameraHandle, LivePlateCameraProps
     let cancelled = false;
 
     const timeout = setTimeout(() => {
-      if (!cancelled) setError('Camera chưa sẵn sàng sau 8 giây. Bấm "Thử lại" hoặc kiểm tra quyền camera trong trình duyệt.');
+      if (!cancelled) setError('Camera is not ready after 8 seconds. Click "Retry" or check browser camera permissions.');
     }, 8000);
 
     (async () => {
@@ -83,17 +83,17 @@ export const LivePlateCamera = forwardRef<LiveCameraHandle, LivePlateCameraProps
         if (!cancelled) {
           const name = (err as { name?: string })?.name ?? '';
           if (name === 'NotAllowedError' || name === 'PermissionDeniedError' || name === 'SecurityError') {
-            setError('Trình duyệt chưa cấp quyền camera. Bấm vào biểu tượng khóa trên thanh địa chỉ → Quyền → Camera → Cho phép.');
+            setError('Camera permission has not been granted. Click the lock icon in the address bar -> Permissions -> Camera -> Allow.');
           } else if (name === 'NotFoundError' || name === 'DevicesNotFoundError' || name === 'NotSupportedError') {
-            setError('Không tìm thấy thiết bị camera. Cắm camera rồi bấm Thử lại.');
+            setError('No camera device found. Connect a camera and click Retry.');
           } else if (name === 'NotReadableError' || name === 'TrackStartError') {
-            setError('Camera đang bị ứng dụng khác sử dụng. Đóng ứng dụng đó rồi bấm Thử lại.');
+            setError('Camera is being used by another app. Close it and click Retry.');
           } else if (name === 'AbortError') {
-            setError('Kết nối camera bị hủy. Bấm Thử lại.');
+            setError('Camera connection was interrupted. Click Retry.');
           } else if (name === 'OverconstrainedError') {
-            setError('Camera không hỗ trợ định dạng yêu cầu. Bấm Thử lại.');
+            setError('Camera does not support the requested format. Click Retry.');
           } else {
-            setError(`Không thể truy cập camera (${name || 'lỗi không xác định'}). Bấm Thử lại.`);
+            setError(`Unable to access camera (${name || 'unknown error'}). Click Retry.`);
           }
         }
       }
@@ -149,7 +149,7 @@ export const LivePlateCamera = forwardRef<LiveCameraHandle, LivePlateCameraProps
 
       let result = await doScan();
       if (!result) {
-        setError('Camera chưa sẵn sàng. Vui lòng thử lại.');
+        setError('Camera is not ready. Please try again.');
         return;
       }
 
@@ -162,14 +162,14 @@ export const LivePlateCamera = forwardRef<LiveCameraHandle, LivePlateCameraProps
 
       onDetected({ plateNumber: result.plateNumber, brand: result.brand, plateImage: result.dataUrl });
       if (result.plateNumber) {
-        setSuccess(`Biển số: ${result.plateNumber}${result.brand ? ` · ${result.brand}` : ''}`);
+        setSuccess(`License Plate: ${result.plateNumber}${result.brand ? ` · ${result.brand}` : ''}`);
         setTimeout(() => setSuccess(null), 2500);
       } else {
-        setSuccess('Đã lưu ảnh biển số. Không đọc được số tự động — vui lòng nhập tay.');
+        setSuccess('License plate image saved. Automatic recognition failed. Please enter it manually.');
         setTimeout(() => setSuccess(null), 3500);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Lỗi nhận diện biển số');
+      setError(err instanceof Error ? err.message : 'License plate recognition failed');
     } finally {
       setProcessing(false);
     }
@@ -187,7 +187,7 @@ export const LivePlateCamera = forwardRef<LiveCameraHandle, LivePlateCameraProps
       const dataUrl = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve(reader.result as string);
-        reader.onerror = () => reject(new Error('Không đọc được file'));
+        reader.onerror = () => reject(new Error('Could not read file'));
         reader.readAsDataURL(file);
       });
       const base64 = dataUrl.split(',')[1];
@@ -197,14 +197,14 @@ export const LivePlateCamera = forwardRef<LiveCameraHandle, LivePlateCameraProps
       const brand = data?.brand ?? null;
       onDetected({ plateNumber, brand, plateImage: dataUrl });
       if (plateNumber) {
-        setSuccess(`Biển số: ${plateNumber}${brand ? ` · ${brand}` : ''}`);
+        setSuccess(`License Plate: ${plateNumber}${brand ? ` · ${brand}` : ''}`);
         setTimeout(() => setSuccess(null), 2500);
       } else {
-        setSuccess('Đã lưu ảnh. Không đọc được số tự động — vui lòng nhập tay.');
+        setSuccess('Image saved. Automatic recognition failed. Please enter it manually.');
         setTimeout(() => setSuccess(null), 3500);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Lỗi nhận diện biển số');
+      setError(err instanceof Error ? err.message : 'License plate recognition failed');
     } finally {
       setProcessing(false);
     }
@@ -214,7 +214,7 @@ export const LivePlateCamera = forwardRef<LiveCameraHandle, LivePlateCameraProps
     <div className="rounded-xl border border-border bg-card/40 p-3 space-y-2.5">
       <div className="flex items-center gap-2">
         <ScanLine size={15} className="text-primary" />
-        <p className="text-sm font-semibold text-foreground">Camera 1 · Quét biển số</p>
+        <p className="text-sm font-semibold text-foreground">Camera 1 · License Plate Scan</p>
       </div>
 
       <div className="relative aspect-[4/3] overflow-hidden rounded-lg border border-white/10 bg-black/60">
@@ -260,7 +260,7 @@ export const LivePlateCamera = forwardRef<LiveCameraHandle, LivePlateCameraProps
             {/* License-plate targeting box — guides staff to align the plate here */}
             <div className="pointer-events-none absolute inset-x-[12%] top-[30%] bottom-[30%] rounded border-2 border-dashed border-yellow-400/70 shadow-[0_0_10px_rgba(250,204,21,0.3)]">
               <span className="absolute -top-5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-black/60 px-2 py-0.5 text-[10px] font-bold text-yellow-300 tracking-widest">
-                BIỂN SỐ VÀO ĐÂY
+                PLACE PLATE HERE
               </span>
             </div>
             <div className={processing ? 'laser-scanner-line laser-scanner-line-active' : 'laser-scanner-line'} />
@@ -280,7 +280,7 @@ export const LivePlateCamera = forwardRef<LiveCameraHandle, LivePlateCameraProps
               onClick={handleRetry}
               className="inline-flex items-center gap-1.5 rounded-lg bg-rose-500/20 border border-rose-500/30 px-3 py-1.5 text-xs font-semibold text-rose-300 hover:bg-rose-500/30 transition"
             >
-              <RefreshCw size={12} /> Thử lại
+              <RefreshCw size={12} /> Retry
             </button>
           </div>
         )}
@@ -294,17 +294,17 @@ export const LivePlateCamera = forwardRef<LiveCameraHandle, LivePlateCameraProps
           className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition hover:brightness-110 disabled:opacity-60"
         >
           {processing ? <Loader2 size={15} className="animate-spin" /> : <ScanLine size={15} />}
-          Chụp &amp; nhận diện
+          Capture &amp; Recognize
         </button>
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
           disabled={processing || busy}
-          title="Tải ảnh biển số từ thiết bị lên thay vì dùng camera"
+          title="Upload a license plate image instead of using the camera"
           className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2.5 text-xs font-semibold text-muted-foreground transition hover:bg-accent hover:text-foreground disabled:opacity-60"
         >
           <Upload size={14} />
-          Tải ảnh
+          Upload Image
         </button>
         <input
           ref={fileInputRef}

@@ -24,6 +24,22 @@ const titles: Record<string, string> = {
   '/manager/wallet': 'Ví tòa nhà',
   '/manager/profile': 'Xem hồ sơ',
   '/manager/settings': 'Cài đặt',
+  '/manager': 'Manager Dashboard',
+  '/manager/dashboard': 'Management report',
+  '/manager/buildings': 'Building Management',
+  '/manager/vehicle-types': 'Vehicle Type',
+  '/manager/floors': 'Floor',
+  '/manager/gates': 'Gate',
+  '/manager/slots': 'Gate',
+  '/manager/operating-hours': 'Operating Hour',
+  '/manager/price-policies': 'Price Policy',
+  '/manager/reservation-policy': 'Reservation Policy',
+  '/manager/packages': 'Package',
+  '/manager/shifts': 'Shilf',
+  '/manager/reviews': 'Review',
+  '/manager/wallet': 'Wallet',
+  '/manager/profile': 'Profile',
+  '/manager/settings': 'Setting',
 };
 
 export function ManagerLayout() {
@@ -59,10 +75,11 @@ export function ManagerLayout() {
           />
           <main className="flex-1 p-4 md:p-6">
             {isLoading && !isProfileRoute ? (
-              <div className="text-sm text-muted-foreground">Đang tải...</div>
+              <div className="text-sm text-muted-foreground">Loading...</div>
             ) : !selectedBuildingId && !isProfileRoute ? (
               <div className="rounded-md border border-border bg-card p-6 text-sm text-muted-foreground">
-                Tài khoản này chưa được gán tòa nhà nào. Vui lòng liên hệ quản lý.
+                
+                This account has not been assigned to any building. Please contact the manager. 
               </div>
             ) : (
               <Outlet
