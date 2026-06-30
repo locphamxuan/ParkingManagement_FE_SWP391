@@ -31,6 +31,19 @@ export interface Floor {
   allowedVehicleTypes: VehicleType[];
 }
 
+export interface Zone {
+  _id: string;
+  building: string;
+  floor: Floor | string;
+  code: string;
+  name: string;
+  vehicleType: VehicleType | string;
+  usageType: 'walk_in' | 'registered' | 'subscriber' | 'reserved';
+  capacity: number;
+  status: 'active' | 'inactive' | 'maintenance';
+  slotCount?: number;
+}
+
 export interface Gate {
   _id: string;
   building: string;
@@ -47,8 +60,10 @@ export interface ParkingSlot {
   _id: string;
   building: string;
   floor: { _id: string; code: string; name: string; levelNumber: number } | string;
+  zone?: { _id: string; code: string; usageType: string; vehicleType?: VehicleType | string } | string | null;
   code: string;
   vehicleType?: VehicleType | string | null;
+  usageType?: string | null;
   status: 'available' | 'occupied' | 'reserved' | 'maintenance';
   reservable: boolean;
   note?: string;
@@ -268,12 +283,22 @@ export const managerApi = {
       api.patch<Wrap<{ item: Gate }>>(path(b, `/gates/${id}/status`), { status }),
   },
 
+  zones: {
+    list: (b: string, q?: Record<string, string | undefined>) =>
+      api.get<Wrap<{ items: Zone[] }>>(path(b, '/zones'), { query: q }),
+    create: (b: string, body: { code: string; name?: string; floor: string; vehicleType: string; usageType: Zone['usageType']; capacity: number; status?: Zone['status'] }) =>
+      api.post<Wrap<{ item: Zone }>>(path(b, '/zones'), body),
+    update: (b: string, id: string, body: Partial<{ code: string; name: string; floor: string; vehicleType: string; usageType: Zone['usageType']; capacity: number; status: Zone['status'] }>) =>
+      api.put<Wrap<{ item: Zone }>>(path(b, `/zones/${id}`), body),
+    remove: (b: string, id: string) => api.delete(path(b, `/zones/${id}`)),
+  },
+
   slots: {
     list: (b: string, q?: Record<string, string | undefined>) =>
       api.get<Wrap<{ items: ParkingSlot[] }>>(path(b, '/slots'), { query: q }),
-    create: (b: string, body: Partial<ParkingSlot> & { floor: string }) =>
+    create: (b: string, body: { code: string; floor: string; zone: string; status?: ParkingSlot['status']; reservable?: boolean; note?: string }) =>
       api.post<Wrap<{ item: ParkingSlot }>>(path(b, '/slots'), body),
-    update: (b: string, id: string, body: Partial<ParkingSlot>) =>
+    update: (b: string, id: string, body: Partial<{ code: string; floor: string; zone: string; status: ParkingSlot['status']; reservable: boolean; note: string }>) =>
       api.put<Wrap<{ item: ParkingSlot }>>(path(b, `/slots/${id}`), body),
     updateStatus: (b: string, id: string, status: ParkingSlot['status']) =>
       api.patch<Wrap<{ item: ParkingSlot }>>(path(b, `/slots/${id}/status`), { status }),

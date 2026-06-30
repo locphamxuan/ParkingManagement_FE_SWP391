@@ -33,6 +33,7 @@ const ManagerProfilePage = lazy(() => import('@/pages/manager/ManagerProfilePage
 const ManagerVehicleTypesPage = lazy(() => import('@/pages/manager/ManagerVehicleTypesPage').then((m) => ({ default: m.ManagerVehicleTypesPage })));
 const ManagerFloorsPage = lazy(() => import('@/pages/manager/ManagerFloorsPage').then((m) => ({ default: m.ManagerFloorsPage })));
 const ManagerGatesPage = lazy(() => import('@/pages/manager/ManagerGatesPage').then((m) => ({ default: m.ManagerGatesPage })));
+const ManagerZonesPage = lazy(() => import('@/pages/manager/ManagerZonesPage').then((m) => ({ default: m.ManagerZonesPage })));
 const ManagerSlotsPage = lazy(() => import('@/pages/manager/ManagerSlotsPage').then((m) => ({ default: m.ManagerSlotsPage })));
 const ManagerPricingPage = lazy(() => import('@/pages/manager/ManagerPricingPage').then((m) => ({ default: m.ManagerPricingPage })));
 const ManagerReservationPolicyPage = lazy(() => import('@/pages/manager/ManagerReservationPolicyPage').then((m) => ({ default: m.ManagerReservationPolicyPage })));
@@ -105,6 +106,7 @@ export function AppRouter() {
           <Route path="profile" element={<ManagerProfilePage />} />
           <Route path="floors" element={<ManagerFloorsPage />} />
           <Route path="gates" element={<ManagerGatesPage />} />
+          <Route path="zones" element={<ManagerZonesPage />} />
           <Route path="slots" element={<ManagerSlotsPage />} />
           <Route path="price-policies" element={<ManagerPricingPage />} />
           <Route path="reservation-policy" element={<ManagerReservationPolicyPage />} />

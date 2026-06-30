@@ -28,9 +28,7 @@ export function PlateQRModal({ isOpen, onClose, qrToken, plateNumber, brand }: P
           // Standard dark-on-white so any scanner (and inverted-unaware decoders) read it.
           color: { dark: '#0f172a', light: '#ffffff' },
         },
-        (error: Error | null | undefined) => {
-          if (error) console.error('Plate QR generation error:', error);
-        }
+        () => undefined
       );
     }
   }, [isOpen, qrToken]);

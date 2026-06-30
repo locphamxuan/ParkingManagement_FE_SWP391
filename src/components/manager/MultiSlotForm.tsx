@@ -4,12 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
 import { CustomSelect } from '@/components/ui/select';
-import type { Floor } from '@/services/manager/managerApi';
+import type { Floor, Zone } from '@/services/manager/managerApi';
 
 export interface SlotFormRow {
   id: string;
   code: string;
   floor: string;
+  zone: string;
   status: 'available' | 'occupied' | 'reserved' | 'maintenance';
   reservable: boolean;
   note: string;
@@ -20,6 +21,7 @@ interface MultiSlotFormProps {
   onClose: () => void;
   onSubmit: (rows: SlotFormRow[]) => Promise<void>;
   floors: Floor[];
+  zones: Zone[];
   loading?: boolean;
 }
 
@@ -27,12 +29,13 @@ const emptyRow = (): SlotFormRow => ({
   id: Math.random().toString(36),
   code: '',
   floor: '',
+  zone: '',
   status: 'available',
   reservable: true,
   note: '',
 });
 
-export function MultiSlotForm({ isOpen, onClose, onSubmit, floors }: MultiSlotFormProps) {
+export function MultiSlotForm({ isOpen, onClose, onSubmit, floors, zones }: MultiSlotFormProps) {
   const [rows, setRows] = useState<SlotFormRow[]>([emptyRow()]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -49,23 +52,26 @@ export function MultiSlotForm({ isOpen, onClose, onSubmit, floors }: MultiSlotFo
 
   const handleRowChange = (id: string, field: keyof SlotFormRow, value: unknown) => {
     setRows(
-      rows.map((r) =>
-        r.id === id ? { ...r, [field]: value } : r
-      )
+      rows.map((r) => {
+        if (r.id !== id) return r;
+        // When floor changes, reset zone so the user picks a valid one.
+        if (field === 'floor') return { ...r, floor: value as string, zone: '' };
+        return { ...r, [field]: value };
+      })
     );
   };
 
+  const zonesForRow = (floorId: string) =>
+    zones.filter((z) => {
+      const zFloorId = typeof z.floor === 'string' ? z.floor : (z.floor as Floor)._id;
+      return zFloorId === floorId;
+    });
+
   const handleSubmit = async () => {
-    // Validation
     for (const row of rows) {
-      if (!row.code.trim()) {
-        setError('Mã ô không được để trống');
-        return;
-      }
-      if (!row.floor) {
-        setError('Phải chọn tầng cho từng ô');
-        return;
-      }
+      if (!row.code.trim()) { setError('Mã ô không được để trống'); return; }
+      if (!row.floor) { setError('Phải chọn tầng cho từng ô'); return; }
+      if (!row.zone) { setError('Phải chọn dãy (zone) cho từng ô'); return; }
     }
 
     setSubmitting(true);
@@ -109,115 +115,131 @@ export function MultiSlotForm({ isOpen, onClose, onSubmit, floors }: MultiSlotFo
 
         {/* Content */}
         <div className="p-6 space-y-4">
-          {/* Error Message */}
           {error && (
             <div className="rounded-lg bg-red-500/10 border border-red-500/30 px-4 py-3 text-sm text-red-300">
               {error}
             </div>
           )}
 
-          {/* Slots List */}
           <div className="space-y-3 max-h-[calc(90vh-300px)] overflow-y-auto">
-            {rows.map((row, index) => (
-              <div
-                key={row.id}
-                className="rounded-xl border border-white/10 bg-slate-800/40 p-4 space-y-3 hover:border-white/20 transition-colors"
-              >
-                {/* Slot Number */}
-                <div className="flex items-center justify-between">
-                  <span className="inline-block bg-orange-500/10 border border-orange-500/30 text-orange-300 px-2.5 py-1 rounded-lg text-xs font-bold">
-                    Chỗ đỗ #{index + 1}
-                  </span>
-                  {rows.length > 1 && (
-                    <button
-                      onClick={() => handleRemoveRow(row.id)}
-                      disabled={submitting}
-                      className="text-slate-400 hover:text-rose-400 transition-colors disabled:opacity-50"
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                  )}
-                </div>
+            {rows.map((row, index) => {
+              const floorZones = zonesForRow(row.floor);
+              return (
+                <div
+                  key={row.id}
+                  className="rounded-xl border border-white/10 bg-slate-800/40 p-4 space-y-3 hover:border-white/20 transition-colors"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="inline-block bg-orange-500/10 border border-orange-500/30 text-orange-300 px-2.5 py-1 rounded-lg text-xs font-bold">
+                      Chỗ đỗ #{index + 1}
+                    </span>
+                    {rows.length > 1 && (
+                      <button
+                        onClick={() => handleRemoveRow(row.id)}
+                        disabled={submitting}
+                        className="text-slate-400 hover:text-rose-400 transition-colors disabled:opacity-50"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    )}
+                  </div>
 
-                {/* Row Content */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-                  {/* Mã Ô */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {/* Mã Ô */}
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wide">Mã Ô *</label>
+                      <Input
+                        value={row.code}
+                        onChange={(e) => handleRowChange(row.id, 'code', e.target.value.toUpperCase())}
+                        placeholder="VD: A01, B12"
+                        disabled={submitting}
+                        className="text-sm"
+                      />
+                    </div>
+
+                    {/* Tầng */}
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wide">Tầng *</label>
+                      <CustomSelect
+                        value={row.floor}
+                        onChange={(val) => handleRowChange(row.id, 'floor', val)}
+                        options={[
+                          { value: '', label: '-- Chọn tầng --' },
+                          ...floors.map((f) => ({ value: f._id, label: f.code })),
+                        ]}
+                        disabled={submitting || floors.length === 0}
+                        placeholder="-- Chọn tầng --"
+                      />
+                    </div>
+
+                    {/* Dãy (Zone) */}
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wide">Dãy *</label>
+                      {!row.floor ? (
+                        <p className="text-xs text-slate-500 rounded border border-white/8 px-3 py-2.5">Chọn tầng trước</p>
+                      ) : floorZones.length === 0 ? (
+                        <p className="text-xs text-amber-400 rounded border border-amber-500/20 px-3 py-2.5">Tầng này chưa có dãy</p>
+                      ) : (
+                        <CustomSelect
+                          value={row.zone}
+                          onChange={(val) => handleRowChange(row.id, 'zone', val)}
+                          options={[
+                            { value: '', label: '-- Chọn dãy --' },
+                            ...floorZones.map((z) => ({ value: z._id, label: z.code })),
+                          ]}
+                          disabled={submitting}
+                          placeholder="-- Chọn dãy --"
+                        />
+                      )}
+                    </div>
+
+                    {/* Trạng Thái */}
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wide">Trạng Thái</label>
+                      <CustomSelect
+                        value={row.status}
+                        onChange={(val) => handleRowChange(row.id, 'status', val)}
+                        options={[
+                          { value: 'available', label: 'Trống' },
+                          { value: 'occupied', label: 'Đầy' },
+                          { value: 'reserved', label: 'Đặt chỗ' },
+                          { value: 'maintenance', label: 'Bảo trì' },
+                        ]}
+                        disabled={submitting}
+                      />
+                    </div>
+
+                    {/* Cho Đặt Chỗ */}
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wide">Cho Đặt Chỗ</label>
+                      <CustomSelect
+                        value={row.reservable ? 'yes' : 'no'}
+                        onChange={(val) => handleRowChange(row.id, 'reservable', val === 'yes')}
+                        options={[
+                          { value: 'yes', label: 'Có' },
+                          { value: 'no', label: 'Không' },
+                        ]}
+                        disabled={submitting}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Ghi Chú */}
                   <div className="space-y-1.5">
-                    <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wide">Mã Ô *</label>
+                    <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wide">Ghi Chú</label>
                     <Input
-                      value={row.code}
-                      onChange={(e) => handleRowChange(row.id, 'code', e.target.value.toUpperCase())}
-                      placeholder="VD: A01, B12"
+                      value={row.note}
+                      onChange={(e) => handleRowChange(row.id, 'note', e.target.value)}
+                      placeholder="VD: Gần cầu thang, Vị trí đặc biệt"
                       disabled={submitting}
                       className="text-sm"
                     />
                   </div>
-
-                  {/* Tầng */}
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wide">Tầng *</label>
-                    <CustomSelect
-                      value={row.floor}
-                      onChange={(val) => handleRowChange(row.id, 'floor', val)}
-                      options={[
-                        { value: '', label: '-- Chọn tầng --' },
-                        ...floors.map((f) => ({
-                          value: f._id,
-                          label: f.code,
-                        })),
-                      ]}
-                      disabled={submitting || floors.length === 0}
-                      placeholder="-- Chọn tầng --"
-                    />
-                  </div>
-
-                  {/* Trạng Thái */}
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wide">Trạng Thái</label>
-                    <CustomSelect
-                      value={row.status}
-                      onChange={(val) => handleRowChange(row.id, 'status', val)}
-                      options={[
-                        { value: 'available', label: 'Trống' },
-                        { value: 'occupied', label: 'Đầy' },
-                        { value: 'reserved', label: 'Đặt chỗ' },
-                        { value: 'maintenance', label: 'Bảo trì' },
-                      ]}
-                      disabled={submitting}
-                    />
-                  </div>
-
-                  {/* Cho Đặt Chỗ */}
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wide">Cho Đặt Chỗ</label>
-                    <CustomSelect
-                      value={row.reservable ? 'yes' : 'no'}
-                      onChange={(val) => handleRowChange(row.id, 'reservable', val === 'yes')}
-                      options={[
-                        { value: 'yes', label: 'Có' },
-                        { value: 'no', label: 'Không' },
-                      ]}
-                      disabled={submitting}
-                    />
-                  </div>
                 </div>
-
-                {/* Ghi Chú */}
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wide">Ghi Chú</label>
-                  <Input
-                    value={row.note}
-                    onChange={(e) => handleRowChange(row.id, 'note', e.target.value)}
-                    placeholder="VD: Gần cầu thang, Vị trí đặc biệt"
-                    disabled={submitting}
-                    className="text-sm"
-                  />
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
-          {/* Add More Button */}
           <button
             onClick={handleAddRow}
             disabled={submitting}
@@ -230,12 +252,7 @@ export function MultiSlotForm({ isOpen, onClose, onSubmit, floors }: MultiSlotFo
 
         {/* Footer */}
         <div className="sticky bottom-0 z-10 border-t border-white/8 bg-slate-800/95 px-6 py-4 flex gap-3 justify-end backdrop-blur-md">
-          <Button
-            variant="outline"
-            onClick={handleClose}
-            disabled={submitting}
-            className="text-sm"
-          >
+          <Button variant="outline" onClick={handleClose} disabled={submitting} className="text-sm">
             Hủy
           </Button>
           <Button

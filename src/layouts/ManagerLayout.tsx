@@ -13,6 +13,7 @@ const titles: Record<string, string> = {
   '/manager/vehicle-types': 'Loại xe',
   '/manager/floors': 'Tầng',
   '/manager/gates': 'Cổng',
+  '/manager/zones': 'Dãy (Zone)',
   '/manager/slots': 'Chỗ đỗ',
   '/manager/operating-hours': 'Giờ hoạt động',
   '/manager/price-policies': 'Chính sách giá',

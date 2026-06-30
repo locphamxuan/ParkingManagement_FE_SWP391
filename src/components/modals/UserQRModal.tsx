@@ -30,9 +30,7 @@ export function UserQRModal({ isOpen, onClose, userId, fullName }: UserQRModalPr
             light: '#ffffff',
           },
         },
-        (error: Error | null | undefined) => {
-          if (error) console.error('QR Code generation error:', error);
-        }
+        () => undefined
       );
     }
   }, [isOpen, userId]);

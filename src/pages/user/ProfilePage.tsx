@@ -2,10 +2,11 @@ import { useMemo, useState, useRef, useEffect } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
-import { ArrowLeft, LogOut, User, Edit, Save, X, ShieldAlert, Plus, AlertCircle, CheckCircle2, Car, Bike, Loader2, QrCode, KeyRound } from 'lucide-react';
+import { ArrowLeft, LogOut, User, Edit, Save, X, ShieldAlert, Plus, AlertCircle, CheckCircle2, Car, Bike, Loader2, QrCode } from 'lucide-react';
 import { syncPlates, listPlates, type PlateRecord } from '@/services/licensePlateService';
 import { UserQRModal } from '@/components/modals/UserQRModal';
 import { PlateQRModal } from '@/components/modals/PlateQRModal';
+import { PasswordChangeSection } from '@/components/user/PasswordChangeSection';
 import { userApi } from '@/services/user/userApi';
 import { CustomSelect } from '@/components/ui/select';
 import { normalizePlate, isValidVietnamPlate, brandsForVehicleType } from '@/utils/plate';
@@ -78,10 +79,6 @@ export default function ProfilePage() {
   // Server plates carry the per-plate QR token (PLT-...) used by the plate-QR modal.
   const [serverPlates, setServerPlates] = useState<PlateRecord[]>([]);
   const [plateQrTarget, setPlateQrTarget] = useState<{ qrToken: string; plateNumber: string; brand?: string | null } | null>(null);
-  const [pwForm, setPwForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
-  const [pwError, setPwError] = useState<string | null>(null);
-  const [pwSuccess, setPwSuccess] = useState<string | null>(null);
-  const [pwSaving, setPwSaving] = useState(false);
 
   const user = useMemo(() => {
     if (!session) return null;
@@ -222,10 +219,10 @@ export default function ProfilePage() {
       // Sync license plates with MongoDB backend
       // Current server-side plates (with _id) come from the session
       const currentServerPlates = (user.licensePlates || []).map((p) => ({
-        _id: (p as any)._id as string | undefined,
+        _id: p._id,
         plateNumber: p.plateNumber,
         vehicleType: p.vehicleType,
-        brand: (p as any).brand ?? null,
+        brand: p.brand ?? null,
       }));
 
       // Sync license plates FIRST so a profile-update failure can't block them.
@@ -287,36 +284,6 @@ export default function ProfilePage() {
     }
   };
 
-  const handleChangePassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setPwError(null);
-    setPwSuccess(null);
-    if (!pwForm.currentPassword || !pwForm.newPassword) {
-      setPwError('Please fill in all fields.');
-      return;
-    }
-    if (pwForm.newPassword.length < 6) {
-      setPwError('New password must be at least 6 characters.');
-      return;
-    }
-    if (pwForm.newPassword !== pwForm.confirmPassword) {
-      setPwError('Passwords do not match.');
-      return;
-    }
-    try {
-      setPwSaving(true);
-      await userApi.profile.changePassword({
-        currentPassword: pwForm.currentPassword,
-        newPassword: pwForm.newPassword,
-      });
-      setPwSuccess('Password changed successfully!');
-      setPwForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
-    } catch (err) {
-      setPwError(err instanceof Error ? err.message : 'Password change failed. Check your current password.');
-    } finally {
-      setPwSaving(false);
-    }
-  };
 
   const hasMissingInfo =
     user.role === 'user' &&
@@ -934,73 +901,7 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* Password Change Section */}
-      <div className="mx-auto max-w-7xl px-4 pb-10 sm:px-6 lg:px-8 relative z-10">
-        <div className="rounded-3xl border border-white/5 bg-slate-900/40 p-6 backdrop-blur-md">
-          <div className="mb-4 flex items-center gap-2">
-            <KeyRound size={16} className="text-orange-400" />
-            <h3 className="text-sm font-bold text-white">Change Password</h3>
-          </div>
-          <form onSubmit={handleChangePassword} className="grid gap-3 sm:grid-cols-3">
-            <div>
-              <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                Current Password
-              </label>
-              <input
-                type="password"
-                value={pwForm.currentPassword}
-                onChange={(e) => setPwForm((p) => ({ ...p, currentPassword: e.target.value }))}
-                placeholder="••••••••"
-                className="h-10 w-full rounded-xl border border-white/10 bg-slate-950/50 px-3 text-sm text-white outline-none placeholder:text-slate-600 focus:border-orange-500/40 focus:ring-1 focus:ring-orange-500/20"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                New Password
-              </label>
-              <input
-                type="password"
-                value={pwForm.newPassword}
-                onChange={(e) => setPwForm((p) => ({ ...p, newPassword: e.target.value }))}
-                placeholder="Min 6 characters"
-                className="h-10 w-full rounded-xl border border-white/10 bg-slate-950/50 px-3 text-sm text-white outline-none placeholder:text-slate-600 focus:border-orange-500/40 focus:ring-1 focus:ring-orange-500/20"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                Confirm Password
-              </label>
-              <input
-                type="password"
-                value={pwForm.confirmPassword}
-                onChange={(e) => setPwForm((p) => ({ ...p, confirmPassword: e.target.value }))}
-                placeholder="Retype new password"
-                className="h-10 w-full rounded-xl border border-white/10 bg-slate-950/50 px-3 text-sm text-white outline-none placeholder:text-slate-600 focus:border-orange-500/40 focus:ring-1 focus:ring-orange-500/20"
-              />
-            </div>
-            <div className="sm:col-span-3 flex items-center gap-3 flex-wrap">
-              <button
-                type="submit"
-                disabled={pwSaving}
-                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 px-5 py-2 text-xs font-black uppercase tracking-wider text-slate-950 hover:brightness-110 disabled:opacity-50 transition-all"
-              >
-                {pwSaving ? <Loader2 size={12} className="animate-spin" /> : <KeyRound size={12} />}
-                {pwSaving ? 'Saving...' : 'Change Password'}
-              </button>
-              {pwError && (
-                <p className="flex items-center gap-1 text-xs text-rose-400">
-                  <AlertCircle size={12} /> {pwError}
-                </p>
-              )}
-              {pwSuccess && (
-                <p className="flex items-center gap-1 text-xs text-emerald-400">
-                  <CheckCircle2 size={12} /> {pwSuccess}
-                </p>
-              )}
-            </div>
-          </form>
-        </div>
-      </div>
+      <PasswordChangeSection />
 
       {/* QR Modal */}
       <UserQRModal

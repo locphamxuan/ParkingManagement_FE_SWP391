@@ -20,7 +20,7 @@ import { useAssignedGates } from '@/hooks/staff/useAssignedGates';
 import { staffApi, extractBuildings, type StaffBuilding } from '@/services/staff/staffApi';
 import { cn } from '@/utils/cn';
 
-const pageTitle: Record<string, string> = {
+const BASE_PAGE_TITLE: Record<string, string> = {
   '': 'Tổng quan',
   dashboard: 'Tổng quan',
   operations: 'Check-in xe vào',
@@ -28,7 +28,6 @@ const pageTitle: Record<string, string> = {
   parked: 'Xe đang đỗ',
   reservations: 'Đặt chỗ trước',
   'my-shifts': 'Ca làm việc của tôi',
-  sessions: 'Ca làm việc hôm nay',
   incidents: 'Quản lý sự cố',
 };
 
@@ -52,7 +51,7 @@ export function StaffLayout() {
       { to: 'parked', label: 'Xe đang đỗ', icon: Car },
       { to: 'reservations', label: 'Đặt chỗ trước', icon: CalendarCheck2 },
       { to: 'my-shifts', label: 'Ca làm việc', icon: CalendarClock },
-      ...(showCheckOut ? [{ to: 'sessions', label: 'Doanh thu ca', icon: Wallet }] : []),
+      ...(showCheckIn || showCheckOut ? [{ to: 'sessions', label: showCheckOut ? 'Doanh thu ca' : 'Lịch sử xe vào', icon: showCheckOut ? Wallet : Car }] : []),
       { to: 'incidents', label: 'Sự cố', icon: ShieldAlert },
     ],
     [showCheckIn, showCheckOut],
@@ -76,7 +75,9 @@ export function StaffLayout() {
     return tail.split('/')[0];
   }, [location.pathname]);
 
-  const title = pageTitle[slug] ?? 'Nhân viên';
+  const title = slug === 'sessions'
+    ? (showCheckOut ? 'Doanh thu ca' : 'Lịch sử xe vào')
+    : (BASE_PAGE_TITLE[slug] ?? 'Nhân viên');
   const selectedBuilding = buildings.find((b) => b._id === selectedBuildingId);
   const isProfileRoute = Boolean(useMatch('/staff/profile'));
 

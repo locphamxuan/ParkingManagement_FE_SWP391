@@ -10,7 +10,6 @@ import {
   Package,
   ShieldCheck,
   Timer,
-  X,
   Zap,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
@@ -43,9 +42,9 @@ import { MiniCalendar } from '@/components/user/MiniCalendar';
 import { TimeScroller } from '@/components/user/TimeScroller';
 import { DurationSelector } from '@/components/user/DurationSelector';
 import { PackageCard } from '@/components/user/PackageCard';
-import { ReservationHistoryTab } from '@/components/user/ReservationHistoryTab';
 import { SlotSelectionModal } from '@/components/user/SlotSelectionModal';
 import { BookingNotificationModal } from '@/components/user/BookingNotificationModal';
+import { BookingHistoryModal } from '@/components/user/BookingHistoryModal';
 import { BookingSummarySidebar } from '@/components/user/BookingSummarySidebar';
 
 /* ─── Types ────────────────────────────────────────────────────────────────── */
@@ -144,30 +143,28 @@ export default function ReservationsPage() {
 
   useEffect(() => {
     if (!user) return;
+    let cancelled = false;
 
-    // Fetch reservations
     const p1 = userApi.reservations.list({ limit: 100 }).then(res => {
-      const items = (res as any)?.data?.items || [];
+      const items = res.data.items || [];
       return items
-        .filter((r: any) => ['pending', 'confirmed', 'checked_in'].includes(r.status))
-        .map((r: any) => r.plateNumber);
-    }).catch(() => []);
+        .filter((r) => ['pending', 'confirmed', 'checked_in'].includes(r.status))
+        .map((r) => r.plateNumber);
+    }).catch(() => [] as string[]);
 
-    // Fetch subscriptions
     const p2 = userApi.longTermSubscriptions.list({ limit: 100 }).then(res => {
-      const items = (res as any)?.data?.items || [];
+      const items = res.data.items || [];
       return items
-        .filter((s: any) => ['pending', 'active'].includes(s.status))
-        .map((s: any) => s.plateNumber || s.linkedPlates?.[0]);
-    }).catch(() => []);
+        .filter((s) => ['pending', 'active'].includes(s.status))
+        .map((s) => (s.plateNumber || s.linkedPlates?.[0]) as string);
+    }).catch(() => [] as string[]);
 
     Promise.all([p1, p2]).then(([resPlates, subPlates]) => {
-      const allBooked = Array.from(new Set([
-        ...resPlates.filter(Boolean),
-        ...subPlates.filter(Boolean)
-      ]));
-      setBookedPlates(allBooked);
+      if (cancelled) return;
+      setBookedPlates(Array.from(new Set([...resPlates.filter(Boolean), ...subPlates.filter(Boolean)])));
     });
+
+    return () => { cancelled = true; };
   }, [user, bookingSuccess]);
 
   /* ── Data Loading ── */
@@ -215,7 +212,6 @@ export default function ReservationsPage() {
       } catch (err) {
         if (!ignore) {
           const errorMsg = err instanceof Error ? err.message : String(err);
-          console.error('Error loading floors:', errorMsg, err);
           setFloorsError(`Failed to load floors: ${errorMsg}`);
           setFloorsData([]);
         }
@@ -232,7 +228,7 @@ export default function ReservationsPage() {
     userApi.longTermPackages.list({ buildingId: selectedBuildingId })
       .then((res) => {
         if (ignore) return;
-        setPackages((res as any)?.data?.packages ?? []);
+        setPackages(res.data.packages ?? []);
       })
       .catch(() => { });
     return () => { ignore = true; };
@@ -444,7 +440,7 @@ export default function ReservationsPage() {
           plateNumber: selectedPlate,
           startDate: startDateTime!.toISOString(),
         });
-        const data = (res as any)?.data;
+        const data = res.data as { subscription?: unknown; checkoutUrl?: string };
         if (data?.checkoutUrl) {
           setBookingSuccess('Redirecting to PayOS payment gateway...');
           window.location.href = data.checkoutUrl;
@@ -842,54 +838,7 @@ export default function ReservationsPage() {
       />
 
       {/* ── History Modal ── */}
-      <AnimatePresence>
-        {showHistory && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md"
-            onClick={() => setShowHistory(false)}
-          >
-            {/* Background glowing flare */}
-            <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[350px] h-[350px] rounded-full bg-cyan-500/10 blur-[120px] pointer-events-none" />
-
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0, y: 15 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.95, opacity: 0, y: 15 }}
-              transition={{ type: "spring", duration: 0.4 }}
-              onClick={(e) => e.stopPropagation()}
-              className="relative max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-3xl glass-panel-white p-6 shadow-[0_12px_40px_rgba(0,0,0,0.15)] flex flex-col"
-            >
-              {/* Modal Header */}
-              <div className="mb-6 flex items-center justify-between border-b border-white/5 pb-4">
-                <div className="flex items-center gap-3">
-                  <div className="rounded-xl bg-orange-500/10 p-2 border border-orange-500/20 shadow-[0_0_15px_rgba(249,115,22,0.15)]">
-                    <CalendarClock size={20} className="text-orange-500" />
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-black text-white tracking-wide">Booking History</h2>
-                    <p className="text-[10px] text-slate-400 font-semibold tracking-wider uppercase mt-0.5">Track & manage your parking reservations</p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowHistory(false)}
-                  className="rounded-full border border-white/10 bg-slate-900/40 p-2 text-slate-400 hover:text-white hover:bg-slate-800 hover:rotate-90 transition-all duration-300"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-
-              {/* Modal Body */}
-              <div className="flex-1 overflow-auto pr-1">
-                <ReservationHistoryTab />
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <BookingHistoryModal isOpen={showHistory} onClose={() => setShowHistory(false)} />
 
       {/* ── Center Notification Popup Modal ── */}
       <BookingNotificationModal

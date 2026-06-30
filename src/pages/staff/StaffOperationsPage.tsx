@@ -22,8 +22,11 @@ import { useAssignedGates } from '@/hooks/staff/useAssignedGates';
 import { LivePlateCamera, type PlateScanResult, type LiveCameraHandle } from '@/components/staff/LivePlateCamera';
 import { LiveQRCamera } from '@/components/staff/LiveQRCamera';
 import { LivePortraitCamera } from '@/components/staff/LivePortraitCamera';
-import { useCameraDevices, type CameraRole } from '@/hooks/useCameraDevices';
+import { useCameraDevices } from '@/hooks/useCameraDevices';
 import { normalizePlate } from '@/utils/plate';
+import { CameraSetupModal } from '@/components/staff/CameraSetupModal';
+import { RejectModal } from '@/components/staff/RejectModal';
+import { UserQrInfoModal, type UserQrInfo } from '@/components/staff/UserQrInfoModal';
 
 type VehicleKind = 'car' | 'motorcycle';
 type OperationMode = 'check-in' | 'check-out';
@@ -79,12 +82,7 @@ export function StaffOperationsPage() {
   const [rejectOpen, setRejectOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   // QR user scan: thông tin tài khoản + gói đang hoạt động
-  const [userQrInfo, setUserQrInfo] = useState<{
-    fullName: string;
-    email: string;
-    walletBalance?: number;
-    activePackages: { id: string; name: string; code: string | null; plateNumber: string; endDate?: string }[];
-  } | null>(null);
+  const [userQrInfo, setUserQrInfo] = useState<UserQrInfo | null>(null);
 
   // Both vehicle types supported by default (staff can always override)
   const allowedTypes = ALLOWED_TYPES;
@@ -216,7 +214,7 @@ export function StaffOperationsPage() {
   // dung do camera chân dung (Camera 1) chụp riêng lúc check-in.
   const handleResolveIdQr = async (code: string) => {
     try {
-      const res = await staffApi.resolveQr(code);
+      const res = await staffApi.resolveQr(code, buildingId);
       const data = (res as {
         data?: {
           kind: 'plate' | 'user';
@@ -426,7 +424,7 @@ export function StaffOperationsPage() {
                     onChange={(e) => setPlateNumber(e.target.value)}
                     onBlur={(e) => { const n = normalizePlate(e.target.value); if (n) setPlateNumber(n); }}
                     placeholder="59G2-038.80"
-                    onKeyDown={(e) => { if (e.key === 'Enter' && !(!plateNumber.trim() || loading || !!buildingSupportWarning || (hasActivePackage && !selectedSlotId))) onCheckIn(); }}
+                    onKeyDown={(e) => { if (e.key === 'Enter' && !(!plateNumber.trim() || loading || !!buildingSupportWarning || (hasActivePackage && !selectedSlotId) || (checkInKind === 'standard' && !plateImage) || (checkInKind === 'standard' && freeSlots.length > 0 && !selectedSlotId))) onCheckIn(); }}
                   />
                   {vehicleBrand && (
                     <span className="inline-flex w-fit items-center gap-1 rounded-full border border-sky-500/30 bg-sky-500/10 px-2.5 py-1 text-[11px] font-semibold text-sky-300">
@@ -827,160 +825,28 @@ export function StaffOperationsPage() {
         </div>
       </section>
 
-      {/* Cài đặt camera — gán thiết bị vật lý cho từng vai trò */}
-      {cameraSettingsOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-          <motion.div initial={{ scale: 0.92, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-            className="w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-2xl"
-          >
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-primary">Thiết bị</p>
-                <h3 className="text-xl font-semibold text-foreground">Cài đặt camera</h3>
-              </div>
-              <button onClick={() => setCameraSettingsOpen(false)} className="text-muted-foreground hover:text-foreground transition">✕</button>
-            </div>
+      <CameraSetupModal
+        open={cameraSettingsOpen}
+        onClose={() => setCameraSettingsOpen(false)}
+        devices={devices}
+        assignment={assignment}
+        assign={assign}
+        requestAndRefresh={requestAndRefresh}
+      />
 
-            <p className="mb-4 text-xs text-muted-foreground">
-              Khi có nhiều camera (biển số / chân dung / QR), gán mỗi vai trò vào một thiết bị riêng để
-              mở đồng thời và chụp đúng hình. Trên máy 1 webcam thì các vai trò dùng chung 1 thiết bị.
-            </p>
+      <RejectModal
+        open={rejectOpen}
+        onClose={() => { setRejectOpen(false); setRejectReason(''); }}
+        plateNumber={plateNumber}
+        rejectReason={rejectReason}
+        onReasonChange={setRejectReason}
+        onConfirm={onReject}
+      />
 
-            <div className="space-y-3">
-              {([
-                { role: 'plate' as CameraRole, label: 'Camera 1 · Biển số' },
-                { role: 'qr' as CameraRole, label: 'Camera 2 · QR' },
-                { role: 'portrait' as CameraRole, label: 'Camera 3 · Chân dung' },
-              ]).map(({ role, label }) => (
-                <div key={role} className="grid gap-1.5">
-                  <label className="text-xs font-semibold text-foreground">{label}</label>
-                  <select
-                    value={assignment[role] ?? ''}
-                    onChange={(e) => assign(role, e.target.value)}
-                    className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground outline-none focus:border-primary/50"
-                  >
-                    <option value="">— Tự động (mặc định) —</option>
-                    {devices.map((d, i) => (
-                      <option key={d.deviceId} value={d.deviceId}>
-                        {d.label || `Camera ${i + 1}`}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              ))}
-            </div>
-
-            {devices.length === 0 && (
-              <p className="mt-3 text-[11px] text-amber-400">
-                Chưa thấy thiết bị nào — bấm “Làm mới” và cấp quyền camera cho trình duyệt.
-              </p>
-            )}
-
-            <div className="mt-5 flex justify-between gap-2">
-              <Button type="button" variant="secondary" onClick={() => void requestAndRefresh()} className="gap-1.5 text-xs">
-                <Settings size={13} /> Làm mới danh sách
-              </Button>
-              <Button onClick={() => setCameraSettingsOpen(false)} className="bg-gradient-to-r from-orange-500 to-amber-400 text-slate-950 hover:brightness-110 text-xs">
-                Xong
-              </Button>
-            </div>
-          </motion.div>
-        </div>
-      )}
-
-      {/* Từ chối check-in */}
-      {rejectOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-          <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-            className="w-full max-w-md rounded-2xl border border-rose-500/30 bg-card p-6 shadow-2xl"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-rose-400">Từ chối cho xe vào</p>
-                <h3 className="text-xl font-semibold text-foreground">Lý do từ chối</h3>
-              </div>
-              <button onClick={() => { setRejectOpen(false); setRejectReason(''); }} className="text-muted-foreground hover:text-foreground transition">✕</button>
-            </div>
-            <p className="text-xs text-muted-foreground mb-3">
-              Biển số <strong className="text-foreground font-mono">{normalizePlate(plateNumber) || plateNumber || '—'}</strong>. Hệ thống sẽ gửi thông báo kèm lý do đến tài khoản khách (nếu biển đã đăng ký).
-            </p>
-            <textarea
-              value={rejectReason}
-              onChange={(e) => setRejectReason(e.target.value)}
-              rows={3}
-              placeholder="Vd: Đăng ký xe máy nhưng thực tế là ô tô; thông tin phương tiện không khớp..."
-              className="w-full rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground outline-none focus:border-rose-500/50"
-            />
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              <Button variant="secondary" onClick={() => { setRejectOpen(false); setRejectReason(''); }} className="text-xs">Hủy</Button>
-              <Button onClick={onReject} disabled={!rejectReason.trim()} className="bg-rose-500 text-white hover:bg-rose-400 text-xs disabled:opacity-60">
-                Xác nhận từ chối
-              </Button>
-            </div>
-          </motion.div>
-        </div>
-      )}
-
-      {/* Modal: Thông tin tài khoản user từ QR scan */}
-      {userQrInfo && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-primary">Tài khoản đã quét</p>
-                <h3 className="text-lg font-semibold text-foreground">{userQrInfo.fullName}</h3>
-                <p className="text-xs text-muted-foreground">{userQrInfo.email}</p>
-              </div>
-              <button onClick={() => setUserQrInfo(null)} className="text-muted-foreground hover:text-foreground transition">✕</button>
-            </div>
-
-            {userQrInfo.walletBalance != null && (
-              <div className="mb-4 rounded-xl border border-violet-500/20 bg-violet-500/8 px-4 py-2.5 flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">Số dư ví</span>
-                <span className="font-mono font-bold text-violet-400">{userQrInfo.walletBalance.toLocaleString('vi-VN')} ₫</span>
-              </div>
-            )}
-
-            <div className="mb-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-              Gói dài hạn đang hoạt động
-            </div>
-            {userQrInfo.activePackages.length === 0 ? (
-              <p className="rounded-xl border border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
-                Khách chưa có gói dài hạn nào đang hoạt động.
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {userQrInfo.activePackages.map((pkg) => (
-                  <div key={pkg.id} className="rounded-xl border border-emerald-500/20 bg-emerald-500/8 px-4 py-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-semibold text-emerald-400">{pkg.name}</span>
-                      {pkg.code && (
-                        <span className="rounded-md border border-emerald-500/20 px-1.5 py-0.5 text-[10px] font-mono text-emerald-500">{pkg.code}</span>
-                      )}
-                    </div>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Biển số: <strong className="text-foreground font-mono">{pkg.plateNumber}</strong>
-                      {pkg.endDate && (
-                        <span className="ml-2 text-slate-500">
-                          · Hết hạn: {new Date(pkg.endDate).toLocaleDateString('vi-VN')}
-                        </span>
-                      )}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <Button onClick={() => setUserQrInfo(null)} className="mt-5 w-full" variant="secondary">
-              Đóng
-            </Button>
-          </motion.div>
-        </div>
-      )}
+      <UserQrInfoModal
+        info={userQrInfo}
+        onClose={() => setUserQrInfo(null)}
+      />
 
     </motion.div>
   );

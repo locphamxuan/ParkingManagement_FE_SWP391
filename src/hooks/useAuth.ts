@@ -21,16 +21,10 @@ export function useAuth() {
       }
     : null;
 
-  const refresh = async () => {
-    // No refresh flow implemented yet. This is a placeholder for route guards that expect it.
-    return;
-  };
-
   return {
     session,
     token,
     user,
-    refresh,
     login,
     logout,
     updateProfile,

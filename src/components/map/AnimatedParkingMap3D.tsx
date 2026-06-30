@@ -1,14 +1,14 @@
-import { useEffect, useState } from 'react';
-import { motion, useAnimation } from 'framer-motion';
+import { useEffect, useMemo, useCallback, useState } from 'react';
+import { motion, useAnimation, type MotionValue } from 'framer-motion';
 import { CartoonCar3D } from './CartoonCar3D';
 import { Activity, Info, Zap } from 'lucide-react';
 
 export interface AnimatedParkingMap3DProps {
-  rotateX?: any;
-  rotateZ?: any;
-  scale?: any;
-  x?: any;
-  y?: any;
+  rotateX?: MotionValue<number> | number;
+  rotateZ?: MotionValue<number> | number;
+  scale?: MotionValue<number> | number;
+  x?: MotionValue<number> | number;
+  y?: MotionValue<number> | number;
   interactive?: boolean;
   selectedSlot?: string | null;
   activeReservations?: Array<{ slotCode: string; plateNumber: string; vehicleType: 'car' | 'motorcycle' }>;
@@ -45,6 +45,20 @@ export function AnimatedParkingMap3D({
 
   // Exhaust smoke particle state triggers
   const [smokeParticles, setSmokeParticles] = useState<{ id: number; x: number; y: number }[]>([]);
+
+  // Memoize lookups so the slot `.map()` doesn't call .find()/.includes() per slot per render
+  const reservationByCode = useMemo(
+    () => new Map(activeReservations.map((r) => [r.slotCode, r])),
+    [activeReservations],
+  );
+  const unavailableSet = useMemo(
+    () => new Set(interactiveUnavailableSlots),
+    [interactiveUnavailableSlots],
+  );
+  const handleSlotClick = useCallback(
+    (slotCode: string) => { if (onSlotClick) onSlotClick(slotCode); },
+    [onSlotClick],
+  );
 
   useEffect(() => {
     if (interactive) {
@@ -487,8 +501,8 @@ export function AnimatedParkingMap3D({
               const isEV = id === 3;
               
               // If interactive mode, check if slot is reserved in activeReservations
-              const reservation = interactive && activeReservations?.find((r) => r.slotCode === slotCode);
-              const blockedBySlotStatus = interactiveUnavailableSlots.includes(slotCode);
+              const reservation = interactive ? reservationByCode.get(slotCode) : undefined;
+              const blockedBySlotStatus = unavailableSet.has(slotCode);
               const isOccupied = interactive 
                 ? Boolean(reservation || blockedBySlotStatus)
                 : (id === 1 || id === 2 || (id === 3 && carAState === 'parked') || (id === 4 && carBState === 'parked') || id === 5);
@@ -498,11 +512,7 @@ export function AnimatedParkingMap3D({
               return (
                 <motion.div 
                   key={id}
-                  onClick={() => {
-                    if (interactive && !isOccupied && onSlotClick) {
-                      onSlotClick(slotCode);
-                    }
-                  }}
+                  onClick={() => { if (interactive && !isOccupied) handleSlotClick(slotCode); }}
                   whileHover={interactive && !isOccupied ? { 
                     scale: 1.05, 
                     boxShadow: '0 0 15px rgba(16,185,129,0.5)',

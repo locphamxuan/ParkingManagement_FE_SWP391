@@ -105,8 +105,7 @@ function parseVietQR(qrString?: string) {
       accountNumber,
       accountName,
     };
-  } catch (e) {
-    console.error('Error parsing VietQR', e);
+  } catch {
     return null;
   }
 }
@@ -145,9 +144,7 @@ export default function WalletPage() {
             light: '#ffffff',
           },
         },
-        (error: Error | null | undefined) => {
-          if (error) console.error('QR Code generation error:', error);
-        }
+        () => undefined
       );
     }
   }, [pendingTopUp]);

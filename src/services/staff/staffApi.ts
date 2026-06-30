@@ -281,7 +281,7 @@ export const staffApi = {
     ),
 
   // Camera 2: unified QR resolver — PLT- plate token or account ID.
-  resolveQr: (code: string) =>
+  resolveQr: (code: string, buildingId?: string) =>
     api.get<
       Wrap<{
         kind: 'plate' | 'user';
@@ -293,7 +293,7 @@ export const staffApi = {
         /** Gói dài hạn đang hoạt động của user (chỉ có khi kind === 'user'). */
         activePackages?: { id: string; name: string; code: string | null; plateNumber: string; startDate?: string; endDate?: string }[];
       }>
-    >(`/staff/users/resolve-qr/${encodeURIComponent(code)}`),
+    >(`/staff/users/resolve-qr/${encodeURIComponent(code)}`, { query: buildingId ? { building: buildingId } : undefined }),
 
   checkInReservation: (code: string) =>
     api.post(`/staff/reservations/${code}/check-in`),

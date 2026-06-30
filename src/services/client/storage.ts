@@ -1,7 +1,7 @@
 const STORAGE_KEYS = {
-  apiBase: 'pbms.apiBase',
   token: 'pbms.token',
   user: 'pbms.user',
+  forgotEmailPending: 'pbms.forgotEmail_pending',
 } as const;
 
 export interface LocalSession {
@@ -16,14 +16,6 @@ export function loadJson<T = unknown>(key: string): T | null {
   } catch {
     return null;
   }
-}
-
-export function loadApiBase(defaultValue: string): string {
-  return localStorage.getItem(STORAGE_KEYS.apiBase) || defaultValue;
-}
-
-export function saveApiBase(apiBase: string): void {
-  localStorage.setItem(STORAGE_KEYS.apiBase, apiBase);
 }
 
 export function loadSession(): LocalSession {
@@ -47,4 +39,16 @@ export function saveSession(session: LocalSession): void {
 export function clearSession(): void {
   localStorage.removeItem(STORAGE_KEYS.token);
   localStorage.removeItem(STORAGE_KEYS.user);
+}
+
+export function saveForgotEmail(email: string): void {
+  localStorage.setItem(STORAGE_KEYS.forgotEmailPending, email);
+}
+
+export function loadForgotEmail(): string | null {
+  return localStorage.getItem(STORAGE_KEYS.forgotEmailPending);
+}
+
+export function clearForgotEmail(): void {
+  localStorage.removeItem(STORAGE_KEYS.forgotEmailPending);
 }

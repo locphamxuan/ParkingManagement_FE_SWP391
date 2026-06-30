@@ -19,7 +19,7 @@ import {
   revokeManagerFromBuilding,
   assignManagerToBuilding,
   assignStaffToBuilding,
-} from '@/services/admin/adminCrud';
+} from '@/services/admin/adminApi';
 import {
   adminApi,
   type AdminUser,
@@ -132,16 +132,13 @@ export function BuildingsPage() {
       setIsLoadingStaff(true);
       try {
         const userRes = await adminApi.users.list({ role: 'staff', limit: '200' });
-        const raw = userRes as unknown as { data?: { items?: AdminUser[] } | AdminUser[] };
-        const list =
-          (raw?.data as { items?: AdminUser[] })?.items ??
-          (Array.isArray(raw?.data) ? (raw.data as AdminUser[]) : []);
+        const list = userRes.data?.items ?? [];
         const unassigned = list.filter(
           (u) => !u.assignedBuildings || u.assignedBuildings.length === 0
         );
         setUnassignedStaff(unassigned);
       } catch (err) {
-        console.error('Không thể tải danh sách nhân viên:', err);
+        setUnassignedStaff([]);
       } finally {
         setIsLoadingStaff(false);
       }
@@ -150,16 +147,13 @@ export function BuildingsPage() {
         setIsLoadingManagers(true);
         try {
           const userRes = await adminApi.users.list({ role: 'manager', limit: '200' });
-          const raw = userRes as unknown as { data?: { items?: AdminUser[] } | AdminUser[] };
-          const list =
-            (raw?.data as { items?: AdminUser[] })?.items ??
-            (Array.isArray(raw?.data) ? (raw.data as AdminUser[]) : []);
+          const list = userRes.data?.items ?? [];
           const unassigned = list.filter(
             (u) => !u.assignedBuildings || u.assignedBuildings.length === 0
           );
           setUnassignedManagers(unassigned);
         } catch (err) {
-          console.error('Không thể tải danh sách quản lý:', err);
+          setUnassignedManagers([]);
         } finally {
           setIsLoadingManagers(false);
         }
