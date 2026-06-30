@@ -20,7 +20,7 @@ export function StaffShiftsPage() {
         setItems(extractShifts(res));
         setError(null);
       })
-      .catch((err) => setError(err instanceof Error ? err.message : 'Tải thất bại'))
+      .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load'))
       .finally(() => setLoading(false));
   }, [from, to]);
 
@@ -31,7 +31,7 @@ export function StaffShiftsPage() {
   const columns: DataColumn<MyShift>[] = [
     {
       key: 'workDate',
-      title: 'Ngày',
+      title: 'Date',
       render: (row) => new Date(row.workDate).toLocaleDateString('vi-VN'),
     },
     {
@@ -39,20 +39,20 @@ export function StaffShiftsPage() {
       title: 'Ca',
       render: (row) => `${row.shift.code} — ${row.shift.startTime}–${row.shift.endTime}`,
     },
-    { key: 'building', title: 'Tòa nhà', render: (row) => row.building.name },
+    { key: 'building', title: 'Building', render: (row) => row.building.name },
     {
       key: 'status',
-      title: 'Trạng thái',
+      title: 'Status',
       render: (row) => <StatusBadge status={row.status} />,
     },
-    { key: 'note', title: 'Ghi chú', render: (row) => row.note ?? '—' },
+    { key: 'note', title: 'Note', render: (row) => row.note ?? '—' },
   ];
 
   return (
     <div className="grid gap-4">
       <div className="flex flex-wrap items-end gap-3 rounded-lg border border-border bg-card p-3">
         <div className="grid gap-1">
-          <label className="text-xs uppercase text-muted-foreground">Từ ngày</label>
+          <label className="text-xs uppercase text-muted-foreground">From date</label>
           <input
             type="date"
             className="h-9 rounded-md border border-border bg-card px-3 text-sm"
@@ -61,7 +61,7 @@ export function StaffShiftsPage() {
           />
         </div>
         <div className="grid gap-1">
-          <label className="text-xs uppercase text-muted-foreground">Đến ngày</label>
+          <label className="text-xs uppercase text-muted-foreground">To date</label>
           <input
             type="date"
             className="h-9 rounded-md border border-border bg-card px-3 text-sm"
@@ -77,17 +77,17 @@ export function StaffShiftsPage() {
       </div>
 
       {loading ? (
-        <div className="text-sm text-muted-foreground">Đang tải...</div>
+        <div className="text-sm text-muted-foreground">Loading...</div>
       ) : error ? (
         <div className="text-sm text-red-600">{error}</div>
       ) : items.length === 0 ? (
         <Card>
           <CardContent className="p-6 text-sm text-muted-foreground">
-            Không có ca nào trong khoảng thời gian này.
+            No shifts found in this date range.
           </CardContent>
         </Card>
       ) : (
-        <DataTable title={`Ca làm việc (${items.length})`} rows={items} columns={columns} />
+        <DataTable title={`Shifts (${items.length})`} rows={items} columns={columns} />
       )}
     </div>
   );

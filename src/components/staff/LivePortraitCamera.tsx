@@ -6,7 +6,7 @@ import { videoConstraintFor } from '@/hooks/useCameraDevices';
 interface LivePortraitCameraProps {
   /** Pause stream rendering (kept for API parity; portrait cam always on). */
   paused?: boolean;
-  /** Thiết bị camera vật lý gán cho vai trò chân dung. */
+  /** Devices camera vật lý gán cho vai trò chân dung. */
   deviceId?: string;
 }
 
@@ -42,7 +42,7 @@ export const LivePortraitCamera = forwardRef<LiveCameraHandle, LivePortraitCamer
       let cancelled = false;
 
       const timeout = setTimeout(() => {
-        if (!cancelled) setError('Camera chưa sẵn sàng sau 8 giây. Bấm "Thử lại" hoặc kiểm tra quyền camera.');
+        if (!cancelled) setError('Camera is not ready after 8 seconds. Click "Retry" or check camera permissions.');
       }, 8000);
 
       (async () => {
@@ -72,15 +72,15 @@ export const LivePortraitCamera = forwardRef<LiveCameraHandle, LivePortraitCamer
           if (!cancelled) {
             const name = (err as { name?: string })?.name ?? '';
             if (name === 'NotAllowedError' || name === 'PermissionDeniedError' || name === 'SecurityError') {
-              setError('Trình duyệt chưa cấp quyền camera. Bấm biểu tượng khóa trên thanh địa chỉ → Camera → Cho phép.');
+              setError('Camera permission has not been granted. Click the lock icon in the address bar -> Camera -> Allow.');
             } else if (name === 'NotFoundError' || name === 'DevicesNotFoundError' || name === 'NotSupportedError') {
-              setError('Không tìm thấy camera. Bấm Thử lại hoặc Bỏ qua để tiếp tục không có ảnh.');
+              setError('No camera found. Click Retry or Skip to continue without a photo.');
             } else if (name === 'NotReadableError' || name === 'TrackStartError') {
-              setError('Camera đang bị ứng dụng khác sử dụng. Đóng app đó rồi bấm Thử lại.');
+              setError('Camera is being used by another app. Close it and click Retry.');
             } else if (name === 'AbortError') {
-              setError('Kết nối camera bị hủy. Bấm Thử lại.');
+              setError('Camera connection was interrupted. Click Retry.');
             } else {
-              setError(`Không thể truy cập camera chân dung (${name || 'lỗi không xác định'}). Bấm Thử lại.`);
+              setError(`Unable to access portrait camera (${name || 'unknown error'}). Click Retry.`);
             }
           }
         }
@@ -105,7 +105,7 @@ export const LivePortraitCamera = forwardRef<LiveCameraHandle, LivePortraitCamer
       <div className="rounded-xl border border-border bg-card/40 p-3 space-y-2.5">
         <div className="flex items-center gap-2">
           <UserSquare size={15} className="text-violet-400" />
-          <p className="text-sm font-semibold text-foreground">Camera 3 · Chân dung tài xế</p>
+          <p className="text-sm font-semibold text-foreground">Camera 3 · Driver Portrait</p>
         </div>
 
         <div className="relative aspect-[4/3] overflow-hidden rounded-lg border border-white/10 bg-black/60">
@@ -135,14 +135,14 @@ export const LivePortraitCamera = forwardRef<LiveCameraHandle, LivePortraitCamer
                 onClick={handleRetry}
                 className="inline-flex items-center gap-1.5 rounded-lg bg-rose-500/20 border border-rose-500/30 px-3 py-1.5 text-xs font-semibold text-rose-300 hover:bg-rose-500/30 transition"
               >
-                <RefreshCw size={12} /> Thử lại
+                <RefreshCw size={12} /> Retry
               </button>
             </div>
           )}
         </div>
 
         <p className="text-center text-[11px] text-muted-foreground">
-          Ảnh chân dung được chụp khi check-in để đối chiếu lúc lấy xe.
+          The driver portrait is captured at check-in for check-out comparison.
         </p>
 
         <canvas ref={canvasRef} className="hidden" />

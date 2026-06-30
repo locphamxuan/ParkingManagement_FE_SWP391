@@ -21,15 +21,15 @@ import { staffApi, extractBuildings, type StaffBuilding } from '@/services/staff
 import { cn } from '@/utils/cn';
 
 const pageTitle: Record<string, string> = {
-  '': 'Tổng quan',
-  dashboard: 'Tổng quan',
-  operations: 'Check-in xe vào',
-  checkout: 'Check-out xe ra',
-  parked: 'Xe đang đỗ',
-  reservations: 'Đặt chỗ trước',
-  'my-shifts': 'Ca làm việc của tôi',
-  sessions: 'Ca làm việc hôm nay',
-  incidents: 'Quản lý sự cố',
+  '': 'Overview',
+  dashboard: 'Overview',
+  operations: 'Vehicle Check-in',
+  checkout: 'Vehicle Check-out',
+  parked: 'Parked Vehicles',
+  reservations: 'Reservations',
+  'my-shifts': 'My Shifts',
+  sessions: "Today's Shift",
+  incidents: 'Incident Management',
 };
 
 export function StaffLayout() {
@@ -42,18 +42,18 @@ export function StaffLayout() {
   const [bootstrapping, setBootstrapping] = useState(true);
   const [collapsed, setCollapsed] = useState(false);
 
-  // Cổng vào → check-in (cổng vào mới hiện tab này). Trang "Xe đang đỗ" hiện cho
-  // cả hai loại nhân viên, nhưng chỉ nhân viên cổng ra mới thao tác thanh toán.
+  // Entry Gate → check-in (gate vào mới hiện tab này). Trang "Parked Vehicles" hiện cho
+  // cả hai loại nhân viên, nhưng chỉ nhân viên gate ra mới thao tác thanh toán.
   const navItems = useMemo(
     () => [
-      { to: '', label: 'Tổng quan', icon: LayoutDashboard, end: true },
-      ...(showCheckIn ? [{ to: 'operations', label: 'Check-in xe vào', icon: ScanLine }] : []),
-      ...(showCheckOut ? [{ to: 'checkout', label: 'Check-out xe ra', icon: LogOut }] : []),
-      { to: 'parked', label: 'Xe đang đỗ', icon: Car },
-      { to: 'reservations', label: 'Đặt chỗ trước', icon: CalendarCheck2 },
-      { to: 'my-shifts', label: 'Ca làm việc', icon: CalendarClock },
-      ...(showCheckOut ? [{ to: 'sessions', label: 'Doanh thu ca', icon: Wallet }] : []),
-      { to: 'incidents', label: 'Sự cố', icon: ShieldAlert },
+      { to: '', label: 'Overview', icon: LayoutDashboard, end: true },
+      ...(showCheckIn ? [{ to: 'operations', label: 'Vehicle Check-in', icon: ScanLine }] : []),
+      ...(showCheckOut ? [{ to: 'checkout', label: 'Vehicle Check-out', icon: LogOut }] : []),
+      { to: 'parked', label: 'Parked Vehicles', icon: Car },
+      { to: 'reservations', label: 'Reservations', icon: CalendarCheck2 },
+      { to: 'my-shifts', label: 'Shifts', icon: CalendarClock },
+      ...(showCheckOut ? [{ to: 'sessions', label: 'Shift Revenue', icon: Wallet }] : []),
+      { to: 'incidents', label: 'Incidents', icon: ShieldAlert },
     ],
     [showCheckIn, showCheckOut],
   );
@@ -76,7 +76,7 @@ export function StaffLayout() {
     return tail.split('/')[0];
   }, [location.pathname]);
 
-  const title = pageTitle[slug] ?? 'Nhân viên';
+  const title = pageTitle[slug] ?? 'Staff';
   const selectedBuilding = buildings.find((b) => b._id === selectedBuildingId);
   const isProfileRoute = Boolean(useMatch('/staff/profile'));
 
@@ -108,7 +108,7 @@ export function StaffLayout() {
                 <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-slate-500">
                   PBMS Staff
                 </p>
-                <p className="text-xs font-extrabold text-slate-100">Nhân viên vận hành</p>
+                <p className="text-xs font-extrabold text-slate-100">Operations Staff</p>
                 {selectedBuilding ? (
                   <p className="mt-0.5 truncate text-[10px] text-slate-500">
                     {selectedBuilding.code} · {selectedBuilding.name}
@@ -167,7 +167,7 @@ export function StaffLayout() {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-600">
-                  Nhân viên
+                  Staff
                 </p>
                 <h1 className="text-lg font-semibold text-white">{title}</h1>
               </div>
@@ -217,7 +217,7 @@ export function StaffLayout() {
                           </div>
                           <div className="min-w-0">
                             <p className="text-sm font-semibold text-white truncate">
-                              {user?.fullName || 'Nhân viên'}
+                              {user?.fullName || 'Staff'}
                             </p>
                             <p className="text-xs text-slate-400 truncate">{user?.email}</p>
                             <p className="mt-0.5 text-[10px] font-bold uppercase tracking-widest text-emerald-500">
@@ -229,7 +229,7 @@ export function StaffLayout() {
                         {/* Building info */}
                         {selectedBuilding && (
                           <div className="mt-3 rounded-xl border border-white/8 bg-slate-800/60 px-3 py-2">
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Tòa nhà phụ trách</p>
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Assigned Building</p>
                             <p className="mt-0.5 text-xs font-semibold text-slate-200">
                               {selectedBuilding.name}
                             </p>
@@ -249,14 +249,14 @@ export function StaffLayout() {
                           className="flex cursor-pointer items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-300 outline-none transition-all duration-200 hover:bg-emerald-500/10 hover:text-emerald-400 focus:bg-emerald-500/10 focus:text-emerald-400"
                           onClick={() => navigate('/staff/profile')}
                         >
-                          <User size={14} className="text-emerald-400" /> Xem hồ sơ
+                          <User size={14} className="text-emerald-400" /> View Profile
                         </DropdownMenu.Item>
                         <DropdownMenu.Separator className="my-1.5 h-px bg-white/8" />
                         <DropdownMenu.Item
                           className="flex cursor-pointer items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs font-bold text-rose-400 outline-none transition-all duration-200 hover:bg-rose-500/10 hover:text-rose-300 focus:bg-rose-500/10 focus:text-rose-300"
                           onClick={onLogout}
                         >
-                          <LogOut size={14} /> Đăng xuất
+                          <LogOut size={14} /> Sign Out
                         </DropdownMenu.Item>
                       </div>
                     </DropdownMenu.Content>
@@ -270,11 +270,11 @@ export function StaffLayout() {
           <main className="flex-1 p-4 md:p-6">
             {bootstrapping && !isProfileRoute ? (
               <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-slate-400">
-                Đang tải...
+                Loading...
               </div>
             ) : !selectedBuildingId && !isProfileRoute ? (
               <div className="rounded-2xl border border-amber-500/20 bg-amber-500/8 p-6 text-sm text-amber-200">
-                Tài khoản này chưa được gán tòa nhà nào. Vui lòng liên hệ quản lý.
+                This account has not been assigned to any building. Please contact your manager.
               </div>
             ) : (
               <Outlet
