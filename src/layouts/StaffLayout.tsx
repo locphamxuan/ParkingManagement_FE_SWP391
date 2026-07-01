@@ -34,10 +34,11 @@ const BASE_PAGE_TITLE: Record<string, string> = {
 export function StaffLayout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout } = useAuth();
+  const { session, user, logout } = useAuth();
   const { showCheckIn, showCheckOut } = useAssignedGates();
+  const assignedBuildingId = session?.assignedBuildingIds?.[0] ?? null;
   const [buildings, setBuildings] = useState<StaffBuilding[]>([]);
-  const [selectedBuildingId, setSelectedBuildingId] = useState<string | null>(null);
+  const [selectedBuildingId, setSelectedBuildingId] = useState<string | null>(assignedBuildingId);
   const [bootstrapping, setBootstrapping] = useState(true);
   const [collapsed, setCollapsed] = useState(false);
 
@@ -58,16 +59,36 @@ export function StaffLayout() {
   );
 
   useEffect(() => {
-    staffApi
-      .buildings()
-      .then((res) => {
-        const list = extractBuildings(res.data as StaffBuilding[] | { items: StaffBuilding[] });
-        setBuildings(list);
-        setSelectedBuildingId(list[0]?._id ?? null);
-      })
-      .catch(() => undefined)
-      .finally(() => setBootstrapping(false));
-  }, []);
+    const assignedBuildingId = session?.assignedBuildingIds?.[0] ?? null;
+
+    const loadBuildings = async () => {
+      try {
+        const res = await staffApi.buildings();
+        const list = extractBuildings(res);
+        if (list.length > 0) {
+          setBuildings(list);
+          setSelectedBuildingId((prev) => prev || list[0]._id || assignedBuildingId);
+        } else if (assignedBuildingId) {
+          const detailRes = await staffApi.buildingDetail(assignedBuildingId);
+          const building = detailRes && typeof detailRes === 'object' && 'data' in detailRes ? (detailRes as { data?: StaffBuilding }).data : detailRes as StaffBuilding;
+          if (building && building._id) {
+            setBuildings([building]);
+            setSelectedBuildingId(building._id);
+          } else {
+            setSelectedBuildingId(null);
+          }
+        } else {
+          setSelectedBuildingId(null);
+        }
+      } catch {
+        setSelectedBuildingId(assignedBuildingId);
+      } finally {
+        setBootstrapping(false);
+      }
+    };
+
+    void loadBuildings();
+  }, [session?.assignedBuildingIds]);
 
   const slug = useMemo(() => {
     const tail = location.pathname.replace(/^\/staff\/?/, '');
