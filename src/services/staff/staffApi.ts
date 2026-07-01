@@ -12,6 +12,29 @@ export interface StaffBuilding {
   contactPhone?: string;
 }
 
+function normalizeBuilding(payload: unknown): StaffBuilding | null {
+  if (!payload || typeof payload !== 'object') return null;
+  const raw = payload as Record<string, unknown>;
+  const id = String(raw._id ?? raw.id ?? '').trim();
+  if (!id) return null;
+
+  return {
+    _id: id,
+    name: String(raw.name ?? ''),
+    code: String(raw.code ?? ''),
+    status:
+      raw.status === 'inactive' || raw.status === 'maintenance'
+        ? (raw.status as 'inactive' | 'maintenance')
+        : 'active',
+    operatingHours: {
+      open: String((raw.operatingHours as Record<string, unknown> | undefined)?.open ?? '00:00'),
+      close: String((raw.operatingHours as Record<string, unknown> | undefined)?.close ?? '00:00'),
+    },
+    address: (raw.address as { fullAddress?: string } | undefined) ?? undefined,
+    contactPhone: typeof raw.contactPhone === 'string' ? raw.contactPhone : undefined,
+  };
+}
+
 export interface MyShift {
   _id: string;
   shift: { _id: string; code: string; name: string; startTime: string; endTime: string };
@@ -399,11 +422,20 @@ export const extractShifts = (payload: Wrap<{ items: MyShift[] } | MyShift[]>): 
   return unwrapList(payload);
 };
 
-export const extractBuildings = (
-  payload: StaffBuilding[] | { items: StaffBuilding[] }
-): StaffBuilding[] => {
-  if (Array.isArray(payload)) return payload;
-  return (payload as { items?: StaffBuilding[] }).items ?? [];
+export const extractBuildings = (payload: unknown): StaffBuilding[] => {
+  if (!payload || typeof payload !== 'object') return [];
+  if (Array.isArray(payload)) {
+    return payload
+      .map((item) => normalizeBuilding(item))
+      .filter((item): item is StaffBuilding => item !== null);
+  }
+
+  const candidate = payload as { data?: unknown; items?: unknown };
+  if (candidate.data) return extractBuildings(candidate.data);
+  if (Array.isArray(candidate.items)) return extractBuildings(candidate.items);
+
+  const single = normalizeBuilding(payload);
+  return single ? [single] : [];
 };
 
 export const extractSessions = (payload: unknown): ParkingSession[] => {
