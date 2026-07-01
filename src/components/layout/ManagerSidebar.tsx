@@ -42,7 +42,7 @@ const modules = [
   { to: 'staff', label: 'Nhân viên', icon: User },
   { to: 'reviews', label: 'Xem đánh giá', icon: MessageSquare },
   { to: 'wallet', label: 'Ví tòa nhà', icon: Wallet },
-=======
+
   { to: '', label: 'Overall', icon: LayoutDashboard },
   { to: 'buildings', label: 'Building', icon: Building2 },
   { to: 'vehicle-types', label: 'Vehicle Type', icon: Truck },

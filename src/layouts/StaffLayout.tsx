@@ -29,16 +29,6 @@ const BASE_PAGE_TITLE: Record<string, string> = {
   reservations: 'Đặt chỗ trước',
   'my-shifts': 'Ca làm việc của tôi',
   incidents: 'Quản lý sự cố',
-const pageTitle: Record<string, string> = {
-  '': 'Overview',
-  dashboard: 'Overview',
-  operations: 'Vehicle Check-in',
-  checkout: 'Vehicle Check-out',
-  parked: 'Parked Vehicles',
-  reservations: 'Reservations',
-  'my-shifts': 'My Shifts',
-  sessions: "Today's Shift",
-  incidents: 'Incident Management',
 };
 
 export function StaffLayout() {
@@ -63,14 +53,6 @@ export function StaffLayout() {
       { to: 'my-shifts', label: 'Ca làm việc', icon: CalendarClock },
       ...(showCheckIn || showCheckOut ? [{ to: 'sessions', label: showCheckOut ? 'Doanh thu ca' : 'Lịch sử xe vào', icon: showCheckOut ? Wallet : Car }] : []),
       { to: 'incidents', label: 'Sự cố', icon: ShieldAlert },
-      { to: '', label: 'Overview', icon: LayoutDashboard, end: true },
-      ...(showCheckIn ? [{ to: 'operations', label: 'Vehicle Check-in', icon: ScanLine }] : []),
-      ...(showCheckOut ? [{ to: 'checkout', label: 'Vehicle Check-out', icon: LogOut }] : []),
-      { to: 'parked', label: 'Parked Vehicles', icon: Car },
-      { to: 'reservations', label: 'Reservations', icon: CalendarCheck2 },
-      { to: 'my-shifts', label: 'Shifts', icon: CalendarClock },
-      ...(showCheckOut ? [{ to: 'sessions', label: 'Shift Revenue', icon: Wallet }] : []),
-      { to: 'incidents', label: 'Incidents', icon: ShieldAlert },
     ],
     [showCheckIn, showCheckOut],
   );
@@ -96,7 +78,6 @@ export function StaffLayout() {
   const title = slug === 'sessions'
     ? (showCheckOut ? 'Doanh thu ca' : 'Lịch sử xe vào')
     : (BASE_PAGE_TITLE[slug] ?? 'Nhân viên');
-  const title = pageTitle[slug] ?? 'Staff';
   const selectedBuilding = buildings.find((b) => b._id === selectedBuildingId);
   const isProfileRoute = Boolean(useMatch('/staff/profile'));
 

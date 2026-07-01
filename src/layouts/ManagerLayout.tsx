@@ -24,22 +24,6 @@ const titles: Record<string, string> = {
   '/manager/wallet': 'Ví tòa nhà',
   '/manager/profile': 'Xem hồ sơ',
   '/manager/settings': 'Cài đặt',
-  '/manager': 'Manager Dashboard',
-  '/manager/dashboard': 'Management report',
-  '/manager/buildings': 'Building Management',
-  '/manager/vehicle-types': 'Vehicle Type',
-  '/manager/floors': 'Floor',
-  '/manager/gates': 'Gate',
-  '/manager/slots': 'Gate',
-  '/manager/operating-hours': 'Operating Hour',
-  '/manager/price-policies': 'Price Policy',
-  '/manager/reservation-policy': 'Reservation Policy',
-  '/manager/packages': 'Package',
-  '/manager/shifts': 'Shilf',
-  '/manager/reviews': 'Review',
-  '/manager/wallet': 'Wallet',
-  '/manager/profile': 'Profile',
-  '/manager/settings': 'Setting',
 };
 
 export function ManagerLayout() {
