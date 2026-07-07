@@ -100,6 +100,19 @@ describe('User — reservations', () => {
     });
   });
 
+  it('get: trả về chi tiết đặt chỗ theo ID', async () => {
+    const listRes = await userApi.reservations.list({ limit: 1 });
+    const first = listRes.data.items[0];
+    if (!first) return;
+
+    const res = await userApi.reservations.get(first._id);
+    expect(res.data).toBeDefined();
+    expect(res.data.reservation).toBeDefined();
+    expect(res.data.reservation._id).toBe(first._id);
+    expect(res.data.reservation).toHaveProperty('plateNumber');
+    expect(res.data.reservation).toHaveProperty('status');
+  });
+
   it('estimate: trả về phí ước tính + số tiền cọc (15%)', async () => {
     // Lấy building và vehicleType thật từ BE
     const buildingRes = await userApi.buildings.list();
@@ -148,6 +161,18 @@ describe('User — parkingHistory', () => {
       expect(s).not.toHaveProperty('paymentStatus');
     }
   });
+
+  it('get: trả về chi tiết phiên gửi xe theo ID', async () => {
+    const listRes = await userApi.parkingHistory.list({ limit: 1 });
+    const first = listRes.data.items[0];
+    if (!first) return;
+
+    const res = await userApi.parkingHistory.get(first._id);
+    expect(res.data).toBeDefined();
+    expect(res.data.session).toBeDefined();
+    expect(res.data.session._id).toBe(first._id);
+    expect(res.data.session).toHaveProperty('plateNumber');
+  });
 });
 
 // ── LONG-TERM PACKAGES ────────────────────────────────────────────────────────
@@ -166,6 +191,19 @@ describe('User — longTermPackages', () => {
       expect(typeof pkg.durationDays).toBe('number');
     }
   });
+
+  it('get: trả về chi tiết gói theo ID', async () => {
+    const listRes = await userApi.longTermPackages.list();
+    const first = listRes.data.packages[0];
+    if (!first) return;
+
+    const res = await userApi.longTermPackages.get(first._id);
+    expect(res.data).toBeDefined();
+    expect(res.data.package).toBeDefined();
+    expect(res.data.package._id).toBe(first._id);
+    expect(res.data.package).toHaveProperty('name');
+    expect(typeof res.data.package.price).toBe('number');
+  });
 });
 
 // ── LONG-TERM SUBSCRIPTIONS ───────────────────────────────────────────────────
@@ -183,6 +221,19 @@ describe('User — longTermSubscriptions', () => {
       expect(sub).toHaveProperty('endDate');
       expect(['pending', 'active', 'expired', 'cancelled']).toContain(sub.status);
     }
+  });
+
+  it('get: trả về chi tiết đăng ký gói theo ID', async () => {
+    const listRes = await userApi.longTermSubscriptions.list({ limit: 1 });
+    const first = listRes.data.items[0];
+    if (!first) return;
+
+    const res = await userApi.longTermSubscriptions.get(first._id);
+    expect(res.data).toBeDefined();
+    expect(res.data.subscription).toBeDefined();
+    expect(res.data.subscription._id).toBe(first._id);
+    expect(res.data.subscription).toHaveProperty('startDate');
+    expect(['pending', 'active', 'expired', 'cancelled']).toContain(res.data.subscription.status);
   });
 });
 
@@ -209,9 +260,9 @@ describe('User — wallet', () => {
   it('get: trả về ví với balance là số', async () => {
     const res = await userApi.wallet.get();
     expect(res.data).toBeDefined();
-    expect(res.data.wallet).toBeDefined();
-    expect(typeof res.data.wallet.balance).toBe('number');
-    expect(res.data.wallet.balance).toBeGreaterThanOrEqual(0);
+    // BE trả về { walletBalance } trực tiếp, không phải { wallet: { balance } }
+    expect(typeof res.data.walletBalance).toBe('number');
+    expect(res.data.walletBalance).toBeGreaterThanOrEqual(0);
   });
 
   it('transactions: trả về lịch sử giao dịch ví', async () => {

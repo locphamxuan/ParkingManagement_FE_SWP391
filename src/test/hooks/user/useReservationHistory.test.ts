@@ -35,13 +35,15 @@ function makeReservation(id: string, status = 'pending') {
   };
 }
 
-function makeListResponse(items: unknown[], total = items.length) {
+type ListResponse = Awaited<ReturnType<typeof userApi.reservations.list>>;
+
+function makeListResponse(items: unknown[], total = items.length): ListResponse {
   return {
     data: {
-      items,
+      items: items as ListResponse['data']['items'],
       pagination: { totalPages: Math.ceil(total / 10), total, page: 1, limit: 10 },
     },
-  };
+  } as unknown as ListResponse;
 }
 
 describe('useReservationHistory', () => {
@@ -100,7 +102,9 @@ describe('useReservationHistory', () => {
   it('handleCancel: cập nhật status item thành cancelled', async () => {
     const items = [makeReservation('r1', 'pending'), makeReservation('r2', 'pending')];
     vi.mocked(userApi.reservations.list).mockResolvedValue(makeListResponse(items));
-    vi.mocked(userApi.reservations.cancel).mockResolvedValue(undefined);
+    vi.mocked(userApi.reservations.cancel).mockResolvedValue(
+      undefined as unknown as Awaited<ReturnType<typeof userApi.reservations.cancel>>,
+    );
 
     const { result } = renderHook(() => useReservationHistory());
     await waitFor(() => expect(result.current.loading).toBe(false));
@@ -138,8 +142,10 @@ describe('useReservationHistory', () => {
     vi.mocked(userApi.reservations.list).mockResolvedValue(
       makeListResponse([makeReservation('r1')]),
     );
+    type CancelReturn = ReturnType<typeof userApi.reservations.cancel>;
     vi.mocked(userApi.reservations.cancel).mockReturnValue(
-      new Promise<void>((res) => { resolve = res; }),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      new Promise<void>((res) => { resolve = res; }) as unknown as CancelReturn,
     );
 
     const { result } = renderHook(() => useReservationHistory());

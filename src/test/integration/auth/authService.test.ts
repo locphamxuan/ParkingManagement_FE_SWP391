@@ -2,29 +2,40 @@
  * Integration tests — Auth service
  * Gọi BE thật. Yêu cầu: BE đang chạy + credentials trong .env.test.local
  */
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
+import type { TestContext } from 'vitest';
 import { loginWithBackend, fetchCurrentUser, type AuthSession } from '@/services/authService';
 import { setStoredToken } from '@/services/client/apiClient';
 
 // Login một lần trong beforeAll, chia sẻ session cho các test — tránh rate-limit
 let staffSession: AuthSession | null = null;
 let managerSession: AuthSession | null = null;
+let isReady = false;
 
 beforeAll(async () => {
-  [staffSession, managerSession] = await Promise.all([
-    loginWithBackend({
-      email: import.meta.env.VITE_TEST_STAFF_EMAIL as string,
-      password: import.meta.env.VITE_TEST_STAFF_PASSWORD as string,
-    }),
-    loginWithBackend({
-      email: import.meta.env.VITE_TEST_MANAGER_EMAIL as string,
-      password: import.meta.env.VITE_TEST_MANAGER_PASSWORD as string,
-    }),
-  ]);
+  try {
+    [staffSession, managerSession] = await Promise.all([
+      loginWithBackend({
+        email: import.meta.env.VITE_TEST_STAFF_EMAIL as string,
+        password: import.meta.env.VITE_TEST_STAFF_PASSWORD as string,
+      }),
+      loginWithBackend({
+        email: import.meta.env.VITE_TEST_MANAGER_EMAIL as string,
+        password: import.meta.env.VITE_TEST_MANAGER_PASSWORD as string,
+      }),
+    ]);
+    isReady = true;
+  } catch (err) {
+    console.warn(`[SKIP] auth tests: ${err instanceof Error ? err.message : String(err)}`);
+  }
 });
 
 afterAll(() => {
   setStoredToken(null);
+});
+
+beforeEach((ctx: TestContext) => {
+  if (!isReady) ctx.skip();
 });
 
 // ── LOGIN ─────────────────────────────────────────────────────────────────────

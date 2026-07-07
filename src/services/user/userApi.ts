@@ -421,7 +421,7 @@ export const userApi = {
   // ========== WALLET ==========
   wallet: {
     get: () =>
-      api.get<Wrap<{ wallet: UserWallet }>>('/users/wallet'),
+      api.get<Wrap<{ walletBalance: number }>>('/users/wallet'),
 
     transactions: (query?: { limit?: number; page?: number }) =>
       api.get<Wrap<ListResult<UserWalletTransaction>>>('/users/wallet/transactions', { query }),

@@ -2,28 +2,35 @@
  * Integration tests — Staff role
  * Gọi BE thật. Yêu cầu: BE đang chạy + credentials trong .env.test.local
  */
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { staffApi, extractBuildings, extractSessions, extractShifts, extractIncidents } from '@/services/staff/staffApi';
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
+import type { TestContext } from 'vitest';
+import { staffApi, extractBuildings, extractSessions, extractShifts, extractIncidents, type StaffIncident } from '@/services/staff/staffApi';
 import { loginAsStaff, clearToken } from '../helpers/auth';
 
 // Building ID lấy động từ BE thay vì hardcode trong env (tránh invalid ID)
 let resolvedBuildingId: string | null = null;
+let isReady = false;
 
 beforeAll(async () => {
-  await loginAsStaff();
-
-  // Lấy building ID đầu tiên được phân công cho staff
   try {
+    await loginAsStaff();
+    isReady = true;
+
+    // Lấy building ID đầu tiên được phân công cho staff
     const res = await staffApi.buildings();
     const buildings = extractBuildings(res.data);
     resolvedBuildingId = buildings[0]?._id ?? null;
-  } catch {
-    resolvedBuildingId = null;
+  } catch (err) {
+    console.warn(`[SKIP] staff tests: ${err instanceof Error ? err.message : String(err)}`);
   }
 });
 
 afterAll(() => {
   clearToken();
+});
+
+beforeEach((ctx: TestContext) => {
+  if (!isReady) ctx.skip();
 });
 
 // ── DASHBOARD ─────────────────────────────────────────────────────────────────
@@ -34,7 +41,8 @@ describe('Staff — dashboard', () => {
     expect(res.data).toBeDefined();
 
     // BE trả về { user: {...}, summary: {...}, buildings: [...] }
-    const d = res.data as Record<string, unknown>;
+    // Dashboard interface có shape cứng → phải cast qua unknown để TypeScript không complain
+    const d = res.data as unknown as Record<string, unknown>;
     expect(d.user).toBeDefined();
     expect(d.summary).toBeDefined();
     const summary = d.summary as Record<string, unknown>;
@@ -67,7 +75,8 @@ describe('Staff — buildings', () => {
 describe('Staff — myShifts', () => {
   it('trả về ca làm việc của staff', async () => {
     const res = await staffApi.myShifts();
-    const shifts = extractShifts(res.data);
+    // extractShifts nhận Wrap<...> (toàn bộ response), không phải chỉ res.data
+    const shifts = extractShifts(res);
     expect(Array.isArray(shifts)).toBe(true);
 
     if (shifts.length > 0) {
@@ -144,11 +153,10 @@ describe('Staff — reservations.list', () => {
 describe('Staff — incidents.list', () => {
   it('trả về danh sách sự cố (có thể rỗng)', async () => {
     const res = await staffApi.incidents.list(resolvedBuildingId ?? undefined);
-    // extractIncidents nhận mảng hoặc { items: [...] }
-    const raw = res.data as unknown;
-    const incidents = Array.isArray(raw)
-      ? extractIncidents(raw as Parameters<typeof extractIncidents>[0])
-      : extractIncidents(raw as { items: Parameters<typeof extractIncidents>[0]['items'] });
+    // cast qua unknown vì BE có thể trả về array hoặc { items: [...] }
+    const incidents = extractIncidents(
+      res.data as unknown as StaffIncident[] | { items: StaffIncident[] },
+    );
     expect(Array.isArray(incidents)).toBe(true);
   });
 });

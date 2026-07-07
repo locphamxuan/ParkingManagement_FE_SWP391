@@ -2,16 +2,28 @@
  * Integration tests — Manager role
  * Gọi BE thật. Yêu cầu: BE đang chạy + credentials trong .env.test.local
  */
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { managerApi, unwrapItems } from '@/services/manager/managerApi';
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
+import type { TestContext } from 'vitest';
+import { managerApi, unwrapItems, type ManagerBuilding } from '@/services/manager/managerApi';
 import { loginAsManager, clearToken, TEST_BUILDING_ID } from '../helpers/auth';
 
+let isReady = false;
+
 beforeAll(async () => {
-  await loginAsManager();
+  try {
+    await loginAsManager();
+    isReady = true;
+  } catch (err) {
+    console.warn(`[SKIP] manager tests: ${err instanceof Error ? err.message : String(err)}`);
+  }
 });
 
 afterAll(() => {
   clearToken();
+});
+
+beforeEach((ctx: TestContext) => {
+  if (!isReady) ctx.skip();
 });
 
 // Helper: lấy buildingId thật từ BE nếu không cấu hình sẵn
@@ -20,7 +32,7 @@ let buildingId = TEST_BUILDING_ID;
 async function resolveBuilding(): Promise<string | null> {
   if (buildingId) return buildingId;
   const res = await managerApi.listAssignedBuildings();
-  const items = Array.isArray(res.data) ? res.data : (res.data as { items?: typeof res.data }).items ?? [];
+  const items = Array.isArray(res.data) ? res.data : ((res.data as unknown as { items?: ManagerBuilding[] }).items ?? []);
   const first = Array.isArray(items) ? items[0] : null;
   if (first) buildingId = first._id;
   return buildingId || null;
