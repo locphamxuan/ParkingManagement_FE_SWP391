@@ -111,8 +111,7 @@ function CheckInHistory({ buildingId }: { buildingId: string }) {
                       Entry Gate: <strong className="text-foreground ml-1">{s.entryGate?.code ?? '—'}</strong>
                     </span>
                     <span className="text-muted-foreground">
-                      Tầng: <strong className="text-foreground">{s.slot?.floor?.name ?? s.slot?.floor?.code ?? '—'}</strong>
-                      Floor: <strong className="text-foreground">{(s.slot as any)?.floor?.name ?? (s.slot as any)?.floor?.code ?? '—'}</strong>
+                      Floor: <strong className="text-foreground">{s.slot?.floor?.name ?? s.slot?.floor?.code ?? '—'}</strong>
                     </span>
                     <span className="text-muted-foreground">
                       Slot: <strong className="text-foreground">{s.slot?.code ?? '—'}</strong>

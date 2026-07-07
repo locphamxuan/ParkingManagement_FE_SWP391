@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { CustomSelect } from '@/components/ui/select';
+import { resolveErrorMessage } from '@/utils/apiErrors';
 import back1 from '@/assets/back1.webp';
 import back3 from '@/assets/back3.png';
 
@@ -451,7 +452,7 @@ export default function ReservationsPage() {
       setSelectedSlot(null);
       setShowSlotModal(false);
     } catch (err) {
-      setBookingError(err instanceof Error ? err.message : 'Failed to complete reservation.');
+      setBookingError(resolveErrorMessage(err, 'Failed to complete reservation.'));
     } finally {
       setIsSubmitting(false);
     }

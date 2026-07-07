@@ -74,10 +74,10 @@ export interface Reservation {
   parkingSession?: {
     _id: string;
     fee: number;
-    status: string;
+    status: 'active' | 'completed' | 'cancelled';
     entryTime: string;
     exitTime?: string | null;
-    paymentStatus?: string;
+    paymentMethod?: 'cash' | 'wallet' | 'qr' | 'long_term' | 'reservation' | null;
   } | null;
 }
 
@@ -92,8 +92,7 @@ export interface ParkingHistory {
   checkOut?: string | null;
   duration?: number | null;
   fee?: number | null;
-  paymentMethod?: 'cash' | 'wallet' | 'qr' | null;
-  paymentStatus: 'pending' | 'paid' | 'waived';
+  paymentMethod?: 'cash' | 'wallet' | 'qr' | 'long_term' | 'reservation' | null;
   status: 'active' | 'completed' | 'cancelled';
   createdAt?: string;
   entryGate?: Gate | null;
@@ -422,7 +421,7 @@ export const userApi = {
   // ========== WALLET ==========
   wallet: {
     get: () =>
-      api.get<Wrap<{ wallet: UserWallet }>>('/users/wallet'),
+      api.get<Wrap<{ walletBalance: number }>>('/users/wallet'),
 
     transactions: (query?: { limit?: number; page?: number }) =>
       api.get<Wrap<ListResult<UserWalletTransaction>>>('/users/wallet/transactions', { query }),
