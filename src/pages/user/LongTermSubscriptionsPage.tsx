@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useLongTermSubscriptions, useCancelSubscription, useRenewSubscription } from '@/hooks/user';
 import type { LongTermSubscription } from '@/services/user/userApi';
 import { packageStatusLabel, packageStatusBadgeClass } from '@/utils/packageStatus';
+import { resolveErrorMessage } from '@/utils/apiErrors';
 
 const currency = new Intl.NumberFormat('en-US', {
   style: 'currency',
@@ -327,7 +328,7 @@ export default function LongTermSubscriptionsPage() {
                     setCancelReason('change_vehicle');
                     setCancelNote('');
                   } catch (err) {
-                    setCancelError(err instanceof Error ? err.message : 'Error cancelling package.');
+                    setCancelError(resolveErrorMessage(err, 'Error cancelling package.'));
                   }
                 }}
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-xs font-black uppercase tracking-wider text-white transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"

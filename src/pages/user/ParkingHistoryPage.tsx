@@ -68,7 +68,7 @@ export default function ParkingHistoryPage() {
   }, [items, statusFilter]);
 
   const totalFee = useMemo(
-    () => filtered.filter((s) => s.paymentStatus === 'paid').reduce((sum, s) => sum + (s.fee ?? 0), 0),
+    () => filtered.filter((s) => s.status === 'completed').reduce((sum, s) => sum + (s.fee ?? 0), 0),
     [filtered],
   );
 
@@ -187,7 +187,7 @@ export default function ParkingHistoryPage() {
 
                     <div className="flex items-center gap-2">
                       <StatusBadge status={session.status} />
-                      {session.paymentStatus === 'paid' && (
+                      {session.status === 'completed' && (
                         <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-400">
                           Paid
                         </span>

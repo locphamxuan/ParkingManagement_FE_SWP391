@@ -22,7 +22,7 @@ import { useAssignedGates } from '@/hooks/staff/useAssignedGates';
 import { LivePlateCamera, type PlateScanResult, type LiveCameraHandle } from '@/components/staff/LivePlateCamera';
 import { LiveQRCamera } from '@/components/staff/LiveQRCamera';
 import { LivePortraitCamera } from '@/components/staff/LivePortraitCamera';
-import { useCameraDevices } from '@/hooks/useCameraDevices';
+import { useCameraDevices, type CameraRole } from '@/hooks/useCameraDevices';
 import { normalizePlate } from '@/utils/plate';
 import { CameraSetupModal } from '@/components/staff/CameraSetupModal';
 import { RejectModal } from '@/components/staff/RejectModal';
