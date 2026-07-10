@@ -24,7 +24,7 @@ export function UserQrInfoModal({ info, onClose }: UserQrInfoModalProps) {
       >
         <div className="flex items-center justify-between mb-4">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-primary">Tài khoản đã quét</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-primary">Scanned Account</p>
             <h3 className="text-lg font-semibold text-foreground">{info.fullName}</h3>
             <p className="text-xs text-muted-foreground">{info.email}</p>
           </div>
@@ -33,17 +33,17 @@ export function UserQrInfoModal({ info, onClose }: UserQrInfoModalProps) {
 
         {info.walletBalance != null && (
           <div className="mb-4 rounded-xl border border-violet-500/20 bg-violet-500/8 px-4 py-2.5 flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">Số dư ví</span>
+            <span className="text-xs text-muted-foreground">Wallet Balance</span>
             <span className="font-mono font-bold text-violet-400">{info.walletBalance.toLocaleString('vi-VN')} ₫</span>
           </div>
         )}
 
         <div className="mb-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-          Gói dài hạn đang hoạt động
+          Active Long-term Packages
         </div>
         {info.activePackages.length === 0 ? (
           <p className="rounded-xl border border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
-            Khách chưa có gói dài hạn nào đang hoạt động.
+            Customer has no active long-term packages.
           </p>
         ) : (
           <div className="space-y-2">
@@ -56,10 +56,10 @@ export function UserQrInfoModal({ info, onClose }: UserQrInfoModalProps) {
                   )}
                 </div>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Biển số: <strong className="text-foreground font-mono">{pkg.plateNumber}</strong>
+                  License Plate: <strong className="text-foreground font-mono">{pkg.plateNumber}</strong>
                   {pkg.endDate && (
                     <span className="ml-2 text-slate-500">
-                      · Hết hạn: {new Date(pkg.endDate).toLocaleDateString('vi-VN')}
+                      · Expires: {new Date(pkg.endDate).toLocaleDateString('vi-VN')}
                     </span>
                   )}
                 </p>
@@ -69,7 +69,7 @@ export function UserQrInfoModal({ info, onClose }: UserQrInfoModalProps) {
         )}
 
         <Button onClick={onClose} className="mt-5 w-full" variant="secondary">
-          Đóng
+          Close
         </Button>
       </motion.div>
     </div>

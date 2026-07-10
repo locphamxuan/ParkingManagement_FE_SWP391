@@ -22,29 +22,29 @@ export function RejectModal({ open, onClose, plateNumber, rejectReason, onReason
       >
         <div className="flex items-center justify-between mb-4">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-rose-400">Từ chối cho xe vào</p>
-            <h3 className="text-xl font-semibold text-foreground">Lý do từ chối</h3>
+            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-rose-400">Reject Check-in</p>
+            <h3 className="text-xl font-semibold text-foreground">Rejection Reason</h3>
           </div>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition">✕</button>
         </div>
         <p className="text-xs text-muted-foreground mb-3">
-          Biển số <strong className="text-foreground font-mono">{normalizePlate(plateNumber) || plateNumber || '—'}</strong>. Hệ thống sẽ gửi thông báo kèm lý do đến tài khoản khách (nếu biển đã đăng ký).
+          License Plate <strong className="text-foreground font-mono">{normalizePlate(plateNumber) || plateNumber || '—'}</strong>. The system will send a notification with the reason to the customer account if the plate is registered.
         </p>
         <textarea
           value={rejectReason}
           onChange={(e) => onReasonChange(e.target.value)}
           rows={3}
-          placeholder="Vd: Đăng ký xe máy nhưng thực tế là ô tô; thông tin phương tiện không khớp..."
+          placeholder="Example: Registered as motorcycle but actually a car; vehicle information does not match..."
           className="w-full rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground outline-none focus:border-rose-500/50"
         />
         <div className="mt-4 grid grid-cols-2 gap-3">
-          <Button variant="secondary" onClick={onClose} className="text-xs">Hủy</Button>
+          <Button variant="secondary" onClick={onClose} className="text-xs">Cancel</Button>
           <Button
             onClick={onConfirm}
             disabled={!rejectReason.trim()}
             className="bg-rose-500 text-white hover:bg-rose-400 text-xs disabled:opacity-60"
           >
-            Xác nhận từ chối
+            Confirm Rejection
           </Button>
         </div>
       </motion.div>
