@@ -1,14 +1,17 @@
 interface DurationSelectorProps {
   hours: number;
   onSelect: (h: number) => void;
+  /** Số giờ tối đa mỗi lượt đặt, theo ReservationPolicy.maxDurationHours của building. */
+  maxHours?: number;
 }
 
-const HOUR_OPTIONS = [1, 2, 3, 4, 5, 6, 8, 12, 24];
+const ALL_HOUR_OPTIONS = [1, 2, 3, 4, 5, 6, 8, 12, 24, 36, 48];
 
-export function DurationSelector({ hours, onSelect }: DurationSelectorProps) {
+export function DurationSelector({ hours, onSelect, maxHours = 24 }: DurationSelectorProps) {
+  const hourOptions = ALL_HOUR_OPTIONS.filter((h) => h <= maxHours);
   return (
     <div className="flex flex-wrap gap-1.5">
-      {HOUR_OPTIONS.map((h) => (
+      {hourOptions.map((h) => (
         <button
           key={h}
           type="button"

@@ -12,6 +12,9 @@ interface BookingSummarySidebarProps {
   startDateTime: Date | null;
   endDateTime: Date | null;
   estimatedAmount: number;
+  /** Số tiền cọc thật do BE tính (chỉ áp dụng chế độ hourly). */
+  depositAmount?: number;
+  depositPercent?: number;
 }
 
 export function BookingSummarySidebar({
@@ -24,6 +27,8 @@ export function BookingSummarySidebar({
   startDateTime,
   endDateTime,
   estimatedAmount,
+  depositAmount,
+  depositPercent,
 }: BookingSummarySidebarProps) {
   return (
     <div className="lg:sticky lg:top-6 lg:self-start">
@@ -101,6 +106,14 @@ export function BookingSummarySidebar({
               {estimatedAmount ? fmtMoney(estimatedAmount) : '—'}
             </span>
           </div>
+          {mode === 'hourly' && depositAmount != null && (
+            <div className="flex items-center justify-between rounded-xl border border-amber-500/30 bg-amber-500/10 p-3">
+              <span className="text-xs font-bold text-amber-400">
+                Deposit{depositPercent != null ? ` (${depositPercent}%)` : ''}
+              </span>
+              <span className="font-mono text-sm font-black text-amber-300">{fmtMoney(depositAmount)}</span>
+            </div>
+          )}
         </div>
       </div>
     </div>

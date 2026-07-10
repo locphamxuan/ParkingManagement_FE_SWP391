@@ -77,10 +77,10 @@ export function isCarPackage(pkg: LongTermPackage): boolean {
   return false;
 }
 
-export function getMaxCalendarDate(mode: BookingMode, pkg?: LongTermPackage | null): Date {
+export function getMaxCalendarDate(mode: BookingMode, pkg?: LongTermPackage | null, maxAdvanceDays = 7): Date {
   const now = new Date();
   if (mode === 'hourly') {
-    return new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    return new Date(now.getTime() + maxAdvanceDays * 24 * 60 * 60 * 1000);
   }
   if (!pkg) return new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
   const days = pkg.durationDays ?? 30;
@@ -99,7 +99,7 @@ export function packageCategory(pkg: LongTermPackage): 'weekly' | 'monthly' | 'y
   return 'yearly';
 }
 
-export const categoryLabels = { weekly: 'Gói tuần', monthly: 'Gói tháng', yearly: 'Gói năm' };
+export const categoryLabels = { weekly: 'Weekly Package', monthly: 'Monthly Package', yearly: 'Yearly Package' };
 
 export const categoryColors = {
   weekly: {
