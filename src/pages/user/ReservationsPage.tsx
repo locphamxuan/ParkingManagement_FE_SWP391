@@ -1,466 +1,30 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { AnimatePresence, motion } from 'framer-motion';
-import {
-  ArrowLeft,
-  Building2,
-  CalendarClock,
-  Clock,
-  MapPin,
-  Package,
-  ShieldCheck,
-  Timer,
-  Zap,
-} from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
-import { CustomSelect } from '@/components/ui/select';
-import { resolveErrorMessage } from '@/utils/apiErrors';
-import back1 from '@/assets/back1.webp';
+import { Navigate, useNavigate } from 'react-router-dom';
+import { AnimatePresence } from 'framer-motion';
 import back3 from '@/assets/back3.png';
 
-import {
-  userApi,
-  type Building,
-  type VehicleType,
-  type ParkingSlot as ApiParkingSlot,
-  type FloorAvailability,
-  type LongTermPackage,
-} from '@/services/user/userApi';
+import { useReservationBooking } from '@/hooks/user/useReservationBooking';
 
-import {
-  type BookingMode,
-  type VehicleKind,
-  fmtMoney,
-  fmtShort,
-  normalizeVehicleTypeCode,
-  isCarPackage,
-  getMaxCalendarDate,
-  packageCategory,
-  categoryColors,
-} from '@/pages/user/reservationsHelper';
-
-import { MiniCalendar } from '@/components/user/MiniCalendar';
-import { TimeScroller } from '@/components/user/TimeScroller';
-import { DurationSelector } from '@/components/user/DurationSelector';
-import { PackageCard } from '@/components/user/PackageCard';
 import { SlotSelectionModal } from '@/components/user/SlotSelectionModal';
 import { BookingNotificationModal } from '@/components/user/BookingNotificationModal';
 import { BookingHistoryModal } from '@/components/user/BookingHistoryModal';
 import { BookingSummarySidebar } from '@/components/user/BookingSummarySidebar';
 
-/* ─── Types ────────────────────────────────────────────────────────────────── */
-
-interface ReservationLocationState {
-  buildingId?: string;
-  plateNumber?: string;
-  openHistory?: boolean;
-  mode?: BookingMode;
-}
-
-interface MappedSlot {
-  _id: string;
-  buildingId: string;
-  code: string;
-  floorCode?: string;
-  vehicleType: VehicleKind | 'all';
-  reservable: boolean;
-  status: string;
-}
-
-/* ─── Main ReservationsPage ────────────────────────────────────────────────── */
+import { ReservationHeader } from '@/components/user/reservations/ReservationHeader';
+import { ModeTabs } from '@/components/user/reservations/ModeTabs';
+import { BasicInfoPanel } from '@/components/user/reservations/BasicInfoPanel';
+import { HourlyBookingPanel } from '@/components/user/reservations/HourlyBookingPanel';
+import { PackageBookingPanel } from '@/components/user/reservations/PackageBookingPanel';
+import { SlotPickerPanel, PackageInfoPanel } from '@/components/user/reservations/SlotPickerPanel';
+import { BookingFooter } from '@/components/user/reservations/BookingFooter';
 
 /* ─── Main ReservationsPage ────────────────────────────────────────────────── */
 
 export default function ReservationsPage() {
   const navigate = useNavigate();
-  const location = useLocation();
-  const { session } = useAuth();
-  const state = (location.state as ReservationLocationState | null) ?? null;
+  const b = useReservationBooking();
 
-  const user = useMemo(() => {
-    if (!session) return null;
-    return { userId: session.userId, fullName: session.displayName, licensePlates: session.licensePlates || [] };
-  }, [session]);
+  if (!b.session || !b.user) return <Navigate to="/auth/login" replace />;
 
-  /* ── Core state ── */
-  const [mode, setMode] = useState<BookingMode>(state?.mode || 'hourly');
-  const [rows, setRows] = useState<Array<{ building: Building }>>([]);
-  const [selectedBuildingId, setSelectedBuildingId] = useState('');
-  const [vehicleTypesForBuilding, setVehicleTypesForBuilding] = useState<VehicleType[]>([]);
-  const [selectedVehicleType, setSelectedVehicleType] = useState<VehicleKind | ''>(
-    () => (localStorage.getItem('pbms_selected_vehicle_type') as VehicleKind) || ''
-  );
-  const changeVehicleType = (val: VehicleKind | '') => {
-    setSelectedVehicleType(val);
-    if (val) {
-      localStorage.setItem('pbms_selected_vehicle_type', val);
-    } else {
-      localStorage.removeItem('pbms_selected_vehicle_type');
-    }
-  };
-  const [floorsData, setFloorsData] = useState<FloorAvailability[]>([]);
-  const [floorsError, setFloorsError] = useState<string>('');
-  const [slots, setSlots] = useState<MappedSlot[]>([]);
-  const [selectedFloorIdModal, setSelectedFloorIdModal] = useState('');
-  const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
-  const [selectedPlate, setSelectedPlate] = useState('');
-
-
-  /* ── Hourly state ── */
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [selectedTime, setSelectedTime] = useState('08:00');
-  const [durationHours, setDurationHours] = useState(2);
-
-  /* ── Package state ── */
-  const [packages, setPackages] = useState<LongTermPackage[]>([]);
-  const [selectedPkg, setSelectedPkg] = useState<LongTermPackage | null>(null);
-  const [pkgStartDate, setPkgStartDate] = useState<Date | null>(null);
-
-  /* ── UI state ── */
-  const [isLoadingBuildings, setIsLoadingBuildings] = useState(true);
-  const [isLoadingSlots, setIsLoadingSlots] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showSlotModal, setShowSlotModal] = useState(false);
-  const [showHistory, setShowHistory] = useState(false);
-  const [bookingError, setBookingError] = useState<string | null>(null);
-  const [bookingSuccess, setBookingSuccess] = useState<string | null>(null);
-
-  // Auto-dismiss alerts after 10 seconds
-  useEffect(() => {
-    if (bookingSuccess) {
-      const timer = setTimeout(() => setBookingSuccess(null), 10000);
-      return () => clearTimeout(timer);
-    }
-  }, [bookingSuccess]);
-
-  useEffect(() => {
-    if (bookingError) {
-      const timer = setTimeout(() => setBookingError(null), 10000);
-      return () => clearTimeout(timer);
-    }
-  }, [bookingError]);
-
-  const [bookedPlates, setBookedPlates] = useState<string[]>([]);
-
-  useEffect(() => {
-    if (!user) return;
-    let cancelled = false;
-
-    const p1 = userApi.reservations.list({ limit: 100 }).then(res => {
-      const items = res.data.items || [];
-      return items
-        .filter((r) => ['pending', 'confirmed', 'checked_in'].includes(r.status))
-        .map((r) => r.plateNumber);
-    }).catch(() => [] as string[]);
-
-    const p2 = userApi.longTermSubscriptions.list({ limit: 100 }).then(res => {
-      const items = res.data.items || [];
-      return items
-        .filter((s) => ['pending', 'active'].includes(s.status))
-        .map((s) => (s.plateNumber || s.linkedPlates?.[0]) as string);
-    }).catch(() => [] as string[]);
-
-    Promise.all([p1, p2]).then(([resPlates, subPlates]) => {
-      if (cancelled) return;
-      setBookedPlates(Array.from(new Set([...resPlates.filter(Boolean), ...subPlates.filter(Boolean)])));
-    });
-
-    return () => { cancelled = true; };
-  }, [user, bookingSuccess]);
-
-  /* ── Data Loading ── */
-  useEffect(() => {
-    let ignore = false;
-    setIsLoadingBuildings(true);
-    userApi.buildings.list()
-      .then((res) => {
-        if (ignore) return;
-        const buildingRows = res.data.items.map((b) => ({ building: b }));
-        setRows(buildingRows);
-        const preferred = state?.buildingId || buildingRows[0]?.building._id || '';
-        setSelectedBuildingId((c) => c || preferred);
-      })
-      .catch(() => { })
-      .finally(() => { if (!ignore) setIsLoadingBuildings(false); });
-    return () => { ignore = true; };
-  }, [state?.buildingId]);
-
-  // Set plate from navigation state
-  useEffect(() => {
-    if (state?.plateNumber) setSelectedPlate(state.plateNumber);
-  }, [state?.plateNumber]);
-
-  // Set history mode
-  useEffect(() => {
-    if (state?.openHistory) setShowHistory(true);
-  }, [state?.openHistory]);
-
-  // Load vehicle types + floors for selected building
-  useEffect(() => {
-    let ignore = false;
-    if (!selectedBuildingId) { setFloorsData([]); setVehicleTypesForBuilding([]); setFloorsError(''); return; }
-
-    const load = async () => {
-      try {
-        setFloorsError('');
-        const vtRes = await userApi.buildings.vehicleTypes(selectedBuildingId);
-        if (ignore) return;
-        setVehicleTypesForBuilding(vtRes.data.items || []);
-
-        const floorsRes = await userApi.buildings.floors(selectedBuildingId);
-        if (ignore) return;
-        setFloorsData(floorsRes.data.floors || []);
-      } catch (err) {
-        if (!ignore) {
-          const errorMsg = err instanceof Error ? err.message : String(err);
-          setFloorsError(`Failed to load floors: ${errorMsg}`);
-          setFloorsData([]);
-        }
-      }
-    };
-    load();
-    return () => { ignore = true; };
-  }, [selectedBuildingId]);
-
-  // Load packages for selected building
-  useEffect(() => {
-    if (!selectedBuildingId) { setPackages([]); return; }
-    let ignore = false;
-    userApi.longTermPackages.list({ buildingId: selectedBuildingId })
-      .then((res) => {
-        if (ignore) return;
-        setPackages(res.data.packages ?? []);
-      })
-      .catch(() => { });
-    return () => { ignore = true; };
-  }, [selectedBuildingId]);
-
-  // Load slots when floor is selected in modal
-  useEffect(() => {
-    let ignore = false;
-    if (!selectedBuildingId || !selectedFloorIdModal) return;
-    setIsLoadingSlots(true);
-    userApi.buildings.slots(selectedBuildingId, selectedFloorIdModal)
-      .then((slotsRes) => {
-        if (ignore) return;
-        const apiSlots: ApiParkingSlot[] = slotsRes.data.slots || [];
-        const mapped: MappedSlot[] = apiSlots.map((s) => {
-          let rawCode: string | undefined;
-          if (s.vehicleType && typeof s.vehicleType === 'object' && 'code' in s.vehicleType) {
-            rawCode = String(s.vehicleType.code);
-          }
-          return {
-            _id: s._id,
-            buildingId: selectedBuildingId,
-            code: s.code,
-            vehicleType: normalizeVehicleTypeCode(rawCode),
-            reservable: s.reservable ?? true,
-            status: (s.status as string) || 'available',
-          };
-        });
-        setSlots(mapped);
-        setSelectedSlot(null);
-      })
-      .catch(() => { })
-      .finally(() => { if (!ignore) setIsLoadingSlots(false); });
-    return () => { ignore = true; };
-  }, [selectedBuildingId, selectedFloorIdModal]);
-
-  /* ── Derived values ── */
-  const selectedBuilding = useMemo(
-    () => rows.find((r) => r.building._id === selectedBuildingId) || null,
-    [rows, selectedBuildingId],
-  );
-
-  const maxCalDate = useMemo(() => getMaxCalendarDate(mode, selectedPkg), [mode, selectedPkg]);
-
-  const startDateTime = useMemo(() => {
-    if (mode === 'hourly') {
-      if (!selectedDate) return null;
-      const [h, m] = selectedTime.split(':').map(Number);
-      const d = new Date(selectedDate);
-      d.setHours(h, m, 0, 0);
-      return d;
-    }
-    // Package mode: use start of day (00:00) — no specific time needed
-    if (!pkgStartDate) return null;
-    const d = new Date(pkgStartDate);
-    d.setHours(0, 0, 0, 0);
-    return d;
-  }, [mode, selectedDate, selectedTime, pkgStartDate]);
-
-  const endDateTime = useMemo(() => {
-    if (mode === 'hourly') {
-      if (!startDateTime) return null;
-      return new Date(startDateTime.getTime() + durationHours * 60 * 60 * 1000);
-    }
-    if (startDateTime && selectedPkg) {
-      return new Date(startDateTime.getTime() + selectedPkg.durationDays * 24 * 60 * 60 * 1000);
-    }
-    return null;
-  }, [mode, startDateTime, durationHours, selectedPkg]);
-
-  const estimatedAmount = useMemo(() => {
-    if (mode === 'package' && selectedPkg) return selectedPkg.price;
-    // Rough estimate for hourly — will be replaced by API estimate
-    const building = selectedBuilding?.building;
-    if (!building?.pricing?.hourlyRate) return 0;
-    const rate = selectedVehicleType === 'motorcycle'
-      ? building.pricing.hourlyRate * (building.pricing.motorcycleMultiplier || 0.5)
-      : building.pricing.hourlyRate;
-    return Math.ceil(rate * durationHours);
-  }, [mode, selectedPkg, selectedBuilding, selectedVehicleType, durationHours]);
-
-  const plateOptions = useMemo(() => {
-    if (!user) return [];
-    const base = selectedVehicleType
-      ? user.licensePlates.filter((p) => {
-        const t = p.vehicleType?.toLowerCase();
-        if (selectedVehicleType === 'motorcycle') return t === 'motorcycle' || t === 'bike';
-        return t !== 'motorcycle' && t !== 'bike';
-      })
-      : user.licensePlates;
-    return base.filter((p) => !bookedPlates.includes(p.plateNumber));
-  }, [user, selectedVehicleType, bookedPlates]);
-
-  const unavailableSlotCodes = useMemo(() => {
-    return slots.filter((s) => {
-      if (s.status !== 'available') return true;
-      if (!s.reservable) return true;
-      return false;
-    }).map((s) => s.code);
-  }, [slots]);
-
-  const unsupportedSlotCodes = useMemo(() => {
-    if (!selectedVehicleType) return [];
-    return slots.filter((s) => {
-      const cleanCode = String(s.code).toUpperCase();
-      if (selectedVehicleType === 'car' && cleanCode.includes('-M')) {
-        return true;
-      }
-      if (selectedVehicleType === 'motorcycle' && (cleanCode.includes('-A') || cleanCode.includes('-C'))) {
-        return true;
-      }
-
-      return s.vehicleType !== 'all' && s.vehicleType !== selectedVehicleType;
-    }).map((s) => s.code);
-  }, [slots, selectedVehicleType]);
-
-
-  const canSubmit = Boolean(selectedBuildingId && !isSubmitting);
-
-
-  /* ── Handlers ── */
-  const handleBuildingChange = (id: string) => {
-    setSelectedBuildingId(id);
-    setSelectedSlot(null);
-    setSelectedPlate('');
-    setBookingError(null);
-    setBookingSuccess(null);
-    setSelectedPkg(null);
-  };
-
-  const handleSlotClick = (code: string) => {
-    if (unavailableSlotCodes.includes(code)) return;
-    if (unsupportedSlotCodes.includes(code)) return;
-    setSelectedSlot(code);
-    setBookingError(null);
-    // Auto-select first available plate
-    if (!selectedPlate && plateOptions.length > 0) {
-      setSelectedPlate(plateOptions[0].plateNumber);
-    }
-  };
-
-  const handleConfirmBooking = async () => {
-    setBookingError(null);
-    setBookingSuccess(null);
-
-    if (!selectedVehicleType) {
-      setBookingError('Please select vehicle type before booking.');
-      return;
-    }
-
-    if (!selectedPlate) {
-      setBookingError('Please select license plate.');
-      return;
-    }
-
-    if (mode === 'hourly') {
-      if (!selectedSlot) {
-        setBookingError('Please select parking slot on the map.');
-        return;
-      }
-      if (!startDateTime || !endDateTime) {
-        setBookingError('Please select check-in and check-out time.');
-        return;
-      }
-      if (startDateTime.getTime() < Date.now() - 5 * 60 * 1000) {
-        setBookingError('Check-in time cannot be in the past. Please select another time.');
-        return;
-      }
-    } else {
-      if (!selectedPkg) {
-        setBookingError('Please select long-term parking package.');
-        return;
-      }
-      if (!startDateTime) {
-        setBookingError('Please select package start date.');
-        return;
-      }
-    }
-
-    if (!selectedBuildingId) return;
-
-
-    setIsSubmitting(true);
-    try {
-      if (mode === 'hourly') {
-        // Find vehicleTypeId from building's vehicle types
-        const vt = vehicleTypesForBuilding.find((v) => {
-          const c = (v.code || v.name || '').toLowerCase();
-          if (selectedVehicleType === 'motorcycle') return /motor|xe|máy|bike|moto/i.test(c);
-          return /car|oto|ô t|auto/i.test(c);
-        });
-
-        // Find the slot's _id
-        const slotRecord = slots.find((s) => s.code === selectedSlot);
-
-        await userApi.reservations.create({
-          buildingId: selectedBuildingId,
-          plateNumber: selectedPlate,
-          vehicleTypeId: vt?._id,
-          vehicleType: selectedVehicleType || undefined,
-          startTime: startDateTime!.toISOString(),
-          endTime: endDateTime!.toISOString(),
-          slotId: slotRecord?._id,
-        });
-        setBookingSuccess(`Booking successful! Slot ${selectedSlot} from ${fmtShort(startDateTime!)} to ${fmtShort(endDateTime!)}`);
-      } else if (selectedPkg) {
-        const res = await userApi.longTermSubscriptions.create({
-          packageId: selectedPkg._id,
-          plateNumber: selectedPlate,
-          startDate: startDateTime!.toISOString(),
-        });
-        const data = res.data as { subscription?: unknown; checkoutUrl?: string };
-        if (data?.checkoutUrl) {
-          setBookingSuccess('Redirecting to PayOS payment gateway...');
-          window.location.href = data.checkoutUrl;
-        } else {
-          setBookingSuccess(`Subscription for "${selectedPkg.name}" successful!`);
-        }
-      }
-      setSelectedSlot(null);
-      setShowSlotModal(false);
-    } catch (err) {
-      setBookingError(resolveErrorMessage(err, 'Failed to complete reservation.'));
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  if (!session || !user) return <Navigate to="/auth/login" replace />;
-
-  /* ── Render ── */
   return (
     <main className="min-h-screen text-slate-100 relative isolate">
       {/* Background */}
@@ -476,345 +40,93 @@ export default function ReservationsPage() {
       </div>
       <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
 
-        {/* ── Header ── */}
-        <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
-          className="mb-6 flex flex-col gap-3 border-b border-white/[0.06] pb-5 sm:flex-row sm:items-center sm:justify-between"
-        >
-          <button type="button" onClick={() => navigate('/')}
-            className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2 text-xs font-black uppercase tracking-wider text-slate-300 transition hover:border-cyan-300/30 hover:text-cyan-200"
-          >
-            <ArrowLeft size={14} /> Home
-          </button>
-          <div className="flex gap-2">
-            <button type="button" onClick={() => setShowHistory(true)}
-              className="inline-flex items-center gap-2 rounded-xl border border-orange-500/20 bg-orange-500/5 px-4 py-2 text-xs font-black uppercase tracking-wider text-orange-400 transition hover:border-orange-400/40 hover:bg-orange-500/10 hover:text-orange-300"
-            >
-              <CalendarClock size={14} /> History
-            </button>
-          </div>
-        </motion.div>
+        <ReservationHeader onBack={() => navigate('/')} onShowHistory={() => b.setShowHistory(true)} />
 
-        {/* ── Tab Bar ── */}
-        <div className="mb-8 flex items-center gap-1 rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-md p-1.5 max-w-md md:max-w-lg w-full mx-auto shadow-xl">
-          {[
-            { key: 'hourly' as BookingMode, label: 'Hourly Pre-booking', icon: <Timer size={14} /> },
-            { key: 'package' as BookingMode, label: 'Long-term Subscriptions', icon: <Package size={14} /> },
-          ].map((tab) => (
-            <button
-              key={tab.key}
-              type="button"
-              onClick={() => {
-                setMode(tab.key);
-                setSelectedSlot(null);
-                setBookingError(null);
-                setBookingSuccess(null);
-              }}
-              className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-3 text-xs font-black uppercase tracking-wider transition-all duration-200 btn-sand ${mode === tab.key
-                ? 'btn-sand-orange btn-sand-active text-slate-950 font-black'
-                : 'btn-sand-dark text-slate-400'
-                }`}
-            >
-              <span className="relative z-10 flex items-center justify-center gap-2">
-                {tab.icon} {tab.label}
-              </span>
-            </button>
-          ))}
-        </div>
-
-        {/* Alerts are now displayed as floating notification toasts */}
-
+        <ModeTabs mode={b.mode} onChange={b.handleModeChange} />
 
         {/* ── Main Wizard ── */}
         <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
           {/* Left: Booking Form */}
           <div className="space-y-5">
-            {/* Building + Vehicle + Plate */}
-            <div className="glass-panel-white rounded-3xl p-6 relative z-30">
-              <div className="flex items-center gap-2 mb-4">
-                <Building2 size={16} className="text-cyan-400" />
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-400">Basic Information</span>
-              </div>
+            <BasicInfoPanel
+              rows={b.rows}
+              selectedBuildingId={b.selectedBuildingId}
+              onBuildingChange={b.handleBuildingChange}
+              selectedVehicleType={b.selectedVehicleType}
+              onVehicleTypeChange={b.handleVehicleTypeChange}
+              selectedPlate={b.selectedPlate}
+              onPlateChange={b.setSelectedPlate}
+              plateOptions={b.plateOptions}
+            />
 
-              <div className="grid gap-4 sm:grid-cols-2 relative z-20">
-                <div>
-                  <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-400">Building</span>
-                  <CustomSelect
-                    value={selectedBuildingId}
-                    onChange={handleBuildingChange}
-                    options={[
-                      { value: '', label: '-- Select building --' },
-                      ...rows.map((r) => ({ value: r.building._id, label: r.building.name })),
-                    ]}
-                    placeholder="-- Select building --"
-                  />
-                </div>
-                <div>
-                  <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-400">Vehicle Type</span>
-                  <CustomSelect
-                    value={selectedVehicleType}
-                    onChange={(val) => {
-                      changeVehicleType(val as VehicleKind | '');
-                      setSelectedSlot(null);
-                      setSelectedPlate('');
-                      setSelectedPkg(null);
-                    }}
-                    options={[
-                      { value: '', label: '-- Select vehicle type --' },
-                      { value: 'car', label: '🚗 Car' },
-                      { value: 'motorcycle', label: '🏍️ Motorcycle' },
-                    ]}
-                    placeholder="-- Select vehicle type --"
-                  />
-                </div>
-              </div>
-
-              {/* Plate selection right below vehicle type */}
-              <div className={`mt-4 relative z-10 transition-all duration-200 ${!selectedVehicleType ? 'opacity-40' : ''}`}>
-                {!selectedVehicleType && (
-                  <div className="absolute inset-0 bg-transparent cursor-not-allowed z-20" title="Please select vehicle type before selecting plate." />
-                )}
-                <div className="flex items-center gap-2 mb-2">
-                  <Zap size={14} className="text-amber-500" />
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">License Plate</span>
-                </div>
-                <CustomSelect
-                  value={selectedPlate}
-                  onChange={setSelectedPlate}
-                  disabled={!selectedVehicleType || plateOptions.length === 0}
-                  options={[
-                    { value: '', label: !selectedVehicleType ? '-- Please select vehicle type first --' : (plateOptions.length === 0 ? '-- All matching plates already reserved --' : '-- Select plate --') },
-                    ...plateOptions.map((p) => ({
-                      value: p.plateNumber,
-                      label: `${p.plateNumber} — ${p.vehicleType === 'motorcycle' ? '🏍️ Motorcycle' : '🚗 Car'}`,
-                    })),
-                  ]}
-                  placeholder="-- Select plate --"
-                />
-              </div>
-            </div>
-
-            {/* ── Hourly Mode ── */}
             <AnimatePresence mode="wait">
-              {mode === 'hourly' && (
-                <motion.div
-                  key="hourly"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className={`space-y-5 transition-all duration-200 ${!selectedVehicleType ? 'opacity-30' : ''}`}
-                >
-
-                  {/* Date */}
-                  <div className="glass-panel-white rounded-3xl p-6 relative">
-                    {!selectedVehicleType && (
-                      <div className="absolute inset-0 bg-transparent cursor-not-allowed z-20" title="Please select vehicle type before selecting date." />
-                    )}
-                    <div className="flex items-center gap-2 mb-4">
-                      <CalendarClock size={16} className="text-cyan-300/70" />
-                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300/70">Select check-in date</span>
-                    </div>
-                    <MiniCalendar selectedDate={selectedDate} onSelect={setSelectedDate} maxDate={maxCalDate} />
-                    <p className="mt-2 text-[10px] font-semibold text-slate-500">
-                      Can only pre-book up to 7 days in advance
-                    </p>
-                  </div>
-
-                  {/* Time */}
-                  <div className="glass-panel-white rounded-3xl p-6 relative">
-                    {!selectedVehicleType && (
-                      <div className="absolute inset-0 bg-transparent cursor-not-allowed z-20" title="Please select vehicle type before selecting check-in time." />
-                    )}
-                    <div className="flex items-center gap-2 mb-3">
-                      <Clock size={16} className="text-cyan-300/70" />
-                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300/70">Check-in time</span>
-                    </div>
-                    <TimeScroller selected={selectedTime} onSelect={setSelectedTime} />
-                  </div>
-
-                  {/* Duration */}
-                  <div className="glass-panel-white rounded-3xl p-6 relative">
-                    {!selectedVehicleType && (
-                      <div className="absolute inset-0 bg-transparent cursor-not-allowed z-20" title="Please select vehicle type before selecting duration." />
-                    )}
-                    <div className="flex items-center gap-2 mb-3">
-                      <Timer size={16} className="text-cyan-300/70" />
-                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300/70">Duration (hours)</span>
-                    </div>
-                    <DurationSelector hours={durationHours} onSelect={setDurationHours} />
-                  </div>
-                </motion.div>
+              {b.mode === 'hourly' && (
+                <HourlyBookingPanel
+                  disabled={!b.selectedVehicleType}
+                  selectedDate={b.selectedDate}
+                  onSelectDate={b.setSelectedDate}
+                  maxCalDate={b.maxCalDate}
+                  selectedTime={b.selectedTime}
+                  onSelectTime={b.setSelectedTime}
+                  durationHours={b.durationHours}
+                  onSelectDuration={b.setDurationHours}
+                  maxDurationHours={b.reservationPolicy?.maxDurationHours}
+                />
               )}
 
-
-              {/* ── Package Mode ── */}
-              {mode === 'package' && (
-                <motion.div
-                  key="package"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className={`space-y-5 transition-all duration-200 ${!selectedVehicleType ? 'opacity-30' : ''}`}
-                >
-                  {/* Package Cards */}
-                  <div className="glass-panel-white rounded-3xl p-6 relative">
-                    {!selectedVehicleType && (
-                      <div className="absolute inset-0 bg-transparent cursor-not-allowed z-20" title="Please select vehicle type before selecting package." />
-                    )}
-                    <div className="flex items-center gap-2 mb-4">
-                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-purple-300/70">Select long-term package</span>
-                    </div>
-
-                    {packages.length === 0 ? (
-                      <p className="text-sm text-slate-500 font-semibold py-4 text-center">
-                        {isLoadingBuildings ? 'Loading...' : 'No packages available for this building.'}
-                      </p>
-                    ) : (
-                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                        {packages.map((pkg) => {
-                          const cat = packageCategory(pkg);
-                          const colors = categoryColors[cat];
-                          const isSelected = selectedPkg?._id === pkg._id;
-                          const isCar = isCarPackage(pkg);
-                          // isLocked: only when a vehicle type IS selected and this package doesn't match
-                          const isLocked = !!selectedVehicleType && (selectedVehicleType === 'car' ? !isCar : isCar);
-                          return (
-                            <PackageCard
-                              key={pkg._id}
-                              pkg={pkg}
-                              isSelected={isSelected}
-                              isLocked={isLocked}
-                              cat={cat}
-                              colors={colors}
-                              onClick={() => {
-                                if (isLocked) return;
-                                setSelectedPkg(pkg);
-                                setPkgStartDate(null);
-                                const nextType = isCar ? 'car' : 'motorcycle';
-                                if (selectedVehicleType !== nextType) {
-                                  changeVehicleType(nextType);
-                                  setSelectedSlot(null);
-                                  setSelectedPlate('');
-                                }
-                              }}
-                            />
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Package Date */}
-                  {selectedPkg && (
-                    <div className="glass-panel-white rounded-3xl p-6 relative">
-                      {!selectedVehicleType && (
-                        <div className="absolute inset-0 bg-transparent cursor-not-allowed z-20" title="Please select vehicle type before selecting start date." />
-                      )}
-                      <div className="flex items-center gap-2 mb-4">
-                        <CalendarClock size={16} className="text-purple-300/70" />
-                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-purple-300/70">Package Start Date</span>
-                      </div>
-                      <MiniCalendar selectedDate={pkgStartDate} onSelect={setPkgStartDate} maxDate={maxCalDate} />
-                      <p className="mt-2 text-[10px] font-semibold text-slate-500">
-                        {selectedPkg.durationDays <= 7
-                          ? 'Weekly package: select within next 7 days'
-                          : selectedPkg.durationDays <= 30
-                            ? 'Monthly package: select this month or next month'
-                            : 'Yearly package: select this year or next year'}
-                      </p>
-                    </div>
-                  )}
-                </motion.div>
+              {b.mode === 'package' && (
+                <PackageBookingPanel
+                  disabled={!b.selectedVehicleType}
+                  packages={b.packages}
+                  isLoading={b.isLoadingBuildings}
+                  selectedPkg={b.selectedPkg}
+                  onSelectPackage={b.handleSelectPackage}
+                  selectedVehicleType={b.selectedVehicleType}
+                  pkgStartDate={b.pkgStartDate}
+                  onSelectPkgStartDate={b.setPkgStartDate}
+                  maxCalDate={b.maxCalDate}
+                />
               )}
             </AnimatePresence>
 
             {/* ── Slot Selection Button (chỉ cho đặt theo giờ) ── */}
-            {mode === 'hourly' ? (
-              <div className={`glass-panel-white rounded-3xl p-6 transition-all duration-200 relative ${!selectedVehicleType ? 'opacity-50' : ''}`}>
-                {!selectedVehicleType && (
-                  <div className="absolute inset-0 bg-transparent cursor-not-allowed z-20" title="Please select vehicle type before selecting slot." />
-                )}
-                <div className="flex items-center gap-2 mb-3">
-                  <MapPin size={16} className="text-cyan-300/70" />
-                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300/70">Select Slot</span>
-                </div>
-
-
-
-                <div className="flex items-center gap-3">
-                  <motion.button
-                    type="button"
-                    onClick={() => setShowSlotModal(true)}
-                    disabled={!selectedBuildingId}
-                    whileHover={{ scale: 1.01 }}
-                    whileTap={{ scale: 0.99 }}
-                    className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-cyan-300/20 bg-cyan-300/5 px-4 py-4 text-sm font-black uppercase tracking-wider text-cyan-200 transition-all hover:bg-cyan-300/10 disabled:cursor-not-allowed disabled:border-slate-700 disabled:text-slate-500 disabled:bg-transparent"
-                  >
-                    <MapPin size={16} /> Select Slot
-                  </motion.button>
-                  <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-center min-w-[100px] shadow-sm">
-                    <p className="text-[9px] font-bold uppercase text-slate-500">Slot</p>
-                    <p className="mt-1 font-mono text-xl font-black text-cyan-300">{selectedSlot || '—'}</p>
-                  </div>
-                </div>
-              </div>
+            {b.mode === 'hourly' ? (
+              <SlotPickerPanel
+                disabled={!b.selectedVehicleType}
+                selectedBuildingId={b.selectedBuildingId}
+                selectedSlot={b.selectedSlot}
+                onOpenSlotModal={() => b.setShowSlotModal(true)}
+              />
             ) : (
-              <div className="glass-panel-white rounded-3xl border border-blue-500/20 bg-blue-500/5 p-6 shadow-lg">
-                <p className="text-[11px] text-cyan-200/90">
-                  Package allows free parking up to <strong>{selectedPkg?.maxHoursPerDay ? `${selectedPkg.maxHoursPerDay}h` : 'according to package'}/day</strong>
-                  {' '}(excess hours billed at regular hourly rates). Subscriptions <strong>do not guarantee a fixed spot</strong> — staff will assign an empty slot upon entry.
-                  Each package is tied to <strong>1 plate</strong>. To guarantee a slot at a specific time, please use <strong>Hourly Pre-booking</strong>.
-                </p>
-              </div>
+              <PackageInfoPanel selectedPkg={b.selectedPkg} />
             )}
-
           </div>
-
 
           {/* Right: Summary Sidebar */}
           <BookingSummarySidebar
-            selectedBuildingName={selectedBuilding?.building.name}
-            mode={mode}
-            selectedPkgName={selectedPkg?.name}
-            selectedVehicleType={selectedVehicleType}
-            selectedSlot={selectedSlot}
-            selectedPlate={selectedPlate}
-            startDateTime={startDateTime}
-            endDateTime={endDateTime}
-            estimatedAmount={estimatedAmount}
+            selectedBuildingName={b.selectedBuilding?.building.name}
+            mode={b.mode}
+            selectedPkgName={b.selectedPkg?.name}
+            selectedVehicleType={b.selectedVehicleType}
+            selectedSlot={b.selectedSlot}
+            selectedPlate={b.selectedPlate}
+            startDateTime={b.startDateTime}
+            endDateTime={b.endDateTime}
+            estimatedAmount={b.estimatedAmount}
+            depositAmount={b.liveEstimate?.depositAmount}
+            depositPercent={b.liveEstimate?.depositPercent}
           />
         </div>
 
-        {/* ── Sticky Footer ── */}
-        <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/[0.06] bg-[#060a11]/95 backdrop-blur-xl">
-          <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
-            <div className="hidden text-xs font-semibold text-slate-400 sm:block">
-              {startDateTime && endDateTime ? (
-                <>
-                  <span className="text-white">Check-in:</span> {fmtShort(startDateTime)}
-                  <span className="mx-2 text-slate-600">—</span>
-                  <span className="text-white">Check-out:</span> {fmtShort(endDateTime)}
-                  <span className="mx-2 text-slate-600">|</span>
-                  <span className="text-emerald-300 font-black">{fmtMoney(estimatedAmount)}</span>
-                </>
-              ) : (
-                'Select time and slot to pre-book'
-              )}
-            </div>
-            <motion.button
-              type="button"
-              disabled={!canSubmit}
-              onClick={handleConfirmBooking}
-              whileHover={canSubmit ? { scale: 1.02 } : {}}
-              whileTap={canSubmit ? { scale: 0.98 } : {}}
-              className="flex items-center gap-2 rounded-2xl btn-sand btn-sand-orange border border-white/10 bg-white/[0.03] backdrop-blur-sm px-6 py-3 text-sm font-black uppercase tracking-wider text-white transition-all disabled:cursor-not-allowed disabled:from-slate-700 disabled:to-slate-700 disabled:text-slate-400 disabled:shadow-none"
-            >
-              <span className="relative z-10 flex items-center gap-2">
-                <ShieldCheck size={16} />
-                {isSubmitting ? 'Processing...' : mode === 'hourly' ? 'Confirm Booking' : 'Buy Package'}
-              </span>
-            </motion.button>
-          </div>
-        </div>
+        <BookingFooter
+          startDateTime={b.startDateTime}
+          endDateTime={b.endDateTime}
+          estimatedAmount={b.estimatedAmount}
+          canSubmit={b.canSubmit}
+          isSubmitting={b.isSubmitting}
+          mode={b.mode}
+          onConfirm={b.handleConfirmBooking}
+        />
 
         {/* Extra bottom padding for sticky footer */}
         <div className="h-20" />
@@ -822,31 +134,31 @@ export default function ReservationsPage() {
 
       {/* ── Slot Selection Modal ── */}
       <SlotSelectionModal
-        isOpen={showSlotModal}
-        onClose={() => setShowSlotModal(false)}
-        selectedFloorIdModal={selectedFloorIdModal}
-        setSelectedFloorIdModal={setSelectedFloorIdModal}
-        slots={slots}
-        selectedSlot={selectedSlot}
-        setSelectedSlot={setSelectedSlot}
-        unavailableSlotCodes={unavailableSlotCodes}
-        unsupportedSlotCodes={unsupportedSlotCodes}
-        onSlotClick={handleSlotClick}
-        isLoadingSlots={isLoadingSlots}
-        floorsError={floorsError}
-        floorsData={floorsData}
-        selectedVehicleType={selectedVehicleType}
+        isOpen={b.showSlotModal}
+        onClose={() => b.setShowSlotModal(false)}
+        selectedFloorIdModal={b.selectedFloorIdModal}
+        setSelectedFloorIdModal={b.setSelectedFloorIdModal}
+        slots={b.slots}
+        selectedSlot={b.selectedSlot}
+        setSelectedSlot={b.setSelectedSlot}
+        unavailableSlotCodes={b.unavailableSlotCodes}
+        unsupportedSlotCodes={b.unsupportedSlotCodes}
+        onSlotClick={b.handleSlotClick}
+        isLoadingSlots={b.isLoadingSlots}
+        floorsError={b.floorsError}
+        floorsData={b.floorsData}
+        selectedVehicleType={b.selectedVehicleType}
       />
 
       {/* ── History Modal ── */}
-      <BookingHistoryModal isOpen={showHistory} onClose={() => setShowHistory(false)} />
+      <BookingHistoryModal isOpen={b.showHistory} onClose={() => b.setShowHistory(false)} />
 
       {/* ── Center Notification Popup Modal ── */}
       <BookingNotificationModal
-        bookingSuccess={bookingSuccess}
-        bookingError={bookingError}
-        onCloseSuccess={() => setBookingSuccess(null)}
-        onCloseError={() => setBookingError(null)}
+        bookingSuccess={b.bookingSuccess}
+        bookingError={b.bookingError}
+        onCloseSuccess={() => b.setBookingSuccess(null)}
+        onCloseError={() => b.setBookingError(null)}
       />
     </main>
   );
