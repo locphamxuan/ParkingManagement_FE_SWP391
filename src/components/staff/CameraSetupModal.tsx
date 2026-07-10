@@ -24,9 +24,9 @@ interface CameraSetupModalProps {
 }
 
 const ROLES: { role: CameraRole; label: string }[] = [
-  { role: 'plate', label: 'Camera 1 · Biển số' },
+  { role: 'plate', label: 'Camera 1 · License Plate' },
   { role: 'qr', label: 'Camera 2 · QR' },
-  { role: 'portrait', label: 'Camera 3 · Chân dung' },
+  { role: 'portrait', label: 'Camera 3 · Portrait' },
 ];
 
 export function CameraSetupModal({ open, onClose, devices, assignment, assign, requestAndRefresh }: CameraSetupModalProps) {
@@ -40,15 +40,15 @@ export function CameraSetupModal({ open, onClose, devices, assignment, assign, r
       >
         <div className="mb-4 flex items-center justify-between">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-primary">Thiết bị</p>
-            <h3 className="text-xl font-semibold text-foreground">Cài đặt camera</h3>
+            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-primary">Devices</p>
+            <h3 className="text-xl font-semibold text-foreground">Camera Setup</h3>
           </div>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition">✕</button>
         </div>
 
         <p className="mb-4 text-xs text-muted-foreground">
-          Khi có nhiều camera (biển số / chân dung / QR), gán mỗi vai trò vào một thiết bị riêng để
-          mở đồng thời và chụp đúng hình. Trên máy 1 webcam thì các vai trò dùng chung 1 thiết bị.
+          When you have multiple cameras (plate / portrait / QR), assign each role to its own device
+          so they can open simultaneously and capture the correct image. On a machine with a single webcam, all roles share the same device.
         </p>
 
         <div className="space-y-3">
@@ -60,7 +60,7 @@ export function CameraSetupModal({ open, onClose, devices, assignment, assign, r
                 onChange={(e) => assign(role, e.target.value)}
                 className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground outline-none focus:border-primary/50"
               >
-                <option value="">— Tự động (mặc định) —</option>
+                <option value="">— Auto (default) —</option>
                 {devices.map((d, i) => (
                   <option key={d.deviceId} value={d.deviceId}>
                     {d.label || `Camera ${i + 1}`}
@@ -73,16 +73,16 @@ export function CameraSetupModal({ open, onClose, devices, assignment, assign, r
 
         {devices.length === 0 && (
           <p className="mt-3 text-[11px] text-amber-400">
-            Chưa thấy thiết bị nào — bấm "Làm mới" và cấp quyền camera cho trình duyệt.
+            No devices found yet — click "Refresh" and grant camera permission to the browser.
           </p>
         )}
 
         <div className="mt-5 flex justify-between gap-2">
           <Button type="button" variant="secondary" onClick={() => void requestAndRefresh()} className="gap-1.5 text-xs">
-            <Settings size={13} /> Làm mới danh sách
+            <Settings size={13} /> Refresh list
           </Button>
           <Button onClick={onClose} className="bg-gradient-to-r from-orange-500 to-amber-400 text-slate-950 hover:brightness-110 text-xs">
-            Xong
+            Done
           </Button>
         </div>
       </motion.div>
