@@ -109,10 +109,12 @@ export const LiveQRCamera = forwardRef<LiveCameraHandle, LiveQRCameraProps>(func
       }
     })();
 
+    // Chốt tham chiếu video tại thời điểm effect chạy — lúc cleanup ref có thể đã đổi.
+    const videoEl = videoRef.current;
     return () => {
       cancelled = true;
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      const s = (videoRef.current?.srcObject as MediaStream | null) ?? stream;
+      const s = (videoEl?.srcObject as MediaStream | null) ?? stream;
       s?.getTracks().forEach((t) => t.stop());
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

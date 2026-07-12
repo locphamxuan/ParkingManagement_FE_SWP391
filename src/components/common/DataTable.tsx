@@ -18,7 +18,7 @@ export function DataTable<T extends object>({
   title,
   rows,
   columns,
-  emptyText = 'Không tìm thấy bản ghi.',
+  emptyText = 'No records found.',
 }: DataTableProps<T>) {
   return (
     <Card className="overflow-hidden border border-border/40 bg-card/40 shadow-lg backdrop-blur-md">

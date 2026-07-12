@@ -77,7 +77,7 @@ export function UserQRModal({ isOpen, onClose, userId, fullName }: UserQRModalPr
               {/* Header */}
               <div className="relative bg-gradient-to-r from-orange-500/10 to-amber-500/10 border-b border-white/5 p-6 flex items-center justify-between">
                 <div className="space-y-1">
-                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-orange-400 font-mono">Mã QR của bạn</p>
+                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-orange-400 font-mono">Your QR Code</p>
                   <h2 className="text-xl font-black text-white">Check-In / Check-Out</h2>
                 </div>
                 <button
@@ -101,8 +101,8 @@ export function UserQRModal({ isOpen, onClose, userId, fullName }: UserQRModalPr
                 {/* User Info */}
                 <div className="space-y-3 rounded-2xl bg-slate-950/60 border border-white/5 p-4">
                   <div>
-                    <p className="text-[9px] font-black uppercase tracking-wider text-slate-500 font-mono mb-1">Tên người dùng</p>
-                    <p className="text-sm font-semibold text-white">{fullName || 'Người dùng'}</p>
+                    <p className="text-[9px] font-black uppercase tracking-wider text-slate-500 font-mono mb-1">User Name</p>
+                    <p className="text-sm font-semibold text-white">{fullName || 'User'}</p>
                   </div>
                   <div>
                     <p className="text-[9px] font-black uppercase tracking-wider text-slate-500 font-mono mb-1">User ID</p>
@@ -126,7 +126,7 @@ export function UserQRModal({ isOpen, onClose, userId, fullName }: UserQRModalPr
                 {/* Info Box */}
                 <div className="rounded-2xl bg-blue-500/5 border border-blue-500/20 p-4">
                   <p className="text-xs text-blue-200 leading-relaxed font-semibold">
-                    📱 <strong>Hướng dẫn:</strong> Nhân viên sẽ quét mã QR này khi bạn check-in hoặc check-out xe. Đảm bảo hiển thị rõ ràng để quét nhanh nhất.
+                    📱 <strong>Instructions:</strong> Staff will scan this QR code when you check in or check out your vehicle. Make sure it is displayed clearly for the fastest scan.
                   </p>
                 </div>
 
@@ -137,13 +137,13 @@ export function UserQRModal({ isOpen, onClose, userId, fullName }: UserQRModalPr
                     className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider transition-all duration-300 hover:scale-105 hover:shadow-[0_0_20px_rgba(249,115,22,0.35)] inline-flex items-center justify-center gap-2"
                   >
                     <Download size={14} className="stroke-[2.5]" />
-                    Tải xuống
+                    Download
                   </button>
                   <button
                     onClick={onClose}
                     className="flex-1 px-4 py-3 rounded-xl bg-slate-800 border border-white/10 text-white font-black text-xs uppercase tracking-wider transition-all duration-300 hover:bg-slate-700 hover:border-white/20"
                   >
-                    Đóng
+                    Close
                   </button>
                 </div>
               </div>

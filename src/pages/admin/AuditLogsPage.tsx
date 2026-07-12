@@ -8,42 +8,42 @@ import type { AuditLog } from '@/types';
 
 // Nhãn tiếng Việt cho từng bảng mục tiêu (targetTable) của nhật ký.
 const TARGET_LABELS: Record<string, string> = {
-  users: 'Người dùng',
-  buildings: 'Tòa nhà',
-  floors: 'Tầng',
-  gates: 'Cổng',
-  parking_slots: 'Chỗ đỗ',
-  vehicle_types: 'Loại xe',
-  price_policies: 'Bảng giá',
-  long_term_packages: 'Gói dài hạn',
-  reservation_policies: 'Chính sách đặt chỗ',
-  shifts: 'Ca làm việc',
-  staff_shifts: 'Phân ca nhân viên',
-  feedbacks: 'Phản hồi',
-  revenue_distributions: 'Phân phối doanh thu',
-  subscription_packages: 'Gói dịch vụ',
-  subscriptions: 'Đăng ký gói',
-  wallets: 'Ví',
-  transactions: 'Giao dịch',
+  users: 'Users',
+  buildings: 'Buildings',
+  floors: 'Floors',
+  gates: 'Gates',
+  parking_slots: 'Parking Slots',
+  vehicle_types: 'Vehicle Types',
+  price_policies: 'Price Policies',
+  long_term_packages: 'Long-term Packages',
+  reservation_policies: 'Reservation Policies',
+  shifts: 'Shifts',
+  staff_shifts: 'Staff Shift Assignments',
+  feedbacks: 'Feedback',
+  revenue_distributions: 'Revenue Distributions',
+  subscription_packages: 'Subscription Packages',
+  subscriptions: 'Subscriptions',
+  wallets: 'Wallets',
+  transactions: 'Transactions',
 };
 
 const targetLabel = (target: string) => TARGET_LABELS[target] ?? target;
 
 // Động từ tiếng Việt suy ra từ tiền tố của mã hành động (CREATE_/UPDATE_/...).
 const ACTION_VERBS: Record<string, string> = {
-  CREATE: 'Tạo',
-  UPDATE: 'Cập nhật',
-  DELETE: 'Xóa',
-  ASSIGN: 'Gán',
-  REVOKE: 'Thu hồi',
-  GRANT: 'Cấp',
-  RESPOND: 'Phản hồi',
-  DISTRIBUTE: 'Phân phối',
-  LOGIN: 'Đăng nhập',
-  LOGOUT: 'Đăng xuất',
+  CREATE: 'Create',
+  UPDATE: 'Update',
+  DELETE: 'Delete',
+  ASSIGN: 'Assign',
+  REVOKE: 'Revoke',
+  GRANT: 'Grant',
+  RESPOND: 'Respond',
+  DISTRIBUTE: 'Distribute',
+  LOGIN: 'Login',
+  LOGOUT: 'Logout',
 };
 
-// "UPDATE_PRICE_POLICY" trên bảng price_policies → "Cập nhật bảng giá".
+// "UPDATE_PRICE_POLICY" trên bảng price_policies → "Update price policies".
 const friendlyDetails = (log: AuditLog) => {
   const verbKey = Object.keys(ACTION_VERBS).find((v) => log.action.startsWith(v));
   if (!verbKey) return log.details;
@@ -65,7 +65,7 @@ export function AuditLogsPage() {
   const groups = useMemo(() => {
     const map = new Map<string, AuditLog[]>();
     for (const log of logs) {
-      const key = log.target || 'khác';
+      const key = log.target || 'other';
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(log);
     }
@@ -98,31 +98,31 @@ export function AuditLogsPage() {
   const pageRows = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   if (isLoading) {
-    return <div className="text-sm text-muted-foreground">Đang tải nhật ký hoạt động...</div>;
+    return <div className="text-sm text-muted-foreground">Loading activity logs...</div>;
   }
 
   if (error || !data) {
-    return <div className="text-sm text-red-600">{error || 'Tải nhật ký thất bại.'}</div>;
+    return <div className="text-sm text-red-600">{error || 'Failed to load logs.'}</div>;
   }
 
   const columns: DataColumn<AuditLog>[] = [
-    { key: 'actor', title: 'Người thực hiện' },
+    { key: 'actor', title: 'Actor' },
     {
       key: 'details',
-      title: 'Chi tiết',
+      title: 'Details',
       render: (row) => (
         <div>
           <div className="text-foreground">{friendlyDetails(row)}</div>
           <div className="text-xs text-muted-foreground">
-            {row.building ? `Tòa nhà: ${row.building}` : 'Toàn hệ thống'}
+            {row.building ? `Building: ${row.building}` : 'System-wide'}
           </div>
         </div>
       ),
     },
-    { key: 'timestamp', title: 'Thời gian' },
+    { key: 'timestamp', title: 'Time' },
     {
       key: 'severity',
-      title: 'Mức độ',
+      title: 'Severity',
       render: (row) => <StatusBadge status={row.severity} />,
     },
   ];
@@ -130,7 +130,7 @@ export function AuditLogsPage() {
   if (groups.length === 0) {
     return (
       <div className="rounded-xl border border-border bg-card p-6 text-center text-sm text-muted-foreground">
-        Chưa có nhật ký hoạt động nào.
+        No activity logs yet.
       </div>
     );
   }
@@ -183,7 +183,7 @@ export function AuditLogsPage() {
       />
 
       <DataTable
-        title={`Nhật ký: ${currentTab ? targetLabel(currentTab) : ''}`}
+        title={`Log: ${currentTab ? targetLabel(currentTab) : ''}`}
         rows={pageRows}
         columns={columns}
       />
@@ -191,8 +191,8 @@ export function AuditLogsPage() {
       <div className="flex items-center justify-between gap-2">
         <span className="text-xs text-muted-foreground">
           {filtered.length > 0
-            ? `${(safePage - 1) * PAGE_SIZE + 1}–${Math.min(safePage * PAGE_SIZE, filtered.length)} / ${filtered.length} bản ghi`
-            : 'Không có bản ghi phù hợp'}
+            ? `${(safePage - 1) * PAGE_SIZE + 1}–${Math.min(safePage * PAGE_SIZE, filtered.length)} / ${filtered.length} records`
+            : 'No matching records'}
         </span>
         <div className="flex items-center gap-2">
           <Button
@@ -201,10 +201,10 @@ export function AuditLogsPage() {
             disabled={safePage <= 1}
             onClick={() => setPage((p) => Math.max(1, p - 1))}
           >
-            Trước
+            Previous
           </Button>
           <span className="text-sm text-muted-foreground">
-            Trang {safePage} / {maxPage}
+            Page {safePage} / {maxPage}
           </span>
           <Button
             variant="secondary"
@@ -212,7 +212,7 @@ export function AuditLogsPage() {
             disabled={safePage >= maxPage}
             onClick={() => setPage((p) => Math.min(maxPage, p + 1))}
           >
-            Tiếp
+            Next
           </Button>
         </div>
       </div>

@@ -3,13 +3,14 @@ import { motion } from 'framer-motion';
 import { Car, Bike, Lock, CheckCircle2, ShieldCheck } from 'lucide-react';
 import type { LongTermPackage } from '@/services/user/userApi';
 import { isCarPackage, fmtMoney, categoryLabels } from '@/pages/user/reservationsHelper';
+import type { CategoryColorSet } from '@/pages/user/reservationsHelper';
 
 interface PackageCardProps {
   pkg: LongTermPackage;
   isSelected: boolean;
   isLocked: boolean;
   cat: 'weekly' | 'monthly' | 'yearly';
-  colors: any;
+  colors: CategoryColorSet;
   onClick: () => void;
 }
 

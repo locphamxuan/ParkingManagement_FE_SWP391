@@ -37,7 +37,7 @@ export function HomeRoute() {
   }, [navigate, onOpenAuth, session]);
 
   const onAction = useCallback(
-    (module: any) => {
+    (module: { id: string }) => {
       if (module.id === 'auth') return onOpenAuth('login');
       if (module.id === 'profile') return onViewProfile();
       if (module.id === 'wallet') return session ? navigate('/wallet') : onOpenAuth('login');

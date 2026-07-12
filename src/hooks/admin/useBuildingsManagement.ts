@@ -120,7 +120,7 @@ export function useBuildingsManagement() {
           (u) => !u.assignedBuildings || u.assignedBuildings.length === 0
         );
         setUnassignedStaff(unassigned);
-      } catch (err) {
+      } catch {
         setUnassignedStaff([]);
       } finally {
         setIsLoadingStaff(false);
@@ -135,7 +135,7 @@ export function useBuildingsManagement() {
             (u) => !u.assignedBuildings || u.assignedBuildings.length === 0
           );
           setUnassignedManagers(unassigned);
-        } catch (err) {
+        } catch {
           setUnassignedManagers([]);
         } finally {
           setIsLoadingManagers(false);

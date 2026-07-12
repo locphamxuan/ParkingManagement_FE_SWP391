@@ -121,7 +121,7 @@ export function useAuthPageForm({ mode, notice, onModeChange, onSubmit }: UseAut
     }
   };
 
-  const handleSelectAccount = (e: ReactMouseEvent, acc: { email: string }) => {
+  const handleSelectAccount = (e: { preventDefault: () => void }, acc: { email: string }) => {
     e.preventDefault(); // Điền sẵn email, người dùng tự nhập mật khẩu.
     setForm((s) => ({ ...s, email: acc.email }));
     setShowDropdown(false);

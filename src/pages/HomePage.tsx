@@ -21,8 +21,10 @@ import { notificationApi } from '@/services/notificationApi';
 import homeBg from '@/assets/back3.png';
 import carGarage from '@/assets/white_car_garage.png';
 import { HotSpot } from '@/components/home/HotSpot';
-import { ModuleCard, moduleIcons } from '@/components/home/ModuleCard';
-import { navigationLinks, PremiumCTABanner, PremiumFooter } from '@/components/home/HomeFooter';
+import { ModuleCard } from '@/components/home/ModuleCard';
+import { moduleIcons } from '@/components/home/moduleCard.constants';
+import { PremiumCTABanner, PremiumFooter } from '@/components/home/HomeFooter';
+import { navigationLinks } from '@/components/home/homeNavigation.constants';
 
 interface HomePageProps {
   modules: LegacyModule[];
@@ -140,7 +142,7 @@ export default function HomePage({ modules, onOpenAuth, onViewProfile, onViewRes
         <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-blue-600 via-cyan-400 to-purple-600 opacity-60 pointer-events-none" />
 
         <div className="max-w-6xl mx-auto px-4 flex items-center justify-between">
-          <a href="#top" aria-label="PBMS Trang chủ" className="flex items-center gap-3 group">
+          <a href="#top" aria-label="PBMS Home" className="flex items-center gap-3 group">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-500 grid place-items-center shadow-[0_0_15px_rgba(6,182,212,0.3)] transition-all duration-300 group-hover:scale-105 group-hover:shadow-[0_0_20px_rgba(6,182,212,0.5)] group-hover:rotate-6">
               <span className="w-2.5 h-2.5 bg-slate-950 rounded-full" />
             </div>

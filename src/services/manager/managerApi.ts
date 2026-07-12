@@ -118,6 +118,9 @@ export interface Subscription {
   startDate: string;
   endDate: string;
   status: 'pending' | 'active' | 'expired' | 'cancelled';
+  /** Snapshot % và số tiền đã hoàn lúc hủy (theo ReservationPolicy tại thời điểm đó). */
+  refundPercent?: number | null;
+  refundAmount?: number | null;
 }
 
 export interface ReservationPolicy {
@@ -327,7 +330,7 @@ export const managerApi = {
     subscriptions: (b: string, q?: Record<string, string | undefined>) =>
       api.get<Wrap<{ items: Subscription[]; pagination: unknown }>>(path(b, '/subscriptions'), { query: q }),
     cancelSubscription: (b: string, id: string, reason?: string) =>
-      api.delete<Wrap<{ subscription: Subscription; refundAmount: number }>>(path(b, `/subscriptions/${id}`), { body: { reason } }),
+      api.delete<Wrap<{ subscription: Subscription; refundAmount: number; refundPercent: number }>>(path(b, `/subscriptions/${id}`), { body: { reason } }),
   },
 
   reservationPolicy: {

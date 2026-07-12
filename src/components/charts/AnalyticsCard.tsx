@@ -86,7 +86,7 @@ export function AnalyticsCard({ label, value, delta, index = 0, icon }: Analytic
               <span>{isPositive ? '▲' : '▼'}</span>
               {delta}
             </span>
-            <span className="text-[10px] font-bold text-slate-500">vs tháng trước</span>
+            <span className="text-[10px] font-bold text-slate-500">vs last month</span>
           </div>
         </div>
 

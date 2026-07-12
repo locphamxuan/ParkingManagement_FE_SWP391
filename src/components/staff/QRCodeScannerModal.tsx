@@ -76,17 +76,21 @@ export function QRCodeScannerModal({
 
     initCamera();
 
+    // Chốt tham chiếu video tại thời điểm effect chạy — lúc cleanup ref có thể đã đổi.
+    const videoEl = videoRef.current;
     return () => {
-      // Cleanup: stop camera and animation frame
-      if (videoRef.current?.srcObject) {
-        const tracks = (videoRef.current.srcObject as MediaStream).getTracks();
+      if (videoEl?.srcObject) {
+        const tracks = (videoEl.srcObject as MediaStream).getTracks();
         tracks.forEach((track) => track.stop());
       }
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [isOpen]);
+    // startScanning cố ý không nằm trong deps: hàm được tạo lại mỗi render,
+    // đưa vào sẽ khiến camera khởi tạo lại liên tục.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, useCamera]);
 
   const startScanning = () => {
     const scan = () => {

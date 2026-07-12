@@ -80,16 +80,16 @@ interface ApiAudit {
 }
 
 const OPERATIONAL_GUARDRAILS = [
-  'Mã thẻ online phải gắn với tài khoản người dùng đã xác thực và biển số liên kết.',
-  'Khách walk-in chỉ được vào qua phiên gửi xe hợp lệ và đóng phí trước khi rời bãi.',
-  'Mọi thay đổi chính sách giá, khóa tài khoản, điều chỉnh phí đều phải có audit log.',
+  'Online card codes must be linked to a verified user account and its associated license plate.',
+  'Walk-in customers may only enter with a valid parking session and must pay before leaving the lot.',
+  'Any change to pricing policy, account lockouts, or fee adjustments must be recorded in the audit log.',
 ];
 
 const METHOD_LABELS: Record<string, string> = {
-  wallet: 'Ví ứng dụng',
+  wallet: 'App Wallet',
   qr: 'QR',
-  cash: 'Tiền mặt',
-  card: 'Thẻ ngân hàng',
+  cash: 'Cash',
+  card: 'Bank Card',
 };
 
 const formatCompactCurrency = (amount: number): string =>
@@ -107,12 +107,12 @@ const toBuilding = (
   stats?: { occupancyRate: number; revenueToday: number },
 ): Building => {
   // Handle manager field that can be a populated object, a string ID, or null
-  let managerName = 'Chưa gán';
-  
+  let managerName = 'Unassigned';
+
   if (item.manager) {
     if (typeof item.manager === 'object' && 'fullName' in item.manager) {
       // Manager is a populated object with fullName
-      managerName = item.manager.fullName || 'Chưa gán';
+      managerName = item.manager.fullName || 'Unassigned';
     } else if (typeof item.manager === 'string') {
       // Manager is a string ID, look up in the map or show truncated ID
       managerName = managerNameById.get(item.manager) || `ID: ${item.manager.slice(0, 8)}`;
@@ -123,7 +123,7 @@ const toBuilding = (
     id: item.code || item._id,
     backendId: item._id,
     name: item.name,
-    address: item.address?.fullAddress || 'Chưa cập nhật địa chỉ',
+    address: item.address?.fullAddress || 'Address not updated',
     floors: item.totalFloors || 0,
     occupancyRate: Number(stats?.occupancyRate || 0),
     status: item.status || 'inactive',
@@ -156,7 +156,7 @@ const toAudit = (item: ApiAudit): AuditLog => ({
   target: item.targetTable,
   severity: item.severity || 'low',
   timestamp: item.createdAt ? new Date(item.createdAt).toLocaleString('vi-VN') : '-',
-  details: item.description || `${item.action} trên ${item.targetTable}`,
+  details: item.description || `${item.action} on ${item.targetTable}`,
   building: item.building
     ? [item.building.name, item.building.code ? `(${item.building.code})` : null]
         .filter(Boolean)
@@ -220,50 +220,50 @@ export async function getApiAdminDataset(token: string): Promise<AdminDataset> {
   const dashboardStats = [
     {
       key: 'buildings',
-      label: 'Tổng số tòa nhà',
+      label: 'Total Buildings',
       value: String(overviewRes.data.counts.buildings),
-      delta: `${buildings.filter((b) => b.status === 'active').length} đang hoạt động`,
+      delta: `${buildings.filter((b) => b.status === 'active').length} active`,
     },
     {
       key: 'sessions',
-      label: 'Phiên đỗ đang hoạt động',
+      label: 'Active Parking Sessions',
       value: overviewRes.data.counts.activeSessions.toLocaleString('vi-VN'),
-      delta: `${overviewRes.data.counts.staff} nhân sự vận hành`,
+      delta: `${overviewRes.data.counts.staff} operations staff`,
     },
     {
       key: 'revenue',
-      label: 'Doanh thu hôm nay',
+      label: 'Revenue Today',
       value: formatCompactCurrency(overviewRes.data.revenue.total ?? overviewRes.data.revenue.today ?? 0),
-      delta: `${paymentMethodDistribution.length} phương thức thanh toán`,
+      delta: `${paymentMethodDistribution.length} payment methods`,
     },
     {
       key: 'users',
-      label: 'Người dùng toàn hệ thống',
+      label: 'System-wide Users',
       value: overviewRes.data.counts.users.toLocaleString('vi-VN'),
-      delta: `${overviewRes.data.counts.managers} quản lý / ${overviewRes.data.counts.staff} nhân viên`,
+      delta: `${overviewRes.data.counts.managers} managers / ${overviewRes.data.counts.staff} staff`,
     },
   ];
 
   const monitoringMetrics: MonitoringMetric[] = [
     {
       id: 'active-buildings',
-      label: 'Tòa nhà hoạt động',
+      label: 'Active Buildings',
       value: `${buildings.filter((b) => b.status === 'active').length}/${buildings.length}`,
-      trend: 'Theo trạng thái hiện tại',
+      trend: 'Based on current status',
       status: buildings.some((b) => b.status === 'maintenance') ? 'warning' : 'ok',
     },
     {
       id: 'active-sessions',
-      label: 'Phiên đang hoạt động',
+      label: 'Active Sessions',
       value: overviewRes.data.counts.activeSessions.toLocaleString('vi-VN'),
-      trend: 'Cập nhật theo thời gian thực',
+      trend: 'Updated in real time',
       status: overviewRes.data.counts.activeSessions > 0 ? 'ok' : 'warning',
     },
     {
       id: 'ops-staff',
-      label: 'Nhân sự vận hành',
+      label: 'Operations Staff',
       value: overviewRes.data.counts.staff.toLocaleString('vi-VN'),
-      trend: `${overviewRes.data.counts.managers} quản lý`,
+      trend: `${overviewRes.data.counts.managers} managers`,
       status: overviewRes.data.counts.staff > 0 ? 'ok' : 'critical',
     },
   ];
@@ -278,6 +278,8 @@ export async function getApiAdminDataset(token: string): Promise<AdminDataset> {
     paymentMethodDistribution,
     buildings,
     users,
+    // BE chưa có endpoint transactions/fraudAlerts riêng cho admin — để mảng rỗng
+    // có chủ đích (không phải thiếu sót) cho tới khi BE bổ sung API tương ứng.
     transactions: [],
     auditLogs,
     fraudAlerts: [],

@@ -67,7 +67,7 @@ const ModulePlaceholderPage = lazy(() => import('@/pages/admin/ModulePlaceholder
 function RouteFallback() {
   return (
     <div className="flex min-h-[40vh] items-center justify-center text-sm text-slate-400">
-      Đang tải…
+      Loading…
     </div>
   );
 }
@@ -122,8 +122,8 @@ export function AppRouter() {
             path="settings"
             element={
               <ManagerPlaceholderPage
-                title="Cài đặt"
-                description="Cấu hình bảo mật, thông báo và tham số vận hành cho manager."
+                title="Settings"
+                description="Configure security, notifications, and operating parameters for managers."
               />
             }
           />
@@ -161,11 +161,11 @@ export function AppRouter() {
           <Route path="profile" element={<AdminProfilePage />} />
           <Route
             path="notifications"
-            element={<ModulePlaceholderPage title="Thông báo" description="Mẫu thông báo, giám sát hàng đợi và kênh gửi." />}
+            element={<ModulePlaceholderPage title="Notifications" description="Notification templates, queue monitoring, and delivery channels." />}
           />
           <Route
             path="settings"
-            element={<ModulePlaceholderPage title="Cài đặt" description="Cấu hình nền tảng, chính sách truy cập và tùy chọn vận hành." />}
+            element={<ModulePlaceholderPage title="Settings" description="Platform configuration, access policies, and operating preferences." />}
           />
         </Route>
       </Route>

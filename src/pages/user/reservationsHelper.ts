@@ -101,7 +101,21 @@ export function packageCategory(pkg: LongTermPackage): 'weekly' | 'monthly' | 'y
 
 export const categoryLabels = { weekly: 'Weekly Package', monthly: 'Monthly Package', yearly: 'Yearly Package' };
 
-export const categoryColors = {
+export type CategoryColorSet = {
+  borderSelected: string;
+  bgSelected: string;
+  shadowSelected: string;
+  borderNormal: string;
+  bgNormal: string;
+  borderHover: string;
+  bgHover: string;
+  shadowHover: string;
+  text: string;
+  accent: string;
+  glitterColors: string[];
+};
+
+export const categoryColors: Record<'weekly' | 'monthly' | 'yearly', CategoryColorSet> = {
   weekly: {
     borderSelected: 'border-cyan-500 ring-2 ring-cyan-500/25',
     bgSelected: 'bg-gradient-to-br from-cyan-950/30 via-cyan-950/10 to-slate-950/30',

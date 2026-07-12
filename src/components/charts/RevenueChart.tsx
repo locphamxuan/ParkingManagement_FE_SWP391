@@ -16,19 +16,27 @@ interface RevenueChartProps {
 
 export function RevenueChart({ data }: RevenueChartProps) {
   // Customized 3D Glowing HTML Tooltip
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  const CustomTooltip = ({
+    active,
+    payload,
+    label,
+  }: {
+    active?: boolean;
+    payload?: Array<{ value: number }>;
+    label?: string;
+  }) => {
     if (active && payload && payload.length) {
       return (
         <div className="glass-panel-dark border border-orange-500/20 px-4 py-3 rounded-2xl shadow-[0_0_25px_rgba(249,115,22,0.2)] text-xs text-white backdrop-blur-md">
           <p className="font-mono font-black text-slate-400 mb-2 uppercase tracking-widest">{label}</p>
           <div className="space-y-1.5">
             <div className="flex justify-between items-center gap-6">
-              <span className="text-orange-400 font-bold">Doanh thu:</span>
+              <span className="text-orange-400 font-bold">Revenue:</span>
               <span className="font-mono font-black text-white">{payload[0].value.toLocaleString()} VND</span>
             </div>
             {payload[1] && (
               <div className="flex justify-between items-center gap-6">
-                <span className="text-purple-400 font-bold">Công suất:</span>
+                <span className="text-purple-400 font-bold">Occupancy:</span>
                 <span className="font-mono font-black text-white">{payload[1].value}%</span>
               </div>
             )}
@@ -46,7 +54,7 @@ export function RevenueChart({ data }: RevenueChartProps) {
       <div className="absolute -right-16 -top-16 h-36 w-36 rounded-full bg-[radial-gradient(circle_at_center,rgba(249,115,22,0.08),transparent_65%)] pointer-events-none" />
       
       <div className="mb-4">
-        <h3 className="text-sm font-black uppercase tracking-wider text-slate-400 font-mono">Xu Hướng Doanh Thu & Công Suất</h3>
+        <h3 className="text-sm font-black uppercase tracking-wider text-slate-400 font-mono">Revenue &amp; Occupancy Trend</h3>
       </div>
 
       <div className="h-[320px] w-full preserve-3d">
@@ -82,7 +90,7 @@ export function RevenueChart({ data }: RevenueChartProps) {
             />
             <Area 
               type="monotone" 
-              name="Doanh thu (VND)"
+              name="Revenue (VND)"
               dataKey="revenue" 
               stroke="#f97316" 
               strokeWidth={2.5} 
@@ -91,7 +99,7 @@ export function RevenueChart({ data }: RevenueChartProps) {
             />
             <Area 
               type="monotone" 
-              name="Công suất (%)"
+              name="Occupancy (%)"
               dataKey="occupancy" 
               stroke="#a855f7" 
               strokeWidth={2} 

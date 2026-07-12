@@ -133,6 +133,9 @@ export interface LongTermSubscription {
   status: 'pending' | 'active' | 'expired' | 'cancelled';
   cancelReason?: 'change_vehicle' | 'no_longer_needed' | 'pricing_issue' | 'other' | null;
   cancelNote?: string | null;
+  /** Snapshot % và số tiền đã hoàn lúc hủy (theo ReservationPolicy tại thời điểm đó). */
+  refundPercent?: number | null;
+  refundAmount?: number | null;
   // ── Legacy/optional FE-only fields ──
   code?: string;
   linkedPlates?: string[];
@@ -187,6 +190,16 @@ export interface ReservationCreateResult {
   reservation: Reservation;
   depositAmount: number;
   estimatedFee: number;
+}
+
+/** Giới hạn đặt chỗ công khai của building (do manager cấu hình) — dùng để ràng buộc
+ * date/duration picker trước khi user chọn giờ cụ thể (estimate cần startTime/endTime). */
+export interface ReservationPolicyLimits {
+  maxAdvanceDays: number;
+  maxDurationHours: number;
+  depositPercent: number;
+  refundPercent: number;
+  cancellationCutoffHours: number;
 }
 
 export interface UserWallet {
@@ -267,6 +280,10 @@ interface ListResult<T> {
 export const userApi = {
   // ========== RESERVATIONS ==========
   reservations: {
+    /** Giới hạn đặt chỗ công khai của building (GET /users/reservations/policy). */
+    getPolicy: (buildingId: string) =>
+      api.get<Wrap<ReservationPolicyLimits>>('/users/reservations/policy', { query: { buildingId } }),
+
     /** Estimate fee + 15% deposit before booking (GET /users/reservations/estimate). */
     estimate: (query: {
       buildingId: string;
@@ -353,9 +370,9 @@ export const userApi = {
         {}
       ),
 
-    /** Cancel subscription */
+    /** Cancel subscription — BE hoàn refundPercent% giá gói vào ví (theo ReservationPolicy của building). */
     cancel: (id: string, body: { cancelReason: string; cancelNote?: string }) =>
-      api.post<Wrap<{ subscription: LongTermSubscription }>>(
+      api.post<Wrap<{ subscription: LongTermSubscription; refundAmount: number; refundPercent: number }>>(
         `/users/long-term/subscriptions/${id}/cancel`,
         body
       ),

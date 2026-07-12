@@ -27,36 +27,21 @@ interface ManagerSidebarProps {
 }
 
 const modules = [
-  { to: '', label: 'Tổng quan', icon: LayoutDashboard },
-  { to: 'buildings', label: 'Tòa nhà', icon: Building2 },
-  { to: 'vehicle-types', label: 'Loại xe', icon: Truck },
-  { to: 'floors', label: 'Tầng', icon: ClipboardList },
-  { to: 'gates', label: 'Cổng', icon: Flag },
-  { to: 'zones', label: 'Dãy', icon: Layers },
-  { to: 'slots', label: 'Chỗ đỗ', icon: Square },
-  { to: 'operating-hours', label: 'Giờ hoạt động', icon: Clock },
-  { to: 'price-policies', label: 'Giá', icon: SlidersHorizontal },
-  { to: 'reservation-policy', label: 'Đặt chỗ', icon: MapPin },
-  { to: 'packages', label: 'Gói', icon: Package },
-  { to: 'shifts', label: 'Ca trực & Gán ca', icon: Users },
-  { to: 'staff', label: 'Nhân viên', icon: User },
-  { to: 'reviews', label: 'Xem đánh giá', icon: MessageSquare },
-  { to: 'wallet', label: 'Ví tòa nhà', icon: Wallet },
-
-  { to: '', label: 'Overall', icon: LayoutDashboard },
-  { to: 'buildings', label: 'Building', icon: Building2 },
-  { to: 'vehicle-types', label: 'Vehicle Type', icon: Truck },
-  { to: 'floors', label: 'Floor', icon: ClipboardList },
-  { to: 'gates', label: 'Gate', icon: Flag },
-  { to: 'slots', label: 'Slot', icon: Square },
-  { to: 'operating-hours', label: 'Operating Hour', icon: Clock },
-  { to: 'price-policies', label: 'Price Policy', icon: SlidersHorizontal },
+  { to: '', label: 'Overview', icon: LayoutDashboard },
+  { to: 'buildings', label: 'Buildings', icon: Building2 },
+  { to: 'vehicle-types', label: 'Vehicle Types', icon: Truck },
+  { to: 'floors', label: 'Floors', icon: ClipboardList },
+  { to: 'gates', label: 'Gates', icon: Flag },
+  { to: 'zones', label: 'Zones', icon: Layers },
+  { to: 'slots', label: 'Parking Slots', icon: Square },
+  { to: 'operating-hours', label: 'Operating Hours', icon: Clock },
+  { to: 'price-policies', label: 'Price Policies', icon: SlidersHorizontal },
   { to: 'reservation-policy', label: 'Reservation Policy', icon: MapPin },
-  { to: 'packages', label: 'Package', icon: Package },
-  { to: 'shifts', label: 'Shilf', icon: Users },
+  { to: 'packages', label: 'Packages', icon: Package },
+  { to: 'shifts', label: 'Shifts & Assignments', icon: Users },
   { to: 'staff', label: 'Staff', icon: User },
-  { to: 'reviews', label: 'Review', icon: MessageSquare },
-  { to: 'wallet', label: 'Wallet', icon: Wallet },
+  { to: 'reviews', label: 'Reviews', icon: MessageSquare },
+  { to: 'wallet', label: 'Building Wallet', icon: Wallet },
 ] as const;
 
 export function ManagerSidebar({ collapsed, onToggle }: ManagerSidebarProps) {
@@ -70,7 +55,7 @@ export function ManagerSidebar({ collapsed, onToggle }: ManagerSidebarProps) {
       <div className="mb-6 flex items-center justify-between rounded-2xl border border-white/8 bg-slate-800/60 p-3 shadow-sm backdrop-blur-md">
         {!collapsed ? (
           <div className="pl-1">
-            <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-slate-500">Môi trường</p>
+            <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-slate-500">Environment</p>
             <p className="text-xs font-extrabold text-slate-100">MANAGER PORTAL</p>
           </div>
         ) : (

@@ -172,7 +172,7 @@ function SlotCell({
       disabled={!isClickable && !isSelected}
       whileHover={isClickable && !is3D ? { scale: 1.08, y: -3 } : {}}
       whileTap={isClickable && !is3D ? { scale: 0.95 } : {}}
-      title={`${slot.code} — ${status === 'available' ? 'Trống' : status === 'selected' ? 'Đang chọn' : status === 'occupied' ? 'Đang sử dụng' : status === 'reserved' ? 'Đã giữ' : status === 'maintenance' ? 'Bảo trì' : 'Không phù hợp'}`}
+      title={`${slot.code} — ${status === 'available' ? 'Available' : status === 'selected' ? 'Selected' : status === 'occupied' ? 'Occupied' : status === 'reserved' ? 'Reserved' : status === 'maintenance' ? 'Maintenance' : 'Unsupported'}`}
       className={`
         relative flex flex-col items-center justify-center rounded-xl border-2 transition-all duration-200 overflow-hidden
         ${is3D ? 'h-12 w-14 sm:h-14 sm:w-16' : 'h-20 w-11 sm:h-22 sm:w-13'}
@@ -291,7 +291,7 @@ function ParkingRow({
       <div className="flex shrink-0 flex-col items-center gap-0.5 px-1 sm:px-3">
         <div className="h-8 w-0.5 rounded-full bg-amber-400/20" />
         <span className="text-[7px] font-bold uppercase tracking-widest text-amber-300/40 [writing-mode:vertical-rl]">
-          Lối đi
+          Aisle
         </span>
         <div className="h-8 w-0.5 rounded-full bg-amber-400/20" />
       </div>
@@ -316,19 +316,19 @@ function Legend() {
     <div className="flex flex-wrap justify-center gap-6 py-2 border-b border-white/5 mb-5">
       <div className="flex items-center gap-2">
         <div className="h-2.5 w-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
-        <span className="text-xs font-bold text-slate-400">Trống</span>
+        <span className="text-xs font-bold text-slate-400">Available</span>
       </div>
       <div className="flex items-center gap-2">
         <div className="h-2.5 w-2.5 rounded-full bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.4)]" />
-        <span className="text-xs font-bold text-slate-400">Đang chọn</span>
+        <span className="text-xs font-bold text-slate-400">Selected</span>
       </div>
       <div className="flex items-center gap-2">
         <div className="h-2.5 w-2.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.4)]" />
-        <span className="text-xs font-bold text-slate-400">Đã giữ</span>
+        <span className="text-xs font-bold text-slate-400">Reserved</span>
       </div>
       <div className="flex items-center gap-2">
         <div className="h-2.5 w-2.5 rounded-full border border-dashed border-slate-500/80 bg-transparent opacity-60" />
-        <span className="text-xs font-bold text-slate-400">Không khả dụng</span>
+        <span className="text-xs font-bold text-slate-400">Unavailable</span>
       </div>
     </div>
   );
@@ -345,10 +345,10 @@ function EntryExitMarkers() {
             <path d="M1 8h12M9 4l4 4-4 4" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </div>
-        <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400/70">Lối vào</span>
+        <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400/70">Entrance</span>
       </div>
       <div className="flex items-center gap-2">
-        <span className="text-[10px] font-black uppercase tracking-wider text-rose-400/70">Lối ra</span>
+        <span className="text-[10px] font-black uppercase tracking-wider text-rose-400/70">Exit</span>
         <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-rose-500/15 text-rose-400">
           <svg viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5">
             <path d="M1 8h12M9 4l4 4-4 4" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -499,7 +499,7 @@ export function ParkingMap2D({
           {view === '3D' && (
             <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3 rounded-2xl border border-white/5 bg-slate-900/60 px-4 py-3.5 text-xs mb-5 shadow-inner">
               <div className="flex items-center gap-2">
-                <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px]">Độ nghiêng (Tilt):</span>
+                <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px]">Tilt:</span>
                 <input
                   type="range"
                   min="25"
@@ -511,7 +511,7 @@ export function ParkingMap2D({
                 <span className="font-mono text-slate-300 w-8 text-right">{rotateX}°</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px]">Xoay (Rotate):</span>
+                <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px]">Rotate:</span>
                 <input
                   type="range"
                   min="-180"
@@ -554,7 +554,7 @@ export function ParkingMap2D({
                 onClick={reset3D}
                 className="px-3 py-1.5 rounded-xl border border-white/10 hover:border-orange-500/30 text-[9px] font-black uppercase tracking-wider text-slate-300 hover:text-orange-200 transition duration-200"
               >
-                Mặc định
+                Reset
               </button>
             </div>
           )}
@@ -591,6 +591,7 @@ export function ParkingMap2D({
               </motion.div>
             ) : (
               <div
+                role="presentation"
                 className="relative w-full h-[450px] overflow-hidden rounded-2xl bg-[#040810]/90 border border-white/5 cursor-grab active:cursor-grabbing flex items-center justify-center select-none"
                 style={{ perspective: '1200px' }}
                 onMouseDown={handleMouseDown}

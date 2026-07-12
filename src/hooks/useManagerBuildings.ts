@@ -21,7 +21,7 @@ export function useManagerBuildings() {
         setSelectedBuildingId((cur) => cur || list[0]._id);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Không thể tải danh sách tòa nhà.');
+      setError(err instanceof Error ? err.message : 'Failed to load the building list.');
     } finally {
       setIsLoading(false);
     }

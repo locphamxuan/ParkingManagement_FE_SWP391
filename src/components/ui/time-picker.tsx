@@ -86,7 +86,7 @@ export function TimePicker({ value, onChange, className, disabled = false }: Tim
           >
             {/* Hour Column */}
             <div className="flex-1 flex flex-col overflow-y-auto custom-scrollbar border-r border-slate-800 pr-1">
-              <span className="text-[9px] font-black uppercase text-slate-500 text-center mb-1 sticky top-0 bg-[#070b12] py-1">Giờ</span>
+              <span className="text-[9px] font-black uppercase text-slate-500 text-center mb-1 sticky top-0 bg-[#070b12] py-1">Hour</span>
               {hoursList.map((h) => {
                 const isSelected = h === hour;
                 return (
@@ -107,7 +107,7 @@ export function TimePicker({ value, onChange, className, disabled = false }: Tim
 
             {/* Minute Column */}
             <div className="flex-1 flex flex-col overflow-y-auto custom-scrollbar border-r border-slate-800 pr-1">
-              <span className="text-[9px] font-black uppercase text-slate-500 text-center mb-1 sticky top-0 bg-[#070b12] py-1">Phút</span>
+              <span className="text-[9px] font-black uppercase text-slate-500 text-center mb-1 sticky top-0 bg-[#070b12] py-1">Minute</span>
               {minutesList.map((m) => {
                 const isSelected = m === minute;
                 return (
@@ -128,7 +128,7 @@ export function TimePicker({ value, onChange, className, disabled = false }: Tim
 
             {/* Period Column */}
             <div className="w-16 flex flex-col justify-start">
-              <span className="text-[9px] font-black uppercase text-slate-500 text-center mb-1 py-1">Buổi</span>
+              <span className="text-[9px] font-black uppercase text-slate-500 text-center mb-1 py-1">AM/PM</span>
               <div className="flex flex-col gap-1">
                 {periodsList.map((p) => {
                   const isSelected = p === period;

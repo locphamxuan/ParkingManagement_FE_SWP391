@@ -6,8 +6,8 @@ import { ManagerSubscriptionsPage } from '@/pages/manager/ManagerSubscriptionsPa
 type Tab = 'packages' | 'subscribers';
 
 const TABS: { key: Tab; label: string; icon: typeof Package }[] = [
-  { key: 'packages', label: 'Danh sách gói', icon: Package },
-  { key: 'subscribers', label: 'Khách đăng ký', icon: Users },
+  { key: 'packages', label: 'Package list', icon: Package },
+  { key: 'subscribers', label: 'Subscribers', icon: Users },
 ];
 
 /**

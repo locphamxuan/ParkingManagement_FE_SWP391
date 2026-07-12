@@ -12,21 +12,21 @@ interface SearchFilterBarProps {
 }
 
 const optionMap: Record<string, string> = {
-  all: 'Tất cả',
-  active: 'Hoạt động',
-  inactive: 'Không hoạt động',
-  maintenance: 'Bảo trì',
-  warning: 'Cảnh báo',
-  admin: 'Quản trị viên',
-  manager: 'Quản lý',
-  staff: 'Nhân viên',
-  user: 'Người dùng',
-  blocked: 'Đã khóa',
-  pending: 'Chờ duyệt',
-  low: 'Thấp',
-  medium: 'Trung bình',
-  high: 'Cao',
-  critical: 'Nguy cấp',
+  all: 'All',
+  active: 'Active',
+  inactive: 'Inactive',
+  maintenance: 'Maintenance',
+  warning: 'Warning',
+  admin: 'Admin',
+  manager: 'Manager',
+  staff: 'Staff',
+  user: 'User',
+  blocked: 'Blocked',
+  pending: 'Pending',
+  low: 'Low',
+  medium: 'Medium',
+  high: 'High',
+  critical: 'Critical',
 };
 
 export function SearchFilterBar({
@@ -51,7 +51,7 @@ export function SearchFilterBar({
         <Input
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
-          placeholder="Tìm kiếm..."
+          placeholder="Search..."
           className="pl-9"
         />
       </div>

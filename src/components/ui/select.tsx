@@ -23,7 +23,7 @@ export function CustomSelect({
   value,
   onChange,
   options,
-  placeholder = 'Chọn một mục...',
+  placeholder = 'Select an item...',
   className,
   disabled = false,
   theme = 'dark',
@@ -79,6 +79,7 @@ export function CustomSelect({
       <AnimatePresence>
         {isOpen && (
           <motion.ul
+            role="listbox"
             initial={{ opacity: 0, y: -10, scale: 0.98 }}
             animate={{ opacity: 1, y: 4, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.98 }}
@@ -93,7 +94,7 @@ export function CustomSelect({
           >
             {options.length === 0 ? (
               <li className="px-3.5 py-2.5 text-xs font-semibold text-slate-500 text-center">
-                Không có lựa chọn nào
+                No options available
               </li>
             ) : (
               options.map((opt) => {
@@ -102,10 +103,22 @@ export function CustomSelect({
                 return (
                   <li
                     key={String(opt.value)}
+                    role="option"
+                    aria-selected={isSelected}
+                    aria-disabled={isDisabled}
+                    tabIndex={isDisabled ? -1 : 0}
                     onClick={() => {
                       if (isDisabled) return;
                       onChange(opt.value);
                       setIsOpen(false);
+                    }}
+                    onKeyDown={(e) => {
+                      if (isDisabled) return;
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        onChange(opt.value);
+                        setIsOpen(false);
+                      }
                     }}
                     className={cn(
                       "relative flex cursor-pointer select-none items-center rounded-xl px-3.5 py-2.5 text-xs font-semibold transition-all duration-150",
