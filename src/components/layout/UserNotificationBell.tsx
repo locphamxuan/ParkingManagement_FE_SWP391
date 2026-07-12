@@ -64,7 +64,7 @@ export function UserNotificationBell() {
           load();
         }}
         className="relative flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-slate-400 transition-colors hover:text-white"
-        aria-label="Thông báo"
+        aria-label="Notifications"
       >
         <Bell size={14} />
         {unread > 0 && (
@@ -77,21 +77,21 @@ export function UserNotificationBell() {
       {open && (
         <div className="absolute right-0 z-50 mt-2 w-80 overflow-hidden rounded-2xl border border-white/10 bg-slate-900 shadow-2xl">
           <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-            <p className="text-xs font-black uppercase tracking-wider text-orange-300">Thông báo</p>
+            <p className="text-xs font-black uppercase tracking-wider text-orange-300">Notifications</p>
             {unread > 0 && (
               <button
                 type="button"
                 onClick={markAll}
                 className="flex items-center gap-1 text-[11px] font-semibold text-orange-400 hover:text-orange-300"
               >
-                <CheckCheck size={12} /> Đọc tất cả
+                <CheckCheck size={12} /> Mark all as read
               </button>
             )}
           </div>
 
           <div className="max-h-96 overflow-y-auto">
             {items.length === 0 ? (
-              <p className="px-4 py-8 text-center text-xs text-slate-500">Chưa có thông báo nào.</p>
+              <p className="px-4 py-8 text-center text-xs text-slate-500">No notifications yet.</p>
             ) : (
               items.map((n) => (
                 <button
@@ -106,7 +106,7 @@ export function UserNotificationBell() {
                     <span className="flex items-center gap-1.5">
                       {!n.isRead && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-rose-500" />}
                       <span className="text-[9px] font-bold uppercase tracking-wider text-slate-500">
-                        {NOTIFICATION_TYPE_LABEL[n.type] ?? 'Thông báo'}
+                        {NOTIFICATION_TYPE_LABEL[n.type] ?? 'Notification'}
                       </span>
                     </span>
                     <span className="shrink-0 text-[10px] text-slate-500">
@@ -128,7 +128,7 @@ export function UserNotificationBell() {
             }}
             className="block w-full border-t border-white/10 px-4 py-2.5 text-center text-[11px] font-semibold text-orange-400 hover:bg-white/5 hover:text-orange-300"
           >
-            Xem tất cả thông báo →
+            View all notifications →
           </button>
         </div>
       )}

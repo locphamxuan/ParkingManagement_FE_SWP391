@@ -112,7 +112,7 @@ export function useReviews() {
   const loadReviews = useCallback((p = 1) => {
     setLoading(true);
     setError(null);
-    const query: any = { page: p, limit: 10 };
+    const query: { page: number; limit: number; buildingId?: string; rating?: number } = { page: p, limit: 10 };
     if (selectedBuilding !== 'all') query.buildingId = selectedBuilding;
     if (selectedRating !== 'all') query.rating = Number(selectedRating);
 
@@ -158,11 +158,13 @@ export function useReviews() {
     try {
       const res = await userApi.parkingHistory.list({ limit: 100 });
       // Map checkIn/checkOut standard fields
-      const items: ParkingHistory[] = (res.data?.items ?? []).map((item: any) => ({
-        ...item,
-        checkIn: item.checkIn ?? item.entryTime ?? null,
-        checkOut: item.checkOut ?? item.exitTime ?? null,
-      }));
+      const items: ParkingHistory[] = (res.data?.items ?? []).map(
+        (item: ParkingHistory & { entryTime?: string | null; exitTime?: string | null }) => ({
+          ...item,
+          checkIn: item.checkIn ?? item.entryTime ?? null,
+          checkOut: item.checkOut ?? item.exitTime ?? null,
+        }),
+      );
       // Only keep completed sessions
       const completed = items.filter((s) => s.status === 'completed');
       setSessions(completed);

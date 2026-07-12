@@ -44,11 +44,13 @@ export default function ParkingHistoryPage() {
         // Backend returns { data: { items, pagination } }
         const raw = (res as { data?: { items?: ParkingHistory[]; pagination?: { totalPages?: number } } })?.data;
         // Normalize: backend ParkingSession uses entryTime/exitTime; map to checkIn/checkOut
-        const normalized: ParkingHistory[] = (raw?.items ?? []).map((item: any) => ({
-          ...item,
-          checkIn: item.checkIn ?? item.entryTime ?? null,
-          checkOut: item.checkOut ?? item.exitTime ?? null,
-        }));
+        const normalized: ParkingHistory[] = (raw?.items ?? []).map(
+          (item: ParkingHistory & { entryTime?: string | null; exitTime?: string | null }) => ({
+            ...item,
+            checkIn: item.checkIn ?? item.entryTime ?? null,
+            checkOut: item.checkOut ?? item.exitTime ?? null,
+          }),
+        );
         setItems(normalized);
         setTotalPages(raw?.pagination?.totalPages ?? 1);
         setPage(p);

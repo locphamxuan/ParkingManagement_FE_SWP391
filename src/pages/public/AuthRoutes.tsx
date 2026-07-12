@@ -17,28 +17,28 @@ function mapAuthErrorMessage(message: string): string {
   const normalized = message.trim().toLowerCase();
 
   if (normalized.includes('invalid email or password')) {
-    return 'Email hoặc mật khẩu không đúng.';
+    return 'Incorrect email or password.';
   }
   if (normalized.includes('account is deactivated')) {
-    return 'Tài khoản đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên.';
+    return 'This account has been deactivated. Please contact an administrator.';
   }
   if (normalized.includes('email already registered')) {
-    return 'Email đã được đăng ký.';
+    return 'This email is already registered.';
   }
   if (normalized.includes('password must be at least 6 characters')) {
-    return 'Mật khẩu phải có ít nhất 6 ký tự.';
+    return 'Password must be at least 6 characters.';
   }
   if (normalized.includes('valid email is required')) {
-    return 'Email không hợp lệ.';
+    return 'Please enter a valid email address.';
   }
   if (normalized.includes('full name is required')) {
-    return 'Vui lòng nhập họ và tên.';
+    return 'Please enter your full name.';
   }
   if (normalized.includes('invalid phone number')) {
-    return 'Số điện thoại không hợp lệ.';
+    return 'Invalid phone number.';
   }
 
-  return message || 'Không thể xử lý yêu cầu, vui lòng thử lại.';
+  return message || 'Unable to process your request, please try again.';
 }
 
 function usePublicAuthFlow(initialMode: 'login' | 'register') {
@@ -73,7 +73,7 @@ function usePublicAuthFlow(initialMode: 'login' | 'register') {
           const session = await login(payload.email, payload.password);
 
           setNotice({
-            message: 'Đăng nhập thành công.',
+            message: 'Login successful.',
             type: 'success',
           });
 
@@ -98,17 +98,17 @@ function usePublicAuthFlow(initialMode: 'login' | 'register') {
           const user = response?.data?.user;
 
           if (!token || !user) {
-            throw new Error('Phản hồi xác thực không hợp lệ từ máy chủ.');
+            throw new Error('Invalid authentication response from the server.');
           }
 
           setNotice({
-            message: 'Đăng ký thành công.',
+            message: 'Registration successful.',
             type: 'success',
           });
           navigate('/', { replace: true });
         }
       } catch (error) {
-        const message = error instanceof Error ? mapAuthErrorMessage(error.message) : 'không thể xử lý yêu cầu';
+        const message = error instanceof Error ? mapAuthErrorMessage(error.message) : 'Unable to process your request.';
         setNotice({ message, type: 'error' });
         throw error;
       } finally {

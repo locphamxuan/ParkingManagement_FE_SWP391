@@ -2,14 +2,7 @@ import { useEffect, useState } from 'react';
 import { motion, AnimatePresence, useMotionValue, useSpring, useTransform, animate } from 'framer-motion';
 import { ArrowRight, Building2, Mail, PhoneCall } from 'lucide-react';
 import footerBg from '@/assets/footer.png';
-
-export const navigationLinks = [
-  { label: 'Home', href: '#top' },
-  { label: 'About', href: '#hero-intro' },
-  { label: 'Solutions', href: '#giai-phap' },
-  { label: 'Services', href: '#dich-vu' },
-  { label: 'Contact', href: '#lien-he' },
-];
+import { navigationLinks } from './homeNavigation.constants';
 
 type HomeUser = { fullName?: string; email?: string; role?: string } | null | undefined;
 

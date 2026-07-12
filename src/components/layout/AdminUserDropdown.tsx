@@ -87,7 +87,7 @@ export function AdminUserDropdown({ email, onLogout, fullName, role }: Props) {
               onClick={handleViewProfile}
             >
               <User size={14} className="text-slate-400" />
-              Xem hồ sơ
+              View Profile
             </button>
             <button
               type="button"
@@ -95,7 +95,7 @@ export function AdminUserDropdown({ email, onLogout, fullName, role }: Props) {
               onClick={() => { setOpen(false); onLogout(); }}
             >
               <LogOut size={14} />
-              Đăng xuất
+              Sign Out
             </button>
           </div>
         </div>

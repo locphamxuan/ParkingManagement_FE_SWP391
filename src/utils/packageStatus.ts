@@ -5,10 +5,10 @@
 export type PackageStatus = 'pending' | 'active' | 'expired' | 'cancelled';
 
 export const PACKAGE_STATUS_LABELS: Record<PackageStatus, string> = {
-  pending: 'Chờ kích hoạt',
-  active: 'Đã mua',
-  expired: 'Hết hạn',
-  cancelled: 'Đã hủy',
+  pending: 'Pending Activation',
+  active: 'Active',
+  expired: 'Expired',
+  cancelled: 'Cancelled',
 };
 
 // Class gồm border + bg + text — dùng trực tiếp làm className của badge.
@@ -29,7 +29,7 @@ export const packageStatusBadgeClass = (status: string): string =>
 
 // Bộ tab lọc cho chế độ gói dài hạn (value = đúng status API; 'all' = tất cả).
 export const PACKAGE_STATUS_TABS = [
-  { value: 'all', label: 'Tất cả' },
+  { value: 'all', label: 'All' },
   { value: 'active', label: PACKAGE_STATUS_LABELS.active },
   { value: 'expired', label: PACKAGE_STATUS_LABELS.expired },
   { value: 'cancelled', label: PACKAGE_STATUS_LABELS.cancelled },

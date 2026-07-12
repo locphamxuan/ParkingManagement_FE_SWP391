@@ -24,7 +24,7 @@ export function RevenueAnalyticsPage() {
       const res = await adminApi.revenue.report({ from, to });
       setReport((res as { data?: RevenueReport })?.data ?? null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Không thể tải báo cáo doanh thu.');
+      setError(err instanceof Error ? err.message : 'Failed to load revenue report.');
     } finally {
       setLoading(false);
     }
@@ -39,23 +39,23 @@ export function RevenueAnalyticsPage() {
           <div className="flex items-center gap-2">
             <CircleDollarSign size={18} className="text-emerald-400" />
             <div>
-              <h3 className="font-semibold text-foreground">Doanh thu gửi xe theo tòa nhà</h3>
+              <h3 className="font-semibold text-foreground">Parking Revenue by Building</h3>
               <p className="text-xs text-muted-foreground">
-                Tổng hợp doanh thu gửi xe của các tòa nhà trong khoảng thời gian đã chọn
+                Summary of parking revenue across buildings for the selected period
               </p>
             </div>
           </div>
           <div className="flex items-end gap-2">
             <div className="grid gap-1">
-              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Từ ngày</label>
+              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">From</label>
               <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="w-40" />
             </div>
             <div className="grid gap-1">
-              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Đến ngày</label>
+              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">To</label>
               <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="w-40" />
             </div>
             <Button variant="secondary" size="sm" onClick={loadReport} className="gap-1.5">
-              <RefreshCw size={13} /> Làm mới
+              <RefreshCw size={13} /> Refresh
             </Button>
           </div>
         </div>
@@ -68,7 +68,7 @@ export function RevenueAnalyticsPage() {
 
         {loading ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <RefreshCw size={14} className="animate-spin" /> Đang tải báo cáo doanh thu...
+            <RefreshCw size={14} className="animate-spin" /> Loading revenue report...
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-3">
@@ -77,14 +77,14 @@ export function RevenueAnalyticsPage() {
                 <div className="mb-2 flex items-center gap-2">
                   <CircleDollarSign size={14} className="text-emerald-500" />
                   <p className="text-xs font-black uppercase tracking-wider text-emerald-600/70">
-                    Tổng doanh thu
+                    Total Revenue
                   </p>
                 </div>
                 <p className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">
                   {fmtVnd(report?.grandTotal)}
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  {report?.items?.length ?? 0} tòa nhà có doanh thu
+                  {report?.items?.length ?? 0} buildings with revenue
                 </p>
               </CardContent>
             </Card>
@@ -93,12 +93,12 @@ export function RevenueAnalyticsPage() {
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-sm">
                   <Building2 size={14} className="text-primary" />
-                  Doanh thu theo tòa nhà
+                  Revenue by Building
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {!report?.items?.length ? (
-                  <p className="py-2 text-sm text-muted-foreground">Chưa có doanh thu trong khoảng thời gian này.</p>
+                  <p className="py-2 text-sm text-muted-foreground">No revenue recorded for this period.</p>
                 ) : (
                   <div className="space-y-2">
                     {report.items.map((r) => (
@@ -108,10 +108,10 @@ export function RevenueAnalyticsPage() {
                             {r.buildingCode && (
                               <span className="mr-1.5 font-mono text-xs text-muted-foreground">{r.buildingCode}</span>
                             )}
-                            {r.buildingName ?? 'Tòa nhà'}
+                            {r.buildingName ?? 'Building'}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {r.sessionCount} lượt · Tiền mặt {fmtVnd(r.cashAmount)} · Ví {fmtVnd(r.walletAmount)} · QR {fmtVnd(r.qrAmount)}
+                            {r.sessionCount} sessions · Cash {fmtVnd(r.cashAmount)} · Wallet {fmtVnd(r.walletAmount)} · QR {fmtVnd(r.qrAmount)}
                           </p>
                         </div>
                         <p className="font-mono font-bold text-emerald-600 dark:text-emerald-400">

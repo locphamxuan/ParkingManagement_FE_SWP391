@@ -39,7 +39,7 @@ export function ManagerShiftsPage() {
     managerApi.shifts
       .list(buildingId)
       .then((res) => setItems(res.data.items))
-      .catch((err) => setError(err instanceof Error ? err.message : 'Tải thất bại'))
+      .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load'))
       .finally(() => setLoading(false));
   }, [buildingId]);
 
@@ -82,28 +82,28 @@ export function ManagerShiftsPage() {
       setModalOpen(false);
       refresh();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Lưu thất bại');
+      alert(err instanceof Error ? err.message : 'Failed to save');
     }
   };
 
   const onDelete = async (row: Shift) => {
-    if (!window.confirm(`Xóa ca ${row.code}?`)) return;
+    if (!window.confirm(`Delete shift ${row.code}?`)) return;
     try {
       await managerApi.shifts.remove(buildingId, row._id);
       refresh();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Xóa thất bại');
+      alert(err instanceof Error ? err.message : 'Failed to delete');
     }
   };
 
   const columns: DataColumn<Shift>[] = [
-    { key: 'code', title: 'Mã' },
-    { key: 'name', title: 'Tên ca' },
-    { key: 'startTime', title: 'Bắt đầu' },
-    { key: 'endTime', title: 'Kết thúc' },
+    { key: 'code', title: 'Code' },
+    { key: 'name', title: 'Shift Name' },
+    { key: 'startTime', title: 'Start' },
+    { key: 'endTime', title: 'End' },
     {
       key: 'isActive',
-      title: 'Trạng thái',
+      title: 'Status',
       render: (row) => <StatusBadge status={row.isActive ? 'active' : 'inactive'} />,
     },
     {
@@ -126,47 +126,47 @@ export function ManagerShiftsPage() {
     <div className="grid gap-4">
       <div className="flex justify-end">
         <Button onClick={openCreate} className="gap-2">
-          <Plus size={14} /> Thêm ca
+          <Plus size={14} /> Add Shift
         </Button>
       </div>
       {loading ? (
-        <div className="text-sm text-muted-foreground">Đang tải...</div>
+        <div className="text-sm text-muted-foreground">Loading...</div>
       ) : error ? (
         <div className="text-sm text-red-600">{error}</div>
       ) : (
-        <DataTable title="Ca trực" rows={items} columns={columns} />
+        <DataTable title="Shifts" rows={items} columns={columns} />
       )}
 
       <ModalForm
         open={modalOpen}
         onOpenChange={setModalOpen}
-        title={editing ? 'Sửa ca trực' : 'Thêm ca trực'}
+        title={editing ? 'Edit Shift' : 'Add Shift'}
         onSubmit={onSubmit}
       >
         <div className="grid gap-3 md:grid-cols-2">
           <div className="grid gap-1.5">
-            <label className="text-xs uppercase text-muted-foreground">Mã</label>
+            <label className="text-xs uppercase text-muted-foreground">Code</label>
             <Input
               value={form.code}
               onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))}
             />
           </div>
           <div className="grid gap-1.5">
-            <label className="text-xs uppercase text-muted-foreground">Tên ca</label>
+            <label className="text-xs uppercase text-muted-foreground">Shift Name</label>
             <Input
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
             />
           </div>
           <div className="grid gap-1.5">
-            <label className="text-xs uppercase text-muted-foreground">Bắt đầu</label>
+            <label className="text-xs uppercase text-muted-foreground">Start</label>
             <TimePicker
               value={form.startTime}
               onChange={(val) => setForm((f) => ({ ...f, startTime: val }))}
             />
           </div>
           <div className="grid gap-1.5">
-            <label className="text-xs uppercase text-muted-foreground">Kết thúc</label>
+            <label className="text-xs uppercase text-muted-foreground">End</label>
             <TimePicker
               value={form.endTime}
               onChange={(val) => setForm((f) => ({ ...f, endTime: val }))}
@@ -178,7 +178,7 @@ export function ManagerShiftsPage() {
               checked={form.isActive}
               onChange={(e) => setForm((f) => ({ ...f, isActive: e.target.checked }))}
             />
-            <span>Đang sử dụng</span>
+            <span>Active</span>
           </label>
         </div>
       </ModalForm>

@@ -52,8 +52,6 @@ describe('Admin — overview', () => {
 // ── BUILDINGS ─────────────────────────────────────────────────────────────────
 
 describe('Admin — buildings', () => {
-  let firstBuildingId: string | null = null;
-
   it('list: trả về tất cả tòa nhà', async () => {
     const res = await adminApi.buildings.list();
     expect(res.data).toBeDefined();
@@ -61,7 +59,6 @@ describe('Admin — buildings', () => {
 
     if (res.data.items.length > 0) {
       const b = res.data.items[0];
-      firstBuildingId = b._id;
       expect(b).toHaveProperty('_id');
       expect(b).toHaveProperty('name');
       expect(b).toHaveProperty('code');

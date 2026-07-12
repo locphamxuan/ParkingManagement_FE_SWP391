@@ -174,11 +174,24 @@ Lỗi 401 → xóa token, điều hướng về đăng nhập. Lỗi 4xx/5xx →
 - ✅ ~~Hợp nhất 2 HTTP client~~ — đã gộp `pbmsApi` vào `apiClient`.
 - ✅ ~~Mật khẩu plaintext trong `pbms_saved_accounts`~~ — chỉ còn lưu email.
 - ✅ ~~Code-splitting~~ — đã `React.lazy` toàn bộ page (chunk chính ~334 kB).
+- ✅ ~~ESLint warnings~~ — `npm run lint` (`--max-warnings 0`) đã xanh: sửa hết
+  `no-explicit-any`/`exhaustive-deps`/unused-vars + các rule a11y tương tác
+  (select, slot 3D, dropdown login); 2 rule label-association tạm `off` (xem dưới).
+- ✅ ~~WalletPage 796 dòng~~ — tách thành `useWallet` hook + 4 component trong
+  `components/user/wallet/` (mỗi file < 300 dòng).
 
-Còn lại:
-1. **Trang user tự-guard** → cân nhắc gom vào một `UserProtectedRoute` cho nhất quán.
-2. **94 ESLint warnings** (chủ yếu `no-explicit-any`, `exhaustive-deps`, biến không
-   dùng) — dọn dần theo từng PR.
-3. **`requestJson` adapter** chỉ để tương thích — có thể migrate dần `auth`/`admin`
+Còn lại (ưu tiên từ trên xuống):
+1. **Toast/Confirm hạ tầng** — còn ~45 chỗ dùng `window.confirm`/`alert` thô
+   (manager CRUD pages, useReviews, useReservationHistory). Cần một
+   `ToastProvider` + `useConfirm` rồi thay dần; UI hiện tại lệch hẳn so với
+   design system (modal đẹp vs alert mặc định của trình duyệt).
+2. **File > 300 dòng còn lại** — `hooks/user/useUserApi.ts` (784, tập hợp hook
+   lặp pattern — cân nhắc factory), `ManagerSlotsPage` (742+), `StaffParkedPage`
+   (707), `AnimatedParkingMap3D` (708), `ParkingMap2D` (666), `HomePage` (563),
+   `BuildingsPage` (548). Tách theo đúng pattern hook + components đã dùng cho
+   StaffOperationsPage/WalletPage.
+3. **`jsx-a11y/label-has-associated-control` đang `off`** — ~120 label chưa gắn
+   `htmlFor`/`id`. Form auth đã gắn xong; dọn tiếp theo từng form rồi bật lại rule.
+4. **Trang user tự-guard** → cân nhắc gom vào một `UserProtectedRoute` cho nhất quán.
+5. **`requestJson` adapter** chỉ để tương thích — có thể migrate dần `auth`/`admin`
    sang `api.*` rồi bỏ adapter.
-```

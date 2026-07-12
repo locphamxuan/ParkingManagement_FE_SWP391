@@ -31,7 +31,7 @@ export function ManagerStaffPage() {
         const raw = res.data?.items ?? (Array.isArray(res.data) ? (res.data as StaffMember[]) : []);
         setItems(raw as StaffMember[]);
       })
-      .catch((err) => setError(err instanceof Error ? err.message : 'Không thể tải danh sách nhân viên'))
+      .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load staff list'))
       .finally(() => setLoading(false));
   }, [buildingId]);
 
@@ -40,12 +40,12 @@ export function ManagerStaffPage() {
   }, [refresh]);
 
   const columns: DataColumn<StaffMember>[] = [
-    { key: 'fullName', title: 'Họ tên' },
+    { key: 'fullName', title: 'Full Name' },
     { key: 'email', title: 'Email' },
-    { key: 'phone', title: 'Số điện thoại', render: (row) => row.phone || '—' },
+    { key: 'phone', title: 'Phone Number', render: (row) => row.phone || '—' },
     {
       key: 'isActive',
-      title: 'Trạng thái',
+      title: 'Status',
       render: (row) => <StatusBadge status={row.isActive !== false ? 'active' : 'inactive'} />,
     },
   ];
@@ -53,26 +53,26 @@ export function ManagerStaffPage() {
   return (
     <div className="grid gap-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-base font-semibold text-foreground">Nhân viên tòa nhà</h2>
+        <h2 className="text-base font-semibold text-foreground">Building Staff</h2>
         <Button variant="ghost" size="sm" className="gap-1" onClick={refresh}>
-          <RefreshCcw size={14} /> Làm mới
+          <RefreshCcw size={14} /> Refresh
         </Button>
       </div>
 
       {loading ? (
-        <div className="text-sm text-muted-foreground">Đang tải danh sách nhân viên...</div>
+        <div className="text-sm text-muted-foreground">Loading staff list...</div>
       ) : error ? (
         <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-400">
           {error}
         </div>
       ) : items.length === 0 ? (
         <div className="rounded-xl border border-border bg-card p-6 text-center text-sm text-muted-foreground">
-          Chưa có nhân viên nào được phân công vào tòa nhà này.
+          No staff have been assigned to this building yet.
           <br />
-          <span className="text-xs">Admin cần dùng chức năng "Thành viên" để phân công nhân viên.</span>
+          <span className="text-xs">Admin needs to use the "Members" function to assign staff.</span>
         </div>
       ) : (
-        <DataTable title={`Nhân viên (${items.length})`} rows={items} columns={columns} />
+        <DataTable title={`Staff (${items.length})`} rows={items} columns={columns} />
       )}
     </div>
   );

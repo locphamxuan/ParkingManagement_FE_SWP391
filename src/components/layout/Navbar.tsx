@@ -21,7 +21,7 @@ export function Navbar({ title, email, onLogout, fullName, role, showNotificatio
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <p className="text-[10px] uppercase font-bold tracking-[0.2em] text-slate-500">
-            HỆ THỐNG ĐIỀU HÀNH
+            OPERATIONS SYSTEM
           </p>
           <h1 className="text-xl font-bold tracking-tight text-white mt-0.5">{title}</h1>
         </div>
@@ -34,7 +34,7 @@ export function Navbar({ title, email, onLogout, fullName, role, showNotificatio
               className="gap-2 rounded-full border border-white/10 bg-slate-800/70 hover:bg-slate-700/80 text-slate-300 hover:text-white shadow-sm px-4 transition-all"
             >
               <Bell size={14} className="text-slate-400" />
-              <span className="hidden sm:inline font-medium text-xs">Thông báo</span>
+              <span className="hidden sm:inline font-medium text-xs">Notifications</span>
             </Button>
           )}
 

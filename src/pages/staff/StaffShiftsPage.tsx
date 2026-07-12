@@ -36,7 +36,7 @@ export function StaffShiftsPage() {
     },
     {
       key: 'shift',
-      title: 'Ca',
+      title: 'Shift',
       render: (row) => `${row.shift.code} — ${row.shift.startTime}–${row.shift.endTime}`,
     },
     { key: 'building', title: 'Building', render: (row) => row.building.name },

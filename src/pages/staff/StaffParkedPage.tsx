@@ -580,8 +580,8 @@ export function StaffParkedPage({ view = 'list' }: { view?: 'scanner' | 'list' }
               <div className="flex justify-between"><span className="text-muted-foreground">Vehicle Type</span><span className="font-medium text-foreground">{checkoutTarget.vehicleType?.name ?? '—'}{checkoutTarget.vehicleBrand ? ` · ${checkoutTarget.vehicleBrand}` : ''}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Entry Time</span><span className="font-medium text-foreground">{fmtTime(checkoutTarget.entryTime)}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Parking Duration</span><span className="font-medium text-foreground">{fmtDuration(checkoutTarget.entryTime)}</span></div>
-              <div className="flex justify-between border-t border-border/60 pt-1.5"><span className="text-muted-foreground">NV check-in</span><span className="font-medium text-foreground">{checkoutTarget.staff?.fullName ?? '—'}{checkoutTarget.entryGate?.code ? ` · gate ${checkoutTarget.entryGate.code}` : ''}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">NV check-out</span><span className="font-medium text-emerald-400">{user?.fullName || user?.email || 'You'}</span></div>
+              <div className="flex justify-between border-t border-border/60 pt-1.5"><span className="text-muted-foreground">Check-in Staff</span><span className="font-medium text-foreground">{checkoutTarget.staff?.fullName ?? '—'}{checkoutTarget.entryGate?.code ? ` · gate ${checkoutTarget.entryGate.code}` : ''}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Check-out Staff</span><span className="font-medium text-emerald-400">{user?.fullName || user?.email || 'You'}</span></div>
             </div>
 
             {checkoutTarget.isLongTerm && (

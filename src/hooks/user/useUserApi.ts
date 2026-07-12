@@ -1,3 +1,7 @@
+/* eslint-disable react-hooks/exhaustive-deps --
+   Các hook trong file này cố ý liệt kê TỪNG FIELD của `query` trong deps thay vì
+   cả object: caller truyền object literal mới mỗi render, đưa `query` vào deps
+   sẽ gây refetch vô hạn. */
 import { useEffect, useState, useCallback } from 'react';
 import {
   userApi,
@@ -546,7 +550,7 @@ export function useCancelSubscription() {
         cancelReason: cancelReason || 'change_vehicle',
         cancelNote,
       });
-      return result.data.subscription;
+      return result.data;
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Unknown error');
       setError(error);
@@ -778,7 +782,7 @@ export function useBuildingSlots(buildingId: string, floorId: string, query?: { 
         error: error instanceof Error ? error : new Error('Unknown error'),
       }));
     }
-  }, [buildingId, floorId, query]);
+  }, [buildingId, floorId]);
 
   return { ...state, refresh };
 }

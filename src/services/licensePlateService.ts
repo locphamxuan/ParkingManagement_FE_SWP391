@@ -85,7 +85,7 @@ export async function syncPlates(
       try {
         await removePlate(plate._id);
       } catch (err) {
-        errors.push(`Xoá ${plate.plateNumber}: ${err instanceof Error ? err.message : 'lỗi'}`);
+        errors.push(`Remove ${plate.plateNumber}: ${err instanceof Error ? err.message : 'error'}`);
       }
     }
   }
@@ -96,7 +96,7 @@ export async function syncPlates(
     try {
       latestPlates = await addPlate(plate.plateNumber, plate.vehicleType, plate.brand);
     } catch (err) {
-      errors.push(`Thêm ${plate.plateNumber}: ${err instanceof Error ? err.message : 'lỗi'}`);
+      errors.push(`Add ${plate.plateNumber}: ${err instanceof Error ? err.message : 'error'}`);
     }
   }
 
@@ -108,7 +108,7 @@ export async function syncPlates(
   }
 
   if (errors.length) {
-    throw new Error(`Đồng bộ biển số thất bại — ${errors.join('; ')}`);
+    throw new Error(`License plate sync failed — ${errors.join('; ')}`);
   }
 
   return latestPlates;

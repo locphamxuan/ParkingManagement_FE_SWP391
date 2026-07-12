@@ -30,13 +30,13 @@ export function ManagerBuildingsPage() {
   }, [selectedBuilding]);
 
   const buildingOptions = useMemo(
-    () => buildings.map((b) => ({ id: b._id, label: b.name || b.code || 'Tòa nhà' })),
+    () => buildings.map((b) => ({ id: b._id, label: b.name || b.code || 'Building' })),
     [buildings],
   );
 
   const handleSave = useCallback(async () => {
     if (!selectedBuildingId) {
-      setSaveError('Chưa chọn tòa nhà.');
+      setSaveError('No building selected.');
       return;
     }
     setIsSaving(true);
@@ -52,7 +52,7 @@ export function ManagerBuildingsPage() {
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : 'Cập nhật tòa nhà thất bại.');
+      setSaveError(err instanceof Error ? err.message : 'Failed to update building.');
     } finally {
       setIsSaving(false);
     }
@@ -65,16 +65,16 @@ export function ManagerBuildingsPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-sm">
             <Building2 size={16} className="text-primary" />
-            Danh sách tòa nhà
+            Building List
           </CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <p className="text-sm text-muted-foreground">Đang tải danh sách tòa nhà...</p>
+            <p className="text-sm text-muted-foreground">Loading buildings...</p>
           ) : error ? (
             <p className="text-sm text-rose-500">{error}</p>
           ) : buildings.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Không có tòa nhà nào được phân quyền.</p>
+            <p className="text-sm text-muted-foreground">No buildings have been assigned.</p>
           ) : (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {buildingOptions.map((opt) => {
@@ -89,11 +89,11 @@ export function ManagerBuildingsPage() {
                     }`}
                   >
                     <p className="font-semibold text-foreground">{opt.label}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">Mã: {b.code || '—'}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">Code: {b.code || '—'}</p>
                     <div className="mt-1 flex items-center gap-1.5">
                       <span className={`h-1.5 w-1.5 rounded-full ${b.status === 'active' ? 'bg-emerald-500' : b.status === 'maintenance' ? 'bg-amber-500' : 'bg-rose-500'}`} />
                       <p className="text-xs text-muted-foreground">
-                        {b.status === 'active' ? 'Hoạt động' : b.status === 'maintenance' ? 'Bảo trì' : 'Tạm dừng'}
+                        {b.status === 'active' ? 'Active' : b.status === 'maintenance' ? 'Maintenance' : 'Inactive'}
                       </p>
                     </div>
                   </button>
@@ -108,38 +108,38 @@ export function ManagerBuildingsPage() {
       {selectedBuilding && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm">Cập nhật thông tin tòa nhà</CardTitle>
+            <CardTitle className="text-sm">Update Building Information</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-5">
             <div className="grid gap-4 sm:grid-cols-2">
               {/* Tên tòa nhà */}
               <div className="grid gap-1.5">
-                <label className="text-sm font-medium text-foreground">Tên tòa nhà</label>
-                <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nhập tên tòa nhà" />
+                <label className="text-sm font-medium text-foreground">Building Name</label>
+                <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Enter building name" />
               </div>
 
               {/* Số tầng */}
               <div className="grid gap-1.5">
-                <label className="text-sm font-medium text-foreground">Số tầng</label>
+                <label className="text-sm font-medium text-foreground">Total Floors</label>
                 <Input
                   type="number"
                   min={1}
                   value={totalFloors}
                   onChange={(e) => setTotalFloors(e.target.value)}
-                  placeholder="Ví dụ: 5"
+                  placeholder="e.g. 5"
                 />
               </div>
 
               {/* Trạng thái — dropdown */}
               <div className="grid gap-1.5">
-                <label className="text-sm font-medium text-foreground">Trạng thái</label>
+                <label className="text-sm font-medium text-foreground">Status</label>
                 <CustomSelect
                   value={status}
                   onChange={(val) => setStatus(val as ManagerBuilding['status'])}
                   options={[
-                    { value: 'active', label: 'Hoạt động (active)' },
-                    { value: 'inactive', label: 'Tạm dừng (inactive)' },
-                    { value: 'maintenance', label: 'Bảo trì (maintenance)' },
+                    { value: 'active', label: 'Active' },
+                    { value: 'inactive', label: 'Inactive' },
+                    { value: 'maintenance', label: 'Maintenance' },
                   ]}
                 />
               </div>
@@ -152,13 +152,13 @@ export function ManagerBuildingsPage() {
             )}
             {saveSuccess && (
               <p className="rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-600">
-                Lưu thành công!
+                Saved successfully!
               </p>
             )}
 
             <Button onClick={handleSave} disabled={isSaving} className="gap-2 w-fit">
               <Save size={14} />
-              {isSaving ? 'Đang lưu...' : 'Lưu thay đổi'}
+              {isSaving ? 'Saving...' : 'Save Changes'}
             </Button>
           </CardContent>
         </Card>

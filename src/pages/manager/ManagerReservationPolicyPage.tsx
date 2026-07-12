@@ -42,7 +42,7 @@ export function ManagerReservationPolicyPage() {
         setPolicy(res.data.item);
         setForm(toForm(res.data.item));
       })
-      .catch((err) => setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Lỗi' }))
+      .catch((err) => setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Error' }))
       .finally(() => setLoading(false));
   }, [buildingId]);
 
@@ -62,30 +62,30 @@ export function ManagerReservationPolicyPage() {
         isActive: form.isActive,
       });
       setPolicy(res.data.item);
-      setMessage({ type: 'success', text: 'Lưu chính sách đặt chỗ thành công.' });
+      setMessage({ type: 'success', text: 'Reservation policy saved successfully.' });
     } catch (err) {
       setMessage({
         type: 'error',
-        text: err instanceof Error ? err.message : 'Lưu thất bại',
+        text: err instanceof Error ? err.message : 'Failed to save',
       });
     } finally {
       setSaving(false);
     }
   };
 
-  if (loading) return <div className="text-sm text-muted-foreground">Đang tải...</div>;
+  if (loading) return <div className="text-sm text-muted-foreground">Loading...</div>;
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Chính sách đặt chỗ trước</CardTitle>
+        <CardTitle>Advance Reservation Policy</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={onSubmit} className="grid gap-4">
           <div className="grid gap-3 md:grid-cols-2">
             <div className="grid gap-1.5">
               <label className="text-xs uppercase text-muted-foreground">
-                Thời gian giữ tối đa (phút)
+                Max hold time (minutes)
               </label>
               <Input
                 type="number"
@@ -96,12 +96,12 @@ export function ManagerReservationPolicyPage() {
                 }
               />
               <p className="text-[11px] text-muted-foreground">
-                Đặt chỗ tự hủy nếu khách không check-in trong khoảng này.
+                The reservation auto-cancels if the customer doesn't check in within this window.
               </p>
             </div>
             <div className="grid gap-1.5">
               <label className="text-xs uppercase text-muted-foreground">
-                % Hoàn tiền khi hủy
+                % Refund on cancellation
               </label>
               <Input
                 type="number"
@@ -115,7 +115,7 @@ export function ManagerReservationPolicyPage() {
             </div>
             <div className="grid gap-1.5">
               <label className="text-xs uppercase text-muted-foreground">
-                % Đặt cọc khi đặt chỗ
+                % Deposit on reservation
               </label>
               <Input
                 type="number"
@@ -127,12 +127,12 @@ export function ManagerReservationPolicyPage() {
                 }
               />
               <p className="text-[11px] text-muted-foreground">
-                Khách trả phần trăm này khi đặt chỗ.
+                Customers pay this percentage when making a reservation.
               </p>
             </div>
             <div className="grid gap-1.5">
               <label className="text-xs uppercase text-muted-foreground">
-                % Còn lại (thu sau checkout)
+                % Remaining (collected after checkout)
               </label>
               <Input
                 type="number"
@@ -142,12 +142,12 @@ export function ManagerReservationPolicyPage() {
                 className="cursor-not-allowed opacity-70"
               />
               <p className="text-[11px] text-muted-foreground">
-                Hệ thống tự tính = 100% − % đặt cọc. Khách thanh toán phần này khi xe ra (checkout).
+                Automatically calculated as 100% − deposit %. Customers pay this amount when the vehicle exits (checkout).
               </p>
             </div>
             <div className="grid gap-1.5">
               <label className="text-xs uppercase text-muted-foreground">
-                Đặt trước tối đa (ngày)
+                Max advance booking (days)
               </label>
               <Input
                 type="number"
@@ -156,12 +156,12 @@ export function ManagerReservationPolicyPage() {
                 onChange={(e) => setForm((f) => ({ ...f, maxAdvanceDays: e.target.value }))}
               />
               <p className="text-[11px] text-muted-foreground">
-                Khách chỉ được đặt chỗ trước trong khoảng số ngày này.
+                Customers can only book this many days in advance.
               </p>
             </div>
             <div className="grid gap-1.5">
               <label className="text-xs uppercase text-muted-foreground">
-                Thời lượng tối đa / lượt (giờ)
+                Max duration / reservation (hours)
               </label>
               <Input
                 type="number"
@@ -170,12 +170,12 @@ export function ManagerReservationPolicyPage() {
                 onChange={(e) => setForm((f) => ({ ...f, maxDurationHours: e.target.value }))}
               />
               <p className="text-[11px] text-muted-foreground">
-                Mỗi lượt đặt chỗ không vượt quá số giờ này.
+                Each reservation cannot exceed this number of hours.
               </p>
             </div>
             <div className="grid gap-1.5">
               <label className="text-xs uppercase text-muted-foreground">
-                Hạn hủy trước giờ đặt (giờ)
+                Cancellation cutoff before slot time (hours)
               </label>
               <Input
                 type="number"
@@ -186,7 +186,7 @@ export function ManagerReservationPolicyPage() {
                 }
               />
               <p className="text-[11px] text-muted-foreground">
-                Khách phải hủy trước giờ đặt ít nhất số giờ này. 0 = được hủy bất kỳ lúc nào trước giờ đặt.
+                Customers must cancel at least this many hours before the reserved time. 0 = can cancel anytime before the reserved time.
               </p>
             </div>
             <label className="flex items-center gap-2 text-sm md:col-span-2">
@@ -197,13 +197,13 @@ export function ManagerReservationPolicyPage() {
                   setForm((f) => ({ ...f, isActive: e.target.checked }))
                 }
               />
-              <span>Cho phép khách đặt chỗ trước</span>
+              <span>Allow customers to make advance reservations</span>
             </label>
           </div>
 
           {policy?._id ? (
             <p className="text-xs text-muted-foreground">
-              Đang chỉnh sửa chính sách hiện hành ({policy._id.slice(-6)}).
+              Editing the current policy ({policy._id.slice(-6)}).
             </p>
           ) : null}
 
@@ -218,7 +218,7 @@ export function ManagerReservationPolicyPage() {
           ) : null}
 
           <div className="flex justify-end">
-            <Button disabled={saving}>{saving ? 'Đang lưu...' : 'Lưu chính sách'}</Button>
+            <Button disabled={saving}>{saving ? 'Saving...' : 'Save policy'}</Button>
           </div>
         </form>
       </CardContent>

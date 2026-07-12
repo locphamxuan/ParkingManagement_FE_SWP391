@@ -10,10 +10,10 @@ import { useBuildingContext } from '@/hooks/useBuildingContext';
 import { managerApi, type Floor, type VehicleType, type Zone } from '@/services/manager/managerApi';
 
 const USAGE_TYPE_LABELS: Record<Zone['usageType'], string> = {
-  walk_in: 'Khách vãng lai',
-  registered: 'Thành viên',
-  subscriber: 'Gói dài hạn',
-  reserved: 'Đặt chỗ trước',
+  walk_in: 'Walk-in',
+  registered: 'Member',
+  subscriber: 'Subscription',
+  reserved: 'Reserved',
 };
 
 interface FormState {
@@ -61,7 +61,7 @@ export function ManagerZonesPage() {
       setVehicleTypes(vtRes.data.items);
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Tải thất bại');
+      setError(err instanceof Error ? err.message : 'Failed to load data');
     } finally {
       setLoading(false);
     }
@@ -109,8 +109,8 @@ export function ManagerZonesPage() {
   };
 
   const onSubmit = async () => {
-    if (!form.floor) { alert('Chọn tầng trước'); return; }
-    if (!form.vehicleType) { alert('Chọn loại xe trước'); return; }
+    if (!form.floor) { alert('Select a floor first'); return; }
+    if (!form.vehicleType) { alert('Select a vehicle type first'); return; }
     const payload = {
       code: form.code.trim().toUpperCase(),
       name: form.name.trim(),
@@ -129,27 +129,27 @@ export function ManagerZonesPage() {
       setModalOpen(false);
       refresh();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Lưu thất bại');
+      alert(err instanceof Error ? err.message : 'Save failed');
     }
   };
 
   const onDelete = async (row: Zone) => {
-    if (!window.confirm(`Xóa dãy ${row.code}? Dãy phải không còn ô đỗ nào.`)) return;
+    if (!window.confirm(`Delete zone ${row.code}? The zone must have no remaining slots.`)) return;
     try {
       await managerApi.zones.remove(buildingId, row._id);
       refresh();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Xóa thất bại');
+      alert(err instanceof Error ? err.message : 'Delete failed');
     }
   };
 
-  const columns: DataColumn<Zone>[] = useMemo(
-    () => [
-      { key: 'code', title: 'Mã dãy' },
-      { key: 'name', title: 'Tên dãy', render: (row) => row.name || '—' },
+  // Không memo hóa: mảng cấu hình cột rẻ, memo với closure cũ dễ gây stale handler.
+  const columns: DataColumn<Zone>[] = [
+      { key: 'code', title: 'Zone Code' },
+      { key: 'name', title: 'Zone Name', render: (row) => row.name || '—' },
       {
         key: 'floor',
-        title: 'Tầng',
+        title: 'Floor',
         render: (row) => {
           const fl = typeof row.floor === 'string' ? floors.find((f) => f._id === row.floor) : row.floor;
           return (fl as Floor)?.code ?? '—';
@@ -157,7 +157,7 @@ export function ManagerZonesPage() {
       },
       {
         key: 'vehicleType',
-        title: 'Loại xe',
+        title: 'Vehicle Type',
         render: (row) => {
           const vt = typeof row.vehicleType === 'string'
             ? vehicleTypes.find((v) => v._id === row.vehicleType)
@@ -167,17 +167,17 @@ export function ManagerZonesPage() {
       },
       {
         key: 'usageType',
-        title: 'Đối tượng',
+        title: 'Usage',
         render: (row) => USAGE_TYPE_LABELS[row.usageType] ?? row.usageType,
       },
       {
         key: 'capacity',
-        title: 'Sức chứa',
+        title: 'Capacity',
         render: (row) => `${row.slotCount ?? 0} / ${row.capacity}`,
       },
       {
         key: 'status',
-        title: 'Trạng thái',
+        title: 'Status',
         render: (row) => <StatusBadge status={row.status} />,
       },
       {
@@ -194,9 +194,7 @@ export function ManagerZonesPage() {
           </div>
         ),
       },
-    ],
-    [floors, vehicleTypes],
-  );
+  ];
 
   return (
     <div className="grid gap-4">
@@ -205,39 +203,39 @@ export function ManagerZonesPage() {
           value={floorFilter}
           onChange={setFloorFilter}
           options={[
-            { value: '', label: 'Tất cả tầng' },
+            { value: '', label: 'All Floors' },
             ...floors.map((f) => ({ value: f._id, label: f.code })),
           ]}
           className="w-40"
         />
         <Button onClick={openCreate} className="gap-2">
-          <Plus size={14} /> Thêm dãy
+          <Plus size={14} /> Add Zone
         </Button>
       </div>
 
       {loading ? (
-        <div className="text-sm text-muted-foreground">Đang tải...</div>
+        <div className="text-sm text-muted-foreground">Loading...</div>
       ) : error ? (
         <div className="text-sm text-red-600">{error}</div>
       ) : (
-        <DataTable title={`Dãy (${items.length})`} rows={items} columns={columns} />
+        <DataTable title={`Zones (${items.length})`} rows={items} columns={columns} />
       )}
 
       <ModalForm
         open={modalOpen}
         onOpenChange={setModalOpen}
-        title={editing ? 'Sửa dãy' : 'Thêm dãy'}
+        title={editing ? 'Edit Zone' : 'Add Zone'}
         onSubmit={onSubmit}
       >
         <div className="grid gap-3 md:grid-cols-2">
           {/* Tầng — chọn trước để lọc loại xe */}
           <div className="grid gap-1.5 md:col-span-2">
-            <label className="text-xs uppercase text-muted-foreground">Tầng *</label>
+            <label className="text-xs uppercase text-muted-foreground">Floor *</label>
             <CustomSelect
               value={form.floor}
               onChange={onFormFloorChange}
               options={[
-                { value: '', label: '-- Chọn tầng --' },
+                { value: '', label: '-- Select Floor --' },
                 ...floors.map((f) => ({ value: f._id, label: f.code })),
               ]}
             />
@@ -245,37 +243,37 @@ export function ManagerZonesPage() {
 
           {/* Mã dãy */}
           <div className="grid gap-1.5">
-            <label className="text-xs uppercase text-muted-foreground">Mã dãy *</label>
+            <label className="text-xs uppercase text-muted-foreground">Zone Code *</label>
             <Input
               value={form.code}
               onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))}
-              placeholder="VD: A, B, SUBSCRIBER"
+              placeholder="e.g. A, B, SUBSCRIBER"
             />
           </div>
 
           {/* Tên dãy */}
           <div className="grid gap-1.5">
-            <label className="text-xs uppercase text-muted-foreground">Tên dãy</label>
+            <label className="text-xs uppercase text-muted-foreground">Zone Name</label>
             <Input
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              placeholder="VD: Dãy ô tô tầng 1"
+              placeholder="e.g. Floor 1 Car Zone"
             />
           </div>
 
           {/* Loại xe — lọc theo tầng đã chọn */}
           <div className="grid gap-1.5">
-            <label className="text-xs uppercase text-muted-foreground">Loại xe *</label>
+            <label className="text-xs uppercase text-muted-foreground">Vehicle Type *</label>
             {allowedVehicleTypes.length === 0 ? (
               <p className="text-xs text-muted-foreground rounded border border-border p-2">
-                {form.floor ? 'Tầng này chưa cấu hình loại xe.' : 'Chọn tầng trước.'}
+                {form.floor ? 'This floor has no vehicle types configured.' : 'Select a floor first.'}
               </p>
             ) : (
               <CustomSelect
                 value={form.vehicleType}
                 onChange={(val) => setForm((f) => ({ ...f, vehicleType: val }))}
                 options={[
-                  { value: '', label: '-- Chọn loại xe --' },
+                  { value: '', label: '-- Select Vehicle Type --' },
                   ...allowedVehicleTypes.map((vt) => ({ value: vt._id, label: `${vt.code} — ${vt.name}` })),
                 ]}
               />
@@ -284,22 +282,22 @@ export function ManagerZonesPage() {
 
           {/* Đối tượng sử dụng */}
           <div className="grid gap-1.5">
-            <label className="text-xs uppercase text-muted-foreground">Đối tượng *</label>
+            <label className="text-xs uppercase text-muted-foreground">Usage *</label>
             <CustomSelect
               value={form.usageType}
               onChange={(val) => setForm((f) => ({ ...f, usageType: val as Zone['usageType'] }))}
               options={[
-                { value: 'walk_in', label: 'Khách vãng lai' },
-                { value: 'registered', label: 'Thành viên' },
-                { value: 'subscriber', label: 'Gói dài hạn' },
-                { value: 'reserved', label: 'Đặt chỗ trước' },
+                { value: 'walk_in', label: 'Walk-in' },
+                { value: 'registered', label: 'Member' },
+                { value: 'subscriber', label: 'Subscription' },
+                { value: 'reserved', label: 'Reserved' },
               ]}
             />
           </div>
 
           {/* Sức chứa */}
           <div className="grid gap-1.5">
-            <label className="text-xs uppercase text-muted-foreground">Sức chứa *</label>
+            <label className="text-xs uppercase text-muted-foreground">Capacity *</label>
             <Input
               type="number"
               min={1}
@@ -310,14 +308,14 @@ export function ManagerZonesPage() {
 
           {/* Trạng thái */}
           <div className="grid gap-1.5">
-            <label className="text-xs uppercase text-muted-foreground">Trạng thái</label>
+            <label className="text-xs uppercase text-muted-foreground">Status</label>
             <CustomSelect
               value={form.status}
               onChange={(val) => setForm((f) => ({ ...f, status: val as Zone['status'] }))}
               options={[
-                { value: 'active', label: 'Hoạt động' },
-                { value: 'inactive', label: 'Không hoạt động' },
-                { value: 'maintenance', label: 'Bảo trì' },
+                { value: 'active', label: 'Active' },
+                { value: 'inactive', label: 'Inactive' },
+                { value: 'maintenance', label: 'Maintenance' },
               ]}
             />
           </div>
@@ -325,7 +323,7 @@ export function ManagerZonesPage() {
           {/* Info note */}
           <div className="md:col-span-2">
             <p className="rounded-xl border border-sky-500/20 bg-sky-500/5 px-3 py-2 text-[11px] text-sky-300">
-              Mỗi ô đỗ phải thuộc 1 dãy. Dãy xác định <strong>loại xe</strong> và <strong>đối tượng</strong> cho tất cả ô đỗ bên trong — thay đổi ở đây sẽ đồng bộ xuống mọi ô.
+              Every slot must belong to a zone. The zone determines the <strong>vehicle type</strong> and <strong>usage</strong> for all slots within it — changes here will sync down to every slot.
             </p>
           </div>
         </div>

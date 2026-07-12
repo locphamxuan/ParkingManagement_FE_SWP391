@@ -228,14 +228,10 @@ export default function LongTermSubscriptionsPage() {
 
             <div className="rounded-2xl border border-rose-500/20 bg-rose-500/10 p-4 space-y-2 text-xs font-semibold text-rose-300">
               <p>
-                This subscription will be cancelled. You will receive a 95% refund (equivalent to{' '}
-                <span className="font-black text-rose-400">
-                  {formatMoney((cancellingSub.price ?? cancellingSub.package.price) * 0.95)}
-                </span>
-                ) back to your wallet.
+                This subscription will be cancelled. A partial refund (per this building's cancellation policy) will be credited to your wallet — the exact amount will be shown after confirmation.
               </p>
               <p className="text-[10px] text-rose-300/80 italic">
-                (*) A 5% cancellation fee will be deducted for utility fees, system management, and parking lot operations.
+                (*) A cancellation fee is deducted for utility fees, system management, and parking lot operations.
               </p>
             </div>
 
@@ -318,11 +314,11 @@ export default function LongTermSubscriptionsPage() {
                 onClick={async () => {
                   setCancelError(null);
                   try {
-                    await cancelSub(cancellingSub._id, cancelReason, cancelNote);
+                    const { refundAmount, refundPercent } = await cancelSub(cancellingSub._id, cancelReason, cancelNote);
                     await refreshSubscriptions();
                     setMessage({
                       type: 'success',
-                      text: 'Package cancelled successfully! The refund (95%) has been credited to your wallet.',
+                      text: `Package cancelled successfully! A ${refundPercent}% refund (${formatMoney(refundAmount)}) has been credited to your wallet.`,
                     });
                     setCancellingSub(null);
                     setCancelReason('change_vehicle');

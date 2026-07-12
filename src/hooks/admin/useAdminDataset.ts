@@ -19,7 +19,7 @@ export function useAdminDataset(): UseAdminDatasetResult {
     const token = session?.token;
     if (!token) {
       setData(null);
-      setError('Bạn chưa đăng nhập phiên quản trị.');
+      setError('You are not signed in to an admin session.');
       setIsLoading(false);
       return;
     }

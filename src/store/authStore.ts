@@ -123,9 +123,10 @@ export const useAuthStore = create<AuthState>()(
         });
       },
       async setDefaultLicensePlate(plateId) {
-        const res = await api.patch<{ data?: { licensePlates?: any[] } }>(`/users/license-plates/${plateId}/default`);
+        type RawPlate = { _id?: unknown; plateNumber?: unknown; vehicleType?: unknown; isDefault?: unknown };
+        const res = await api.patch<{ data?: { licensePlates?: RawPlate[] } }>(`/users/license-plates/${plateId}/default`);
         const updatedPlates = Array.isArray(res?.data?.licensePlates)
-          ? res.data.licensePlates.map((item: any) => ({
+          ? res.data.licensePlates.map((item: RawPlate) => ({
               _id: item._id ? String(item._id) : undefined,
               plateNumber: String(item.plateNumber || '').toUpperCase().trim(),
               vehicleType: item.vehicleType === 'motorcycle' ? ('motorcycle' as const) : ('car' as const),

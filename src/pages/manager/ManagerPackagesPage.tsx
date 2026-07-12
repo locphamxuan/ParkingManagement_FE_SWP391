@@ -55,7 +55,7 @@ export function ManagerPackagesPage() {
       setVts(vtList.data.items);
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Tải thất bại');
+      setError(err instanceof Error ? err.message : 'Failed to load');
     } finally {
       setLoading(false);
     }
@@ -89,7 +89,7 @@ export function ManagerPackagesPage() {
 
   const onSubmit = async () => {
     if (!form.vehicleType) {
-      alert('Chọn loại xe trước');
+      alert('Select a vehicle type first');
       return;
     }
     const payload = {
@@ -116,52 +116,52 @@ export function ManagerPackagesPage() {
       setModalOpen(false);
       refresh();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Lưu thất bại');
+      alert(err instanceof Error ? err.message : 'Failed to save');
     }
   };
 
   const onDelete = async (row: LongTermPackage) => {
-    if (!window.confirm(`Xóa gói "${row.name}"?`)) return;
+    if (!window.confirm(`Delete package "${row.name}"?`)) return;
     try {
       await managerApi.packages.remove(buildingId, row._id);
       refresh();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Xóa thất bại');
+      alert(err instanceof Error ? err.message : 'Failed to delete');
     }
   };
 
   const columns: DataColumn<LongTermPackage>[] = [
-    { key: 'code', title: 'Mã' },
-    { key: 'name', title: 'Tên' },
+    { key: 'code', title: 'Code' },
+    { key: 'name', title: 'Name' },
     {
       key: 'vehicleType',
-      title: 'Loại xe',
+      title: 'Vehicle type',
       render: (row) => (typeof row.vehicleType === 'string' ? row.vehicleType : row.vehicleType.code),
     },
-    { key: 'durationDays', title: 'Thời hạn (ngày)' },
+    { key: 'durationDays', title: 'Duration (days)' },
     {
       key: 'price',
-      title: 'Giá',
+      title: 'Price',
       render: (row) => `${row.price.toLocaleString('vi-VN')} đ`,
     },
     {
       key: 'maxHoursPerDay',
-      title: 'Giờ free/ngày',
+      title: 'Free hours/day',
       render: (row) =>
-        row.maxHoursPerDay && row.maxHoursPerDay > 0 ? `${row.maxHoursPerDay}h` : 'Không giới hạn',
+        row.maxHoursPerDay && row.maxHoursPerDay > 0 ? `${row.maxHoursPerDay}h` : 'Unlimited',
     },
     {
       key: 'benefits',
-      title: 'Ưu đãi',
+      title: 'Perks',
       render: (row) => (
         <span className="text-xs text-slate-400">
-          {(row.benefits?.length ?? 0) > 0 ? `${row.benefits!.length} ưu đãi` : '—'}
+          {(row.benefits?.length ?? 0) > 0 ? `${row.benefits!.length} perks` : '—'}
         </span>
       ),
     },
     {
       key: 'isActive',
-      title: 'Trạng thái',
+      title: 'Status',
       render: (row) => <StatusBadge status={row.isActive ? 'active' : 'inactive'} />,
     },
     {
@@ -184,28 +184,28 @@ export function ManagerPackagesPage() {
     <div className="grid gap-4">
       <div className="flex justify-end">
         <Button onClick={openCreate} className="gap-2">
-          <Plus size={14} /> Thêm gói
+          <Plus size={14} /> Add package
         </Button>
       </div>
       {loading ? (
         <div className="flex justify-center py-10">
-          <Spinner label="Đang tải danh sách gói..." />
+          <Spinner label="Loading packages..." />
         </div>
       ) : error ? (
         <div className="text-sm text-red-600">{error}</div>
       ) : (
-        <DataTable title="Gói dài hạn" rows={items} columns={columns} />
+        <DataTable title="Long-term packages" rows={items} columns={columns} />
       )}
 
       <ModalForm
         open={modalOpen}
         onOpenChange={setModalOpen}
-        title={editing ? 'Sửa gói dài hạn' : 'Thêm gói dài hạn'}
+        title={editing ? 'Edit long-term package' : 'Add long-term package'}
         onSubmit={onSubmit}
       >
         <div className="grid gap-3 md:grid-cols-2 text-slate-100">
           <div className="grid gap-1.5">
-            <label className="text-[10px] font-black uppercase tracking-wider text-slate-300 font-mono">Mã</label>
+            <label className="text-[10px] font-black uppercase tracking-wider text-slate-300 font-mono">Code</label>
             <Input
               value={form.code}
               onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))}
@@ -213,7 +213,7 @@ export function ManagerPackagesPage() {
             />
           </div>
           <div className="grid gap-1.5">
-            <label className="text-[10px] font-black uppercase tracking-wider text-slate-300 font-mono">Tên</label>
+            <label className="text-[10px] font-black uppercase tracking-wider text-slate-300 font-mono">Name</label>
             <Input
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
@@ -221,22 +221,22 @@ export function ManagerPackagesPage() {
             />
           </div>
           <div className="grid gap-1.5">
-            <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono">Loại xe</label>
+            <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 font-mono">Vehicle type</label>
             <CustomSelect
               value={form.vehicleType}
               onChange={(val) => setForm((f) => ({ ...f, vehicleType: val }))}
               options={[
-                { value: '', label: 'Chọn' },
+                { value: '', label: 'Select' },
                 ...vts.map((vt) => ({
                   value: vt._id,
                   label: `${vt.code} - ${vt.name}`,
                 })),
               ]}
-              placeholder="Chọn loại xe..."
+              placeholder="Select vehicle type..."
             />
           </div>
           <div className="grid gap-1.5">
-            <label className="text-[10px] font-black uppercase tracking-wider text-slate-300 font-mono">Thời hạn (ngày)</label>
+            <label className="text-[10px] font-black uppercase tracking-wider text-slate-300 font-mono">Duration (days)</label>
             <Input
               type="number"
               min={1}
@@ -246,7 +246,7 @@ export function ManagerPackagesPage() {
             />
           </div>
           <div className="grid gap-1.5">
-            <label className="text-[10px] font-black uppercase tracking-wider text-slate-300 font-mono">Giá (VND)</label>
+            <label className="text-[10px] font-black uppercase tracking-wider text-slate-300 font-mono">Price (VND)</label>
             <Input
               type="number"
               min={0}
@@ -256,22 +256,22 @@ export function ManagerPackagesPage() {
             />
           </div>
           <div className="grid gap-1.5 md:col-span-2">
-            <label className="text-[10px] font-black uppercase tracking-wider text-slate-300 font-mono">Giờ free / ngày</label>
+            <label className="text-[10px] font-black uppercase tracking-wider text-slate-300 font-mono">Free hours / day</label>
             <Input
               type="number"
               min={0}
-              placeholder="Để trống = tự theo thời hạn"
+              placeholder="Leave blank = auto by duration"
               value={form.maxHoursPerDay}
               onChange={(e) => setForm((f) => ({ ...f, maxHoursPerDay: e.target.value }))}
               className="bg-slate-950 border-white/10 text-white rounded-xl focus:border-orange-500/40 placeholder-slate-600"
             />
             <p className="text-[11px] text-slate-400">
-              Số giờ đỗ miễn phí/ngày. Vượt sẽ tính phí theo giá thường. Để trống → mặc định tuần 5h / tháng 7h / năm 10h. 0 = không giới hạn.
-              Gói KHÔNG giữ chỗ cố định — nhân viên gán chỗ trống lúc khách vào.
+              Free parking hours per day. Extra hours are charged at the regular rate. Leave blank → defaults to 5h/week, 7h/month, 10h/year. 0 = unlimited.
+              Packages do NOT hold a fixed slot — staff assign an available slot at check-in.
             </p>
           </div>
           <div className="grid gap-1.5 md:col-span-2">
-            <label className="text-[10px] font-black uppercase tracking-wider text-slate-300 font-mono">Mô tả</label>
+            <label className="text-[10px] font-black uppercase tracking-wider text-slate-300 font-mono">Description</label>
             <Input
               value={form.description}
               onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
@@ -280,17 +280,17 @@ export function ManagerPackagesPage() {
           </div>
           <div className="grid gap-1.5 md:col-span-2">
             <label className="text-[10px] font-black uppercase tracking-wider text-slate-300 font-mono">
-              Ưu đãi của gói (mỗi dòng 1 ưu đãi)
+              Package perks (one per line)
             </label>
             <textarea
               value={form.benefits}
               onChange={(e) => setForm((f) => ({ ...f, benefits: e.target.value }))}
               rows={4}
-              placeholder={'Miễn phí giữ xe không giới hạn lượt\nƯu tiên chỗ gần thang máy\nMiễn phí rửa xe 1 lần/tháng'}
+              placeholder={'Unlimited free parking\nPriority slot near the elevator\nFree car wash once a month'}
               className="rounded-xl border border-white/10 bg-slate-950 px-3 py-2 text-sm text-white outline-none focus:border-orange-500/40 placeholder-slate-600"
             />
             <p className="text-[11px] text-slate-400">
-              Những ưu đãi này sẽ hiển thị cho khách hàng khi chọn mua gói.
+              These perks are shown to customers when choosing a package.
             </p>
           </div>
           <label className="flex items-center gap-3 text-xs font-bold text-slate-300 md:col-span-2 select-none">
@@ -300,7 +300,7 @@ export function ManagerPackagesPage() {
               onChange={(e) => setForm((f) => ({ ...f, isActive: e.target.checked }))}
               className="w-4 h-4 rounded border-white/10 bg-slate-950 text-orange-500 focus:ring-0 cursor-pointer"
             />
-            <span>Đang mở bán</span>
+            <span>Available for sale</span>
           </label>
         </div>
       </ModalForm>

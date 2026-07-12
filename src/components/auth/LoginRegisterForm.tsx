@@ -7,11 +7,23 @@ import { AuthSocialButtons } from '@/components/auth/AuthSocialButtons';
 
 type LoginRegisterFormProps = Pick<
   AuthPageFormState,
-  | 'form' | 'handleChange' | 'handleSubmit' | 'showPassword' | 'setShowPassword'
-  | 'showConfirmPassword' | 'setShowConfirmPassword' | 'showDropdown' | 'setShowDropdown'
-  | 'savedAccounts' | 'handleSelectAccount' | 'deleteSavedAccount'
-  | 'emailInputRef' | 'passwordInputRef' | 'dropdownRef'
-  | 'handleGoToForgotPassword' | 'handleToggleLoginRegister'
+  | 'form'
+  | 'handleChange'
+  | 'handleSubmit'
+  | 'showPassword'
+  | 'setShowPassword'
+  | 'showConfirmPassword'
+  | 'setShowConfirmPassword'
+  | 'showDropdown'
+  | 'setShowDropdown'
+  | 'savedAccounts'
+  | 'handleSelectAccount'
+  | 'deleteSavedAccount'
+  | 'emailInputRef'
+  | 'passwordInputRef'
+  | 'dropdownRef'
+  | 'handleGoToForgotPassword'
+  | 'handleToggleLoginRegister'
 > & {
   mode: AuthMode;
   isLoading: boolean;
@@ -44,8 +56,14 @@ export function LoginRegisterForm({
       {mode === 'register' && (
         <>
           <div className="space-y-1.5">
-            <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono">Full Name</label>
+            <label
+              htmlFor="auth-fullName"
+              className="block text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono"
+            >
+              Full Name
+            </label>
             <input
+              id="auth-fullName"
               name="fullName"
               value={form.fullName}
               onChange={handleChange as (e: ChangeEvent<HTMLInputElement>) => void}
@@ -55,8 +73,14 @@ export function LoginRegisterForm({
             />
           </div>
           <div className="space-y-1.5">
-            <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono">Phone Number</label>
+            <label
+              htmlFor="auth-phone"
+              className="block text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono"
+            >
+              Phone Number
+            </label>
             <input
+              id="auth-phone"
               name="phone"
               value={form.phone}
               onChange={handleChange as (e: ChangeEvent<HTMLInputElement>) => void}
@@ -69,7 +93,12 @@ export function LoginRegisterForm({
       )}
 
       <div className="space-y-1.5 relative">
-        <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono">Email</label>
+        <label
+          htmlFor="auth-email"
+          className="block text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono"
+        >
+          Email
+        </label>
         {/* Hidden input to hold username for browser password manager association */}
         <input
           type="text"
@@ -79,10 +108,18 @@ export function LoginRegisterForm({
           readOnly
           tabIndex={-1}
           aria-hidden="true"
-          style={{ position: 'absolute', opacity: 0, height: 0, width: 0, zIndex: -1, pointerEvents: 'none' }}
+          style={{
+            position: 'absolute',
+            opacity: 0,
+            height: 0,
+            width: 0,
+            zIndex: -1,
+            pointerEvents: 'none',
+          }}
         />
         <input
           ref={emailInputRef}
+          id="auth-email"
           name="email"
           value={form.email}
           onChange={handleChange as (e: ChangeEvent<HTMLInputElement>) => void}
@@ -107,7 +144,12 @@ export function LoginRegisterForm({
             {savedAccounts.map((acc) => (
               <div
                 key={acc.email}
+                role="button"
+                tabIndex={0}
                 onMouseDown={(e) => handleSelectAccount(e, acc)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') handleSelectAccount(e, acc);
+                }}
                 className="flex items-center justify-between px-3.5 py-2.5 hover:bg-slate-900 text-xs font-semibold text-slate-300 hover:text-white transition-colors cursor-pointer group"
               >
                 <span className="font-medium tracking-wide truncate max-w-[85%]">{acc.email}</span>
@@ -126,10 +168,16 @@ export function LoginRegisterForm({
       </div>
 
       <div className="space-y-1.5">
-        <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono">Password</label>
+        <label
+          htmlFor="auth-password"
+          className="block text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono"
+        >
+          Password
+        </label>
         <div className="relative">
           <input
             ref={passwordInputRef}
+            id="auth-password"
             name="password"
             value={form.password}
             onChange={handleChange as (e: ChangeEvent<HTMLInputElement>) => void}
@@ -163,9 +211,15 @@ export function LoginRegisterForm({
 
       {mode === 'register' && (
         <div className="space-y-1.5 animate-fadeIn">
-          <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono">Confirm Password</label>
+          <label
+            htmlFor="auth-confirmPassword"
+            className="block text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono"
+          >
+            Confirm Password
+          </label>
           <div className="relative">
             <input
+              id="auth-confirmPassword"
               name="confirmPassword"
               value={form.confirmPassword}
               onChange={handleChange as (e: ChangeEvent<HTMLInputElement>) => void}
@@ -193,11 +247,7 @@ export function LoginRegisterForm({
           whileTap={{ scale: 0.96 }}
           className="w-full h-11 rounded-xl text-slate-950 font-black text-xs uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:shadow-[0_0_25px_rgba(249,115,22,0.45)] disabled:opacity-50"
         >
-          {isLoading
-            ? 'Processing...'
-            : mode === 'login'
-            ? 'Login'
-            : 'Register'}
+          {isLoading ? 'Processing...' : mode === 'login' ? 'Login' : 'Register'}
         </motion.button>
 
         <div className="text-center">
