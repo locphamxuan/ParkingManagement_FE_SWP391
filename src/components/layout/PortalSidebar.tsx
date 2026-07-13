@@ -1,50 +1,26 @@
 import { NavLink } from 'react-router-dom';
-import {
-  Building2,
-  ChevronLeft,
-  ClipboardList,
-  Flag,
-  LayoutDashboard,
-  Layers,
-  MapPin,
-  Package,
-  SlidersHorizontal,
-  Square,
-  Truck,
-  User,
-  Users,
-  Clock,
-  Wallet,
-  Fingerprint,
-  MessageSquare,
-} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import { ChevronLeft, Fingerprint } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/utils/cn';
 
-interface ManagerSidebarProps {
-  collapsed: boolean;
-  onToggle: () => void;
+export interface PortalNavItem {
+  to: string;
+  label: string;
+  icon: LucideIcon;
 }
 
-const modules = [
-  { to: '', label: 'Overview', icon: LayoutDashboard },
-  { to: 'buildings', label: 'Buildings', icon: Building2 },
-  { to: 'vehicle-types', label: 'Vehicle Types', icon: Truck },
-  { to: 'floors', label: 'Floors', icon: ClipboardList },
-  { to: 'gates', label: 'Gates', icon: Flag },
-  { to: 'zones', label: 'Zones', icon: Layers },
-  { to: 'slots', label: 'Parking Slots', icon: Square },
-  { to: 'operating-hours', label: 'Operating Hours', icon: Clock },
-  { to: 'price-policies', label: 'Price Policies', icon: SlidersHorizontal },
-  { to: 'reservation-policy', label: 'Reservation Policy', icon: MapPin },
-  { to: 'packages', label: 'Packages', icon: Package },
-  { to: 'shifts', label: 'Shifts & Assignments', icon: Users },
-  { to: 'staff', label: 'Staff', icon: User },
-  { to: 'reviews', label: 'Reviews', icon: MessageSquare },
-  { to: 'wallet', label: 'Building Wallet', icon: Wallet },
-] as const;
+interface PortalSidebarProps {
+  collapsed: boolean;
+  onToggle: () => void;
+  /** Tên portal hiển thị ở header sidebar (vd: "ADMIN PORTAL") */
+  portalLabel: string;
+  items: readonly PortalNavItem[];
+}
 
-export function ManagerSidebar({ collapsed, onToggle }: ManagerSidebarProps) {
+// Sidebar dùng chung cho các portal quản trị (admin/manager) — trước đây bị
+// duplicate thành Sidebar.tsx và ManagerSidebar.tsx với markup giống hệt nhau.
+export function PortalSidebar({ collapsed, onToggle, portalLabel, items }: PortalSidebarProps) {
   return (
     <aside
       className={cn(
@@ -56,7 +32,7 @@ export function ManagerSidebar({ collapsed, onToggle }: ManagerSidebarProps) {
         {!collapsed ? (
           <div className="pl-1">
             <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-slate-500">Environment</p>
-            <p className="text-xs font-extrabold text-slate-100">MANAGER PORTAL</p>
+            <p className="text-xs font-extrabold text-slate-100">{portalLabel}</p>
           </div>
         ) : (
           <Fingerprint className="text-primary drop-shadow-[0_0_8px_rgba(249,115,22,0.25)] h-5 w-5 mx-auto" />
@@ -67,13 +43,13 @@ export function ManagerSidebar({ collapsed, onToggle }: ManagerSidebarProps) {
       </div>
 
       <nav className="space-y-1.5 overflow-y-auto max-h-[calc(100vh-100px)] pr-1">
-        {modules.map((module) => {
-          const Icon = module.icon;
+        {items.map((item) => {
+          const Icon = item.icon;
           return (
             <NavLink
-              key={module.label}
-              to={module.to}
-              end={module.to === ''}
+              key={item.label}
+              to={item.to}
+              end={item.to === ''}
               className={({ isActive }) =>
                 cn(
                   'flex items-center gap-3.5 rounded-xl px-3.5 py-2.5 text-xs font-semibold transition-all duration-300',
@@ -84,7 +60,7 @@ export function ManagerSidebar({ collapsed, onToggle }: ManagerSidebarProps) {
               }
             >
               <Icon size={15} className="shrink-0" />
-              {!collapsed ? <span className="tracking-wide">{module.label}</span> : null}
+              {!collapsed ? <span className="tracking-wide">{item.label}</span> : null}
             </NavLink>
           );
         })}

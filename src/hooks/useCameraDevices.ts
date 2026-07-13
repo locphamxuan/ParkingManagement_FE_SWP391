@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { STORAGE_KEYS, loadJson, saveJson } from '@/services/client/storage';
 
 /**
  * Quản lý việc gán THIẾT BỊ CAMERA VẬT LÝ cho từng vai trò ở màn staff:
@@ -14,15 +15,8 @@ export type CameraRole = 'plate' | 'portrait' | 'qr';
 
 export type CameraAssignment = Partial<Record<CameraRole, string>>;
 
-const STORAGE_KEY = 'pbms.staffCameraDevices';
-
-const readAssignment = (): CameraAssignment => {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}') as CameraAssignment;
-  } catch {
-    return {};
-  }
-};
+const readAssignment = (): CameraAssignment =>
+  loadJson<CameraAssignment>(STORAGE_KEYS.staffCameraDevices) ?? {};
 
 /**
  * Tạo `video` constraint cho getUserMedia: ưu tiên deviceId đã gán, nếu chưa gán
@@ -64,11 +58,7 @@ export function useCameraDevices() {
     setAssignment((prev) => {
       const next = { ...prev, [role]: deviceId || undefined };
       if (!deviceId) delete next[role];
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      } catch {
-        /* ignore */
-      }
+      saveJson(STORAGE_KEYS.staffCameraDevices, next);
       return next;
     });
   }, []);

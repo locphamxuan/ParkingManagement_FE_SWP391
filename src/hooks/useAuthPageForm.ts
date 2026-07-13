@@ -3,7 +3,7 @@ import type { FormEvent, ChangeEvent, MouseEvent as ReactMouseEvent } from 'reac
 import { useMotionValue, useSpring, useTransform } from 'framer-motion';
 import { useSearchParams } from 'react-router-dom';
 import { forgotPassword, resetPassword } from '@/services/authService';
-import { clearForgotEmail } from '@/services/client/storage';
+import { STORAGE_KEYS, clearForgotEmail, loadJson, saveJson } from '@/services/client/storage';
 import type { AuthMode } from '@/pages/AuthPage';
 
 const initialForm = {
@@ -73,52 +73,38 @@ export function useAuthPageForm({ mode, notice, onModeChange, onSubmit }: UseAut
 
   // Load saved emails from localStorage on mount and initialize phones
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem('pbms_saved_accounts');
-      if (stored) {
-        // Chỉ giữ email; loại bỏ mọi mật khẩu plaintext có thể còn sót từ bản cũ.
-        const parsed: { email?: string }[] = JSON.parse(stored);
-        const emailsOnly = parsed
-          .filter((acc) => acc?.email)
-          .map((acc) => ({ email: acc.email as string }));
-        setSavedAccounts(emailsOnly);
-        localStorage.setItem('pbms_saved_accounts', JSON.stringify(emailsOnly));
-      }
-    } catch {
-      // localStorage unavailable (e.g. private mode) — proceed without saved accounts
+    const parsed = loadJson<{ email?: string }[]>(STORAGE_KEYS.savedAccounts);
+    if (parsed) {
+      // Chỉ giữ email; loại bỏ mọi mật khẩu plaintext có thể còn sót từ bản cũ.
+      const emailsOnly = parsed
+        .filter((acc) => acc?.email)
+        .map((acc) => ({ email: acc.email as string }));
+      setSavedAccounts(emailsOnly);
+      saveJson(STORAGE_KEYS.savedAccounts, emailsOnly);
     }
   }, []);
 
   // Save email helper (no password persisted)
   const saveAccount = (email: string) => {
     if (!email) return;
-    try {
-      const stored = localStorage.getItem('pbms_saved_accounts');
-      let current: { email: string }[] = stored ? JSON.parse(stored) : [];
+    let current = loadJson<{ email: string }[]>(STORAGE_KEYS.savedAccounts) ?? [];
 
-      // Remove duplicates, add to front, keep max 5
-      current = current.filter((acc) => acc.email !== email);
-      current.unshift({ email });
-      current = current.slice(0, 5);
+    // Bỏ trùng, đưa lên đầu, giữ tối đa 5 email
+    current = current.filter((acc) => acc.email !== email);
+    current.unshift({ email });
+    current = current.slice(0, 5);
 
-      localStorage.setItem('pbms_saved_accounts', JSON.stringify(current));
-      setSavedAccounts(current);
-    } catch {
-      // localStorage unavailable — skip persistence
-    }
+    saveJson(STORAGE_KEYS.savedAccounts, current);
+    setSavedAccounts(current);
   };
 
   // Delete saved account
   const deleteSavedAccount = (e: ReactMouseEvent, emailToDelete: string) => {
     e.stopPropagation();
     e.preventDefault(); // Prevents input from losing focus!
-    try {
-      const updated = savedAccounts.filter((acc) => acc.email !== emailToDelete);
-      localStorage.setItem('pbms_saved_accounts', JSON.stringify(updated));
-      setSavedAccounts(updated);
-    } catch {
-      // localStorage unavailable — skip
-    }
+    const updated = savedAccounts.filter((acc) => acc.email !== emailToDelete);
+    saveJson(STORAGE_KEYS.savedAccounts, updated);
+    setSavedAccounts(updated);
   };
 
   const handleSelectAccount = (e: { preventDefault: () => void }, acc: { email: string }) => {

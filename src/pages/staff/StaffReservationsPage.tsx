@@ -128,7 +128,7 @@ export function StaffReservationsPage() {
       title: 'Floor / Slot',
       render: (row) => {
         const floor = (row.slot as { floor?: { code?: string; name?: string } } | null)?.floor;
-        const floorLabel = floor?.code ?? floor?.name ?? null;
+        const floorLabel = floor?.name ?? floor?.code ?? null;
         const slotCode = row.slot?.code ?? null;
         return (
           <div className="flex items-center gap-1 flex-wrap">

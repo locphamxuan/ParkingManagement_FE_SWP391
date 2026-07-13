@@ -1,17 +1,8 @@
 import { useCallback, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import AuthPage, { AuthMode } from '@/pages/AuthPage';
-import { requestJson } from '@/services/client/apiClient';
+import { registerWithBackend } from '@/services/authService';
 import { useAuth } from '@/hooks/useAuth';
-
-interface AuthApiResponse {
-  success: boolean;
-  message?: string;
-  data?: {
-    token?: string;
-    user?: Record<string, unknown>;
-  };
-}
 
 function mapAuthErrorMessage(message: string): string {
   const normalized = message.trim().toLowerCase();
@@ -87,19 +78,12 @@ function usePublicAuthFlow(initialMode: 'login' | 'register') {
             navigate('/', { replace: true });
           }
         } else {
-          const path = '/users/auth/register';
-          const response = await requestJson<AuthApiResponse>({
-            path,
-            method: 'POST',
-            body: payload,
+          await registerWithBackend({
+            email: payload.email,
+            password: payload.password,
+            fullName: payload.fullName,
+            phone: payload.phone || undefined,
           });
-
-          const token = response?.data?.token;
-          const user = response?.data?.user;
-
-          if (!token || !user) {
-            throw new Error('Invalid authentication response from the server.');
-          }
 
           setNotice({
             message: 'Registration successful.',

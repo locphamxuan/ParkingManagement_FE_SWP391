@@ -60,7 +60,7 @@ src/
 │
 ├── components/
 │   ├── ui/        primitives (button, card, input, modal, select, badge)
-│   ├── layout/    Header, Footer, Navbar, Sidebar, ManagerSidebar, …
+│   ├── layout/    Header, Footer, Navbar, PortalSidebar (admin+manager), …
 │   ├── modals/    ConfirmModal, ModalForm, PlateQRModal, UserQRModal
 │   ├── charts/    RevenueChart, AnalyticsCard, ActivityTimeline
 │   ├── map/       AnimatedParkingMap3D, ParkingMap2D, CartoonCar3D
@@ -130,9 +130,10 @@ src/
 
 - **`AppRouter.tsx`** khai báo toàn bộ route.
 - Khu vực nội bộ bọc bởi guard + layout:
-  - `ProtectedRoute role="admin"` → `AdminLayout` (`/admin/dashboard/*`)
-  - `ManagerProtectedRoute` → `ManagerLayout` (`/manager/*`)
-  - `StaffProtectedRoute` → `StaffLayout` (`/staff/*`)
+  - `ProtectedRoute role="admin"` → `AdminLayout` (`/admin/*`, đường dẫn cũ
+    `/admin/dashboard/<page>` được redirect sang `/admin/<page>`)
+  - `ProtectedRoute role="manager"` → `ManagerLayout` (`/manager/*`)
+  - `ProtectedRoute role="staff"` → `StaffLayout` (`/staff/*`)
 - Trang user (`/profile`, `/wallet`, …) hiện **tự guard** bên trong (kiểm tra
   `session` rồi `Navigate` về `/auth/login`).
 
