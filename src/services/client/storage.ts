@@ -1,8 +1,14 @@
-const STORAGE_KEYS = {
+// Giá trị key phải giữ nguyên vĩnh viễn — đổi là mất dữ liệu người dùng đã lưu.
+export const STORAGE_KEYS = {
   token: 'pbms.token',
   user: 'pbms.user',
   forgotEmailPending: 'pbms.forgotEmail_pending',
+  savedAccounts: 'pbms_saved_accounts',
+  staffCameraDevices: 'pbms.staffCameraDevices',
+  selectedVehicleType: 'pbms_selected_vehicle_type',
 } as const;
+
+export type StorageKey = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS];
 
 export interface LocalSession {
   token: string;
@@ -15,6 +21,38 @@ export function loadJson<T = unknown>(key: string): T | null {
     return raw ? (JSON.parse(raw) as T) : null;
   } catch {
     return null;
+  }
+}
+
+export function saveJson(key: StorageKey, value: unknown): void {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // localStorage không khả dụng (private mode) — bỏ qua, không chặn UI
+  }
+}
+
+export function loadString(key: StorageKey): string | null {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+export function saveString(key: StorageKey, value: string): void {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // localStorage không khả dụng — bỏ qua
+  }
+}
+
+export function removeStored(key: StorageKey): void {
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    // localStorage không khả dụng — bỏ qua
   }
 }
 

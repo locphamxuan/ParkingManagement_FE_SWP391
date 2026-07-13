@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useParams } from 'react-router-dom';
 import { ScrollToTop } from '@/components/common/ScrollToTop';
 // Guards + layouts: eager (nhỏ, là khung luôn cần). Page: lazy để tách chunk.
 import { ProtectedRoute } from '@/routes/ProtectedRoute';
@@ -62,6 +62,12 @@ const RevenueAnalyticsPage = lazy(() => import('@/pages/admin/RevenueAnalyticsPa
 const AuditLogsPage = lazy(() => import('@/pages/admin/AuditLogsPage').then((m) => ({ default: m.AuditLogsPage })));
 const AdminProfilePage = lazy(() => import('@/pages/admin/AdminProfilePage').then((m) => ({ default: m.AdminProfilePage })));
 const ModulePlaceholderPage = lazy(() => import('@/pages/admin/ModulePlaceholderPage').then((m) => ({ default: m.ModulePlaceholderPage })));
+
+/** Giữ tương thích bookmark cũ: /admin/dashboard/<page> → /admin/<page>. */
+function LegacyAdminRedirect() {
+  const { page } = useParams();
+  return <Navigate to={`/admin/${page ?? ''}`} replace />;
+}
 
 /** Fallback hiển thị khi chunk của page đang được tải. */
 function RouteFallback() {
@@ -148,12 +154,13 @@ export function AppRouter() {
       </Route>
 
       <Route path="/admin/login" element={<Navigate to="/auth/login" replace />} />
-      <Route path="/admin" element={<Navigate to="/auth/login" replace />} />
-      <Route path="/admin/direct" element={<AdminLayout />} />
-
+      <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
       <Route element={<ProtectedRoute role="admin" />}>
-        <Route path="/admin/dashboard" element={<AdminLayout />}>
+        <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<DashboardOverviewPage />} />
+          <Route path="dashboard" element={<DashboardOverviewPage />} />
+          {/* Redirect các đường dẫn lồng nhau kiểu cũ /admin/dashboard/<page> */}
+          <Route path="dashboard/:page" element={<LegacyAdminRedirect />} />
           <Route path="buildings" element={<BuildingsPage />} />
           <Route path="users" element={<UsersPage />} />
           <Route path="revenue-analytics" element={<RevenueAnalyticsPage />} />

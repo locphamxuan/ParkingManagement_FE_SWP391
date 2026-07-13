@@ -20,7 +20,7 @@ export function AdminUserDropdown({ email, onLogout, fullName, role }: Props) {
     if (location.pathname.startsWith('/manager')) {
       navigate('/manager/profile');
     } else if (location.pathname.startsWith('/admin')) {
-      navigate('/admin/dashboard/profile');
+      navigate('/admin/profile');
     }
   };
 

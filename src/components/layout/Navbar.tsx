@@ -20,8 +20,9 @@ export function Navbar({ title, email, onLogout, fullName, role, showNotificatio
     <header className="sticky top-0 z-20 border-b border-white/8 bg-slate-900/90 px-6 py-4 backdrop-blur-xl shadow-[0_4px_30px_rgba(0,0,0,0.2)]">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
+          {/* Eyebrow hiển thị role hiện tại — đồng bộ với header của StaffLayout */}
           <p className="text-[10px] uppercase font-bold tracking-[0.2em] text-slate-500">
-            OPERATIONS SYSTEM
+            {role ?? 'Operations System'}
           </p>
           <h1 className="text-xl font-bold tracking-tight text-white mt-0.5">{title}</h1>
         </div>

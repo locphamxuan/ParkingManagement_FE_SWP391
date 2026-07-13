@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { resolveErrorMessage } from '@/utils/apiErrors';
+import { STORAGE_KEYS, loadString, removeStored, saveString } from '@/services/client/storage';
 
 import {
   userApi,
@@ -34,7 +35,6 @@ export interface MappedSlot {
   _id: string;
   buildingId: string;
   code: string;
-  floorCode?: string;
   vehicleType: VehicleKind | 'all';
   reservable: boolean;
   status: string;
@@ -61,14 +61,14 @@ export function useReservationBooking() {
   const [selectedBuildingId, setSelectedBuildingId] = useState('');
   const [vehicleTypesForBuilding, setVehicleTypesForBuilding] = useState<VehicleType[]>([]);
   const [selectedVehicleType, setSelectedVehicleType] = useState<VehicleKind | ''>(
-    () => (localStorage.getItem('pbms_selected_vehicle_type') as VehicleKind) || ''
+    () => (loadString(STORAGE_KEYS.selectedVehicleType) as VehicleKind) || ''
   );
   const changeVehicleType = (val: VehicleKind | '') => {
     setSelectedVehicleType(val);
     if (val) {
-      localStorage.setItem('pbms_selected_vehicle_type', val);
+      saveString(STORAGE_KEYS.selectedVehicleType, val);
     } else {
-      localStorage.removeItem('pbms_selected_vehicle_type');
+      removeStored(STORAGE_KEYS.selectedVehicleType);
     }
   };
   const [reservationPolicy, setReservationPolicy] = useState<ReservationPolicyLimits | null>(null);
@@ -346,19 +346,13 @@ export function useReservationBooking() {
     }).map((s) => s.code);
   }, [slots]);
 
+  // So khớp bằng vehicleType thật của slot — không đoán từ chuỗi code
+  // (code giờ do BE sinh {zoneCode}-NN nên không còn mang ý nghĩa loại xe).
   const unsupportedSlotCodes = useMemo(() => {
     if (!selectedVehicleType) return [];
-    return slots.filter((s) => {
-      const cleanCode = String(s.code).toUpperCase();
-      if (selectedVehicleType === 'car' && cleanCode.includes('-M')) {
-        return true;
-      }
-      if (selectedVehicleType === 'motorcycle' && (cleanCode.includes('-A') || cleanCode.includes('-C'))) {
-        return true;
-      }
-
-      return s.vehicleType !== 'all' && s.vehicleType !== selectedVehicleType;
-    }).map((s) => s.code);
+    return slots
+      .filter((s) => s.vehicleType !== 'all' && s.vehicleType !== selectedVehicleType)
+      .map((s) => s.code);
   }, [slots, selectedVehicleType]);
 
   const canSubmit = Boolean(selectedBuildingId && !isSubmitting);

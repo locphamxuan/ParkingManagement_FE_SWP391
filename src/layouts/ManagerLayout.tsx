@@ -1,10 +1,45 @@
 import { useMemo, useState } from 'react';
 import { Outlet, useLocation, useNavigate, useMatch } from 'react-router-dom';
+import {
+  Building2,
+  ClipboardList,
+  Clock,
+  Flag,
+  LayoutDashboard,
+  Layers,
+  MapPin,
+  MessageSquare,
+  Package,
+  SlidersHorizontal,
+  Square,
+  Truck,
+  User,
+  Users,
+  Wallet,
+} from 'lucide-react';
 import { Navbar } from '@/components/layout/Navbar';
-import { ManagerSidebar } from '@/components/layout/ManagerSidebar';
+import { PortalSidebar, type PortalNavItem } from '@/components/layout/PortalSidebar';
 import { useAuth } from '@/hooks/useAuth';
 import { ADMIN_EMAIL_FALLBACK } from '@/utils/constants';
 import { useManagerBuildings } from '@/hooks/useManagerBuildings';
+
+const navItems: readonly PortalNavItem[] = [
+  { to: '', label: 'Overview', icon: LayoutDashboard },
+  { to: 'buildings', label: 'Buildings', icon: Building2 },
+  { to: 'vehicle-types', label: 'Vehicle Types', icon: Truck },
+  { to: 'floors', label: 'Floors', icon: ClipboardList },
+  { to: 'gates', label: 'Gates', icon: Flag },
+  { to: 'zones', label: 'Zones', icon: Layers },
+  { to: 'slots', label: 'Parking Slots', icon: Square },
+  { to: 'operating-hours', label: 'Operating Hours', icon: Clock },
+  { to: 'price-policies', label: 'Price Policies', icon: SlidersHorizontal },
+  { to: 'reservation-policy', label: 'Reservation Policy', icon: MapPin },
+  { to: 'packages', label: 'Packages', icon: Package },
+  { to: 'shifts', label: 'Shifts & Assignments', icon: Users },
+  { to: 'staff', label: 'Staff', icon: User },
+  { to: 'reviews', label: 'Reviews', icon: MessageSquare },
+  { to: 'wallet', label: 'Building Wallet', icon: Wallet },
+];
 
 const titles: Record<string, string> = {
   '/manager': 'Manager Dashboard',
@@ -44,7 +79,12 @@ export function ManagerLayout() {
         <div className="absolute bottom-0 left-0 w-[400px] h-[400px] rounded-full bg-[radial-gradient(circle_at_center,rgba(249,115,22,0.04),transparent_60%)] blur-3xl" />
       </div>
       <div className="relative z-10 flex min-h-screen">
-        <ManagerSidebar collapsed={collapsed} onToggle={() => setCollapsed((prev) => !prev)} />
+        <PortalSidebar
+          collapsed={collapsed}
+          onToggle={() => setCollapsed((prev) => !prev)}
+          portalLabel="MANAGER PORTAL"
+          items={navItems}
+        />
         <div className="flex min-h-screen flex-1 flex-col">
           <Navbar
             title={title}
