@@ -38,7 +38,6 @@ export interface FloorAvailability {
   _id: string;
   code: string;
   name: string;
-  levelNumber: number;
   capacity: number;
   status: 'active' | 'inactive' | 'maintenance';
   availableSlots: number;

@@ -1,17 +1,16 @@
-import { useState } from 'react';
-import { Plus, Trash2, X } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
 import { CustomSelect } from '@/components/ui/select';
-import type { Floor, Zone } from '@/services/manager/managerApi';
+import type { Floor, ParkingSlot, Zone } from '@/services/manager/managerApi';
 
-export interface SlotFormRow {
-  id: string;
-  code: string;
+export interface SlotBatchForm {
   floor: string;
   zone: string;
-  status: 'available' | 'occupied' | 'reserved' | 'maintenance';
+  quantity: number;
+  status: ParkingSlot['status'];
   reservable: boolean;
   note: string;
 }
@@ -19,66 +18,71 @@ export interface SlotFormRow {
 interface MultiSlotFormProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (rows: SlotFormRow[]) => Promise<void>;
+  onSubmit: (form: SlotBatchForm) => Promise<void>;
   floors: Floor[];
   zones: Zone[];
+  /** Slot hiện có — dùng để preview dải mã sẽ sinh (VD: VL-03 … VL-05). */
+  slots?: ParkingSlot[];
   loading?: boolean;
 }
 
-const emptyRow = (): SlotFormRow => ({
-  id: Math.random().toString(36),
-  code: '',
+const emptyForm = (): SlotBatchForm => ({
   floor: '',
   zone: '',
+  quantity: 1,
   status: 'available',
   reservable: true,
   note: '',
 });
 
-export function MultiSlotForm({ isOpen, onClose, onSubmit, floors, zones }: MultiSlotFormProps) {
-  const [rows, setRows] = useState<SlotFormRow[]>([emptyRow()]);
+export function MultiSlotForm({ isOpen, onClose, onSubmit, floors, zones, slots = [] }: MultiSlotFormProps) {
+  const [form, setForm] = useState<SlotBatchForm>(emptyForm());
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleAddRow = () => {
-    setRows([...rows, emptyRow()]);
-  };
+  const floorZones = zones.filter((z) => {
+    const zFloorId = typeof z.floor === 'string' ? z.floor : (z.floor as Floor)._id;
+    return zFloorId === form.floor;
+  });
+  const selectedZone = zones.find((z) => z._id === form.zone);
 
-  const handleRemoveRow = (id: string) => {
-    if (rows.length > 1) {
-      setRows(rows.filter((r) => r.id !== id));
+  // Preview dải mã BE sẽ sinh: đếm số lớn nhất của {zoneCode}-NN trên tầng đã chọn.
+  const codePreview = useMemo(() => {
+    if (!selectedZone || form.quantity < 1) return null;
+    const pattern = new RegExp(`^${selectedZone.code}-(\\d+)$`);
+    const maxN = slots
+      .filter((s) => (typeof s.floor === 'string' ? s.floor : s.floor?._id) === form.floor)
+      .reduce((max, s) => {
+        const m = pattern.exec(s.code);
+        return m ? Math.max(max, Number(m[1])) : max;
+      }, 0);
+    const first = `${selectedZone.code}-${String(maxN + 1).padStart(2, '0')}`;
+    if (form.quantity === 1) return first;
+    const last = `${selectedZone.code}-${String(maxN + form.quantity).padStart(2, '0')}`;
+    return `${first} … ${last}`;
+  }, [selectedZone, form.floor, form.quantity, slots]);
+
+  const setField = <K extends keyof SlotBatchForm>(field: K, value: SlotBatchForm[K]) => {
+    // Đổi tầng thì reset zone để buộc chọn lại zone thuộc tầng mới.
+    if (field === 'floor') {
+      setForm((f) => ({ ...f, floor: value as string, zone: '' }));
+      return;
     }
+    setForm((f) => ({ ...f, [field]: value }));
   };
-
-  const handleRowChange = (id: string, field: keyof SlotFormRow, value: unknown) => {
-    setRows(
-      rows.map((r) => {
-        if (r.id !== id) return r;
-        // When floor changes, reset zone so the user picks a valid one.
-        if (field === 'floor') return { ...r, floor: value as string, zone: '' };
-        return { ...r, [field]: value };
-      })
-    );
-  };
-
-  const zonesForRow = (floorId: string) =>
-    zones.filter((z) => {
-      const zFloorId = typeof z.floor === 'string' ? z.floor : (z.floor as Floor)._id;
-      return zFloorId === floorId;
-    });
 
   const handleSubmit = async () => {
-    for (const row of rows) {
-      if (!row.code.trim()) { setError('Slot code cannot be empty'); return; }
-      if (!row.floor) { setError('A floor must be selected for each slot'); return; }
-      if (!row.zone) { setError('A zone must be selected for each slot'); return; }
+    if (!form.floor) { setError('Select a floor first'); return; }
+    if (!form.zone) { setError('Select a zone first'); return; }
+    if (!Number.isInteger(form.quantity) || form.quantity < 1 || form.quantity > 50) {
+      setError('Quantity must be between 1 and 50');
+      return;
     }
-
     setSubmitting(true);
     setError(null);
     try {
-      await onSubmit(rows);
-      setRows([emptyRow()]);
+      await onSubmit(form);
+      setForm(emptyForm());
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
@@ -89,7 +93,7 @@ export function MultiSlotForm({ isOpen, onClose, onSubmit, floors, zones }: Mult
 
   const handleClose = () => {
     if (!submitting) {
-      setRows([emptyRow()]);
+      setForm(emptyForm());
       setError(null);
       onClose();
     }
@@ -97,12 +101,12 @@ export function MultiSlotForm({ isOpen, onClose, onSubmit, floors, zones }: Mult
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose}>
-      <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+      <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="sticky top-0 z-10 border-b border-white/8 bg-slate-800/95 px-6 py-4 flex items-center justify-between backdrop-blur-md">
           <div>
             <h2 className="text-lg font-bold text-slate-100">Add New Slots</h2>
-            <p className="text-xs text-slate-400 mt-1">Create one or more parking slots at once</p>
+            <p className="text-xs text-slate-400 mt-1">Pick a zone and quantity — slot codes are generated automatically</p>
           </div>
           <button
             onClick={handleClose}
@@ -121,133 +125,105 @@ export function MultiSlotForm({ isOpen, onClose, onSubmit, floors, zones }: Mult
             </div>
           )}
 
-          <div className="space-y-3 max-h-[calc(90vh-300px)] overflow-y-auto">
-            {rows.map((row, index) => {
-              const floorZones = zonesForRow(row.floor);
-              return (
-                <div
-                  key={row.id}
-                  className="rounded-xl border border-white/10 bg-slate-800/40 p-4 space-y-3 hover:border-white/20 transition-colors"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="inline-block bg-orange-500/10 border border-orange-500/30 text-orange-300 px-2.5 py-1 rounded-lg text-xs font-bold">
-                      Slot #{index + 1}
-                    </span>
-                    {rows.length > 1 && (
-                      <button
-                        onClick={() => handleRemoveRow(row.id)}
-                        disabled={submitting}
-                        className="text-slate-400 hover:text-rose-400 transition-colors disabled:opacity-50"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    )}
-                  </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {/* Tầng */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wide">Floor *</label>
+              <CustomSelect
+                value={form.floor}
+                onChange={(val) => setField('floor', val)}
+                options={[
+                  { value: '', label: '-- Select Floor --' },
+                  ...floors.map((f) => ({ value: f._id, label: f.name || f.code })),
+                ]}
+                disabled={submitting || floors.length === 0}
+                placeholder="-- Select Floor --"
+              />
+            </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {/* Mã Ô */}
-                    <div className="space-y-1.5">
-                      <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wide">Slot Code *</label>
-                      <Input
-                        value={row.code}
-                        onChange={(e) => handleRowChange(row.id, 'code', e.target.value.toUpperCase())}
-                        placeholder="e.g. A01, B12"
-                        disabled={submitting}
-                        className="text-sm"
-                      />
-                    </div>
+            {/* Dãy (Zone) */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wide">Zone *</label>
+              {!form.floor ? (
+                <p className="text-xs text-slate-500 rounded border border-white/8 px-3 py-2.5">Select a floor first</p>
+              ) : floorZones.length === 0 ? (
+                <p className="text-xs text-amber-400 rounded border border-amber-500/20 px-3 py-2.5">This floor has no zones yet</p>
+              ) : (
+                <CustomSelect
+                  value={form.zone}
+                  onChange={(val) => setField('zone', val)}
+                  options={[
+                    { value: '', label: '-- Select Zone --' },
+                    ...floorZones.map((z) => ({ value: z._id, label: z.name || z.code })),
+                  ]}
+                  disabled={submitting}
+                  placeholder="-- Select Zone --"
+                />
+              )}
+            </div>
 
-                    {/* Tầng */}
-                    <div className="space-y-1.5">
-                      <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wide">Floor *</label>
-                      <CustomSelect
-                        value={row.floor}
-                        onChange={(val) => handleRowChange(row.id, 'floor', val)}
-                        options={[
-                          { value: '', label: '-- Select Floor --' },
-                          ...floors.map((f) => ({ value: f._id, label: f.code })),
-                        ]}
-                        disabled={submitting || floors.length === 0}
-                        placeholder="-- Select Floor --"
-                      />
-                    </div>
+            {/* Số lượng */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wide">Quantity *</label>
+              <Input
+                type="number"
+                min={1}
+                max={50}
+                value={String(form.quantity)}
+                onChange={(e) => setField('quantity', Number(e.target.value))}
+                disabled={submitting}
+                className="text-sm"
+              />
+            </div>
 
-                    {/* Dãy (Zone) */}
-                    <div className="space-y-1.5">
-                      <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wide">Zone *</label>
-                      {!row.floor ? (
-                        <p className="text-xs text-slate-500 rounded border border-white/8 px-3 py-2.5">Select a floor first</p>
-                      ) : floorZones.length === 0 ? (
-                        <p className="text-xs text-amber-400 rounded border border-amber-500/20 px-3 py-2.5">This floor has no zones yet</p>
-                      ) : (
-                        <CustomSelect
-                          value={row.zone}
-                          onChange={(val) => handleRowChange(row.id, 'zone', val)}
-                          options={[
-                            { value: '', label: '-- Select Zone --' },
-                            ...floorZones.map((z) => ({ value: z._id, label: z.code })),
-                          ]}
-                          disabled={submitting}
-                          placeholder="-- Select Zone --"
-                        />
-                      )}
-                    </div>
+            {/* Trạng Thái */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wide">Status</label>
+              <CustomSelect
+                value={form.status}
+                onChange={(val) => setField('status', val as ParkingSlot['status'])}
+                options={[
+                  { value: 'available', label: 'Available' },
+                  { value: 'occupied', label: 'Occupied' },
+                  { value: 'reserved', label: 'Reserved' },
+                  { value: 'maintenance', label: 'Maintenance' },
+                ]}
+                disabled={submitting}
+              />
+            </div>
 
-                    {/* Trạng Thái */}
-                    <div className="space-y-1.5">
-                      <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wide">Status</label>
-                      <CustomSelect
-                        value={row.status}
-                        onChange={(val) => handleRowChange(row.id, 'status', val)}
-                        options={[
-                          { value: 'available', label: 'Available' },
-                          { value: 'occupied', label: 'Occupied' },
-                          { value: 'reserved', label: 'Reserved' },
-                          { value: 'maintenance', label: 'Maintenance' },
-                        ]}
-                        disabled={submitting}
-                      />
-                    </div>
+            {/* Cho Đặt Chỗ */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wide">Reservable</label>
+              <CustomSelect
+                value={form.reservable ? 'yes' : 'no'}
+                onChange={(val) => setField('reservable', val === 'yes')}
+                options={[
+                  { value: 'yes', label: 'Yes' },
+                  { value: 'no', label: 'No' },
+                ]}
+                disabled={submitting}
+              />
+            </div>
 
-                    {/* Cho Đặt Chỗ */}
-                    <div className="space-y-1.5">
-                      <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wide">Reservable</label>
-                      <CustomSelect
-                        value={row.reservable ? 'yes' : 'no'}
-                        onChange={(val) => handleRowChange(row.id, 'reservable', val === 'yes')}
-                        options={[
-                          { value: 'yes', label: 'Yes' },
-                          { value: 'no', label: 'No' },
-                        ]}
-                        disabled={submitting}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Ghi Chú */}
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wide">Note</label>
-                    <Input
-                      value={row.note}
-                      onChange={(e) => handleRowChange(row.id, 'note', e.target.value)}
-                      placeholder="e.g. Near stairs, special spot"
-                      disabled={submitting}
-                      className="text-sm"
-                    />
-                  </div>
-                </div>
-              );
-            })}
+            {/* Ghi Chú */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wide">Note</label>
+              <Input
+                value={form.note}
+                onChange={(e) => setField('note', e.target.value)}
+                placeholder="e.g. Near stairs, special spot"
+                disabled={submitting}
+                className="text-sm"
+              />
+            </div>
           </div>
 
-          <button
-            onClick={handleAddRow}
-            disabled={submitting}
-            className="w-full rounded-xl border-2 border-dashed border-orange-500/30 hover:border-orange-500/60 py-3 text-orange-300 hover:text-orange-200 font-semibold text-sm uppercase tracking-wide transition-colors disabled:opacity-50 flex items-center justify-center gap-2 group"
-          >
-            <Plus size={18} className="group-hover:scale-110 transition-transform" />
-            Add Another Slot
-          </button>
+          {codePreview && (
+            <div className="rounded-lg bg-orange-500/10 border border-orange-500/30 px-4 py-3 text-sm text-orange-200">
+              Codes to be generated: <span className="font-bold font-mono">{codePreview}</span>
+            </div>
+          )}
         </div>
 
         {/* Footer */}
@@ -257,7 +233,7 @@ export function MultiSlotForm({ isOpen, onClose, onSubmit, floors, zones }: Mult
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={submitting || rows.length === 0}
+            disabled={submitting}
             className="bg-orange-500 hover:bg-orange-600 text-white font-semibold text-sm gap-2"
           >
             {submitting ? (
@@ -268,7 +244,7 @@ export function MultiSlotForm({ isOpen, onClose, onSubmit, floors, zones }: Mult
             ) : (
               <>
                 <Plus size={16} />
-                Create {rows.length} Slot{rows.length > 1 ? 's' : ''}
+                Create {form.quantity} Slot{form.quantity > 1 ? 's' : ''}
               </>
             )}
           </Button>

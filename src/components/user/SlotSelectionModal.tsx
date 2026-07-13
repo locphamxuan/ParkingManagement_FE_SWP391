@@ -9,7 +9,6 @@ interface MappedSlot {
   _id: string;
   buildingId: string;
   code: string;
-  floorCode?: string;
   vehicleType: VehicleKind | 'all';
   reservable: boolean;
   status: string;
@@ -118,7 +117,7 @@ export function SlotSelectionModal({
                         { value: '', label: '-- Select floor --' },
                         ...floorsData.map((f) => ({
                           value: f._id,
-                          label: `Floor ${f.code || f.name || ''} (${f.availableSlots}/${f.totalSlots})`,
+                          label: `${f.name || f.code || ''} (${f.availableSlots}/${f.totalSlots})`,
                         })),
                       ]}
                       placeholder="-- Select floor --"

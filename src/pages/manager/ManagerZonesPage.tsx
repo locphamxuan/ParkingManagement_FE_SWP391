@@ -17,7 +17,6 @@ const USAGE_TYPE_LABELS: Record<Zone['usageType'], string> = {
 };
 
 interface FormState {
-  code: string;
   name: string;
   floor: string;
   vehicleType: string;
@@ -27,7 +26,6 @@ interface FormState {
 }
 
 const empty: FormState = {
-  code: '',
   name: '',
   floor: '',
   vehicleType: '',
@@ -97,8 +95,7 @@ export function ManagerZonesPage() {
     const vtId = typeof row.vehicleType === 'string' ? row.vehicleType : row.vehicleType._id;
     setEditing(row);
     setForm({
-      code: row.code,
-      name: row.name,
+      name: row.name || row.code,
       floor: floorId,
       vehicleType: vtId,
       usageType: row.usageType,
@@ -111,8 +108,8 @@ export function ManagerZonesPage() {
   const onSubmit = async () => {
     if (!form.floor) { alert('Select a floor first'); return; }
     if (!form.vehicleType) { alert('Select a vehicle type first'); return; }
+    if (!form.name.trim()) { alert('Zone name is required'); return; }
     const payload = {
-      code: form.code.trim().toUpperCase(),
       name: form.name.trim(),
       floor: form.floor,
       vehicleType: form.vehicleType,
@@ -134,7 +131,7 @@ export function ManagerZonesPage() {
   };
 
   const onDelete = async (row: Zone) => {
-    if (!window.confirm(`Delete zone ${row.code}? The zone must have no remaining slots.`)) return;
+    if (!window.confirm(`Delete zone ${row.name || row.code}? The zone must have no remaining slots.`)) return;
     try {
       await managerApi.zones.remove(buildingId, row._id);
       refresh();
@@ -145,14 +142,14 @@ export function ManagerZonesPage() {
 
   // Không memo hóa: mảng cấu hình cột rẻ, memo với closure cũ dễ gây stale handler.
   const columns: DataColumn<Zone>[] = [
-      { key: 'code', title: 'Zone Code' },
-      { key: 'name', title: 'Zone Name', render: (row) => row.name || '—' },
+      { key: 'name', title: 'Zone Name', render: (row) => row.name || row.code },
+      { key: 'code', title: 'Code' },
       {
         key: 'floor',
         title: 'Floor',
         render: (row) => {
           const fl = typeof row.floor === 'string' ? floors.find((f) => f._id === row.floor) : row.floor;
-          return (fl as Floor)?.code ?? '—';
+          return (fl as Floor)?.name ?? (fl as Floor)?.code ?? '—';
         },
       },
       {
@@ -204,7 +201,7 @@ export function ManagerZonesPage() {
           onChange={setFloorFilter}
           options={[
             { value: '', label: 'All Floors' },
-            ...floors.map((f) => ({ value: f._id, label: f.code })),
+            ...floors.map((f) => ({ value: f._id, label: f.name || f.code })),
           ]}
           className="w-40"
         />
@@ -236,29 +233,20 @@ export function ManagerZonesPage() {
               onChange={onFormFloorChange}
               options={[
                 { value: '', label: '-- Select Floor --' },
-                ...floors.map((f) => ({ value: f._id, label: f.code })),
+                ...floors.map((f) => ({ value: f._id, label: f.name || f.code })),
               ]}
             />
           </div>
 
-          {/* Mã dãy */}
+          {/* Tên dãy — code do BE tự sinh từ tên */}
           <div className="grid gap-1.5">
-            <label className="text-xs uppercase text-muted-foreground">Zone Code *</label>
-            <Input
-              value={form.code}
-              onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))}
-              placeholder="e.g. A, B, SUBSCRIBER"
-            />
-          </div>
-
-          {/* Tên dãy */}
-          <div className="grid gap-1.5">
-            <label className="text-xs uppercase text-muted-foreground">Zone Name</label>
+            <label className="text-xs uppercase text-muted-foreground">Zone Name *</label>
             <Input
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              placeholder="e.g. Floor 1 Car Zone"
+              placeholder="e.g. Walk-in Zone, VIP Zone"
             />
+            <p className="text-[10px] text-muted-foreground">Zone code is generated automatically from the name.</p>
           </div>
 
           {/* Loại xe — lọc theo tầng đã chọn */}
