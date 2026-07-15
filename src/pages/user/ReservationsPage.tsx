@@ -1,6 +1,5 @@
 import { Navigate, useNavigate } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
-import back3 from '@/assets/back3.png';
 
 import { useReservationBooking } from '@/hooks/user/useReservationBooking';
 
@@ -29,10 +28,6 @@ export default function ReservationsPage() {
     <main className="min-h-screen text-slate-100 relative isolate">
       {/* Background */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10 bg-[#0d1a1a]" aria-hidden="true">
-        <div
-          className="absolute inset-0 opacity-[0.70] bg-cover bg-center pointer-events-none"
-          style={{ backgroundImage: `url(${back3})` }}
-        />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(13,26,26,0.1)_0%,rgba(13,26,26,0.60)_100%)] pointer-events-none" />
         <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[55%] rounded-full bg-[radial-gradient(circle_at_center,hsla(180,70%,30%,0.08),transparent_55%)] blur-3xl" />
         <div className="absolute top-[35%] right-[-15%] w-[60%] h-[60%] rounded-full bg-[radial-gradient(circle_at_center,hsla(195,80%,25%,0.06),transparent_55%)] blur-3xl" />
