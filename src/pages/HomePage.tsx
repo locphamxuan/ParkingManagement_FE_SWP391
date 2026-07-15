@@ -122,11 +122,11 @@ export default function HomePage({ modules, onOpenAuth, onViewProfile, onViewRes
   return (
     <main id="top" className="min-h-screen text-slate-100 font-sans selection:bg-cyan-500 selection:text-white relative isolate">
 
-      {/* Background — fixed so they never cause scroll issues */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10 bg-[#0d1a1a]" aria-hidden="true">
+      {/* Background — absolute so it scrolls naturally and doesn't overlap the header */}
+      <div className="absolute inset-x-0 top-0 h-[100vh] pointer-events-none overflow-hidden -z-10 bg-[#0d1a1a]" aria-hidden="true">
         <div
-          className="absolute inset-0 opacity-[0.70] bg-cover bg-center pointer-events-none"
-          style={{ backgroundImage: `url(${homeBg})` }}
+          className="absolute inset-0 opacity-[0.70] bg-cover pointer-events-none"
+          style={{ backgroundImage: `url(${homeBg})`, backgroundPosition: 'center 80px' }}
         />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(13,26,26,0.1)_0%,rgba(13,26,26,0.60)_100%)] pointer-events-none" />
         <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[55%] rounded-full bg-[radial-gradient(circle_at_center,hsla(180,70%,30%,0.12),transparent_55%)] blur-3xl" />
