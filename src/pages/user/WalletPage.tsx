@@ -82,7 +82,7 @@ export default function WalletPage() {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => navigate('/reservations')}
+              onClick={() => navigate('/packages/buy')}
               className="inline-flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-2.5 text-xs font-black uppercase tracking-wider text-cyan-400 transition-all duration-300 hover:border-cyan-500/40 hover:bg-cyan-500/10 active:scale-95"
             >
               <CalendarClock size={14} /> Pre-booking

@@ -43,10 +43,10 @@ export const mainFlowModules: LegacyModule[] = [
     available: true,
   },
   {
-    id: 'reservations',
-    title: 'Pre-booking',
-    description: 'Reserve a parking slot by hour, deposit online, and check-in upon arrival.',
-    actionLabel: 'Book Now',
+    id: 'buy-package',
+    title: 'Buy Package',
+    description: 'Purchase a long-term parking package, optionally pick a fixed slot, and pay from your wallet.',
+    actionLabel: 'Buy Package',
     available: true,
   },
   {
@@ -66,7 +66,7 @@ export const mainFlowModules: LegacyModule[] = [
   {
     id: 'notifications',
     title: 'Notifications',
-    description: 'Receive system notifications regarding reservations, subscriptions, and account updates.',
+    description: 'Receive system notifications regarding packages, subscriptions, and account updates.',
     actionLabel: 'Coming Soon',
     available: false,
   },

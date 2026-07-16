@@ -13,13 +13,16 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Modal } from '@/components/ui/modal';
 import { StatusBadge } from '@/components/common/StatusBadge';
 import { useBuildingContext } from '@/hooks/useBuildingContext';
 import { extractIncidents, staffApi, type StaffIncident } from '@/services/staff/staffApi';
+import { resolveErrorMessage } from '@/utils/apiErrors';
 
 type IncidentStatus = 'open' | 'investigating' | 'escalated' | 'resolved' | 'closed';
 
 interface IncidentRow {
+  _id: string;
   id: string;
   type: string;
   building: string;
@@ -27,11 +30,16 @@ interface IncidentRow {
   status: IncidentStatus;
   timestamp: string;
   note: string;
+  target: string;
+  violatorPlate: string;
+  resolutionNote: string;
 }
+
+const STATUS_OPTIONS: IncidentStatus[] = ['open', 'investigating', 'escalated', 'resolved', 'closed'];
 
 const SEVERITY_LABELS: Record<string, string> = {
   medium: 'Medium',
-  high: 'Cao',
+  high: 'High',
   critical: 'Critical',
 };
 
@@ -54,7 +62,18 @@ export function StaffIncidentsPage() {
   const [incidentMessage, setIncidentMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
   const [isCreating, setIsCreating] = useState(false);
 
+  // Modal xử lý sự cố
+  const [selected, setSelected] = useState<IncidentRow | null>(null);
+  const [resolveStatus, setResolveStatus] = useState<IncidentStatus>('investigating');
+  const [resolutionNote, setResolutionNote] = useState('');
+  const [violatorPlate, setViolatorPlate] = useState('');
+  const [penaltyFee, setPenaltyFee] = useState('');
+  const [payMethod, setPayMethod] = useState<'cash' | 'wallet' | 'qr'>('cash');
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [resolveMessage, setResolveMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
+
   const mapIncident = (item: StaffIncident, index: number): IncidentRow => ({
+    _id: item._id,
     id: item.code || item._id || `INC-${1000 + index}`,
     type: item.type || 'Incidents',
     building: item.building?.code || item.building?.name || building?.code || '---',
@@ -69,6 +88,9 @@ export function StaffIncidentsPage() {
         })
       : '---',
     note: item.note || 'No notes',
+    target: item.target || '',
+    violatorPlate: item.violatorPlate || '',
+    resolutionNote: item.resolutionNote || '',
   });
 
   const refresh = useCallback(() => {
@@ -114,6 +136,54 @@ export function StaffIncidentsPage() {
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  const openResolveModal = (incident: IncidentRow) => {
+    setSelected(incident);
+    setResolveStatus(incident.status === 'open' ? 'investigating' : incident.status);
+    setResolutionNote(incident.resolutionNote);
+    setViolatorPlate(incident.violatorPlate);
+    setPenaltyFee('');
+    setPayMethod('cash');
+    setResolveMessage(null);
+  };
+
+  const submitUpdate = async (penalize: boolean) => {
+    if (!selected) return;
+    if (penalize && !violatorPlate.trim()) {
+      setResolveMessage({ type: 'err', text: 'Violator plate is required to penalize.' });
+      return;
+    }
+    setIsUpdating(true);
+    setResolveMessage(null);
+    try {
+      await staffApi.incidents.update(
+        selected._id,
+        penalize
+          ? {
+              action: 'penalize_violator',
+              violatorPlate: violatorPlate.trim(),
+              penaltyFee: Number(penaltyFee) || 0,
+              paymentMethod: payMethod,
+              resolutionNote: resolutionNote.trim() || undefined,
+            }
+          : {
+              status: resolveStatus,
+              resolutionNote: resolutionNote.trim() || undefined,
+              violatorPlate: violatorPlate.trim() || undefined,
+            }
+      );
+      setSelected(null);
+      setIncidentMessage({
+        type: 'ok',
+        text: penalize ? 'Violator penalized and incident resolved.' : 'Incident updated successfully.',
+      });
+      refresh();
+    } catch (err) {
+      setResolveMessage({ type: 'err', text: resolveErrorMessage(err, 'Failed to update incident.') });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
   const filtered = useMemo(
     () =>
@@ -172,7 +242,7 @@ export function StaffIncidentsPage() {
                 tone: 'border-sky-400/25 bg-sky-500/10 text-sky-300',
               },
               {
-                label: 'Leo thang',
+                label: 'Escalated',
                 value: counts.escalated,
                 icon: ArrowRight,
                 tone: 'border-rose-400/25 bg-rose-500/10 text-rose-300',
@@ -307,7 +377,7 @@ export function StaffIncidentsPage() {
                 >
                   <option value="all">All Severities</option>
                   <option value="medium">Medium</option>
-                  <option value="high">Cao</option>
+                  <option value="high">High</option>
                   <option value="critical">Critical</option>
                 </select>
               </div>
@@ -356,8 +426,13 @@ export function StaffIncidentsPage() {
                       <div className="rounded-md border border-border/70 bg-card/60 px-3 py-2 text-xs text-muted-foreground">
                         {incident.building}
                       </div>
-                      <Button variant="secondary" size="sm" className="gap-1.5 text-xs">
-                        Details <ArrowRight size={13} />
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="gap-1.5 text-xs"
+                        onClick={() => openResolveModal(incident)}
+                      >
+                        Handle <ArrowRight size={13} />
                       </Button>
                     </div>
                   </div>
@@ -405,6 +480,130 @@ export function StaffIncidentsPage() {
           );
         })}
       </section>
+
+      <Modal
+        open={selected !== null}
+        onOpenChange={(open) => { if (!open) setSelected(null); }}
+        title={selected ? `Handle Incident ${selected.id}` : 'Handle Incident'}
+      >
+        {selected && (
+          <div className="grid gap-4">
+            <div className="rounded-xl border border-white/10 bg-slate-950/60 p-4 text-sm">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-semibold text-white">{selected.type}</span>
+                <span
+                  className={`rounded-full border px-2.5 py-0.5 text-[10px] font-black uppercase tracking-[0.12em] ${
+                    SEVERITY_STYLES[selected.severity] ?? SEVERITY_STYLES.medium
+                  }`}
+                >
+                  {SEVERITY_LABELS[selected.severity] ?? selected.severity}
+                </span>
+                <StatusBadge status={selected.status} />
+              </div>
+              <p className="mt-2 text-slate-300">{selected.note}</p>
+              {selected.target && (
+                <p className="mt-1 text-xs text-slate-400">Target: {selected.target}</p>
+              )}
+              <p className="mt-1 text-xs text-slate-500">{selected.building} · {selected.timestamp}</p>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  Status
+                </label>
+                <select
+                  value={resolveStatus}
+                  onChange={(e) => setResolveStatus(e.target.value as IncidentStatus)}
+                  className="h-10 w-full rounded-md border border-border bg-background/60 px-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
+                >
+                  {STATUS_OPTIONS.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  Violator plate
+                </label>
+                <Input
+                  value={violatorPlate}
+                  onChange={(e) => setViolatorPlate(e.target.value.toUpperCase())}
+                  placeholder="e.g. 59G2-038.80"
+                  className="h-10 bg-background/60"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                Resolution note
+              </label>
+              <textarea
+                value={resolutionNote}
+                onChange={(e) => setResolutionNote(e.target.value)}
+                rows={3}
+                placeholder="How was this incident handled..."
+                className="w-full resize-none rounded-md border border-border bg-background/60 px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+
+            <div className="rounded-xl border border-rose-400/15 bg-rose-500/5 p-4">
+              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-rose-300">
+                Penalize violator
+              </p>
+              <p className="mt-1 text-xs text-slate-400">
+                Force check-out the offending vehicle, charge a penalty fee, and resolve this incident.
+              </p>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <Input
+                  type="number"
+                  min={0}
+                  value={penaltyFee}
+                  onChange={(e) => setPenaltyFee(e.target.value)}
+                  placeholder="Penalty fee (VND)"
+                  className="h-10 bg-background/60"
+                />
+                <select
+                  value={payMethod}
+                  onChange={(e) => setPayMethod(e.target.value as 'cash' | 'wallet' | 'qr')}
+                  className="h-10 w-full rounded-md border border-border bg-background/60 px-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="cash">Cash</option>
+                  <option value="wallet">Wallet</option>
+                  <option value="qr">QR</option>
+                </select>
+              </div>
+            </div>
+
+            {resolveMessage && (
+              <div
+                className={`rounded-lg border px-3 py-2 text-xs font-medium ${
+                  resolveMessage.type === 'ok'
+                    ? 'border-emerald-400/20 bg-emerald-500/10 text-emerald-300'
+                    : 'border-rose-400/20 bg-rose-500/10 text-rose-300'
+                }`}
+              >
+                {resolveMessage.text}
+              </div>
+            )}
+
+            <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+              <Button
+                variant="secondary"
+                disabled={isUpdating}
+                onClick={() => submitUpdate(true)}
+                className="gap-1.5 border border-rose-400/25 text-rose-300 hover:bg-rose-500/10"
+              >
+                <ShieldAlert size={14} /> Penalize & Resolve
+              </Button>
+              <Button disabled={isUpdating} onClick={() => submitUpdate(false)} className="gap-1.5">
+                <CheckCircle2 size={14} /> Update Status
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

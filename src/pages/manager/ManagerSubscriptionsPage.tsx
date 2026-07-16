@@ -138,7 +138,7 @@ export function ManagerSubscriptionsPage() {
                               onClick={() => {
                                 setCancelTarget(s);
                                 setPreviewRefundPercent(null);
-                                managerApi.reservationPolicy
+                                managerApi.refundPolicy
                                   .get(buildingId)
                                   .then((res) => setPreviewRefundPercent(res.data.item?.refundPercent ?? null))
                                   .catch(() => setPreviewRefundPercent(null));

@@ -523,7 +523,7 @@ export default function BuildingsPage() {
                   type="button"
                   disabled={!canProceed}
                   onClick={() =>
-                    navigate('/reservations', {
+                    navigate('/packages/buy', {
                       state: { buildingId: selectedBuilding._id, plateNumber: selectedPlate },
                     })
                   }

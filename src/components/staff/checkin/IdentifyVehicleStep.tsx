@@ -80,15 +80,16 @@ export function IdentifyVehicleStep({
             </p>
           </div>
         )}
-        {/* Badge loại check-in đã nhận diện */}
-        {plateNumber.trim().length >= 7 && checkInKind === 'package' && (
-          <div className="mt-1 rounded-lg border border-amber-500/30 bg-amber-500/10 p-2.5 text-xs text-amber-300">
-            🅿️ Vehicle has a <strong>long-term package</strong>{plateAccountInfo?.activePackage?.name ? ` "${plateAccountInfo.activePackage.name}"` : ''} — capture portrait and select an available slot in the next step.
+        {/* Badge loại check-in đã nhận diện — gói slot cố định thì báo slot tự gán, khỏi chọn */}
+        {plateNumber.trim().length >= 7 && checkInKind === 'package' && plateAccountInfo?.activePackage?.slot && (
+          <div className="mt-1 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-2.5 text-xs text-emerald-300">
+            🅿️ Vehicle has a <strong>long-term package</strong>{plateAccountInfo.activePackage.name ? ` "${plateAccountInfo.activePackage.name}"` : ''} with
+            {' '}<strong>reserved slot {plateAccountInfo.activePackage.slot.code}</strong> (auto-assigned) — capture portrait in the next step.
           </div>
         )}
-        {plateNumber.trim().length >= 7 && checkInKind === 'reservation' && (
-          <div className="mt-1 rounded-lg border border-sky-500/30 bg-sky-500/10 p-2.5 text-xs text-sky-300">
-            📅 Vehicle has a <strong>reservation</strong>{plateAccountInfo?.activeReservation?.code ? ` (code ${plateAccountInfo.activeReservation.code})` : ''} — capture portrait in the next step to confirm.
+        {plateNumber.trim().length >= 7 && checkInKind === 'package' && !plateAccountInfo?.activePackage?.slot && (
+          <div className="mt-1 rounded-lg border border-amber-500/30 bg-amber-500/10 p-2.5 text-xs text-amber-300">
+            🅿️ Vehicle has a <strong>long-term package</strong>{plateAccountInfo?.activePackage?.name ? ` "${plateAccountInfo.activePackage.name}"` : ''} — capture portrait and select an available slot in the next step.
           </div>
         )}
         {plateNumber.trim().length >= 7 && checkInKind === 'standard' && !plateImage && (

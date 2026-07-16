@@ -234,22 +234,19 @@ describe('Manager — packages', () => {
   });
 });
 
-// ── RESERVATION POLICY ────────────────────────────────────────────────────────
+// ── REFUND POLICY ─────────────────────────────────────────────────────────────
 
-describe('Manager — reservationPolicy', () => {
-  it('get: trả về chính sách đặt chỗ của building', async () => {
+describe('Manager — refundPolicy', () => {
+  it('get: trả về chính sách hoàn tiền gói của building', async () => {
     const bid = await resolveBuilding();
     if (!bid) return;
 
-    const res = await managerApi.reservationPolicy.get(bid);
+    const res = await managerApi.refundPolicy.get(bid);
     expect(res.data).toBeDefined();
     expect(res.data.item).toBeDefined();
 
     const policy = res.data.item;
-    expect(typeof policy.maxHoldMinutes).toBe('number');
     expect(typeof policy.refundPercent).toBe('number');
-    expect(typeof policy.depositPercent).toBe('number');
-    expect(typeof policy.cancellationCutoffHours).toBe('number');
   });
 });
 

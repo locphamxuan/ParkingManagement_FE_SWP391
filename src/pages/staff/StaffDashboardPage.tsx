@@ -12,7 +12,6 @@ import {
   Gauge,
   ScanLine,
   ShieldAlert,
-  Ticket,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
@@ -24,7 +23,6 @@ import {
   type MyShift,
   type ParkingSession,
   type StaffIncident,
-  type StaffReservation,
 } from '@/services/staff/staffApi';
 
 function fmtTime(iso: string) {
@@ -84,7 +82,6 @@ export function StaffDashboardPage() {
   const [shifts, setShifts] = useState<MyShift[]>([]);
   const [sessions, setSessions] = useState<ParkingSession[]>([]);
   const [incidents, setIncidents] = useState<StaffIncident[]>([]);
-  const [reservations, setReservations] = useState<StaffReservation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -94,9 +91,8 @@ export function StaffDashboardPage() {
       staffApi.myShifts(),
       staffApi.getActiveSessions({ populate: 'slot.floor,vehicleType,entryGate,exitGate' }),
       staffApi.incidents.list(buildingId),
-      staffApi.listReservations(buildingId ? { buildingId, status: 'confirmed' } : {}),
     ])
-      .then(([shiftRes, sessionRes, incidentRes, resRes]) => {
+      .then(([shiftRes, sessionRes, incidentRes]) => {
         setShifts(extractShifts(shiftRes as Parameters<typeof extractShifts>[0]));
 
         const rawSessions =
@@ -112,9 +108,6 @@ export function StaffDashboardPage() {
         setIncidents(
           Array.isArray(rawInc) ? rawInc : (rawInc as { items?: StaffIncident[] })?.items ?? [],
         );
-
-        const rawRes = (resRes as { data?: { items?: StaffReservation[] } })?.data?.items ?? [];
-        setReservations(Array.isArray(rawRes) ? rawRes : []);
 
         setError(null);
       })
@@ -140,11 +133,6 @@ export function StaffDashboardPage() {
     () => incidents.filter((i) => ['open', 'investigating', 'escalated'].includes(i.status ?? '')),
     [incidents],
   );
-  const pendingReservations = useMemo(
-    () => reservations.filter((r) => r.status === 'confirmed'),
-    [reservations],
-  );
-
   const assignedGates = useMemo(() => {
     const pickFrom = todayShifts.length > 0 ? todayShifts : shifts.slice(0, 1);
     const map = new Map<string, NonNullable<MyShift['gate']>>();
@@ -157,14 +145,14 @@ export function StaffDashboardPage() {
   const directionText = (d: 'in' | 'out' | 'both') =>
     d === 'in' ? 'Entry Gate' : d === 'out' ? 'Exit Gate' : 'Both Directions';
 
-  const showCheckIn = assignedGates.some((g) => g.direction === 'in' || g.direction === 'both') || assignedGates.length === 0;
-  const showCheckOut = assignedGates.some((g) => g.direction === 'out' || g.direction === 'both') || assignedGates.length === 0;
-  const taskCount = (showCheckIn ? 1 : 0) + (showCheckOut ? 1 : 0);
+  // Luôn hiện cả hai thao tác — gate được gán chỉ mang tính hiển thị.
+  const showCheckIn = true;
+  const showCheckOut = true;
+  const taskCount = 2;
 
   const stats = [
     { label: "Today's Shifts", value: todayShifts.length, icon: CalendarClock, accent: 'border border-teal-500/20 bg-teal-500/10 text-teal-400', loading },
     { label: 'Parked Vehicles', value: activeSessions.length, icon: Gauge, accent: 'border border-emerald-500/20 bg-emerald-500/10 text-emerald-400', loading },
-    { label: 'Reservations Waiting', value: pendingReservations.length, icon: Ticket, accent: 'border border-amber-500/20 bg-amber-500/10 text-amber-400', loading },
     {
       label: 'Open Incidents',
       value: openIncidents.length,

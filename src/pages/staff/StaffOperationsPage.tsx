@@ -111,12 +111,12 @@ export function StaffOperationsPage() {
           </CardContent>
         </Card>
 
-        {/* Note: gói & đặt chỗ tự nhận diện khi quét — không cần nhập code thủ công */}
+        {/* Note: gói tự nhận diện khi quét — không cần nhập code thủ công */}
         <div className="rounded-xl border border-border bg-card/50 p-4 text-xs text-muted-foreground">
           <p className="mb-1 flex items-center gap-1.5 font-semibold text-foreground">
-            <Settings size={13} className="text-primary" /> Packages &amp; reservations are detected automatically
+            <Settings size={13} className="text-primary" /> Packages are detected automatically
           </p>
-          Vehicles with <strong>packages</strong> or <strong>reservations</strong> are matched automatically when scanning the plate / QR in step 1. No manual code entry is needed.
+          Vehicles with <strong>long-term packages</strong> are matched automatically when scanning the plate / QR in step 1. No manual code entry is needed.
           Payment collection and check-out are handled by exit-gate staff in the{' '}
           <Link to="/staff/parked" className="font-semibold text-primary hover:underline">“Parked Vehicles”</Link>.
         </div>

@@ -20,7 +20,7 @@ export const moduleIcons: Record<string, LucideIcon> = {
   wallet: Wallet,
   buildings: Building2,
   packages: Ticket,
-  reservations: CalendarClock,
+  'buy-package': CalendarClock,
   sessions: ScanLine,
   payments: CreditCard,
   notifications: BellRing,

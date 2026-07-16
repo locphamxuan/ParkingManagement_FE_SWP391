@@ -120,34 +120,6 @@ describe('Staff — lookupPlate', () => {
   });
 });
 
-// ── RESERVATIONS (STAFF VIEW) ─────────────────────────────────────────────────
-
-describe('Staff — reservations.list', () => {
-  it('trả về danh sách đặt chỗ cần xử lý', async () => {
-    const res = await staffApi.reservations.list();
-    expect(res.data).toBeDefined();
-    expect(Array.isArray(res.data.items)).toBe(true);
-    // total có thể nằm trong pagination hoặc top-level — kiểm tra mềm
-    const hasTotal =
-      typeof res.data.total === 'number' ||
-      typeof (res.data as Record<string, unknown>).pagination !== 'undefined';
-    expect(hasTotal || res.data.items.length >= 0).toBe(true);
-
-    if (res.data.items.length > 0) {
-      const r = res.data.items[0];
-      expect(r).toHaveProperty('_id');
-      expect(['pending', 'confirmed', 'checked_in', 'completed', 'cancelled', 'expired']).toContain(r.status);
-    }
-  });
-
-  it('filter theo status=confirmed', async () => {
-    const res = await staffApi.reservations.list({ status: 'confirmed' });
-    res.data.items.forEach((r) => {
-      expect(r.status).toBe('confirmed');
-    });
-  });
-});
-
 // ── INCIDENTS ─────────────────────────────────────────────────────────────────
 
 describe('Staff — incidents.list', () => {
@@ -162,23 +134,6 @@ describe('Staff — incidents.list', () => {
 });
 
 // ── SESSIONS NAMESPACE ────────────────────────────────────────────────────────
-
-describe('Staff — sessions.myShiftRevenue', () => {
-  it('trả về doanh thu ca hôm nay', async () => {
-    if (!resolvedBuildingId) return;
-
-    const res = await staffApi.sessions.myShiftRevenue(resolvedBuildingId);
-    expect(res.data).toBeDefined();
-    expect(typeof res.data.total).toBe('number');
-    expect(Array.isArray(res.data.items)).toBe(true);
-
-    if (res.data.items.length > 0) {
-      const item = res.data.items[0];
-      expect(item).toHaveProperty('amount');
-      expect(['cash', 'wallet', 'qr', 'card', 'payos']).toContain(item.method);
-    }
-  });
-});
 
 describe('Staff — sessions.myCheckIns', () => {
   it('trả về lịch sử xe vào hôm nay (có location)', async () => {

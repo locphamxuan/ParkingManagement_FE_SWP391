@@ -52,34 +52,6 @@ export interface Gate {
   name: string;
 }
 
-export interface Reservation {
-  _id: string;
-  code: string;
-  plateNumber: string;
-  vehicleType?: VehicleType | null;
-  slot?: ParkingSlot | null;
-  building: Building;
-  status: 'pending' | 'confirmed' | 'checked_in' | 'expired' | 'cancelled' | 'completed';
-  startTime: string;
-  endTime?: string | null;
-  fee?: number;
-  refundPercent?: number;
-  refundAmount?: number;
-  estimatedFee?: number;
-  /** Snapshot: phải hủy trước giờ đặt ít nhất số giờ này (0 = không giới hạn). */
-  cancellationCutoffHours?: number;
-  createdAt?: string;
-  updatedAt?: string;
-  parkingSession?: {
-    _id: string;
-    fee: number;
-    status: 'active' | 'completed' | 'cancelled';
-    entryTime: string;
-    exitTime?: string | null;
-    paymentMethod?: 'cash' | 'wallet' | 'qr' | 'long_term' | 'reservation' | null;
-  } | null;
-}
-
 export interface ParkingHistory {
   _id: string;
   plateNumber: string;
@@ -91,7 +63,7 @@ export interface ParkingHistory {
   checkOut?: string | null;
   duration?: number | null;
   fee?: number | null;
-  paymentMethod?: 'cash' | 'wallet' | 'qr' | 'long_term' | 'reservation' | null;
+  paymentMethod?: 'cash' | 'wallet' | 'qr' | 'long_term' | null;
   status: 'active' | 'completed' | 'cancelled';
   createdAt?: string;
   entryGate?: Gate | null;
@@ -132,7 +104,7 @@ export interface LongTermSubscription {
   status: 'pending' | 'active' | 'expired' | 'cancelled';
   cancelReason?: 'change_vehicle' | 'no_longer_needed' | 'pricing_issue' | 'other' | null;
   cancelNote?: string | null;
-  /** Snapshot % và số tiền đã hoàn lúc hủy (theo ReservationPolicy tại thời điểm đó). */
+  /** Snapshot % và số tiền đã hoàn lúc hủy (theo refund policy tại thời điểm đó). */
   refundPercent?: number | null;
   refundAmount?: number | null;
   // ── Legacy/optional FE-only fields ──
@@ -164,41 +136,6 @@ export interface UserProfile {
   role: 'admin' | 'manager' | 'staff' | 'user';
   walletBalance?: number;
   licensePlates?: LicensePlate[];
-}
-
-export interface ReservationEstimate {
-  estimatedFee: number;
-  depositAmount: number;
-  remainingFee: number;
-  /** % cọc khi đặt (do manager cấu hình). */
-  depositPercent?: number;
-  /** % còn lại thu sau checkout = 100 - depositPercent. */
-  remainingPercent?: number;
-  hourlyRate: number;
-  hours: number;
-  regularHours: number;
-  peakHours: number;
-  peakRate: number;
-  /** Thời lượng thực của khung đặt chỗ (phút). */
-  durationMinutes?: number;
-  /** True nếu phí bị nâng lên mức tối thiểu (lượt rất ngắn). */
-  minimumApplied?: boolean;
-}
-
-export interface ReservationCreateResult {
-  reservation: Reservation;
-  depositAmount: number;
-  estimatedFee: number;
-}
-
-/** Giới hạn đặt chỗ công khai của building (do manager cấu hình) — dùng để ràng buộc
- * date/duration picker trước khi user chọn giờ cụ thể (estimate cần startTime/endTime). */
-export interface ReservationPolicyLimits {
-  maxAdvanceDays: number;
-  maxDurationHours: number;
-  depositPercent: number;
-  refundPercent: number;
-  cancellationCutoffHours: number;
 }
 
 export interface UserWallet {
@@ -244,8 +181,6 @@ export interface Notification {
     | 'subscription_expired'
     | 'subscription_slot_released'
     | 'subscription_overage'
-    | 'reservation_expired'
-    | 'reservation_overstay'
     | 'feedback_reply'
     | 'general';
   title: string;
@@ -274,50 +209,36 @@ interface ListResult<T> {
   pagination?: { page: number; limit: number; total: number; totalPages: number };
 }
 
+export type UserIncidentType =
+  | 'slot_occupied'
+  | 'slot_blocked'
+  | 'vehicle_damaged'
+  | 'facility_issue'
+  | 'wrong_scan'
+  | 'payment_dispute'
+  | 'lost_ticket'
+  | 'security'
+  | 'other';
+
+export interface UserIncident {
+  _id: string;
+  code: string;
+  type: string;
+  note?: string;
+  target?: string;
+  violatorPlate?: string;
+  resolutionNote?: string;
+  severity: string;
+  status: string;
+  building?: { _id: string; code?: string; name?: string } | null;
+  slot?: { _id: string; code?: string } | null;
+  createdAt: string;
+  resolvedAt?: string | null;
+}
+
 // ========== API METHODS ==========
 
 export const userApi = {
-  // ========== RESERVATIONS ==========
-  reservations: {
-    /** Giới hạn đặt chỗ công khai của building (GET /users/reservations/policy). */
-    getPolicy: (buildingId: string) =>
-      api.get<Wrap<ReservationPolicyLimits>>('/users/reservations/policy', { query: { buildingId } }),
-
-    /** Estimate fee + 15% deposit before booking (GET /users/reservations/estimate). */
-    estimate: (query: {
-      buildingId: string;
-      vehicleTypeId: string;
-      startTime: string;
-      endTime: string;
-    }) => api.get<Wrap<ReservationEstimate>>('/users/reservations/estimate', { query }),
-
-    /** Get list of user's reservations */
-    list: (query?: { status?: string; limit?: number; page?: number }) =>
-      api.get<Wrap<ListResult<Reservation>>>('/users/reservations', { query }),
-
-    /** Get reservation detail */
-    get: (id: string) =>
-      api.get<Wrap<{ reservation: Reservation }>>(`/users/reservations/${id}`),
-
-    /** Create new reservation */
-    create: (body: {
-      plateNumber: string;
-      buildingId: string;
-      vehicleTypeId?: string;
-      vehicleType?: string;
-      startTime: string;
-      endTime?: string;
-      slotId?: string;
-    }) =>
-      api.post<Wrap<{ reservation: Reservation }>>('/users/reservations', body),
-
-    /** Cancel reservation — BE hoàn refundPercent% tiền cọc vào ví. */
-    cancel: (id: string) =>
-      api.delete<Wrap<{ reservation: Reservation; refund: number; amountPaid: number; refundPercent: number }>>(
-        `/users/reservations/${id}`,
-      ),
-  },
-
   // ========== PARKING HISTORY ==========
   parkingHistory: {
     /** Get user's parking history */
@@ -355,8 +276,8 @@ export const userApi = {
     get: (id: string) =>
       api.get<Wrap<{ subscription: LongTermSubscription }>>(`/users/long-term/subscriptions/${id}`),
 
-    /** Subscribe to a long-term package (BE expects { packageId, plateNumber, startDate? }). Gói floating: không chọn slot. */
-    create: (body: { packageId: string; plateNumber: string; startDate?: string }) =>
+    /** Subscribe to a long-term package. slotId tùy chọn: chọn slot cố định (dãy subscriber). */
+    create: (body: { packageId: string; plateNumber: string; startDate?: string; slotId?: string }) =>
       api.post<Wrap<{ subscription: LongTermSubscription }>>(
         '/users/long-term/subscriptions',
         body
@@ -369,7 +290,7 @@ export const userApi = {
         {}
       ),
 
-    /** Cancel subscription — BE hoàn refundPercent% giá gói vào ví (theo ReservationPolicy của building). */
+    /** Cancel subscription — BE hoàn refundPercent% giá gói vào ví (theo refund policy của building). */
     cancel: (id: string, body: { cancelReason: string; cancelNote?: string }) =>
       api.post<Wrap<{ subscription: LongTermSubscription; refundAmount: number; refundPercent: number }>>(
         `/users/long-term/subscriptions/${id}/cancel`,
@@ -387,17 +308,20 @@ export const userApi = {
     vehicleTypes: (buildingId: string) =>
       api.get<Wrap<ListResult<VehicleType>>>(`/users/buildings/${buildingId}/vehicle-types`),
 
-    /** Get floors for a building with live availability counts (BE returns { building, floors }). */
-    floors: (buildingId: string, query?: { vehicleTypeId?: string }) =>
+    /** Get floors for a building with live availability counts (BE returns { building, floors }).
+     *  usage='subscriber' → chỉ đếm ô dãy gói (mua gói chọn slot cố định). */
+    floors: (buildingId: string, query?: { vehicleTypeId?: string; usage?: 'subscriber' }) =>
       api.get<Wrap<{ building: { _id: string; code: string; name: string }; floors: FloorAvailability[] }>>(
         `/users/buildings/${buildingId}/floors`,
         { query }
       ),
 
-    /** Get parking slots for a building floor (BE returns { floor, slots }). */
-    slots: (buildingId: string, floorId: string) =>
+    /** Get parking slots for a building floor (BE returns { floor, slots }).
+     *  usage='subscriber' → chỉ trả ô dãy gói đúng loại xe (mua gói chọn slot cố định). */
+    slots: (buildingId: string, floorId: string, query?: { usage?: 'subscriber'; vehicleTypeId?: string }) =>
       api.get<Wrap<{ floor: { _id: string; name: string; code: string }; slots: ParkingSlot[] }>>(
-        `/users/buildings/${buildingId}/floors/${floorId}/slots`
+        `/users/buildings/${buildingId}/floors/${floorId}/slots`,
+        { query }
       ),
   },
 
@@ -473,9 +397,23 @@ export const userApi = {
   // ========== NOTIFICATIONS ==========
   notifications: {
     list: () => api.get<Wrap<{ items: Notification[]; unread: number }>>('/users/notifications'),
-    
+
     markAsRead: (id: string) => api.patch<Wrap<Notification>>(`/users/notifications/${id}/read`),
 
     markAllRead: () => api.patch<Wrap<{ ok: boolean }>>('/users/notifications/read-all'),
+  },
+
+  // ========== INCIDENTS (báo cáo sự cố) ==========
+  incidents: {
+    create: (body: {
+      type: UserIncidentType;
+      note?: string;
+      slotId?: string;
+      buildingId?: string;
+      violatorPlate?: string;
+    }) => api.post<Wrap<{ item: UserIncident }>>('/users/incidents', body),
+
+    listMine: (query?: { status?: string; limit?: number; page?: number }) =>
+      api.get<Wrap<ListResult<UserIncident>>>('/users/incidents/me', { query }),
   },
 };

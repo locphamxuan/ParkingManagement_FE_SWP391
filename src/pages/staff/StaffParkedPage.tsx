@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useBuildingContext } from '@/hooks/useBuildingContext';
 import { useAuth } from '@/hooks/useAuth';
-import { useAssignedGates } from '@/hooks/staff/useAssignedGates';
 import { staffApi, type ParkingSession } from '@/services/staff/staffApi';
 import { LivePlateCamera, type PlateScanResult, type LiveCameraHandle } from '@/components/staff/LivePlateCamera';
 import { LiveQRCamera } from '@/components/staff/LiveQRCamera';
@@ -55,16 +54,14 @@ function CompareImg({ src, label }: { src?: string | null; label: string }) {
  * Một component, 2 view:
  *  - view="scanner" (/staff/checkout · tab "Vehicle Check-out"): CHỈ camera quét
  *    biển số / QR để tìm xe rồi mở modal thu phí. Không hiện danh sách.
- *  - view="list" (/staff/parked · tab "Parked Vehicles"): danh sách xe đang đỗ; nhân
- *    viên gate RA bấm vào xe để checkout, nhân viên khác chỉ xem.
+ *  - view="list" (/staff/parked · tab "Parked Vehicles"): danh sách xe đang đỗ; bấm
+ *    vào xe để mở modal checkout.
  */
 export function StaffParkedPage({ view = 'list' }: { view?: 'scanner' | 'list' }) {
   const { buildingId, building } = useBuildingContext();
   const { user } = useAuth();
-  const { showCheckOut } = useAssignedGates();
-  // View scanner (tab Check-out) luôn cho thao tác; view list (tab Parked Vehicles) chỉ
-  // cho checkout nếu là nhân viên gate ra, ngược lại chỉ xem.
-  const canCheckout = view === 'scanner' ? true : showCheckOut;
+  // Staff nào cũng thao tác được checkout ở cả hai view.
+  const canCheckout = true;
 
   const [sessions, setSessions] = useState<ParkingSession[]>([]);
   const [loading, setLoading] = useState(true);
@@ -161,8 +158,8 @@ export function StaffParkedPage({ view = 'list' }: { view?: 'scanner' | 'list' }
     openCheckoutByPlate(plateNumber, plateImage);
   };
 
-  // Camera 3 — QR (token biển số PLT- / ID tài khoản). Reservation/khách chỉ cần
-  // quét QR phương tiện là đủ để nhận diện và cho xe ra. Portrait Photo do camera
+  // Camera 3 — QR (token biển số PLT- / ID tài khoản). Khách chỉ cần quét QR
+  // phương tiện là đủ để nhận diện và cho xe ra. Portrait Photo do camera
   // chân dung (Camera 1) chụp riêng lúc cho xe ra.
   const handleResolveIdQr = async (code: string) => {
     try {
@@ -210,17 +207,15 @@ export function StaffParkedPage({ view = 'list' }: { view?: 'scanner' | 'list' }
       // Portrait Photo lúc ra: ưu tiên ảnh đã chụp, nếu chưa thì chụp 1 khung từ camera chân dung.
       const exitPortrait = capturedPortraitImage ?? portraitCamRef.current?.capture() ?? null;
       await staffApi.checkOut(target._id, {
-        ...(target.isReservation ? {} : { paymentMethod: dueFee > 0 ? paymentMethod : 'cash' }),
+        paymentMethod: dueFee > 0 ? paymentMethod : 'cash',
         exitPlateImage: capturedPlateImage,
         exitPortraitImage: exitPortrait,
       });
       setOpMessage({
         type: 'ok',
-        text: target.isReservation
-          ? `Checked out vehicle ${target.plateNumber} — the system deducted the wallet automatically.`
-          : dueFee > 0
-            ? `Collected payment and checked out vehicle ${target.plateNumber}.`
-            : `Checked out vehicle ${target.plateNumber} (free by package).`,
+        text: dueFee > 0
+          ? `Collected payment and checked out vehicle ${target.plateNumber}.`
+          : `Checked out vehicle ${target.plateNumber} (free by package).`,
       });
       setPaymentMethod('cash');
       setCheckoutTarget(null);
@@ -471,14 +466,12 @@ export function StaffParkedPage({ view = 'list' }: { view?: 'scanner' | 'list' }
                     </div>
                     <div className="mt-2 flex items-center justify-between">
                       <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                        {s.isLongTerm ? 'Overage Fee' : s.isReservation ? 'Remaining Due' : 'Estimated Fee'}
+                        {s.isLongTerm ? 'Overage Fee' : 'Estimated Fee'}
                       </span>
                       <span className="font-bold text-primary">
-                        {s.isReservation
-                          ? fmtMoney(s.reservationRemainingFee ?? 0)
-                          : (s.currentFee ?? s.fee ?? 0) > 0
-                            ? fmtMoney(s.currentFee ?? s.fee)
-                            : s.isLongTerm ? 'Free' : fmtMoney(0)}
+                        {(s.currentFee ?? s.fee ?? 0) > 0
+                          ? fmtMoney(s.currentFee ?? s.fee)
+                          : s.isLongTerm ? 'Free' : fmtMoney(0)}
                       </span>
                     </div>
                     {canCheckout && (
@@ -593,38 +586,30 @@ export function StaffParkedPage({ view = 'list' }: { view?: 'scanner' | 'list' }
               </div>
             )}
 
-            {checkoutTarget.isReservation ? (
-              <div className="mt-4 rounded-xl border border-sky-500/30 bg-sky-500/10 p-4 text-sm text-sky-300">
-                Reservations — the system will deduct the remaining amount (<strong>{fmtMoney(checkoutTarget.reservationRemainingFee ?? 0)}</strong>) from the wallet after check-out.
-              </div>
-            ) : (
-              <>
-                <div className="mt-4 rounded-xl border border-primary/30 bg-primary/10 p-4 flex items-center justify-between">
-                  <span className="text-sm font-semibold text-foreground">Amount Due</span>
-                  <span className="font-mono text-2xl font-black text-primary">
-                    {(checkoutTarget.currentFee ?? checkoutTarget.fee ?? 0) > 0
-                      ? fmtMoney(checkoutTarget.currentFee ?? checkoutTarget.fee)
-                      : 'Free'}
-                  </span>
-                </div>
+            <div className="mt-4 rounded-xl border border-primary/30 bg-primary/10 p-4 flex items-center justify-between">
+              <span className="text-sm font-semibold text-foreground">Amount Due</span>
+              <span className="font-mono text-2xl font-black text-primary">
+                {(checkoutTarget.currentFee ?? checkoutTarget.fee ?? 0) > 0
+                  ? fmtMoney(checkoutTarget.currentFee ?? checkoutTarget.fee)
+                  : 'Free'}
+              </span>
+            </div>
 
-                {(checkoutTarget.currentFee ?? checkoutTarget.fee ?? 0) > 0 && (
-                  <>
-                    <p className="mt-4 mb-2 text-xs uppercase tracking-[0.18em] text-muted-foreground">Payment Method</p>
-                    <div className="grid gap-2 sm:grid-cols-3">
-                      {[{ value: 'cash', label: 'Cash' }, { value: 'bank_transfer', label: 'Bank Transfer' }, { value: 'wallet', label: 'Wallet' }].map((m) => (
-                        <button
-                          key={m.value}
-                          type="button"
-                          onClick={() => setPaymentMethod(m.value as PaymentKind)}
-                          className={`rounded-xl border px-3 py-2.5 text-center text-sm font-medium transition ${paymentMethod === m.value ? 'border-primary/40 bg-primary/10 text-foreground' : 'border-border bg-card text-muted-foreground hover:border-primary/20'}`}
-                        >
-                          {m.label}
-                        </button>
-                      ))}
-                    </div>
-                  </>
-                )}
+            {(checkoutTarget.currentFee ?? checkoutTarget.fee ?? 0) > 0 && (
+              <>
+                <p className="mt-4 mb-2 text-xs uppercase tracking-[0.18em] text-muted-foreground">Payment Method</p>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {[{ value: 'cash', label: 'Cash' }, { value: 'bank_transfer', label: 'Bank Transfer' }, { value: 'wallet', label: 'Wallet' }].map((m) => (
+                    <button
+                      key={m.value}
+                      type="button"
+                      onClick={() => setPaymentMethod(m.value as PaymentKind)}
+                      className={`rounded-xl border px-3 py-2.5 text-center text-sm font-medium transition ${paymentMethod === m.value ? 'border-primary/40 bg-primary/10 text-foreground' : 'border-border bg-card text-muted-foreground hover:border-primary/20'}`}
+                    >
+                      {m.label}
+                    </button>
+                  ))}
+                </div>
               </>
             )}
 
@@ -633,11 +618,9 @@ export function StaffParkedPage({ view = 'list' }: { view?: 'scanner' | 'list' }
                 <ArrowLeft size={16} /> Back
               </Button>
               <Button onClick={onCheckOut} disabled={loading} className="flex-1 h-11 gap-2 bg-gradient-to-r from-orange-500 to-amber-400 text-slate-950 hover:brightness-110 disabled:opacity-60">
-                <CheckCircle2 size={16} /> {checkoutTarget.isReservation
-                  ? 'Check out (auto wallet deduction)'
-                  : (checkoutTarget.currentFee ?? checkoutTarget.fee ?? 0) <= 0
-                    ? 'Check out (free)'
-                    : paymentMethod === 'bank_transfer' ? 'Create Payment QR' : `Collect ${fmtMoney(checkoutTarget.currentFee ?? checkoutTarget.fee)} & check out`}
+                <CheckCircle2 size={16} /> {(checkoutTarget.currentFee ?? checkoutTarget.fee ?? 0) <= 0
+                  ? 'Check out (free)'
+                  : paymentMethod === 'bank_transfer' ? 'Create Payment QR' : `Collect ${fmtMoney(checkoutTarget.currentFee ?? checkoutTarget.fee)} & check out`}
               </Button>
               <Button type="button" variant="outline" onClick={() => setRejectOpen(true)} className="h-11 border-rose-500/40 text-rose-400 hover:bg-rose-500/10">
                 Reject

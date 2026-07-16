@@ -132,17 +132,16 @@ export function useCheckInWorkflow() {
 
   // License Plate có gói còn hạn → tải slot trống của tòa nhà để staff gán chỗ.
   const hasActivePackage = Boolean(plateAccountInfo?.hasActivePackage);
-  const hasActiveReservation = Boolean(plateAccountInfo?.hasActiveReservation);
+  // Slot cố định của gói (nếu user đã chọn lúc mua) → staff KHÔNG cần chọn slot,
+  // BE tự dùng slot này khi check-in.
+  const packageFixedSlot = plateAccountInfo?.activePackage?.slot ?? null;
   // Loại check-in quyết định luật ảnh:
-  //  - 'package'/'reservation': chỉ cần quét (biển/QR) định danh — không bắt ảnh.
+  //  - 'package': chỉ cần quét (biển/QR) định danh — không bắt ảnh.
   //  - 'standard' (khách vãng lai / user thường): bắt buộc ảnh biển + chân dung.
-  const checkInKind: 'package' | 'reservation' | 'standard' = hasActivePackage
-    ? 'package'
-    : hasActiveReservation
-      ? 'reservation'
-      : 'standard';
-  // Load free slots cho cả package lẫn standard (khách vãng lai / user thường cũng phải chọn slot)
-  const needsSlotSelection = hasActivePackage || checkInKind === 'standard';
+  const checkInKind: 'package' | 'standard' = hasActivePackage ? 'package' : 'standard';
+  // Load free slots cho package (floating) lẫn standard. Gói có slot cố định thì KHÔNG
+  // cần chọn (BE tự gán slot cố định).
+  const needsSlotSelection = (hasActivePackage && !packageFixedSlot) || checkInKind === 'standard';
   useEffect(() => {
     if (!needsSlotSelection || !buildingId) {
       setFreeSlots([]);
@@ -247,8 +246,9 @@ export function useCheckInWorkflow() {
 
   const onCheckIn = async () => {
     setOpMessage(null);
-    // Package floating: bắt buộc chọn slot trống cho xe mua gói.
-    if (hasActivePackage && !selectedSlotId) {
+    // Gói floating (không slot cố định): bắt buộc chọn slot trống cho xe mua gói.
+    // Gói có slot cố định → BE tự gán, không cần chọn.
+    if (hasActivePackage && !packageFixedSlot && !selectedSlotId) {
       setOpMessage({ type: 'err', text: 'This vehicle has a long-term package. Please select an available slot before check-in.' });
       return;
     }
@@ -351,7 +351,7 @@ export function useCheckInWorkflow() {
     plateTypeWarning,
     buildingSupportWarning,
     hasActivePackage,
-    hasActiveReservation,
+    packageFixedSlot,
     checkInKind,
     needsSlotSelection,
     vehicleTypeMismatch,

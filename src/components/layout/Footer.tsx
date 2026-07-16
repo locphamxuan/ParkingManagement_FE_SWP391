@@ -4,7 +4,7 @@ export default function Footer() {
       <div className="max-w-6xl mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="space-y-3">
           <h4>About us</h4>
-          <p>Parking management system — easily manage reservations, payments and access control.</p>
+          <p>Parking management system — easily manage parking sessions, payments and access control.</p>
         </div>
 
         <div className="space-y-3">

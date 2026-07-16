@@ -16,15 +16,7 @@ export function resolveErrorMessage(err: unknown, fallback = 'An unexpected erro
 }
 
 const ERROR_MESSAGES: Record<string, string> = {
-  // Reservation creation
-  BUILDING_NO_SLOTS:
-    'This building has no parking slots configured yet. Please try another location.',
-  BUILDING_FULLY_BOOKED:
-    'This building is fully booked for the selected time window. Please choose a different time.',
-  PLATE_RECENTLY_CANCELLED:
-    'This plate recently cancelled a reservation. Please wait 24 hours before re-booking at the same building.',
-  CANCELLATION_CUTOFF_PASSED:
-    'Cancellation deadline has passed — you must cancel at least the required number of hours before your reserved time.',
+  // Payment
   INSUFFICIENT_WALLET_BALANCE:
     'Insufficient wallet balance. Please top up and try again.',
 
