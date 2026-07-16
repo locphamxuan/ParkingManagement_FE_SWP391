@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   AlertTriangle,
+  Banknote,
   CheckCircle2,
   Clock,
   RefreshCw,
@@ -19,6 +20,7 @@ import {
   type BuildingWallet,
   type BuildingWalletTransaction,
   type DailyRevenueResult,
+  type PendingCashItem,
 } from '@/services/manager/managerApi';
 
 const fmtVnd = (n: number | null | undefined) =>
@@ -40,6 +42,9 @@ export function ManagerWalletPage() {
   const [wallet, setWallet] = useState<BuildingWallet | null>(null);
   const [daily, setDaily] = useState<DailyRevenueResult | null>(null);
   const [transactions, setTransactions] = useState<BuildingWalletTransaction[]>([]);
+  const [pendingCash, setPendingCash] = useState<PendingCashItem[]>([]);
+  const [pendingTotal, setPendingTotal] = useState(0);
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
@@ -49,19 +54,23 @@ export function ManagerWalletPage() {
   const [topupBusy, setTopupBusy] = useState(false);
   const [pendingTopup, setPendingTopup] = useState<{ orderCode: number; checkoutUrl: string; amount: number } | null>(null);
 
+  // Không setLoading(true) ở đây — poll nền 30s sẽ làm nháy màn hình loading toàn trang.
   const refresh = useCallback(async () => {
     if (!buildingId) return;
-    setLoading(true);
     setError(null);
     try {
-      const [walletRes, dailyRes, txRes] = await Promise.all([
+      const [walletRes, dailyRes, txRes, pendingRes] = await Promise.all([
         managerApi.wallet.get(buildingId),
         managerApi.wallet.getDailyRevenue(buildingId),
         managerApi.wallet.listTransactions(buildingId),
+        managerApi.wallet.listPendingCash(buildingId),
       ]);
       setWallet((walletRes as { data?: { wallet: BuildingWallet } })?.data?.wallet ?? null);
       setDaily((dailyRes as { data?: DailyRevenueResult })?.data ?? null);
       setTransactions((txRes as { data?: { items: BuildingWalletTransaction[] } })?.data?.items ?? []);
+      const pendingData = (pendingRes as { data?: { items: PendingCashItem[]; pendingTotal: number } })?.data;
+      setPendingCash(pendingData?.items ?? []);
+      setPendingTotal(pendingData?.pendingTotal ?? 0);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load wallet data');
     } finally {
@@ -69,8 +78,12 @@ export function ManagerWalletPage() {
     }
   }, [buildingId]);
 
+  // Tải lần đầu + tự làm mới mỗi 30s (đồng bộ cách làm với trang Sessions).
   useEffect(() => {
+    setLoading(true);
     refresh();
+    const timer = setInterval(refresh, 30_000);
+    return () => clearInterval(timer);
   }, [refresh]);
 
   const handleInitiateTopup = useCallback(async () => {
@@ -117,6 +130,21 @@ export function ManagerWalletPage() {
       setTopupBusy(false);
     }
   }, [buildingId, pendingTopup, refresh]);
+
+  const handleConfirmCash = useCallback(async (paymentId: string) => {
+    if (!buildingId) return;
+    setConfirmingId(paymentId);
+    setMessage(null);
+    try {
+      await managerApi.wallet.confirmCash(buildingId, paymentId);
+      setMessage({ type: 'ok', text: 'Cash receipt confirmed and added to the building wallet.' });
+      await refresh();
+    } catch (err) {
+      setMessage({ type: 'err', text: err instanceof Error ? err.message : 'Failed to confirm cash receipt.' });
+    } finally {
+      setConfirmingId(null);
+    }
+  }, [buildingId, refresh]);
 
   if (loading) {
     return (
@@ -228,6 +256,56 @@ export function ManagerWalletPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Tiền mặt chờ xác nhận — manager "Thu nhận" để cộng vào ví building */}
+      <Card className={pendingCash.length > 0 ? 'border-amber-500/30' : undefined}>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between gap-2 text-sm">
+            <span className="flex items-center gap-2">
+              <Banknote size={15} className="text-amber-400" />
+              Cash Pending Confirmation
+              <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-400">
+                {pendingCash.length}
+              </span>
+            </span>
+            <span className="text-xs font-normal text-muted-foreground">
+              Total: <strong className="text-amber-400">{fmtVnd(pendingTotal)}</strong>
+            </span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {pendingCash.length === 0 ? (
+            <p className="py-4 text-center text-sm text-muted-foreground">No cash awaiting confirmation.</p>
+          ) : (
+            <div className="grid gap-2">
+              {pendingCash.map((p) => (
+                <div key={p._id} className="flex items-center justify-between gap-3 rounded-lg border border-amber-500/20 bg-amber-500/5 px-4 py-3">
+                  <div className="flex items-center gap-3">
+                    <span className="rounded border border-amber-500/25 bg-amber-500/10 px-2 py-0.5 font-mono text-xs font-bold text-amber-300">
+                      {p.parkingSession?.plateNumber ?? '—'}
+                    </span>
+                    <div>
+                      <p className="font-mono text-sm font-bold text-foreground">{fmtVnd(p.amount)}</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {p.staff?.fullName ? `Collected by ${p.staff.fullName} · ` : ''}{fmtTime(p.createdAt)}
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={() => handleConfirmCash(p._id)}
+                    disabled={confirmingId === p._id}
+                    className="gap-1.5"
+                  >
+                    {confirmingId === p._id ? <RefreshCw size={13} className="animate-spin" /> : <CheckCircle2 size={13} />}
+                    Collect
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Lịch sử giao dịch */}
       <Card>

@@ -8,7 +8,6 @@ import {
   CarFront,
   ChevronDown,
   Clock3,
-  History,
   LogOut,
   MapPinned,
   Ticket,
@@ -30,7 +29,6 @@ interface HomePageProps {
   modules: LegacyModule[];
   onOpenAuth: (mode?: 'login' | 'register') => void;
   onViewProfile: () => void;
-  onViewReservationHistory: () => void;
   onAction: (module: LegacyModule) => void;
   user?: { fullName?: string; email?: string; phone?: string; role?: string; licensePlates?: Array<{ plateNumber: string; vehicleType: 'car' | 'motorcycle' }> } | null;
   onLogout?: () => void;
@@ -55,12 +53,12 @@ const benefits = [
   },
   {
     icon: CarFront,
-    title: 'Reservations, Subscriptions & Wallet',
-    description: 'Pre-book spots, buy monthly packages, pay via e-wallet, and look up parking logs — all under a single account.',
+    title: 'Packages, Subscriptions & Wallet',
+    description: 'Buy monthly packages, pay via e-wallet, and look up parking logs — all under a single account.',
   },
 ];
 
-export default function HomePage({ modules, onOpenAuth, onViewProfile, onViewReservationHistory, onAction, user, onLogout }: HomePageProps) {
+export default function HomePage({ modules, onOpenAuth, onViewProfile, onAction, user, onLogout }: HomePageProps) {
   const hasMissingInfo = Boolean(
     user &&
     user.role === 'user' &&
@@ -237,12 +235,6 @@ export default function HomePage({ modules, onOpenAuth, onViewProfile, onViewRes
                       >
                         <Wallet size={12} className="inline-block mr-2" /> E-Wallet
                       </button>
-                      <button
-                        className="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-slate-800 text-slate-300 hover:text-white"
-                        onClick={() => { setMenuOpen(false); onViewReservationHistory(); }}
-                      >
-                        <History size={12} className="inline-block mr-2" /> Booking History
-                      </button>
                       <a
                         href="/parking-history"
                         className="w-full text-left px-4 py-2 text-xs font-semibold hover:bg-slate-800 text-slate-300 hover:text-white flex items-center"
@@ -380,7 +372,7 @@ export default function HomePage({ modules, onOpenAuth, onViewProfile, onViewRes
           <div className="mt-10 flex flex-wrap gap-3">
             {user ? (
               <motion.a
-                href={user.role === 'admin' ? '/admin/dashboard' : user.role === 'manager' ? '/manager/dashboard' : user.role === 'staff' ? '/staff' : '/reservations'}
+                href={user.role === 'admin' ? '/admin/dashboard' : user.role === 'manager' ? '/manager/dashboard' : user.role === 'staff' ? '/staff' : '/long-term-subscriptions'}
                 whileHover={{ scale: 1.04, boxShadow: '0 0 25px rgba(6,182,212,0.4)' }}
                 whileTap={{ scale: 0.97 }}
                 className="px-7 py-3.5 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-black text-[11px] uppercase tracking-wider shadow-[0_0_20px_rgba(6,182,212,0.25)] inline-flex items-center gap-2 transition-all duration-300"
@@ -471,7 +463,7 @@ export default function HomePage({ modules, onOpenAuth, onViewProfile, onViewRes
             <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 font-mono">PBMS SYSTEM</span>
             <h2 className="text-2xl md:text-3xl font-black mt-2 text-white">Comprehensive Parking Operation Solution</h2>
             <p className="mt-3 text-sm text-slate-400 font-semibold leading-relaxed max-w-3xl">
-              PBMS digitizes the entire parking operations workflow — from entry/exit checkpoints and floor layout management to pre-booking reservations and subscriptions. Designed for building managers and end-users.
+              PBMS digitizes the entire parking operations workflow — from entry/exit checkpoints and floor layout management to long-term packages and subscriptions. Designed for building managers and end-users.
             </p>
             <div className="mt-6 grid md:grid-cols-3 gap-4">
               {benefits.map((benefit) => {

@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { NavLink, Outlet, useLocation, useMatch, useNavigate } from 'react-router-dom';
 import {
   CalendarClock,
-  CalendarCheck2,
   Car,
   ChevronLeft,
   ChevronDown,
@@ -11,12 +10,10 @@ import {
   ScanLine,
   ShieldAlert,
   User,
-  Wallet,
 } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
-import { useAssignedGates } from '@/hooks/staff/useAssignedGates';
 import { staffApi, extractBuildings, type StaffBuilding } from '@/services/staff/staffApi';
 import { cn } from '@/utils/cn';
 
@@ -26,7 +23,6 @@ const BASE_PAGE_TITLE: Record<string, string> = {
   operations: 'Vehicle Check-in',
   checkout: 'Vehicle Check-out',
   parked: 'Parked Vehicles',
-  reservations: 'Reservations',
   'my-shifts': 'My Shifts',
   incidents: 'Incident Management',
 };
@@ -35,27 +31,24 @@ export function StaffLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { session, user, logout } = useAuth();
-  const { showCheckIn, showCheckOut } = useAssignedGates();
   const assignedBuildingId = session?.assignedBuildingIds?.[0] ?? null;
   const [buildings, setBuildings] = useState<StaffBuilding[]>([]);
   const [selectedBuildingId, setSelectedBuildingId] = useState<string | null>(assignedBuildingId);
   const [bootstrapping, setBootstrapping] = useState(true);
   const [collapsed, setCollapsed] = useState(false);
 
-  // Entry Gate → check-in (gate vào mới hiện tab này). Trang "Parked Vehicles" hiện cho
-  // cả hai loại nhân viên, nhưng chỉ nhân viên gate ra mới thao tác thanh toán.
+  // Staff nào cũng thao tác được cả hai chiều — gate được gán chỉ hiển thị dạng badge.
   const navItems = useMemo(
     () => [
       { to: '', label: 'Overview', icon: LayoutDashboard, end: true },
-      ...(showCheckIn ? [{ to: 'operations', label: 'Vehicle Check-in', icon: ScanLine }] : []),
-      ...(showCheckOut ? [{ to: 'checkout', label: 'Vehicle Check-out', icon: LogOut }] : []),
+      { to: 'operations', label: 'Vehicle Check-in', icon: ScanLine },
+      { to: 'checkout', label: 'Vehicle Check-out', icon: LogOut },
       { to: 'parked', label: 'Parked Vehicles', icon: Car },
-      { to: 'reservations', label: 'Reservations', icon: CalendarCheck2 },
       { to: 'my-shifts', label: 'My Shifts', icon: CalendarClock },
-      ...(showCheckIn || showCheckOut ? [{ to: 'sessions', label: showCheckOut ? 'Shift Revenue' : 'Check-in History', icon: showCheckOut ? Wallet : Car }] : []),
+      { to: 'sessions', label: 'Check-in History', icon: Car },
       { to: 'incidents', label: 'Incidents', icon: ShieldAlert },
     ],
-    [showCheckIn, showCheckOut],
+    [],
   );
 
   useEffect(() => {
@@ -97,7 +90,7 @@ export function StaffLayout() {
   }, [location.pathname]);
 
   const title = slug === 'sessions'
-    ? (showCheckOut ? 'Shift Revenue' : 'Check-in History')
+    ? 'Check-in History'
     : (BASE_PAGE_TITLE[slug] ?? 'Staff');
   const selectedBuilding = buildings.find((b) => b._id === selectedBuildingId);
   const isProfileRoute = Boolean(useMatch('/staff/profile'));

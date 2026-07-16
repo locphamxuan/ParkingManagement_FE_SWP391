@@ -5,12 +5,12 @@ import { LiveQRCamera } from '@/components/staff/LiveQRCamera';
 import { kioskApi } from '@/services/kioskApi';
 
 type Result =
-  | { type: 'ok'; plate: string; code: string; entryTime: string }
+  | { type: 'ok'; plate: string; entryTime: string }
   | { type: 'err'; text: string };
 
 /**
- * Public gate kiosk — a reservation driver self-admits by showing the vehicle QR
- * to Camera 2. No staff involved. A portrait frame is captured and stored.
+ * Public gate kiosk — a long-term package driver self-admits by showing the vehicle
+ * QR to Camera 2. No staff involved. A portrait frame is captured and stored.
  */
 export default function KioskCheckInPage() {
   const [busy, setBusy] = useState(false);
@@ -21,12 +21,11 @@ export default function KioskCheckInPage() {
     setBusy(true);
     setResult(null);
     try {
-      const res = await kioskApi.reservationCheckIn(payload);
-      const data = (res as { data?: { reservation?: { code?: string; plateNumber?: string }; parkingSession?: { entryTime?: string } } })?.data;
+      const res = await kioskApi.packageCheckIn(payload);
+      const data = (res as { data?: { subscription?: { plateNumber?: string }; parkingSession?: { entryTime?: string } } })?.data;
       setResult({
         type: 'ok',
-        plate: data?.reservation?.plateNumber ?? '',
-        code: data?.reservation?.code ?? '',
+        plate: data?.subscription?.plateNumber ?? '',
         entryTime: data?.parkingSession?.entryTime ?? new Date().toISOString(),
       });
     } catch (err) {
@@ -49,9 +48,9 @@ export default function KioskCheckInPage() {
           <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-400">
             <QrCode size={28} />
           </div>
-          <h1 className="text-2xl font-black">Reservation Self Check-in</h1>
+          <h1 className="text-2xl font-black">Package Self Check-in</h1>
           <p className="mt-1 text-sm text-slate-400">
-            For guests with an existing reservation: present the vehicle QR code to the camera to enter automatically (no staff needed).
+            For long-term package holders: present the vehicle QR code to the camera to enter automatically (no staff needed).
           </p>
         </div>
 
@@ -70,7 +69,6 @@ export default function KioskCheckInPage() {
             <CheckCircle2 size={40} className="mx-auto mb-2 text-emerald-400" />
             <p className="text-lg font-bold text-emerald-300">Please proceed to the parking area</p>
             <p className="mt-1 font-mono text-xl font-black text-white">{result.plate}</p>
-            {result.code && <p className="text-xs text-slate-400">Reservation code: {result.code}</p>}
             <p className="mt-1 text-xs text-slate-400">{new Date(result.entryTime).toLocaleString('vi-VN')}</p>
           </motion.div>
         )}

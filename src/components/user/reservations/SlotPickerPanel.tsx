@@ -54,8 +54,9 @@ export function PackageInfoPanel({ selectedPkg }: PackageInfoPanelProps) {
     <div className="glass-panel-white rounded-3xl border border-blue-500/20 bg-blue-500/5 p-6 shadow-lg">
       <p className="text-[11px] text-cyan-200/90">
         Package allows free parking up to <strong>{selectedPkg?.maxHoursPerDay ? `${selectedPkg.maxHoursPerDay}h` : 'according to package'}/day</strong>
-        {' '}(excess hours billed at regular hourly rates). Subscriptions <strong>do not guarantee a fixed spot</strong> — staff will assign an empty slot upon entry.
-        Each package is tied to <strong>1 plate</strong>. To guarantee a slot at a specific time, please use <strong>Hourly Pre-booking</strong>.
+        {' '}(excess hours billed at regular hourly rates). You may optionally <strong>reserve a fixed slot</strong> that stays yours
+        for the whole package period — otherwise staff will assign an empty slot upon entry.
+        Each package is tied to <strong>1 plate</strong>.
       </p>
     </div>
   );

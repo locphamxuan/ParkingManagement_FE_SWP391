@@ -9,8 +9,8 @@ function makeApiError(code: string, message = 'backend error', status = 400): Ap
 
 describe('getApiErrorCode', () => {
   it('trả về code từ ApiError payload', () => {
-    const err = makeApiError('BUILDING_NO_SLOTS');
-    expect(getApiErrorCode(err)).toBe('BUILDING_NO_SLOTS');
+    const err = makeApiError('INSUFFICIENT_WALLET_BALANCE');
+    expect(getApiErrorCode(err)).toBe('INSUFFICIENT_WALLET_BALANCE');
   });
 
   it('trả về undefined khi không phải ApiError', () => {
@@ -29,16 +29,10 @@ describe('getApiErrorCode', () => {
 });
 
 describe('resolveErrorMessage', () => {
-  it('map BUILDING_NO_SLOTS → English message', () => {
-    const err = makeApiError('BUILDING_NO_SLOTS');
+  it('map INSUFFICIENT_WALLET_BALANCE → English message', () => {
+    const err = makeApiError('INSUFFICIENT_WALLET_BALANCE');
     const msg = resolveErrorMessage(err);
-    expect(msg).toContain('no parking slots configured');
-  });
-
-  it('map BUILDING_FULLY_BOOKED → English message', () => {
-    const err = makeApiError('BUILDING_FULLY_BOOKED');
-    const msg = resolveErrorMessage(err);
-    expect(msg).toContain('fully booked');
+    expect(msg).toContain('Insufficient wallet balance');
   });
 
   it('map VEHICLE_CURRENTLY_PARKED → English message', () => {
@@ -51,12 +45,6 @@ describe('resolveErrorMessage', () => {
     const err = makeApiError('CANCELLATION_WINDOW_EXPIRED');
     const msg = resolveErrorMessage(err);
     expect(msg).toContain('3 days');
-  });
-
-  it('map PLATE_RECENTLY_CANCELLED → English message', () => {
-    const err = makeApiError('PLATE_RECENTLY_CANCELLED');
-    const msg = resolveErrorMessage(err);
-    expect(msg).toContain('24 hours');
   });
 
   it('fallback về err.message khi code không có trong map', () => {

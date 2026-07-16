@@ -1,6 +1,6 @@
 // Nguồn dùng chung cho nhãn/màu/tab của status GÓI DÀI HẠN phía user.
 // BE trả về: pending | active | expired | cancelled.
-// Dùng ở: ReservationHistoryTab, LongTermSubscriptionsPage, ProfilePage để đồng bộ.
+// Dùng ở: LongTermSubscriptionsPage, ProfilePage để đồng bộ.
 
 export type PackageStatus = 'pending' | 'active' | 'expired' | 'cancelled';
 

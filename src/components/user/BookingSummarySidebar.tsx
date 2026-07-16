@@ -70,12 +70,12 @@ export function BookingSummarySidebar({
 
           <div className="h-px bg-white/[0.06]" />
 
-          <div className={`grid gap-2 ${mode === 'hourly' ? 'grid-cols-2' : 'grid-cols-1'}`}>
-            {mode === 'hourly' && (
+          <div className={`grid gap-2 ${selectedSlot ? 'grid-cols-2' : 'grid-cols-1'}`}>
+            {selectedSlot && (
               <div className="rounded-xl border border-white/5 bg-white/[0.02] p-3 shadow-inner">
                 <p className="text-[9px] font-bold uppercase text-slate-500">Slot</p>
                 <p className="mt-1 font-mono text-lg font-black text-orange-400">
-                  {selectedSlot || '—'}
+                  {selectedSlot}
                 </p>
               </div>
             )}

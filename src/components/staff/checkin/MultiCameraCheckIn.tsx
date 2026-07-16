@@ -32,7 +32,8 @@ export function MultiCameraCheckIn({
     !plateNumber.trim() ||
     loading ||
     !!buildingSupportWarning ||
-    (hasActivePackage && !selectedSlotId) ||
+    // Gói có slot cố định (needsSlotSelection=false) → BE tự gán, không bắt chọn slot.
+    (hasActivePackage && needsSlotSelection && !selectedSlotId) ||
     (checkInKind === 'standard' && !plateImage) ||
     (checkInKind === 'standard' && freeSlots.length > 0 && !selectedSlotId);
 
@@ -76,14 +77,16 @@ export function MultiCameraCheckIn({
             <strong className="text-foreground">Walk-in Customer</strong> (no account).
           </div>
         )}
-        {plateNumber.trim().length >= 7 && checkInKind === 'package' && (
-          <div className="mt-1 rounded-lg border border-amber-500/30 bg-amber-500/10 p-2.5 text-xs text-amber-300">
-            🅿️ Vehicle has a long-term package{plateAccountInfo?.activePackage?.name ? ` "${plateAccountInfo.activePackage.name}"` : ''} — select an available slot below.
+        {/* Gói slot cố định → báo slot tự gán; gói floating → nhắc chọn slot bên dưới */}
+        {plateNumber.trim().length >= 7 && checkInKind === 'package' && plateAccountInfo?.activePackage?.slot && (
+          <div className="mt-1 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-2.5 text-xs text-emerald-300">
+            🅿️ Long-term package{plateAccountInfo.activePackage.name ? ` "${plateAccountInfo.activePackage.name}"` : ''} with
+            {' '}<strong>reserved slot {plateAccountInfo.activePackage.slot.code}</strong> — auto-assigned at check-in.
           </div>
         )}
-        {plateNumber.trim().length >= 7 && checkInKind === 'reservation' && (
-          <div className="mt-1 rounded-lg border border-sky-500/30 bg-sky-500/10 p-2.5 text-xs text-sky-300">
-            📅 Vehicle has a reservation{plateAccountInfo?.activeReservation?.code ? ` (code ${plateAccountInfo.activeReservation.code})` : ''}.
+        {plateNumber.trim().length >= 7 && checkInKind === 'package' && !plateAccountInfo?.activePackage?.slot && (
+          <div className="mt-1 rounded-lg border border-amber-500/30 bg-amber-500/10 p-2.5 text-xs text-amber-300">
+            🅿️ Vehicle has a long-term package{plateAccountInfo?.activePackage?.name ? ` "${plateAccountInfo.activePackage.name}"` : ''} — select an available slot below.
           </div>
         )}
       </div>

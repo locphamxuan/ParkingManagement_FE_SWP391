@@ -26,21 +26,24 @@ export function ConfirmCheckInStep({
     loading ||
     !!buildingSupportWarning ||
     !portraitImage ||
-    (hasActivePackage && !selectedSlotId) ||
+    // Gói có slot cố định (needsSlotSelection=false) → BE tự gán, không bắt chọn slot.
+    (hasActivePackage && needsSlotSelection && !selectedSlotId) ||
     (checkInKind === 'standard' && !plateImage) ||
     (checkInKind === 'standard' && freeSlots.length > 0 && !selectedSlotId);
 
   return (
     <div className="space-y-5">
       {/* Banner loại check-in đã nhận diện */}
-      {checkInKind === 'package' && (
-        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-2.5 text-xs text-amber-300">
-          🅿️ Vehicle has a long-term package{plateAccountInfo?.activePackage?.name ? ` "${plateAccountInfo.activePackage.name}"` : ''} — select an available slot below, then check in.
+      {checkInKind === 'package' && plateAccountInfo?.activePackage?.slot && (
+        <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-2.5 text-xs text-emerald-300">
+          🅿️ Long-term package{plateAccountInfo.activePackage.name ? ` "${plateAccountInfo.activePackage.name}"` : ''} with a
+          {' '}<strong>reserved slot {plateAccountInfo.activePackage.slot.code}</strong>
+          {plateAccountInfo.activePackage.slot.floor?.name ? ` (Floor ${plateAccountInfo.activePackage.slot.floor.name})` : ''} — confirm to check in.
         </div>
       )}
-      {checkInKind === 'reservation' && (
-        <div className="rounded-lg border border-sky-500/30 bg-sky-500/10 p-2.5 text-xs text-sky-300">
-          📅 Vehicle has a reservation{plateAccountInfo?.activeReservation?.code ? ` (code ${plateAccountInfo.activeReservation.code})` : ''} — confirm to check in.
+      {checkInKind === 'package' && !plateAccountInfo?.activePackage?.slot && (
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-2.5 text-xs text-amber-300">
+          🅿️ Vehicle has a long-term package{plateAccountInfo?.activePackage?.name ? ` "${plateAccountInfo.activePackage.name}"` : ''} — select an available slot below, then check in.
         </div>
       )}
 

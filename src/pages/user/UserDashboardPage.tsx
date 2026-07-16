@@ -10,17 +10,16 @@ import {
   History,
   LogOut,
   Package,
+  ShieldAlert,
   User,
   Wallet,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import {
   userApi,
-  type Reservation,
   type UserWallet,
   type ParkingHistory,
 } from '@/services/user/userApi';
-import { StatusBadge } from '@/components/common/StatusBadge';
 import { UserNotificationBell } from '@/components/layout/UserNotificationBell';
 
 const fmtVnd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 });
@@ -32,7 +31,6 @@ export default function UserDashboardPage() {
   const { session, logout } = useAuth();
 
   const [wallet, setWallet] = useState<UserWallet | null>(null);
-  const [reservations, setReservations] = useState<Reservation[]>([]);
   const [activeSession, setActiveSession] = useState<ParkingHistory | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -42,17 +40,13 @@ export default function UserDashboardPage() {
     setLoading(true);
     Promise.all([
       userApi.wallet.get(),
-      userApi.reservations.list({ limit: 5 }),
       userApi.parkingHistory.list({ limit: 5 }),
     ])
-      .then(([walletRes, resRes, histRes]) => {
+      .then(([walletRes, histRes]) => {
         // Backend returns { data: { walletBalance } }; tolerate a legacy { wallet } shape too.
         const walletData = walletRes.data as { wallet?: { balance?: number }; walletBalance?: number };
         const balance = walletData.walletBalance ?? walletData.wallet?.balance ?? 0;
         setWallet({ balance } as UserWallet);
-
-        const reservItems = resRes.data.items ?? [];
-        setReservations(reservItems);
 
         const histItems: ParkingHistory[] = histRes.data.items ?? [];
         const active = histItems.find((s) => s.status === 'active') ?? null;
@@ -72,16 +66,13 @@ export default function UserDashboardPage() {
   const quickLinks = [
     { icon: Wallet, label: 'My Wallet', desc: 'Deposit & transactions', href: '/wallet', color: 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5' },
     { icon: Building2, label: 'Buildings', desc: 'Browse parking lots', href: '/buildings', color: 'text-blue-400 border-blue-500/20 bg-blue-500/5' },
-    { icon: CalendarClock, label: 'Pre-booking', desc: 'Reserve slot in advance', href: '/reservations', color: 'text-orange-400 border-orange-500/20 bg-orange-500/5' },
+    { icon: CalendarClock, label: 'Buy Package', desc: 'Purchase a long-term package', href: '/packages/buy', color: 'text-orange-400 border-orange-500/20 bg-orange-500/5' },
     { icon: History, label: 'Parking History', desc: 'Browse past parking logs', href: '/parking-history', color: 'text-violet-400 border-violet-500/20 bg-violet-500/5' },
     { icon: Package, label: 'Subscriptions', desc: 'Subscribe to monthly packages', href: '/long-term-subscriptions', color: 'text-amber-400 border-amber-500/20 bg-amber-500/5' },
     { icon: Bell, label: 'Notifications', desc: 'View all system notifications', href: '/notifications', color: 'text-rose-400 border-rose-500/20 bg-rose-500/5' },
+    { icon: ShieldAlert, label: 'Report Incident', desc: 'Report a parking issue', href: '/report-incident', color: 'text-orange-400 border-orange-500/20 bg-orange-500/5' },
     { icon: User, label: 'Profile', desc: 'Update personal details', href: '/profile', color: 'text-slate-400 border-slate-500/20 bg-slate-500/5' },
   ];
-
-  const activeReservations = reservations.filter((r) =>
-    ['pending', 'confirmed', 'checked_in'].includes(r.status),
-  );
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
@@ -154,42 +145,6 @@ export default function UserDashboardPage() {
                   <Clock size={10} /> In: {fmtTime(activeSession.checkIn)}
                 </p>
               </div>
-            </div>
-          </div>
-        )}
-
-        {/* Active reservations */}
-        {activeReservations.length > 0 && (
-          <div>
-            <div className="mb-3 flex items-center justify-between">
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                Active Reservations ({activeReservations.length})
-              </p>
-              <button
-                type="button"
-                onClick={() => navigate('/reservations', { state: { openHistory: true } })}
-                className="text-[10px] text-orange-400 hover:text-orange-300 font-semibold"
-              >
-                View All →
-              </button>
-            </div>
-            <div className="space-y-2">
-              {activeReservations.slice(0, 3).map((r) => (
-                <div key={r._id} className="flex items-center gap-3 rounded-xl border border-white/8 bg-white/3 px-4 py-3">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-xs font-black text-orange-300">{r.code}</span>
-                      <span className="rounded border border-amber-500/25 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-bold text-amber-300">
-                        {r.plateNumber}
-                      </span>
-                    </div>
-                    <p className="mt-0.5 text-[10px] text-slate-400">
-                      {r.building?.name} · {fmtTime(r.startTime)}
-                    </p>
-                  </div>
-                  <StatusBadge status={r.status} />
-                </div>
-              ))}
             </div>
           </div>
         )}

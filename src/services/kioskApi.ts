@@ -1,12 +1,11 @@
 import { api } from '@/services/client/apiClient';
 
-// Public gate-kiosk API — a reservation driver self-admits by scanning the
+// Public gate-kiosk API — a long-term package driver self-admits by scanning the
 // vehicle QR, without going through a staff member.
 
 export interface KioskCheckInResult {
-  reservation: {
+  subscription: {
     _id: string;
-    code: string;
     plateNumber: string;
     status: string;
     building: string;
@@ -20,11 +19,12 @@ export interface KioskCheckInResult {
 }
 
 export const kioskApi = {
-  reservationCheckIn: (payload: {
+  packageCheckIn: (payload: {
     qrCode: string;
     gate?: string;
+    building?: string;
     plateImage?: string | null;
     portraitImage?: string | null;
   }) =>
-    api.post<{ data: KioskCheckInResult }>('/kiosk/reservation-checkin', payload),
+    api.post<{ data: KioskCheckInResult }>('/kiosk/package-checkin', payload),
 };

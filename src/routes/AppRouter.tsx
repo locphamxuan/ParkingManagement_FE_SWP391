@@ -18,11 +18,12 @@ const PublicResetPasswordRoute = lazy(() => import('@/pages/public/AuthRoutes').
 // ── User ────────────────────────────────────────────────────────────────────
 const BuildingsUserPage = lazy(() => import('@/pages/user/BuildingsPage'));
 const ProfilePage = lazy(() => import('@/pages/user/ProfilePage'));
-const ReservationsPage = lazy(() => import('@/pages/user/ReservationsPage'));
+const PackagePurchasePage = lazy(() => import('@/pages/user/PackagePurchasePage'));
 const LongTermSubscriptionsPage = lazy(() => import('@/pages/user/LongTermSubscriptionsPage'));
 const UserNotificationsPage = lazy(() => import('@/pages/user/UserNotificationsPage'));
 const WalletPage = lazy(() => import('@/pages/user/WalletPage'));
 const ParkingHistoryPage = lazy(() => import('@/pages/user/ParkingHistoryPage'));
+const ReportIncidentPage = lazy(() => import('@/pages/user/ReportIncidentPage'));
 const UserDashboardPage = lazy(() => import('@/pages/user/UserDashboardPage'));
 
 // ── Manager ─────────────────────────────────────────────────────────────────
@@ -36,19 +37,20 @@ const ManagerGatesPage = lazy(() => import('@/pages/manager/ManagerGatesPage').t
 const ManagerZonesPage = lazy(() => import('@/pages/manager/ManagerZonesPage').then((m) => ({ default: m.ManagerZonesPage })));
 const ManagerSlotsPage = lazy(() => import('@/pages/manager/ManagerSlotsPage').then((m) => ({ default: m.ManagerSlotsPage })));
 const ManagerPricingPage = lazy(() => import('@/pages/manager/ManagerPricingPage').then((m) => ({ default: m.ManagerPricingPage })));
-const ManagerReservationPolicyPage = lazy(() => import('@/pages/manager/ManagerReservationPolicyPage').then((m) => ({ default: m.ManagerReservationPolicyPage })));
+const ManagerRefundPolicyPage = lazy(() => import('@/pages/manager/ManagerRefundPolicyPage').then((m) => ({ default: m.ManagerRefundPolicyPage })));
 const ManagerPackagesHubPage = lazy(() => import('@/pages/manager/ManagerPackagesHubPage').then((m) => ({ default: m.ManagerPackagesHubPage })));
 const ManagerShiftManagementPage = lazy(() => import('@/pages/manager/ManagerShiftManagementPage').then((m) => ({ default: m.ManagerShiftManagementPage })));
 const ManagerOperatingHoursPage = lazy(() => import('@/pages/manager/ManagerOperatingHoursPage').then((m) => ({ default: m.ManagerOperatingHoursPage })));
 const ManagerStaffPage = lazy(() => import('@/pages/manager/ManagerStaffPage').then((m) => ({ default: m.ManagerStaffPage })));
 const ManagerWalletPage = lazy(() => import('@/pages/manager/ManagerWalletPage').then((m) => ({ default: m.ManagerWalletPage })));
 const ManagerReviewsPage = lazy(() => import('@/pages/manager/ManagerReviewsPage').then((m) => ({ default: m.ManagerReviewsPage })));
+const ManagerIncidentsPage = lazy(() => import('@/pages/manager/ManagerIncidentsPage').then((m) => ({ default: m.ManagerIncidentsPage })));
+const ManagerSessionsPage = lazy(() => import('@/pages/manager/ManagerSessionsPage').then((m) => ({ default: m.ManagerSessionsPage })));
 
 // ── Staff ───────────────────────────────────────────────────────────────────
 const StaffDashboardPage = lazy(() => import('@/pages/staff/StaffDashboardPage').then((m) => ({ default: m.StaffDashboardPage })));
 const StaffOperationsPage = lazy(() => import('@/pages/staff/StaffOperationsPage').then((m) => ({ default: m.StaffOperationsPage })));
 const StaffParkedPage = lazy(() => import('@/pages/staff/StaffParkedPage').then((m) => ({ default: m.StaffParkedPage })));
-const StaffReservationsPage = lazy(() => import('@/pages/staff/StaffReservationsPage').then((m) => ({ default: m.StaffReservationsPage })));
 const StaffSessionsPage = lazy(() => import('@/pages/staff/StaffSessionsPage').then((m) => ({ default: m.StaffSessionsPage })));
 const StaffShiftsPage = lazy(() => import('@/pages/staff/StaffShiftsPage').then((m) => ({ default: m.StaffShiftsPage })));
 const StaffIncidentsPage = lazy(() => import('@/pages/staff/StaffIncidentsPage').then((m) => ({ default: m.StaffIncidentsPage })));
@@ -93,10 +95,12 @@ export function AppRouter() {
       <Route path="/buildings" element={<BuildingsUserPage />} />
       <Route path="/profile" element={<ProfilePage />} />
       <Route path="/wallet" element={<WalletPage />} />
-      <Route path="/reservations" element={<ReservationsPage />} />
+      <Route path="/packages/buy" element={<PackagePurchasePage />} />
+      <Route path="/reservations" element={<Navigate to="/packages/buy" replace />} />
       <Route path="/long-term-subscriptions" element={<LongTermSubscriptionsPage />} />
       <Route path="/notifications" element={<UserNotificationsPage />} />
       <Route path="/parking-history" element={<ParkingHistoryPage />} />
+      <Route path="/report-incident" element={<ReportIncidentPage />} />
       <Route path="/reviews" element={<ReviewsPage />} />
       <Route path="/user-dashboard" element={<UserDashboardPage />} />
       <Route path="/kiosk" element={<KioskCheckInPage />} />
@@ -115,7 +119,7 @@ export function AppRouter() {
           <Route path="zones" element={<ManagerZonesPage />} />
           <Route path="slots" element={<ManagerSlotsPage />} />
           <Route path="price-policies" element={<ManagerPricingPage />} />
-          <Route path="reservation-policy" element={<ManagerReservationPolicyPage />} />
+          <Route path="refund-policy" element={<ManagerRefundPolicyPage />} />
           <Route path="packages" element={<ManagerPackagesHubPage />} />
           <Route path="subscriptions" element={<Navigate to="/manager/packages" replace />} />
           <Route path="shifts" element={<ManagerShiftManagementPage />} />
@@ -123,6 +127,8 @@ export function AppRouter() {
           <Route path="operating-hours" element={<ManagerOperatingHoursPage />} />
           <Route path="staff" element={<ManagerStaffPage />} />
           <Route path="reviews" element={<ManagerReviewsPage />} />
+          <Route path="incidents" element={<ManagerIncidentsPage />} />
+          <Route path="sessions" element={<ManagerSessionsPage />} />
           <Route path="wallet" element={<ManagerWalletPage />} />
           <Route
             path="settings"
@@ -145,7 +151,6 @@ export function AppRouter() {
           <Route path="operations" element={<StaffOperationsPage />} />
           <Route path="checkout" element={<StaffParkedPage view="scanner" />} />
           <Route path="parked" element={<StaffParkedPage view="list" />} />
-          <Route path="reservations" element={<StaffReservationsPage />} />
           <Route path="my-shifts" element={<StaffShiftsPage />} />
           <Route path="sessions" element={<StaffSessionsPage />} />
           <Route path="incidents" element={<StaffIncidentsPage />} />

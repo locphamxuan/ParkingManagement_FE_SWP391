@@ -138,7 +138,7 @@ export function PremiumCTABanner({ user, onViewProfile }: PremiumCTABannerProps)
                 <span className="bg-gradient-to-r from-blue-400 via-cyan-300 to-cyan-400 bg-clip-text text-transparent">intelligent parking lot</span>
               </h2>
               <p className="text-xs text-slate-400 mt-2 max-w-md leading-relaxed font-semibold">
-                Optimal management, instant reservations, and real-time monitoring. Maximize the value of your building's parking lot.
+                Optimal management, long-term packages, and real-time monitoring. Maximize the value of your building's parking lot.
               </p>
             </div>
 

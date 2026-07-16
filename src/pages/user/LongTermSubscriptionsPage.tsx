@@ -99,7 +99,7 @@ export default function LongTermSubscriptionsPage() {
           </div>
           <button
             type="button"
-            onClick={() => navigate('/reservations', { state: { mode: 'package' } })}
+            onClick={() => navigate('/packages/buy')}
             className="inline-flex items-center gap-2 rounded-xl border border-orange-500/30 bg-orange-500/10 px-5 py-2.5 text-xs font-black uppercase tracking-wider text-orange-300 hover:bg-orange-500/20 transition-all shrink-0"
           >
             <CheckCircle2 size={14} /> Buy New Package

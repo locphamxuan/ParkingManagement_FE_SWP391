@@ -1,5 +1,8 @@
 import { api } from '@/services/client/apiClient';
 import type { Feedback } from '@/services/user/userApi';
+import type { ParkingSession } from '@/services/staff/staffApi';
+
+export type { ParkingSession };
 
 export interface ManagerBuilding {
   _id: string;
@@ -120,25 +123,15 @@ export interface Subscription {
   startDate: string;
   endDate: string;
   status: 'pending' | 'active' | 'expired' | 'cancelled';
-  /** Snapshot % và số tiền đã hoàn lúc hủy (theo ReservationPolicy tại thời điểm đó). */
+  /** Snapshot % và số tiền đã hoàn lúc hủy (theo refund policy tại thời điểm đó). */
   refundPercent?: number | null;
   refundAmount?: number | null;
 }
 
-export interface ReservationPolicy {
+/** Chính sách hoàn tiền khi hủy gói dài hạn (per building). */
+export interface RefundPolicy {
   _id?: string;
-  maxHoldMinutes: number;
   refundPercent: number;
-  /** % tổng phí thu làm cọc khi đặt; phần còn lại (100 - depositPercent) thu sau checkout. */
-  depositPercent: number;
-  /** Số ngày được đặt trước tối đa. */
-  maxAdvanceDays: number;
-  /** Số giờ tối đa cho mỗi lượt đặt. */
-  maxDurationHours: number;
-  /** % phụ phí phạt áp lên phần đỗ quá giờ đặt (overstay). 0 = không phạt. */
-  overstayPenaltyPercent: number;
-  /** Số giờ trước giờ đặt mà khách còn được hủy. 0 = hủy bất kỳ lúc nào trước giờ đặt. */
-  cancellationCutoffHours: number;
   isActive: boolean;
 }
 
@@ -162,19 +155,6 @@ export interface StaffShift {
   workDate: string;
   status: 'scheduled' | 'active' | 'completed' | 'cancelled';
   note?: string;
-}
-
-export interface ShiftRevenue {
-  _id: string;
-  shift: { _id: string; code: string; name: string };
-  staff: { _id: string; fullName: string; email: string };
-  workDate: string;
-  sessionCount: number;
-  totalRevenue: number;
-  cashAmount: number;
-  walletAmount: number;
-  qrAmount: number;
-  reconciled: boolean;
 }
 
 export interface DashboardOverview {
@@ -222,21 +202,65 @@ export interface DailyRevenueResult {
   settled: boolean;
 }
 
-export interface DailyRevenueSettlement {
+/** Một khoản tiền mặt của khách đang chờ manager "Thu nhận". */
+export interface PendingCashItem {
   _id: string;
-  building: string;
-  date: string;
-  revenue: number;
-  targetAmount: number;
-  transferredAmount: number;
-  note?: string;
+  amount: number;
+  method: string;
+  status: string;
   createdAt: string;
+  parkingSession?: { _id: string; plateNumber?: string; entryTime?: string; exitTime?: string } | null;
+  staff?: { _id: string; fullName?: string; email?: string } | null;
+}
+
+/** Một dòng tiền (Payment) của building — dùng cho tab "Dòng tiền" theo phương thức. */
+export interface PaymentRecord {
+  _id: string;
+  type: string;
+  method: string;
+  amount: number;
+  status: string;
+  createdAt: string;
+  note?: string;
+  parkingSession?: { _id: string; plateNumber?: string } | null;
+  user?: { _id: string; fullName?: string; email?: string } | null;
+  staff?: { _id: string; fullName?: string; email?: string } | null;
 }
 
 export interface WalletTopUpResult {
   checkoutUrl: string;
   qrCode: string;
   orderCode: number;
+}
+
+export type ManagerIncidentStatus = 'open' | 'investigating' | 'escalated' | 'resolved' | 'closed';
+
+export interface ManagerIncident {
+  _id: string;
+  code?: string;
+  type?: string;
+  building?: { _id?: string; code?: string; name?: string } | null;
+  slot?: { _id?: string; code?: string } | null;
+  severity?: 'medium' | 'high' | 'critical';
+  status?: ManagerIncidentStatus;
+  note?: string;
+  target?: string;
+  violatorPlate?: string;
+  resolutionNote?: string;
+  reportedBy?: { _id?: string; fullName?: string; email?: string } | null;
+  resolvedBy?: { _id?: string; fullName?: string; email?: string } | null;
+  resolvedAt?: string | null;
+  createdAt?: string;
+}
+
+export interface ManagerIncidentUpdatePayload {
+  status?: ManagerIncidentStatus;
+  resolutionNote?: string;
+  violatorPlate?: string;
+  /** 'penalize_violator' → BE force-checkout xe vi phạm + thu phí phạt + resolve incident */
+  action?: 'penalize_violator';
+  penaltyFee?: number;
+  paymentMethod?: 'cash' | 'wallet' | 'qr';
 }
 
 interface Wrap<T> {
@@ -257,6 +281,15 @@ export const managerApi = {
 
   getDashboard: (buildingId: string) =>
     api.get<Wrap<DashboardOverview>>(path(buildingId, '/dashboard')),
+
+  sessions: {
+    /** Danh sách phiên xe đang đỗ (status=active) trong tòa nhà — giám sát realtime. */
+    listActive: (b: string) =>
+      api.get<Wrap<{ items: ParkingSession[] }>>(path(b, '/sessions/active')),
+    /** Chi tiết 1 phiên (kèm ảnh biển số / chân dung lúc check-in). */
+    detail: (b: string, id: string) =>
+      api.get<Wrap<ParkingSession>>(path(b, `/sessions/${id}`)),
+  },
 
   vehicleTypes: {
     list: (b: string) => api.get<Wrap<{ items: VehicleType[] }>>(path(b, '/vehicle-types')),
@@ -339,11 +372,11 @@ export const managerApi = {
       api.delete<Wrap<{ subscription: Subscription; refundAmount: number; refundPercent: number }>>(path(b, `/subscriptions/${id}`), { body: { reason } }),
   },
 
-  reservationPolicy: {
+  refundPolicy: {
     get: (b: string) =>
-      api.get<Wrap<{ item: ReservationPolicy }>>(path(b, '/reservation-policy')),
-    update: (b: string, body: Partial<ReservationPolicy>) =>
-      api.put<Wrap<{ item: ReservationPolicy }>>(path(b, '/reservation-policy'), body),
+      api.get<Wrap<{ item: RefundPolicy }>>(path(b, '/refund-policy')),
+    update: (b: string, body: Partial<RefundPolicy>) =>
+      api.put<Wrap<{ item: RefundPolicy }>>(path(b, '/refund-policy'), body),
   },
 
   shifts: {
@@ -370,10 +403,17 @@ export const managerApi = {
     ) => api.put<Wrap<{ item: StaffShift }>>(path(b, `/staff-shifts/${id}`), body),
     removeStaffShift: (b: string, id: string) =>
       api.delete(path(b, `/staff-shifts/${id}`)),
-    revenues: (b: string, q?: Record<string, string | undefined>) =>
-      api.get<
-        Wrap<{ items: ShiftRevenue[]; totals: { sessionCount: number; totalRevenue: number; cashAmount: number; walletAmount: number; qrAmount: number } }>
-      >(path(b, '/shift-revenues'), { query: q }),
+  },
+
+  incidents: {
+    list: (b: string, q?: { status?: string; severity?: string; page?: number; limit?: number }) =>
+      api.get<Wrap<{
+        items: ManagerIncident[];
+        pagination: { page: number; limit: number; total: number; totalPages: number };
+      }>>(path(b, '/incidents'), { query: q }),
+
+    resolve: (b: string, id: string, body: ManagerIncidentUpdatePayload) =>
+      api.patch<Wrap<{ item: ManagerIncident }>>(path(b, `/incidents/${id}`), body),
   },
 
   wallet: {
@@ -385,8 +425,20 @@ export const managerApi = {
       }),
     listTransactions: (b: string, q?: Record<string, string | undefined>) =>
       api.get<Wrap<{ items: BuildingWalletTransaction[] }>>(path(b, '/wallet/transactions'), { query: q }),
-    listSettlements: (b: string, q?: Record<string, string | undefined>) =>
-      api.get<Wrap<{ items: DailyRevenueSettlement[] }>>(path(b, '/wallet/settlements'), { query: q }),
+
+    /** Tiền mặt của khách đang chờ xác nhận (GET /wallet/pending-cash). */
+    listPendingCash: (b: string, q?: Record<string, string | undefined>) =>
+      api.get<Wrap<{ items: PendingCashItem[]; pendingTotal: number; pagination?: { page: number; limit: number; total: number; totalPages: number } }>>(
+        path(b, '/wallet/pending-cash'), { query: q }),
+
+    /** Manager "Thu nhận" 1 khoản tiền mặt → cộng vào ví (POST /wallet/pending-cash/:paymentId/confirm). */
+    confirmCash: (b: string, paymentId: string) =>
+      api.post<Wrap<{ payment: PaymentRecord }>>(path(b, `/wallet/pending-cash/${paymentId}/confirm`), {}),
+
+    /** Toàn bộ dòng tiền của building theo phương thức (GET /payments). */
+    listPayments: (b: string, q?: Record<string, string | undefined>) =>
+      api.get<Wrap<{ items: PaymentRecord[]; pagination?: { page: number; limit: number; total: number; totalPages: number } }>>(
+        path(b, '/payments'), { query: q }),
 
     /** PayOS top-up for the building wallet (POST /wallet/topup). */
     initiateTopup: (b: string, amount: number) =>

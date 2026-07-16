@@ -29,13 +29,6 @@ export function HomeRoute() {
     navigate('/profile');
   }, [navigate, onOpenAuth, session]);
 
-  const onViewReservationHistory = useCallback(() => {
-    if (!session) { onOpenAuth('login'); return; }
-    // Lịch sử ĐẶT CHỖ → mở chế độ xem lịch sử đặt chỗ trong trang đặt chỗ
-    // (KHÔNG phải trang lịch sử gửi xe).
-    navigate('/reservations', { state: { openHistory: true } });
-  }, [navigate, onOpenAuth, session]);
-
   const onAction = useCallback(
     (module: { id: string }) => {
       if (module.id === 'auth') return onOpenAuth('login');
@@ -43,7 +36,7 @@ export function HomeRoute() {
       if (module.id === 'wallet') return session ? navigate('/wallet') : onOpenAuth('login');
       if (module.id === 'buildings') return navigate('/buildings');
       if (module.id === 'packages') return navigate('/long-term-subscriptions');
-      if (module.id === 'reservations') return navigate('/reservations');
+      if (module.id === 'buy-package') return session ? navigate('/packages/buy') : onOpenAuth('login');
       if (module.id === 'payments') return navigate('/long-term-subscriptions');
       if (module.id === 'feedback') return navigate('/reviews');
     },
@@ -65,7 +58,6 @@ export function HomeRoute() {
       modules={mainFlowModules}
       onOpenAuth={onOpenAuth}
       onViewProfile={onViewProfile}
-      onViewReservationHistory={onViewReservationHistory}
       onAction={onAction}
       user={userMapped}
       onLogout={onLogout}
