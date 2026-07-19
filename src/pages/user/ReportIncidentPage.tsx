@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
-import { AlertTriangle, ArrowLeft, CheckCircle2, Loader2, ShieldAlert } from 'lucide-react';
+import { Navigate } from 'react-router-dom';
+import { AlertTriangle, CheckCircle2, Loader2, ShieldAlert } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { userApi, type UserIncident, type UserIncidentType } from '@/services/user/userApi';
 import { resolveErrorMessage } from '@/utils/apiErrors';
@@ -29,7 +29,6 @@ const typeLabel = (t: string) => INCIDENT_TYPES.find((x) => x.value === t)?.labe
 const fmtDate = (s?: string | null) => (s ? new Date(s).toLocaleString('en-US') : '—');
 
 export default function ReportIncidentPage() {
-  const navigate = useNavigate();
   const { session } = useAuth();
 
   const [type, setType] = useState<UserIncidentType>('slot_occupied');
@@ -84,19 +83,13 @@ export default function ReportIncidentPage() {
   };
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100">
+    <main className="relative z-10">
       <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
-        <div className="mb-6 flex items-center justify-between">
-          <button
-            type="button"
-            onClick={() => navigate('/')}
-            className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-slate-950 px-4 py-2 text-xs font-black uppercase tracking-wider text-orange-300 hover:border-orange-400/50"
-          >
-            <ArrowLeft size={14} /> Home
-          </button>
-          <h1 className="flex items-center gap-2 text-lg font-black text-white sm:text-2xl">
-            <ShieldAlert size={20} className="text-orange-400" /> Report an Incident
+        <div className="mb-6">
+          <h1 className="flex items-center gap-2 text-2xl font-black text-white">
+            <ShieldAlert size={20} className="text-cyan-400" /> Report an Incident
           </h1>
+          <p className="mt-1 text-xs font-semibold text-slate-400">Tell us what happened — on-site staff will handle it and you will be notified.</p>
         </div>
 
         {/* Form */}

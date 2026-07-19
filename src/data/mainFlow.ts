@@ -53,8 +53,8 @@ export const mainFlowModules: LegacyModule[] = [
     id: 'sessions',
     title: 'Parking History',
     description: 'Review vehicle entries/exits, total parking duration, and payments.',
-    actionLabel: 'Coming Soon',
-    available: false,
+    actionLabel: 'View History',
+    available: true,
   },
   {
     id: 'feedback',
@@ -67,8 +67,8 @@ export const mainFlowModules: LegacyModule[] = [
     id: 'notifications',
     title: 'Notifications',
     description: 'Receive system notifications regarding packages, subscriptions, and account updates.',
-    actionLabel: 'Coming Soon',
-    available: false,
+    actionLabel: 'View Notifications',
+    available: true,
   },
 ];
 

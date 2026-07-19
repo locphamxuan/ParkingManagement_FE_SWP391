@@ -3,6 +3,7 @@ import { motion, AnimatePresence, useMotionValue, useSpring, useTransform, anima
 import { ArrowRight, Building2, Mail, PhoneCall } from 'lucide-react';
 import footerBg from '@/assets/footer.png';
 import { navigationLinks } from './homeNavigation.constants';
+import { Logo } from '@/components/layout/Logo';
 
 type HomeUser = { fullName?: string; email?: string; role?: string } | null | undefined;
 
@@ -215,15 +216,8 @@ export function PremiumFooter({ user, onViewProfile }: PremiumFooterProps) {
           <div className="relative z-20 grid md:grid-cols-3 gap-10 lg:gap-16 pb-12" style={{ transformStyle: 'preserve-3d' }}>
             {/* Col 1: Platform Info */}
             <div className="space-y-6" style={{ transform: 'translateZ(30px)' }}>
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center shadow-[0_0_15px_rgba(6,182,212,0.3)]">
-                  <span className="text-white font-black text-base font-mono">P</span>
-                </div>
-                <div>
-                  <p className="text-sm font-black text-white tracking-wider font-mono leading-none">PBMS PLATFORM</p>
-                  <span className="text-[9px] text-slate-500 font-mono tracking-widest uppercase">Cloud Management</span>
-                </div>
-              </div>
+              <Logo size={32} tagline="Cloud Management" />
+
 
               <p className="text-xs leading-relaxed text-slate-400 font-medium">
                 Leading intelligent parking lot management system for buildings and large enterprise organizations in Vietnam.

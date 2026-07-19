@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate, Navigate } from 'react-router-dom';
-import { ArrowLeft, Car, Clock, History, RefreshCw } from 'lucide-react';
+import { Navigate } from 'react-router-dom';
+import { Car, Clock, History, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { userApi, type ParkingHistory } from '@/services/user/userApi';
 import { StatusBadge } from '@/components/common/StatusBadge';
@@ -24,7 +24,6 @@ const PAYMENT_LABELS: Record<string, string> = {
 type FilterStatus = 'all' | 'active' | 'completed';
 
 export default function ParkingHistoryPage() {
-  const navigate = useNavigate();
   const { session } = useAuth();
 
   const [items, setItems] = useState<ParkingHistory[]>([]);
@@ -84,23 +83,15 @@ export default function ParkingHistoryPage() {
   if (!session) return <Navigate to="/auth/login" replace />;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
-      {/* Header */}
-      <header className="sticky top-0 z-20 border-b border-white/8 bg-slate-950/80 px-4 py-3 backdrop-blur-xl">
+    <div className="relative z-10">
+      <header className="px-4 pt-8">
         <div className="mx-auto flex max-w-4xl items-center gap-3">
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-slate-400 hover:text-white transition-colors"
-          >
-            <ArrowLeft size={15} />
-          </button>
           <div className="flex flex-col">
             <div className="flex items-center gap-2">
-              <History size={16} className="text-orange-400" />
-              <h1 className="text-sm font-bold text-white">Parking History</h1>
+              <History size={18} className="text-cyan-400" />
+              <h1 className="text-2xl font-black text-white">Parking History</h1>
             </div>
-            <p className="text-[11px] text-slate-500">Direct parking sessions (walk-in/drive-in)</p>
+            <p className="mt-1 text-xs font-semibold text-slate-400">Direct parking sessions (walk-in/drive-in)</p>
           </div>
           <button
             type="button"

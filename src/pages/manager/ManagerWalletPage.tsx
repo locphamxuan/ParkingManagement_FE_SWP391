@@ -3,13 +3,12 @@ import {
   AlertTriangle,
   Banknote,
   CheckCircle2,
-  Clock,
   RefreshCw,
-  TrendingUp,
-  ArrowUpRight,
   Wallet,
   Plus,
   ExternalLink,
+  CreditCard,
+  QrCode,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,9 +17,9 @@ import { useBuildingContext } from '@/hooks/useBuildingContext';
 import {
   managerApi,
   type BuildingWallet,
-  type BuildingWalletTransaction,
   type DailyRevenueResult,
   type PendingCashItem,
+  type PaymentRecord,
 } from '@/services/manager/managerApi';
 
 const fmtVnd = (n: number | null | undefined) =>
@@ -29,19 +28,19 @@ const fmtVnd = (n: number | null | undefined) =>
 const fmtTime = (iso: string) =>
   new Date(iso).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' });
 
-const TX_REASON_LABELS: Record<string, string> = {
-  parking_fee: 'Parking Fee',
-  reservation_fee: 'Reservation Fee',
-  topup: 'Wallet Top-up',
-  refund: 'Refund',
-};
+const PAYMENT_METHODS = [
+  { id: 'cash', label: 'Cash', icon: Banknote, color: 'text-amber-400' },
+  { id: 'wallet', label: 'Wallet', icon: Wallet, color: 'text-blue-400' },
+  { id: 'qr', label: 'QR Code', icon: QrCode, color: 'text-purple-400' },
+  { id: 'card', label: 'Card', icon: CreditCard, color: 'text-green-400' },
+  { id: 'payos', label: 'PayOS', icon: CreditCard, color: 'text-cyan-400' },
+];
 
 export function ManagerWalletPage() {
   const { buildingId } = useBuildingContext();
 
   const [wallet, setWallet] = useState<BuildingWallet | null>(null);
   const [daily, setDaily] = useState<DailyRevenueResult | null>(null);
-  const [transactions, setTransactions] = useState<BuildingWalletTransaction[]>([]);
   const [pendingCash, setPendingCash] = useState<PendingCashItem[]>([]);
   const [pendingTotal, setPendingTotal] = useState(0);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
@@ -54,20 +53,23 @@ export function ManagerWalletPage() {
   const [topupBusy, setTopupBusy] = useState(false);
   const [pendingTopup, setPendingTopup] = useState<{ orderCode: number; checkoutUrl: string; amount: number } | null>(null);
 
+  // Payment stream by method
+  const [selectedMethod, setSelectedMethod] = useState<string>('cash');
+  const [paymentsByMethod, setPaymentsByMethod] = useState<Record<string, PaymentRecord[]>>({});
+  const [paymentsLoading, setPaymentsLoading] = useState(false);
+
   // Không setLoading(true) ở đây — poll nền 30s sẽ làm nháy màn hình loading toàn trang.
   const refresh = useCallback(async () => {
     if (!buildingId) return;
     setError(null);
     try {
-      const [walletRes, dailyRes, txRes, pendingRes] = await Promise.all([
+      const [walletRes, dailyRes, pendingRes] = await Promise.all([
         managerApi.wallet.get(buildingId),
         managerApi.wallet.getDailyRevenue(buildingId),
-        managerApi.wallet.listTransactions(buildingId),
         managerApi.wallet.listPendingCash(buildingId),
       ]);
       setWallet((walletRes as { data?: { wallet: BuildingWallet } })?.data?.wallet ?? null);
       setDaily((dailyRes as { data?: DailyRevenueResult })?.data ?? null);
-      setTransactions((txRes as { data?: { items: BuildingWalletTransaction[] } })?.data?.items ?? []);
       const pendingData = (pendingRes as { data?: { items: PendingCashItem[]; pendingTotal: number } })?.data;
       setPendingCash(pendingData?.items ?? []);
       setPendingTotal(pendingData?.pendingTotal ?? 0);
@@ -78,6 +80,27 @@ export function ManagerWalletPage() {
     }
   }, [buildingId]);
 
+  // Load payments by method
+  const loadPaymentsByMethod = useCallback(
+    async (method: string) => {
+      if (!buildingId) return;
+      setPaymentsLoading(true);
+      try {
+        const res = await managerApi.wallet.listPayments(buildingId, { method, limit: '50' });
+        const data = (res as { data?: { items: PaymentRecord[] } })?.data;
+        setPaymentsByMethod((prev) => ({
+          ...prev,
+          [method]: data?.items ?? [],
+        }));
+      } catch (err) {
+        console.error(`Failed to load payments for method ${method}:`, err);
+      } finally {
+        setPaymentsLoading(false);
+      }
+    },
+    [buildingId]
+  );
+
   // Tải lần đầu + tự làm mới mỗi 30s (đồng bộ cách làm với trang Sessions).
   useEffect(() => {
     setLoading(true);
@@ -85,6 +108,13 @@ export function ManagerWalletPage() {
     const timer = setInterval(refresh, 30_000);
     return () => clearInterval(timer);
   }, [refresh]);
+
+  // Load payments for selected method + auto-refresh every 30s
+  useEffect(() => {
+    loadPaymentsByMethod(selectedMethod);
+    const timer = setInterval(() => loadPaymentsByMethod(selectedMethod), 30_000);
+    return () => clearInterval(timer);
+  }, [selectedMethod, loadPaymentsByMethod]);
 
   const handleInitiateTopup = useCallback(async () => {
     if (!buildingId) return;
@@ -310,52 +340,67 @@ export function ManagerWalletPage() {
       {/* Lịch sử giao dịch */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-sm">
-            <Clock size={15} className="text-primary" />
-            Recent Transactions
-          </CardTitle>
+          <CardTitle className="text-sm">Revenue Stream by Payment Method</CardTitle>
         </CardHeader>
-        <CardContent>
-          {transactions.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4 text-center">No transactions yet.</p>
-          ) : (
-            <div className="grid gap-2">
-              {transactions.map((tx) => {
-                const isCredit = tx.type === 'credit';
-                return (
+        <CardContent className="grid gap-4">
+          {/* Tabs for payment methods */}
+          <div className="flex flex-wrap gap-2">
+            {PAYMENT_METHODS.map((method) => {
+              const Icon = method.icon;
+              return (
+                <button
+                  key={method.id}
+                  onClick={() => setSelectedMethod(method.id)}
+                  className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                    selectedMethod === method.id
+                      ? 'border border-primary bg-primary/10 text-primary'
+                      : 'border border-border bg-card hover:bg-card/80'
+                  }`}
+                >
+                  <Icon size={14} className={method.color} />
+                  {method.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Payments list for selected method */}
+          <div className="pt-2">
+            {paymentsLoading ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
+                <RefreshCw size={14} className="animate-spin" /> Loading payments...
+              </div>
+            ) : paymentsByMethod[selectedMethod]?.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-4 text-center">
+                No payments via {PAYMENT_METHODS.find((m) => m.id === selectedMethod)?.label} yet.
+              </p>
+            ) : (
+              <div className="grid gap-2 max-h-96 overflow-y-auto">
+                {paymentsByMethod[selectedMethod]?.map((payment) => (
                   <div
-                    key={tx._id}
+                    key={payment._id}
                     className="flex items-center justify-between rounded-lg border border-border bg-card/50 px-4 py-3"
                   >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
-                          isCredit ? 'bg-emerald-500/15 text-emerald-400' : 'bg-rose-500/15 text-rose-400'
-                        }`}
-                      >
-                        {isCredit ? <TrendingUp size={13} /> : <ArrowUpRight size={13} />}
+                    <div className="flex items-center gap-3 flex-1">
+                      <div className="text-xs font-mono font-bold text-muted-foreground">
+                        {payment.parkingSession?.plateNumber ?? 'N/A'}
                       </div>
-                      <div>
+                      <div className="flex-1">
                         <p className="text-sm font-semibold text-foreground">
-                          {TX_REASON_LABELS[tx.reason] ?? tx.reason}
+                          {payment.user?.fullName || payment.staff?.fullName || 'Unknown'}
                         </p>
-                        {tx.note && <p className="text-xs text-muted-foreground">{tx.note}</p>}
-                        <p className="text-xs text-muted-foreground">
-                          Balance after: {fmtVnd(tx.balanceAfter)}
-                        </p>
+                        <p className="text-xs text-muted-foreground">{fmtTime(payment.createdAt)}</p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className={`font-mono font-bold ${isCredit ? 'text-emerald-400' : 'text-rose-400'}`}>
-                        {isCredit ? '+' : '-'}{fmtVnd(tx.amount)}
-                      </p>
-                      <p className="text-xs text-muted-foreground">{fmtTime(tx.createdAt)}</p>
+                      <p className="font-mono font-bold text-emerald-400">{fmtVnd(payment.amount)}</p>
+                      <span className="text-xs text-muted-foreground capitalize">{payment.status}</span>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>

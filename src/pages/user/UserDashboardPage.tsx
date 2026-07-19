@@ -8,7 +8,6 @@ import {
   ChevronRight,
   Clock,
   History,
-  LogOut,
   Package,
   ShieldAlert,
   User,
@@ -20,7 +19,6 @@ import {
   type UserWallet,
   type ParkingHistory,
 } from '@/services/user/userApi';
-import { UserNotificationBell } from '@/components/layout/UserNotificationBell';
 
 const fmtVnd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 });
 const fmtTime = (s?: string | null) =>
@@ -28,7 +26,7 @@ const fmtTime = (s?: string | null) =>
 
 export default function UserDashboardPage() {
   const navigate = useNavigate();
-  const { session, logout } = useAuth();
+  const { session } = useAuth();
 
   const [wallet, setWallet] = useState<UserWallet | null>(null);
   const [activeSession, setActiveSession] = useState<ParkingHistory | null>(null);
@@ -58,11 +56,6 @@ export default function UserDashboardPage() {
 
   if (!session) return <Navigate to="/auth/login" replace />;
 
-  const onLogout = () => {
-    logout();
-    navigate('/', { replace: true });
-  };
-
   const quickLinks = [
     { icon: Wallet, label: 'My Wallet', desc: 'Deposit & transactions', href: '/wallet', color: 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5' },
     { icon: Building2, label: 'Buildings', desc: 'Browse parking lots', href: '/buildings', color: 'text-blue-400 border-blue-500/20 bg-blue-500/5' },
@@ -75,43 +68,21 @@ export default function UserDashboardPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
-      {/* Header */}
-      <header className="sticky top-0 z-20 border-b border-white/8 bg-slate-950/80 px-4 py-3 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-4xl items-center justify-between">
-          <div>
-            <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-slate-500">PBMS</p>
-            <p className="text-sm font-bold text-white">
-              Welcome, {session.displayName || session.email}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <UserNotificationBell />
-            <button
-              type="button"
-              onClick={() => navigate('/profile')}
-              className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-slate-400 hover:text-white transition-colors"
-            >
-              <User size={14} />
-            </button>
-            <button
-              type="button"
-              onClick={onLogout}
-              className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-rose-400 hover:text-rose-300 transition-colors"
-            >
-              <LogOut size={14} />
-            </button>
-          </div>
+    <div className="relative z-10">
+      <div className="mx-auto max-w-4xl px-4 py-8 space-y-6">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-400 font-mono">My Dashboard</p>
+          <h1 className="mt-1 text-2xl font-black text-white">
+            Welcome back, {session.displayName || session.email}
+          </h1>
         </div>
-      </header>
 
-      <div className="mx-auto max-w-4xl px-4 py-6 space-y-6">
         {/* Wallet balance */}
-        <div className="relative overflow-hidden rounded-2xl border border-orange-500/20 bg-gradient-to-br from-orange-500/10 to-amber-500/5 p-5">
-          <div className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-orange-500/10 blur-2xl" />
+        <div className="relative overflow-hidden rounded-2xl border border-cyan-500/20 bg-gradient-to-br from-cyan-500/10 to-blue-500/5 p-5">
+          <div className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-cyan-500/10 blur-2xl" />
           <div className="relative flex items-center justify-between">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-orange-300/70">Wallet Balance</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-cyan-300/70">Wallet Balance</p>
               <p className="mt-1 text-3xl font-black text-white">
                 {loading ? '…' : fmtVnd.format(wallet?.balance ?? 0)}
               </p>
@@ -119,7 +90,7 @@ export default function UserDashboardPage() {
             <button
               type="button"
               onClick={() => navigate('/wallet')}
-              className="flex items-center gap-1.5 rounded-xl border border-orange-500/30 bg-orange-500/10 px-4 py-2 text-xs font-bold text-orange-300 hover:bg-orange-500/20 transition-colors"
+              className="flex items-center gap-1.5 rounded-xl border border-cyan-500/30 bg-cyan-500/10 px-4 py-2 text-xs font-bold text-cyan-300 hover:bg-cyan-500/20 transition-colors"
             >
               <Wallet size={13} /> Deposit
             </button>
