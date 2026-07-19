@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Bell, CheckCheck } from 'lucide-react';
+import { Navigate } from 'react-router-dom';
+import { Bell, CheckCheck } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { notificationApi, type AppNotification, NOTIFICATION_TYPE_LABEL } from '@/services/notificationApi';
 
 export default function UserNotificationsPage() {
-  const navigate = useNavigate();
   const { session } = useAuth();
   const [items, setItems] = useState<AppNotification[]>([]);
   const [unread, setUnread] = useState(0);
@@ -52,32 +51,24 @@ export default function UserNotificationsPage() {
   if (!session) return <Navigate to="/auth/login" replace />;
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100">
+    <main className="relative z-10">
       <div className="mx-auto max-w-2xl px-4 py-8">
-        <div className="mb-6 flex items-center justify-between">
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-slate-950 px-4 py-2 text-xs font-black uppercase tracking-wider text-orange-300 hover:border-orange-400/50"
-          >
-            <ArrowLeft size={14} /> Back
-          </button>
+        <div className="mb-6 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Bell size={20} className="text-cyan-300" />
+            <h1 className="text-2xl font-black text-white">Notifications</h1>
+            {unread > 0 && (
+              <span className="rounded-full bg-rose-500 px-2 py-0.5 text-[11px] font-bold text-white">{unread} new</span>
+            )}
+          </div>
           {unread > 0 && (
             <button
               type="button"
               onClick={markAll}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-orange-400/30 bg-orange-500/10 px-3 py-2 text-xs font-semibold text-orange-300 hover:bg-orange-500/20"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-cyan-400/30 bg-cyan-500/10 px-3 py-2 text-xs font-semibold text-cyan-300 hover:bg-cyan-500/20"
             >
               <CheckCheck size={13} /> Mark all as read
             </button>
-          )}
-        </div>
-
-        <div className="mb-6 flex items-center gap-2">
-          <Bell size={20} className="text-orange-300" />
-          <h1 className="text-2xl font-black text-white">Notifications</h1>
-          {unread > 0 && (
-            <span className="rounded-full bg-rose-500 px-2 py-0.5 text-[11px] font-bold text-white">{unread} new</span>
           )}
         </div>
 

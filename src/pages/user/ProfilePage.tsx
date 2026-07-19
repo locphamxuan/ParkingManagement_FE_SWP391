@@ -3,7 +3,6 @@ import { useProfileWorkflow } from '@/hooks/user/useProfileWorkflow';
 import { UserQRModal } from '@/components/modals/UserQRModal';
 import { PlateQRModal } from '@/components/modals/PlateQRModal';
 import { PasswordChangeSection } from '@/components/user/PasswordChangeSection';
-import { ProfileHeaderBar } from '@/components/user/profile/ProfileHeaderBar';
 import { ProfileAlerts } from '@/components/user/profile/ProfileAlerts';
 import { ProfileInfoCard } from '@/components/user/profile/ProfileInfoCard';
 import { ProfileSidebar } from '@/components/user/profile/ProfileSidebar';
@@ -17,14 +16,12 @@ export default function ProfilePage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100 font-sans relative overflow-hidden selection:bg-orange-500 selection:text-white">
-      {/* Background Cyber Glowing Accents */}
-      <div className="absolute top-0 left-0 w-[500px] h-[500px] rounded-full bg-[radial-gradient(circle_at_center,rgba(249,115,22,0.06),transparent_60%)] pointer-events-none blur-3xl" />
-      <div className="absolute bottom-0 right-0 w-[450px] h-[450px] rounded-full bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.05),transparent_60%)] pointer-events-none blur-3xl" />
-
-      <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8 relative z-10">
-
-        <ProfileHeaderBar onLogout={profile.handleLogout} />
+    <main className="relative z-10">
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 relative z-10">
+        <div className="mb-8">
+          <h1 className="text-2xl font-black text-white">My Profile</h1>
+          <p className="mt-1 text-xs font-semibold text-slate-400">Personal details, license plates, and account security.</p>
+        </div>
 
         <ProfileAlerts
           successMessage={profile.successMessage}

@@ -3,10 +3,7 @@ import {
   AlertTriangle,
   Banknote,
   CheckCircle2,
-  Clock,
   RefreshCw,
-  TrendingUp,
-  ArrowUpRight,
   Wallet,
   Plus,
   ExternalLink,
@@ -20,7 +17,6 @@ import { useBuildingContext } from '@/hooks/useBuildingContext';
 import {
   managerApi,
   type BuildingWallet,
-  type BuildingWalletTransaction,
   type DailyRevenueResult,
   type PendingCashItem,
   type PaymentRecord,
@@ -31,13 +27,6 @@ const fmtVnd = (n: number | null | undefined) =>
 
 const fmtTime = (iso: string) =>
   new Date(iso).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' });
-
-const TX_REASON_LABELS: Record<string, string> = {
-  parking_fee: 'Parking Fee',
-  reservation_fee: 'Reservation Fee',
-  topup: 'Wallet Top-up',
-  refund: 'Refund',
-};
 
 const PAYMENT_METHODS = [
   { id: 'cash', label: 'Cash', icon: Banknote, color: 'text-amber-400' },
@@ -52,7 +41,6 @@ export function ManagerWalletPage() {
 
   const [wallet, setWallet] = useState<BuildingWallet | null>(null);
   const [daily, setDaily] = useState<DailyRevenueResult | null>(null);
-  const [transactions, setTransactions] = useState<BuildingWalletTransaction[]>([]);
   const [pendingCash, setPendingCash] = useState<PendingCashItem[]>([]);
   const [pendingTotal, setPendingTotal] = useState(0);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
@@ -75,15 +63,13 @@ export function ManagerWalletPage() {
     if (!buildingId) return;
     setError(null);
     try {
-      const [walletRes, dailyRes, txRes, pendingRes] = await Promise.all([
+      const [walletRes, dailyRes, pendingRes] = await Promise.all([
         managerApi.wallet.get(buildingId),
         managerApi.wallet.getDailyRevenue(buildingId),
-        managerApi.wallet.listTransactions(buildingId),
         managerApi.wallet.listPendingCash(buildingId),
       ]);
       setWallet((walletRes as { data?: { wallet: BuildingWallet } })?.data?.wallet ?? null);
       setDaily((dailyRes as { data?: DailyRevenueResult })?.data ?? null);
-      setTransactions((txRes as { data?: { items: BuildingWalletTransaction[] } })?.data?.items ?? []);
       const pendingData = (pendingRes as { data?: { items: PendingCashItem[]; pendingTotal: number } })?.data;
       setPendingCash(pendingData?.items ?? []);
       setPendingTotal(pendingData?.pendingTotal ?? 0);
@@ -100,7 +86,7 @@ export function ManagerWalletPage() {
       if (!buildingId) return;
       setPaymentsLoading(true);
       try {
-        const res = await managerApi.wallet.listPayments(buildingId, { method, limit: 50 });
+        const res = await managerApi.wallet.listPayments(buildingId, { method, limit: '50' });
         const data = (res as { data?: { items: PaymentRecord[] } })?.data;
         setPaymentsByMethod((prev) => ({
           ...prev,
@@ -123,12 +109,12 @@ export function ManagerWalletPage() {
     return () => clearInterval(timer);
   }, [refresh]);
 
-  // Load payments for selected method
+  // Load payments for selected method + auto-refresh every 30s
   useEffect(() => {
-    if (!paymentsByMethod[selectedMethod]) {
-      loadPaymentsByMethod(selectedMethod);
-    }
-  }, [selectedMethod, loadPaymentsByMethod, paymentsByMethod]);
+    loadPaymentsByMethod(selectedMethod);
+    const timer = setInterval(() => loadPaymentsByMethod(selectedMethod), 30_000);
+    return () => clearInterval(timer);
+  }, [selectedMethod, loadPaymentsByMethod]);
 
   const handleInitiateTopup = useCallback(async () => {
     if (!buildingId) return;
@@ -352,58 +338,6 @@ export function ManagerWalletPage() {
       </Card>
 
       {/* Lịch sử giao dịch */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-sm">
-            <Clock size={15} className="text-primary" />
-            Recent Transactions
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {transactions.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4 text-center">No transactions yet.</p>
-          ) : (
-            <div className="grid gap-2">
-              {transactions.map((tx) => {
-                const isCredit = tx.type === 'credit';
-                return (
-                  <div
-                    key={tx._id}
-                    className="flex items-center justify-between rounded-lg border border-border bg-card/50 px-4 py-3"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
-                          isCredit ? 'bg-emerald-500/15 text-emerald-400' : 'bg-rose-500/15 text-rose-400'
-                        }`}
-                      >
-                        {isCredit ? <TrendingUp size={13} /> : <ArrowUpRight size={13} />}
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-foreground">
-                          {TX_REASON_LABELS[tx.reason] ?? tx.reason}
-                        </p>
-                        {tx.note && <p className="text-xs text-muted-foreground">{tx.note}</p>}
-                        <p className="text-xs text-muted-foreground">
-                          Balance after: {fmtVnd(tx.balanceAfter)}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className={`font-mono font-bold ${isCredit ? 'text-emerald-400' : 'text-rose-400'}`}>
-                        {isCredit ? '+' : '-'}{fmtVnd(tx.amount)}
-                      </p>
-                      <p className="text-xs text-muted-foreground">{fmtTime(tx.createdAt)}</p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Payment stream by method */}
       <Card>
         <CardHeader>
           <CardTitle className="text-sm">Revenue Stream by Payment Method</CardTitle>

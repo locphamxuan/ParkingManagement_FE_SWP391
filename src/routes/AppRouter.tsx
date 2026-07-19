@@ -6,9 +6,13 @@ import { ProtectedRoute } from '@/routes/ProtectedRoute';
 import { AdminLayout } from '@/layouts/AdminLayout';
 import { ManagerLayout } from '@/layouts/ManagerLayout';
 import { StaffLayout } from '@/layouts/StaffLayout';
+import { UserLayout } from '@/layouts/UserLayout';
 
 // ── Public ──────────────────────────────────────────────────────────────────
 const HomeRoute = lazy(() => import('@/pages/public/HomeRoute').then((m) => ({ default: m.HomeRoute })));
+const AboutPage = lazy(() => import('@/pages/public/AboutPage'));
+const ServicesPage = lazy(() => import('@/pages/public/ServicesPage'));
+const ContactPage = lazy(() => import('@/pages/public/ContactPage'));
 const ReviewsPage = lazy(() => import('@/pages/public/ReviewsPage'));
 const KioskCheckInPage = lazy(() => import('@/pages/public/KioskCheckInPage'));
 const PublicLoginRoute = lazy(() => import('@/pages/public/AuthRoutes').then((m) => ({ default: m.PublicLoginRoute })));
@@ -87,22 +91,27 @@ export function AppRouter() {
       <Suspense fallback={<RouteFallback />}>
       <Routes>
       <Route path="/" element={<HomeRoute />} />
+      <Route path="/about" element={<AboutPage />} />
+      <Route path="/services" element={<ServicesPage />} />
+      <Route path="/contact" element={<ContactPage />} />
       <Route path="/dashboard" element={<Navigate to="/" replace />} />
       <Route path="/auth/login" element={<PublicLoginRoute />} />
       <Route path="/auth/register" element={<PublicRegisterRoute />} />
       <Route path="/auth/reset-password" element={<PublicResetPasswordRoute />} />
       <Route path="/auth/reset_password" element={<PublicResetPasswordRoute />} />
-      <Route path="/buildings" element={<BuildingsUserPage />} />
-      <Route path="/profile" element={<ProfilePage />} />
-      <Route path="/wallet" element={<WalletPage />} />
-      <Route path="/packages/buy" element={<PackagePurchasePage />} />
+      <Route element={<UserLayout />}>
+        <Route path="/buildings" element={<BuildingsUserPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/wallet" element={<WalletPage />} />
+        <Route path="/packages/buy" element={<PackagePurchasePage />} />
+        <Route path="/long-term-subscriptions" element={<LongTermSubscriptionsPage />} />
+        <Route path="/notifications" element={<UserNotificationsPage />} />
+        <Route path="/parking-history" element={<ParkingHistoryPage />} />
+        <Route path="/report-incident" element={<ReportIncidentPage />} />
+        <Route path="/user-dashboard" element={<UserDashboardPage />} />
+      </Route>
       <Route path="/reservations" element={<Navigate to="/packages/buy" replace />} />
-      <Route path="/long-term-subscriptions" element={<LongTermSubscriptionsPage />} />
-      <Route path="/notifications" element={<UserNotificationsPage />} />
-      <Route path="/parking-history" element={<ParkingHistoryPage />} />
-      <Route path="/report-incident" element={<ReportIncidentPage />} />
       <Route path="/reviews" element={<ReviewsPage />} />
-      <Route path="/user-dashboard" element={<UserDashboardPage />} />
       <Route path="/kiosk" element={<KioskCheckInPage />} />
 
       <Route path="/manager/login" element={<Navigate to="/auth/login" replace />} />

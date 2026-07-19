@@ -38,6 +38,8 @@ export function HomeRoute() {
       if (module.id === 'packages') return navigate('/long-term-subscriptions');
       if (module.id === 'buy-package') return session ? navigate('/packages/buy') : onOpenAuth('login');
       if (module.id === 'payments') return navigate('/long-term-subscriptions');
+      if (module.id === 'sessions') return session ? navigate('/parking-history') : onOpenAuth('login');
+      if (module.id === 'notifications') return session ? navigate('/notifications') : onOpenAuth('login');
       if (module.id === 'feedback') return navigate('/reviews');
     },
     [navigate, onOpenAuth, onViewProfile, session],

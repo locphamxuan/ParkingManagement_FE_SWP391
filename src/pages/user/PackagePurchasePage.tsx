@@ -1,5 +1,4 @@
-import { Navigate, useNavigate } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { Navigate } from 'react-router-dom';
 
 import { usePackagePurchase } from '@/hooks/user/usePackagePurchase';
 
@@ -14,24 +13,16 @@ import { BookingFooter } from '@/components/user/reservations/BookingFooter';
 /* ─── Trang mua gói dài hạn ─────────────────────────────────────────────────── */
 
 export default function PackagePurchasePage() {
-  const navigate = useNavigate();
   const b = usePackagePurchase();
 
   if (!b.session || !b.user) return <Navigate to="/auth/login" replace />;
 
   return (
-    <main className="min-h-screen text-slate-100 relative isolate bg-slate-950">
+    <main className="relative z-10">
       <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
-        <div className="mb-6 flex items-center justify-between">
-          <button
-            type="button"
-            onClick={() => navigate('/long-term-subscriptions')}
-            className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-slate-950 px-4 py-2 text-xs font-black uppercase tracking-wider text-orange-300 hover:border-orange-400/50"
-          >
-            <ArrowLeft size={14} />
-            My Subscriptions
-          </button>
-          <h1 className="text-lg font-black text-white sm:text-2xl">Buy Long-term Package</h1>
+        <div className="mb-6">
+          <h1 className="text-2xl font-black text-white">Buy Long-term Package</h1>
+          <p className="mt-1 text-xs font-semibold text-slate-400">Pick a building, choose a package, and optionally reserve a fixed slot.</p>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[1fr_340px]">

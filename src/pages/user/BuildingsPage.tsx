@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ArrowLeft,
   Building2,
   Car,
   Bike,
@@ -10,7 +9,6 @@ import {
   ChevronDown,
   Loader2,
   MapPin,
-  PhoneCall,
   Search,
   SquareParking,
   Layers,
@@ -346,28 +344,7 @@ export default function BuildingsPage() {
   const canProceed = Boolean(selectedBuilding && selectedPlate && isBuildingOpen(selectedBuilding));
 
   return (
-    <main className="relative min-h-screen bg-[#060a11] text-slate-100 selection:bg-orange-500 selection:text-white overflow-hidden">
-      {/* Background Radial Glow */}
-      <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top_right,rgba(249,115,22,0.06),transparent_50%),radial-gradient(ellipse_at_bottom_left,rgba(6,182,212,0.04),transparent_50%)] pointer-events-none" />
-
-      {/* ── Top Bar ── */}
-      <div className="border-b border-white/[0.06] bg-[#060a11]/80 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
-          <button
-            type="button"
-            onClick={() => navigate('/')}
-            className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2 text-xs font-black uppercase tracking-wider text-orange-300/90 transition hover:border-orange-400/30 hover:bg-orange-400/5"
-          >
-            <ArrowLeft size={14} />
-            Home
-          </button>
-          <div className="hidden items-center gap-2 text-xs font-bold text-slate-500 sm:flex">
-            <PhoneCall size={14} className="text-emerald-400/60" />
-            Support 1900 636 447
-          </div>
-        </div>
-      </div>
-
+    <main className="relative z-10">
       {/* ── Content ── */}
       <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <motion.div

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Building2, CheckCircle2, Loader2, RefreshCw } from 'lucide-react';
+import { Building2, CheckCircle2, Loader2, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useLongTermSubscriptions, useCancelSubscription, useRenewSubscription } from '@/hooks/user';
 import type { LongTermSubscription } from '@/services/user/userApi';
@@ -69,24 +69,8 @@ export default function LongTermSubscriptionsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100">
+    <main className="relative z-10">
       <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8 flex items-center justify-between"
-        >
-          <button
-            type="button"
-            onClick={() => navigate('/')}
-            className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-slate-950 px-4 py-2 text-xs font-black uppercase tracking-wider text-orange-300 hover:border-orange-400/50"
-          >
-            <ArrowLeft size={14} />
-            Home
-          </button>
-        </motion.div>
-
         {/* Title */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
