@@ -49,6 +49,12 @@ export function ManagerSlotsPage() {
   const [editing, setEditing] = useState<ParkingSlot | null>(null);
   const [form, setForm] = useState<FormState>(empty);
   const [multiSlotModalOpen, setMultiSlotModalOpen] = useState(false);
+  const [batchQty, setBatchQty] = useState(5);
+
+  const openBatchModal = (qty = 5) => {
+    setBatchQty(qty);
+    setMultiSlotModalOpen(true);
+  };
 
   const [viewMode, setViewMode] = useState<'list' | '3d'>('3d');
 
@@ -341,6 +347,7 @@ export function ManagerSlotsPage() {
               statusFilter={statusFilter}
               vehicleTypes={vehicleTypes}
               onSlotClick={openEdit}
+              onOpenMultiSlot={openBatchModal}
             />
           )}
         </div>
@@ -430,6 +437,8 @@ export function ManagerSlotsPage() {
         floors={floors}
         zones={zones}
         slots={items}
+        defaultFloor={floorFilter}
+        defaultQuantity={batchQty}
       />
     </div>
   );

@@ -1,19 +1,27 @@
-import { useEffect, useMemo, useCallback, useState } from 'react';
-import { motion, useAnimation, type MotionValue } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { CartoonCar3D } from './CartoonCar3D';
+import { useParkingSimulation } from './useParkingSimulation';
 import { Activity, Info, Zap } from 'lucide-react';
 
 export interface AnimatedParkingMap3DProps {
-  rotateX?: MotionValue<number> | number;
-  rotateZ?: MotionValue<number> | number;
-  scale?: MotionValue<number> | number;
-  x?: MotionValue<number> | number;
-  y?: MotionValue<number> | number;
+  rotateX?: any;
+  rotateZ?: any;
+  scale?: any;
+  x?: any;
+  y?: any;
   interactive?: boolean;
   selectedSlot?: string | null;
   activeReservations?: Array<{ slotCode: string; plateNumber: string; vehicleType: 'car' | 'motorcycle' }>;
   interactiveUnavailableSlots?: string[];
   onSlotClick?: (slotCode: string) => void;
+  slots?: Array<{
+    _id?: string;
+    code: string;
+    status: 'available' | 'occupied' | 'reserved' | 'maintenance' | string;
+    vehicleType?: any;
+    note?: string;
+  }>;
+  onEditSlot?: (slot: any) => void;
 }
 
 export function AnimatedParkingMap3D({
@@ -26,209 +34,20 @@ export function AnimatedParkingMap3D({
   selectedSlot = null,
   activeReservations = [],
   interactiveUnavailableSlots = [],
-  onSlotClick
+  onSlotClick,
+  slots = [],
+  onEditSlot,
 }: AnimatedParkingMap3DProps = {}) {
-  const [hudMessage, setHudMessage] = useState('Starting simulation system...');
-  const [simPhase, setSimPhase] = useState(0);
-
-  // Animation controllers for Car A (Cyan Sedan) and Car B (Fuchsia SUV)
-  const controlsCarA = useAnimation();
-  const controlsCarB = useAnimation();
-
-  // Control gates
-  const [gateAOpen, setGateAOpen] = useState(false);
-  const [gateBOpen, setGateBOpen] = useState(false);
-
-  // States for headlights and parking status
-  const [carAState, setCarAState] = useState<'driving' | 'parking' | 'parked'>('driving');
-  const [carBState, setCarBState] = useState<'driving' | 'parking' | 'parked'>('parked');
-
-  // Exhaust smoke particle state triggers
-  const [smokeParticles, setSmokeParticles] = useState<{ id: number; x: number; y: number }[]>([]);
-
-  // Memoize lookups so the slot `.map()` doesn't call .find()/.includes() per slot per render
-  const reservationByCode = useMemo(
-    () => new Map(activeReservations.map((r) => [r.slotCode, r])),
-    [activeReservations],
-  );
-  const unavailableSet = useMemo(
-    () => new Set(interactiveUnavailableSlots),
-    [interactiveUnavailableSlots],
-  );
-  const handleSlotClick = useCallback(
-    (slotCode: string) => { if (onSlotClick) onSlotClick(slotCode); },
-    [onSlotClick],
-  );
-
-  useEffect(() => {
-    if (interactive) {
-      setCarAState('parked');
-      setCarBState('parked');
-      setGateAOpen(false);
-      setGateBOpen(false);
-      setHudMessage('Please select an available (green) slot on the map.');
-      return;
-    }
-
-    let active = true;
-
-    async function runSimulationLoop() {
-      if (!active) return;
-
-      // Phase 0: Reset states
-      setSimPhase(0);
-      setHudMessage('System operating normally. 3 slots available.');
-      setCarAState('driving');
-      setCarBState('parked');
-      setGateAOpen(false);
-      setGateBOpen(false);
-      
-      // Reset positions instantly
-      controlsCarA.set({ x: -100, y: 160, rotateZ: 90, opacity: 0 });
-      controlsCarB.set({ x: 270, y: 30, rotateZ: -90, opacity: 1 });
-
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      if (!active) return;
-
-      // PHASE 1: Car A (Cyan Sedan) Enters
-      setSimPhase(1);
-      setHudMessage('Gate 1: Detecting Cyan EV entering...');
-      setGateAOpen(true);
-      
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      if (!active) return;
-
-      // Drive through gate
-      await controlsCarA.start({
-        opacity: 1,
-        x: 100,
-        y: 160,
-        transition: { type: 'spring', stiffness: 50, damping: 14 }
-      });
-      if (!active) return;
-      
-      setGateAOpen(false);
-      setHudMessage('Cyan Sedan moving along the lane...');
-
-      // Drive to Slot 3 alignment
-      await controlsCarA.start({
-        x: 190,
-        y: 160,
-        transition: { ease: 'linear', duration: 1.2 }
-      });
-      if (!active) return;
-
-      setHudMessage('Aligning parking angle. Activating reverse sensor...');
-      setCarAState('parking');
-
-      // Turn 90 degrees to face away from slot
-      await controlsCarA.start({
-        rotateZ: 0,
-        transition: { duration: 0.5 }
-      });
-      if (!active) return;
-
-      // Reverse Park into Slot 3
-      setHudMessage('Reversing into slot 3...');
-      await controlsCarA.start({
-        y: 30,
-        transition: { type: 'spring', stiffness: 40, damping: 12 }
-      });
-      if (!active) return;
-
-      setCarAState('parked');
-      setHudMessage('Cyan Sedan has parked in slot 3. Starting EV charging.');
-
-      await new Promise((resolve) => setTimeout(resolve, 3000));
-      if (!active) return;
-
-      // PHASE 2: Car B (Fuchsia SUV) Exits
-      setSimPhase(2);
-      setHudMessage('System command received: Fuchsia SUV in slot 4 preparing to exit...');
-      setCarBState('driving');
-
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      if (!active) return;
-
-      // Turn on headlights and drive out of slot 4
-      setHudMessage('Fuchsia SUV leaving slot 4...');
-      await controlsCarB.start({
-        y: 160,
-        transition: { type: 'spring', stiffness: 45, damping: 12 }
-      });
-      if (!active) return;
-
-      // Turn 90 degrees right to face exit
-      await controlsCarB.start({
-        rotateZ: 90,
-        transition: { duration: 0.5 }
-      });
-      if (!active) return;
-
-      setHudMessage('Moving toward exit gate 2...');
-      setGateBOpen(true);
-
-      // Drive to exit gate
-      await controlsCarB.start({
-        x: 380,
-        y: 160,
-        transition: { ease: 'linear', duration: 1.2 }
-      });
-      if (!active) return;
-
-      setHudMessage('RFID card scanned successfully. Exit gate 2 opening.');
-
-      // Exit screen
-      await controlsCarB.start({
-        x: 520,
-        transition: { type: 'spring', stiffness: 50, damping: 12 }
-      });
-      if (!active) return;
-
-      setGateBOpen(false);
-      setHudMessage('Fuchsia SUV has left the lot. Transaction successful.');
-
-      await new Promise((resolve) => setTimeout(resolve, 3000));
-      if (!active) return;
-
-      // Loop restart
-      runSimulationLoop();
-    }
-
-    runSimulationLoop();
-
-    return () => {
-      active = false;
-    };
-    // `interactive` cố ý không nằm trong deps: vòng lặp mô phỏng chỉ khởi động
-    // một lần, toggle interactive giữa chừng không được reset animation.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [controlsCarA, controlsCarB]);
-
-  // Handle active car smoke particles spawning during motion
-  useEffect(() => {
-    if (simPhase === 0) return;
-    
-    const interval = setInterval(() => {
-      if (simPhase === 1 && carAState === 'driving') {
-        setSmokeParticles((prev) => [
-          ...prev.slice(-4),
-          { id: Math.random(), x: 90, y: 170 }
-        ]);
-      }
-      if (simPhase === 2 && carBState === 'driving') {
-        setSmokeParticles((prev) => [
-          ...prev.slice(-4),
-          { id: Math.random(), x: 260, y: 170 }
-        ]);
-      }
-    }, 450);
-
-    return () => clearInterval(interval);
-  }, [simPhase, carAState, carBState]);
+  const {
+    hudMessage, simPhase,
+    gateAOpen, gateBOpen,
+    carAState, carBState,
+    smokeParticles,
+    controlsCarA, controlsCarB,
+  } = useParkingSimulation(interactive);
 
   return (
-    <div className="relative w-full rounded-3xl bg-slate-950 border border-white/5 shadow-2xl p-6 overflow-hidden flex flex-col justify-between h-[420px]">
+    <div className="relative w-full h-full min-h-[460px] rounded-3xl bg-slate-950 border border-white/5 shadow-2xl p-6 overflow-hidden flex flex-col justify-between">
       
       {/* Blueprint Grid Lines Backing */}
       <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.01)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.01)_1px,transparent_1px)] bg-[size:15px_15px] pointer-events-none" />
@@ -239,7 +58,7 @@ export function AnimatedParkingMap3D({
           <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse shadow-[0_0_8px_#f97316]" />
           <span className="text-[10px] font-black uppercase tracking-wider text-slate-300 font-mono flex items-center gap-1.5">
             <Activity size={12} className="text-orange-400" />
-            {interactive ? '3D INTERACTIVE RESERVATION MAP' : 'LIVE SIMULATION V3.0'}
+            {interactive ? '3D INTERACTIVE BOOKING MAP' : 'LIVE SIMULATION V3.0'}
           </span>
         </div>
         <span className="text-[9px] font-mono font-black text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded border border-orange-500/20 uppercase tracking-widest">
@@ -344,13 +163,18 @@ export function AnimatedParkingMap3D({
             {/* Lanes markings (dashed white-ish lines with subtle glowing drop shadows) */}
             <line x1="0" y1="135" x2="450" y2="135" stroke="rgba(255,255,255,0.18)" strokeWidth="2" strokeDasharray="6 8" />
 
+            {/* Road Lane Ground Labels (Entry Lane & Exit Lane) */}
+            <text x="25" y="150" fill="#06b6d4" fontSize="8" fontWeight="bold" fontFamily="monospace" letterSpacing="1.2" opacity="0.9">ENTRY LANE ➔</text>
+            <text x="330" y="150" fill="#f43f5e" fontSize="8" fontWeight="bold" fontFamily="monospace" letterSpacing="1.2" opacity="0.9">➔ EXIT LANE</text>
+
             {/* Yellow parking lane boundaries */}
             {[20, 105, 190, 275, 360, 445].map((xPos) => (
               <path key={xPos} d={`M ${xPos},20 L ${xPos},85`} stroke="#fbbf24" strokeWidth="2.5" opacity="0.85" />
             ))}
             
             {/* White ground directional arrows */}
-            <path d="M 160,170 L 190,170 M 180,165 L 190,170 L 180,175" stroke="rgba(255,255,255,0.3)" strokeWidth="2" fill="none" strokeLinecap="round" />
+            <path d="M 160,170 L 190,170 M 180,165 L 190,170 L 180,175" stroke="rgba(255,255,255,0.35)" strokeWidth="2" fill="none" strokeLinecap="round" />
+            <path d="M 260,170 L 290,170 M 280,165 L 290,170 L 280,175" stroke="rgba(255,255,255,0.35)" strokeWidth="2" fill="none" strokeLinecap="round" />
 
             {/* Curved trajectory guide arrow (Teal Sedan reversing path into Slot 3) */}
             {simPhase === 1 && (
@@ -421,6 +245,15 @@ export function AnimatedParkingMap3D({
               transformStyle: 'preserve-3d'
             }}
           >
+            {/* Floating Entry Gate Label Badge */}
+            <div 
+              className="absolute left-[-30px] top-[-25px] z-30 font-mono text-[8px] font-black uppercase text-emerald-300 bg-slate-950/90 border border-emerald-500/40 px-2 py-0.5 rounded shadow-[0_0_10px_rgba(16,185,129,0.3)] flex items-center gap-1 pointer-events-none"
+              style={{ transform: 'translateZ(35px)' }}
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+              <span>CỔNG VÀO (IN)</span>
+            </div>
+
             {/* Volumetric black scanner body */}
             <div 
               className="box-3d w-full h-full preserve-3d"
@@ -465,26 +298,15 @@ export function AnimatedParkingMap3D({
               transformStyle: 'preserve-3d'
             }}
           >
+            {/* Floating Exit Gate Label Badge */}
             <div 
-              className="box-3d w-full h-full preserve-3d"
-              style={{
-                '--box-w': '12px',
-                '--box-d': '12px',
-                '--box-h': '36px',
-                transformStyle: 'preserve-3d'
-              } as React.CSSProperties}
+              className="absolute right-[-30px] top-[-25px] z-30 font-mono text-[8px] font-black uppercase text-rose-300 bg-slate-950/90 border border-rose-500/40 px-2 py-0.5 rounded shadow-[0_0_10px_rgba(244,63,94,0.3)] flex items-center gap-1 pointer-events-none"
+              style={{ transform: 'translateZ(35px)' }}
             >
-              {/* Top Face (Glowing red status bulb) */}
-              <div className="box-3d-face box-3d-top bg-slate-950 border border-slate-800 rounded-sm flex items-center justify-center">
-                <div className="w-2.5 h-2.5 rounded-full bg-red-500 shadow-[0_0_8px_#ef4444]" />
-              </div>
-              <div className="box-3d-face box-3d-front bg-slate-900 border-b border-black/40" />
-              <div className="box-3d-face box-3d-right bg-slate-900" />
-              <div className="box-3d-face box-3d-back bg-slate-900" />
-              <div className="box-3d-face box-3d-left bg-slate-900" />
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-ping" />
+              <span>CỔNG RA (OUT)</span>
             </div>
 
-            {/* Red/White striped gate arm (exit gate closed horizontal 0 degrees) */}
             <div 
               className="absolute right-3.5 top-1.5 w-[50px] h-2.5 bg-red-500 origin-right transition-transform duration-500 shadow-lg preserve-3d"
               style={{ 
@@ -497,38 +319,54 @@ export function AnimatedParkingMap3D({
             />
           </div>
 
-          {/* Render 5 volumetric Parking slots with stoppers */}
-          <div className="absolute top-[20px] left-[20px] right-[20px] h-[70px] grid grid-cols-5 gap-4 items-center justify-items-center">
-            {[1, 2, 3, 4, 5].map((id) => {
-              const slotCode = `A-0${id}`;
-              const isEV = id === 3;
+          {/* Render Parking slots with stoppers & visual 3D cars */}
+          <div className="absolute top-[20px] left-[20px] right-[20px] h-[70px] flex flex-wrap items-center justify-center gap-3.5 preserve-3d">
+            {(slots && slots.length > 0 ? slots.slice(0, 10) : [1, 2, 3, 4, 5]).map((item, index) => {
+              const id = index + 1;
+              const isRawSlot = typeof item === 'object' && item !== null;
+              const rawSlot = isRawSlot ? (item as any) : null;
+              const slotCode = rawSlot ? rawSlot.code : `A-0${id}`;
+              const isEV = id === 3 || slotCode.toLowerCase().includes('ev');
               
-              // If interactive mode, check if slot is reserved in activeReservations
-              const reservation = interactive ? reservationByCode.get(slotCode) : undefined;
-              const blockedBySlotStatus = unavailableSet.has(slotCode);
-              const isOccupied = interactive 
-                ? Boolean(reservation || blockedBySlotStatus)
-                : (id === 1 || id === 2 || (id === 3 && carAState === 'parked') || (id === 4 && carBState === 'parked') || id === 5);
+              const reservation = interactive && activeReservations?.find((r) => r.slotCode === slotCode);
+              const blockedBySlotStatus = interactiveUnavailableSlots.includes(slotCode);
               
+              const isOccupied = rawSlot 
+                ? rawSlot.status === 'occupied' 
+                : (interactive 
+                  ? Boolean(reservation || blockedBySlotStatus)
+                  : (id === 1 || id === 2 || (id === 3 && carAState === 'parked') || (id === 4 && carBState === 'parked') || id === 5));
+              const isReserved = rawSlot ? rawSlot.status === 'reserved' : false;
+              const isMaintenance = rawSlot ? rawSlot.status === 'maintenance' : false;
               const isSelected = interactive && selectedSlot === slotCode;
+
+              const carTypes: Array<'sedan' | 'suv' | 'offroad' | 'crossover'> = ['sedan', 'suv', 'offroad', 'crossover'];
+              const carColors = ['#0e7490', '#be185d', '#334155', '#eab308', '#059669', '#d97706'];
 
               return (
                 <motion.div 
-                  key={id}
-                  onClick={() => { if (interactive && !isOccupied) handleSlotClick(slotCode); }}
-                  whileHover={interactive && !isOccupied ? { 
-                    scale: 1.05, 
-                    boxShadow: '0 0 15px rgba(16,185,129,0.5)',
-                    borderColor: 'rgba(16,185,129,0.5)'
-                  } : {}}
-                  whileTap={interactive && !isOccupied ? { scale: 0.95, y: 1 } : {}}
-                  className={`w-[66px] h-[46px] rounded-xl border flex flex-col justify-between p-1.5 relative shadow-2xl transition-all duration-300 ${
-                    interactive && !isOccupied ? 'cursor-pointer' : ''
-                  } ${
+                  key={rawSlot?._id || slotCode || id}
+                  onClick={() => {
+                    if (onEditSlot && rawSlot) {
+                      onEditSlot(rawSlot);
+                    } else if (interactive && !isOccupied && onSlotClick) {
+                      onSlotClick(slotCode);
+                    }
+                  }}
+                  whileHover={{ 
+                    scale: 1.06, 
+                    boxShadow: isOccupied ? '0 0 15px rgba(244,63,94,0.5)' : '0 0 15px rgba(16,185,129,0.5)',
+                  }}
+                  whileTap={{ scale: 0.95 }}
+                  className={`w-[66px] h-[46px] rounded-xl border flex flex-col justify-between p-1.5 relative shadow-2xl transition-all duration-300 cursor-pointer ${
                     isSelected
                       ? 'border-orange-500 bg-orange-500/10 shadow-[0_0_15px_rgba(249,115,22,0.6)] scale-105 z-20'
                       : isOccupied
-                      ? 'border-rose-500/80 bg-rose-500/5 shadow-[0_0_10px_rgba(244,63,94,0.3)]'
+                      ? 'border-rose-500/80 bg-rose-500/10 shadow-[0_0_10px_rgba(244,63,94,0.3)]'
+                      : isReserved
+                      ? 'border-purple-500/80 bg-purple-500/10 shadow-[0_0_10px_rgba(168,85,247,0.3)]'
+                      : isMaintenance
+                      ? 'border-amber-500/80 bg-amber-500/10 shadow-[0_0_10px_rgba(245,158,11,0.3)]'
                       : 'border-emerald-500 bg-emerald-500/5 shadow-[0_0_10px_rgba(16,185,129,0.3)] hover:border-emerald-400 hover:bg-emerald-500/10'
                   }`}
                 >
@@ -550,17 +388,19 @@ export function AnimatedParkingMap3D({
                   />
                   
                   <div className="flex justify-between items-center z-10 font-mono text-[8px] text-slate-500 font-extrabold uppercase mt-2 pointer-events-none">
-                    <span>{slotCode}</span>
+                    <span className="truncate max-w-[42px]">{slotCode}</span>
                     {isOccupied && <span className="text-rose-400 font-bold text-[7px] uppercase tracking-normal">FULL</span>}
-                    {!isOccupied && <span className="text-emerald-400 font-bold text-[7px] uppercase tracking-normal">FREE</span>}
+                    {isReserved && <span className="text-purple-400 font-bold text-[7px] uppercase tracking-normal">RSVD</span>}
+                    {isMaintenance && <span className="text-amber-400 font-bold text-[7px] uppercase tracking-normal">MAINT</span>}
+                    {!isOccupied && !isReserved && !isMaintenance && <span className="text-emerald-400 font-bold text-[7px] uppercase tracking-normal">FREE</span>}
                   </div>
                   
-                  {/* Render visual cars in slots */}
+                  {/* Render visual cars in occupied slots */}
                   {isOccupied && (
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ transform: 'translateZ(4px)' }}>
                       <CartoonCar3D 
-                        type={id === 1 ? 'offroad' : id === 5 ? 'crossover' : 'sedan'} 
-                        color={id === 1 ? '#334155' : id === 5 ? '#eab308' : (reservation && reservation.vehicleType === 'motorcycle') ? '#be185d' : '#0e7490'} 
+                        type={carTypes[index % carTypes.length]} 
+                        color={carColors[index % carColors.length]} 
                         state="parked" 
                       />
                     </div>
@@ -571,7 +411,7 @@ export function AnimatedParkingMap3D({
           </div>
 
           {/* Floating exhaust smoke particles */}
-          {!interactive && smokeParticles.map((p) => (
+          {!interactive && smokeParticles.map((p: any) => (
             <motion.span 
               key={p.id}
               initial={{ scale: 0.3, opacity: 0.8, z: 6 }}
@@ -695,9 +535,7 @@ export function AnimatedParkingMap3D({
       <div className="absolute bottom-4 right-4 w-[280px] z-20 flex gap-2.5 items-start bg-slate-950/80 border border-orange-500/30 border-l-4 border-l-orange-500 p-3 rounded-xl backdrop-blur-md shadow-[0_12px_40px_rgba(0,0,0,0.5)] transition-all duration-300 hover:border-orange-500/50">
         <Info size={14} className="text-orange-400 shrink-0 mt-0.5 animate-pulse" />
         <div className="space-y-0.5">
-          <p className="text-[8px] font-black uppercase text-slate-400 font-mono tracking-wider flex items-center gap-1.5">
-            Operating status
-            <span className="relative flex h-1.5 w-1.5">
+          <p className="text-[8px] font-black uppercase text-slate-400 font-mono tracking-wider flex items-center gap-1.5">Operating status<span className="relative flex h-1.5 w-1.5">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
             </span>
