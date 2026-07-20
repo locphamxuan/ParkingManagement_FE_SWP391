@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import { Layers, RotateCcw } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { Slot3DBox } from '@/components/manager/slots/Slot3DBox';
+import { Plus, RotateCcw, Zap } from 'lucide-react';
+import { AnimatedParkingMap3D } from '@/components/map/AnimatedParkingMap3D';
 import type { Floor, ParkingSlot, VehicleType } from '@/services/manager/managerApi';
 
 interface Slots3DMapViewProps {
@@ -12,16 +11,10 @@ interface Slots3DMapViewProps {
   statusFilter: string;
   vehicleTypes: VehicleType[];
   onSlotClick: (slot: ParkingSlot) => void;
+  onOpenMultiSlot?: (qty?: number) => void;
 }
 
-const LEGEND: { status: ParkingSlot['status']; label: string; swatch: string; count: string }[] = [
-  { status: 'available', label: 'Available', swatch: 'bg-emerald-500/20 border-emerald-500/40', count: 'text-emerald-400' },
-  { status: 'occupied', label: 'Occupied', swatch: 'bg-red-500/20 border-red-500/40', count: 'text-red-400' },
-  { status: 'reserved', label: 'Reserved', swatch: 'bg-purple-500/20 border-purple-500/40', count: 'text-purple-400' },
-  { status: 'maintenance', label: 'Maintenance', swatch: 'bg-amber-500/20 border-amber-500/30', count: 'text-amber-400' },
-];
-
-// Bản đồ slot 3D dạng chồng tầng + panel chỉnh góc nhìn (rx/rz là state cục bộ của view).
+// Bản đồ slot 3D đồng nhất với User role + panel chỉnh góc nhìn & quick batch action.
 export function Slots3DMapView({
   floors,
   slotsByFloor,
@@ -30,103 +23,66 @@ export function Slots3DMapView({
   statusFilter,
   vehicleTypes,
   onSlotClick,
+  onOpenMultiSlot,
 }: Slots3DMapViewProps) {
   const [rx, setRx] = useState(60);
   const [rz, setRz] = useState(-45);
 
+  const displayedSlots = floorFilter ? (slotsByFloor[floorFilter] || []) : items;
+
   return (
     <div className="grid gap-6 xl:grid-cols-[1fr,300px]">
-      {/* 3D Map Viewport */}
-      <div className="h-[620px] relative rounded-3xl border border-orange-500/15 bg-slate-950 shadow-[0_0_60px_rgba(0,0,0,0.9),inset_0_0_30px_rgba(0,0,0,0.6)] overflow-hidden flex items-center justify-center glass-premium cyber-scanline">
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(6,182,212,0.018)_1px,transparent_1px),linear-gradient(90deg,rgba(6,182,212,0.018)_1px,transparent_1px)] bg-[size:28px_28px] pointer-events-none" />
-        <div className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:14px_14px] pointer-events-none" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(249,115,22,0.07),rgba(168,85,247,0.035)_50%,transparent_75%)] pointer-events-none" />
+      {/* 3D Map Viewport (Identical high-fidelity 3D Hologram Map model as User side) */}
+      <div className="h-[620px] relative rounded-3xl overflow-hidden shadow-2xl group">
+        <AnimatedParkingMap3D
+          rotateX={rx}
+          rotateZ={rz}
+          interactive={true}
+          slots={displayedSlots}
+          onEditSlot={onSlotClick}
+        />
 
-        <div className="perspective-1000 w-full h-full flex items-center justify-center preserve-3d">
-          <motion.div
-            style={{
-              rotateX: rx,
-              rotateZ: rz,
-              transformStyle: 'preserve-3d',
-            }}
-            className="isometric-mesh relative w-[500px] h-[400px] preserve-3d transition-transform duration-200"
-          >
-            {floors.map((floor, fIdx) => {
-              if (floorFilter && floor._id !== floorFilter) return null;
-
-              const floorSlots = slotsByFloor[floor._id] || [];
-              // Lọc theo 1 tầng thì hạ tầng đó về mặt đất thay vì treo lơ lửng
-              const zOffset = floorFilter ? 0 : (fIdx * 130);
-
-              return (
-                <motion.div
-                  key={floor._id}
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: fIdx * 0.06, type: 'spring', stiffness: 120, damping: 18 }}
-                  style={{
-                    transform: `translateZ(${zOffset}px)`,
-                    transformStyle: 'preserve-3d',
-                  }}
-                  className="absolute inset-0 rounded-3xl border border-cyan-500/25 bg-slate-900/55 shadow-[0_0_30px_rgba(6,182,212,0.08),0_8px_32px_rgba(0,0,0,0.6)] preserve-3d p-6 flex flex-col justify-between overflow-hidden"
-                >
-                  <div className="absolute inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-cyan-400/40 to-transparent pointer-events-none"
-                    style={{ top: `${((fIdx % 3) + 1) * 25}%` }}
-                  />
-                  <div className="flex justify-between items-center mb-4 z-10 preserve-3d" style={{ transform: 'translateZ(15px)' }}>
-                    <span className="text-[10px] font-black tracking-widest text-orange-400 uppercase font-mono bg-slate-950/80 px-2.5 py-1 rounded-lg border border-white/5">
-                      {(floor.name || `FLOOR ${floor.code}`).toUpperCase()}
-                    </span>
-                    <span className="text-[9px] font-bold text-slate-500 font-mono">
-                      CAPACITY: {floorSlots.filter(s => s.status === 'occupied').length}/{floorSlots.length} SLOTS
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-4 sm:grid-cols-5 gap-6 my-auto items-center justify-items-center preserve-3d" style={{ transform: 'translateZ(10px)' }}>
-                    {floorSlots.length === 0 ? (
-                      <div className="col-span-full text-center text-slate-600 text-xs py-10 uppercase tracking-widest font-mono">No slots configured</div>
-                    ) : (
-                      floorSlots.map((slot) => (
-                        <Slot3DBox
-                          key={slot._id}
-                          slot={slot}
-                          onClick={() => onSlotClick(slot)}
-                          statusFilter={statusFilter}
-                          vehicleTypes={vehicleTypes}
-                        />
-                      ))
-                    )}
-                  </div>
-
-                  <div className="text-[8px] text-slate-600 font-black tracking-widest uppercase font-mono text-right preserve-3d mt-4" style={{ transform: 'translateZ(5px)' }}>
-                    {(floor.name || floor.code).toUpperCase()} ARCHITECTURE
-                  </div>
-                </motion.div>
-              );
-            })}
-          </motion.div>
-        </div>
-
-        <div className="absolute left-6 top-6 flex flex-col gap-1.5 z-20 pointer-events-none">
-          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-slate-400">
-            <Layers size={12} className="text-orange-400" />
-            <span>3D Zone Map ({items.length} Slots)</span>
+        {/* Quick Batch Creator Overlay Action Bar directly on 3D Map */}
+        {onOpenMultiSlot && (
+          <div className="absolute top-16 left-6 z-20 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => onOpenMultiSlot(5)}
+              className="px-3.5 py-2 rounded-xl bg-orange-500/90 border border-orange-400/40 text-slate-950 font-mono text-[10px] font-black uppercase tracking-wider backdrop-blur-md shadow-lg hover:bg-orange-400 hover:scale-105 active:scale-95 transition-all duration-200 flex items-center gap-1.5 cursor-pointer"
+            >
+              <Plus size={12} className="stroke-[3]" /> +5 Slots
+            </button>
+            <button
+              type="button"
+              onClick={() => onOpenMultiSlot(10)}
+              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 border border-orange-400/40 text-slate-950 font-mono text-[10px] font-black uppercase tracking-wider backdrop-blur-md shadow-lg hover:brightness-110 hover:scale-105 active:scale-95 transition-all duration-200 flex items-center gap-1.5 cursor-pointer"
+            >
+              <Zap size={12} className="text-slate-950 fill-slate-950" /> +10 Slots
+            </button>
+            <button
+              type="button"
+              onClick={() => onOpenMultiSlot(20)}
+              className="px-3.5 py-2 rounded-xl bg-slate-900/80 border border-white/10 text-slate-200 font-mono text-[10px] font-black uppercase tracking-wider backdrop-blur-md shadow-lg hover:bg-slate-800 hover:border-white/20 hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer"
+            >
+              +20 Batch
+            </button>
           </div>
-        </div>
+        )}
       </div>
 
-      {/* Cockpit control panel */}
-      <div className="glass-premium glow-border-pulse rounded-3xl p-6 shadow-2xl flex flex-col justify-between">
+      {/* Sci-Fi Right Cockpit Control Panel */}
+      <div className="glass-panel-dark rounded-3xl p-6 border border-white/5 shadow-2xl flex flex-col justify-between">
         <div>
           <h3 className="text-xs font-black uppercase tracking-widest text-white font-mono mb-4 flex items-center gap-1.5 pb-2.5 border-b border-white/5">
             <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-ping" />
-            Spatial View
+            Spatial view
           </h3>
 
+          {/* Cockpit Angle Tilt Controls */}
           <div className="space-y-6">
             <div className="space-y-2">
               <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-slate-400 font-mono">
-                <span>X Tilt</span>
+                <span>Tilt X</span>
                 <span className="text-orange-400 font-mono">{rx}°</span>
               </div>
               <input
@@ -141,7 +97,7 @@ export function Slots3DMapView({
 
             <div className="space-y-2">
               <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-slate-400 font-mono">
-                <span>Z Rotation</span>
+                <span>Rotate Z</span>
                 <span className="text-orange-400 font-mono">{rz}°</span>
               </div>
               <input
@@ -155,24 +111,57 @@ export function Slots3DMapView({
             </div>
 
             <button
+              type="button"
               onClick={() => { setRx(60); setRz(-45); }}
-              className="w-full py-2.5 rounded-xl border border-white/10 hover:border-orange-500/30 text-white font-mono text-[9px] font-black uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2 hover:bg-slate-950/50"
+              className="w-full py-2.5 rounded-xl border border-white/10 hover:border-orange-500/30 text-white font-mono text-[9px] font-black uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2 hover:bg-slate-950/50 cursor-pointer"
             >
               <RotateCcw size={12} /> Reset View
             </button>
           </div>
         </div>
 
-        <div className="mt-8 pt-4 border-t border-white/5 space-y-3">
-          <div className="text-[9px] font-black uppercase tracking-widest text-slate-500 font-mono mb-2">Status Legend</div>
-          {LEGEND.map((row) => (
-            <div key={row.status} className="flex items-center justify-between text-[10px] font-bold text-slate-300 bg-slate-950/40 p-2.5 rounded-xl border border-white/5">
-              <span className="flex items-center gap-2"><span className={`w-2.5 h-2.5 rounded border ${row.swatch}`} /> {row.label}</span>
-              <span className={`font-mono font-black ${row.count}`}>
-                {items.filter(s => s.status === row.status).length}
-              </span>
-            </div>
-          ))}
+        <div className="mt-8 pt-4 border-t border-white/5 space-y-2">
+          <div className="text-[9px] font-black uppercase tracking-widest text-slate-400 font-mono mb-2">Status legend</div>
+          
+          <div className="flex items-center justify-between text-[10px] font-bold text-slate-300 bg-slate-900/60 p-2.5 rounded-xl border border-emerald-500/20">
+            <span className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]" /> 
+              Available
+            </span>
+            <span className="font-mono text-emerald-400 font-black">
+              {displayedSlots.filter(s => s.status === 'available').length}
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between text-[10px] font-bold text-slate-300 bg-slate-900/60 p-2.5 rounded-xl border border-rose-500/20">
+            <span className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-red-500 shadow-[0_0_8px_#ef4444]" /> 
+              Occupied
+            </span>
+            <span className="font-mono text-rose-400 font-black">
+              {displayedSlots.filter(s => s.status === 'occupied').length}
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between text-[10px] font-bold text-slate-300 bg-slate-900/60 p-2.5 rounded-xl border border-purple-500/20">
+            <span className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-purple-500 shadow-[0_0_8px_#a855f7]" /> 
+              Reserved
+            </span>
+            <span className="font-mono text-purple-400 font-black">
+              {displayedSlots.filter(s => s.status === 'reserved').length}
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between text-[10px] font-bold text-slate-300 bg-slate-900/60 p-2.5 rounded-xl border border-amber-500/20">
+            <span className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-[0_0_8px_#f59e0b]" /> 
+              Maintenance
+            </span>
+            <span className="font-mono text-amber-400 font-black">
+              {displayedSlots.filter(s => s.status === 'maintenance').length}
+            </span>
+          </div>
         </div>
       </div>
     </div>
