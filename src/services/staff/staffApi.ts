@@ -222,8 +222,13 @@ export const staffApi = {
     api.post<Wrap<{ item: ParkingSession }>>('/staff/parking-sessions/check-in', payload),
 
   // Slot 'available' của 1 tòa nhà — để gán xe mua gói khi check-in.
-  freeSlots: (buildingId: string) =>
-    api.get<Wrap<{ items: FreeSlot[] }>>('/staff/parking-sessions/free-slots', { query: { building: buildingId } }),
+  // usageType/vehicleType lọc & xếp hạng đúng dãy/zone manager đã cấu hình
+  // (thiếu 2 tham số này BE trả về TOÀN BỘ slot trống của tòa nhà, không lọc).
+  freeSlots: (buildingId: string, opts?: { usageType?: string; vehicleType?: string }) =>
+    api.get<Wrap<{ items: FreeSlot[]; suggestedSlotId?: string | null; totalSlots?: number; totalAvailable?: number }>>(
+      '/staff/parking-sessions/free-slots',
+      { query: { building: buildingId, usageType: opts?.usageType, vehicleType: opts?.vehicleType } },
+    ),
 
   checkOut: (
     sessionId: string,

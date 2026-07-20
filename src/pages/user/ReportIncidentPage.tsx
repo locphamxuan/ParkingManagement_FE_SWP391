@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { AlertTriangle, CheckCircle2, Loader2, ShieldAlert } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Loader2, ParkingCircle, ShieldAlert } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { userApi, type UserIncident, type UserIncidentType } from '@/services/user/userApi';
+import { userApi, type ParkingHistory, type UserIncident, type UserIncidentType } from '@/services/user/userApi';
 import { resolveErrorMessage } from '@/utils/apiErrors';
 
 const INCIDENT_TYPES: { value: UserIncidentType; label: string }[] = [
@@ -40,6 +40,11 @@ export default function ReportIncidentPage() {
   const [items, setItems] = useState<UserIncident[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Phiên đang đỗ hiện tại (nếu có) — hiển thị để user biết báo cáo sẽ gắn vào
+  // xe/tòa nhà nào, và gửi kèm buildingId/slotId rõ ràng thay vì để BE tự suy đoán.
+  const [activeSession, setActiveSession] = useState<ParkingHistory | null>(null);
+  const [loadingSession, setLoadingSession] = useState(true);
+
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
@@ -53,7 +58,16 @@ export default function ReportIncidentPage() {
   }, []);
 
   useEffect(() => {
-    if (session) void refresh();
+    if (!session) return;
+    void refresh();
+    setLoadingSession(true);
+    userApi.parkingHistory.list({ limit: 5 })
+      .then((res) => {
+        const found = (res.data.items ?? []).find((s) => s.status === 'active');
+        setActiveSession(found ?? null);
+      })
+      .catch(() => setActiveSession(null))
+      .finally(() => setLoadingSession(false));
   }, [session, refresh]);
 
   if (!session) return <Navigate to="/auth/login" replace />;
@@ -70,6 +84,8 @@ export default function ReportIncidentPage() {
         type,
         note: note.trim(),
         violatorPlate: type === 'slot_occupied' ? violatorPlate.trim() || undefined : undefined,
+        buildingId: activeSession?.building?._id,
+        slotId: activeSession?.slot?._id,
       });
       setMessage({ type: 'ok', text: 'Incident reported. Staff and the building manager will handle it.' });
       setNote('');
@@ -91,6 +107,28 @@ export default function ReportIncidentPage() {
           </h1>
           <p className="mt-1 text-xs font-semibold text-slate-400">Tell us what happened — on-site staff will handle it and you will be notified.</p>
         </div>
+
+        {/* Current parking session */}
+        {loadingSession ? (
+          <div className="mb-4 rounded-2xl border border-white/10 bg-slate-900/50 p-4 text-center text-xs text-slate-400">
+            <Loader2 size={14} className="mx-auto mb-1 animate-spin text-cyan-300" /> Checking your active session...
+          </div>
+        ) : activeSession ? (
+          <div className="mb-4 flex items-center gap-3 rounded-2xl border border-cyan-400/25 bg-cyan-500/10 p-4">
+            <ParkingCircle size={20} className="shrink-0 text-cyan-300" />
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-cyan-300">This report will be linked to your current session</p>
+              <p className="mt-0.5 text-sm font-semibold text-white">
+                {activeSession.plateNumber} · {activeSession.building?.name ?? 'Unknown building'}
+                {activeSession.slot?.code ? ` · Slot ${activeSession.slot.code}` : ''}
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="mb-4 rounded-2xl border border-amber-400/25 bg-amber-500/10 p-4 text-xs font-semibold text-amber-300">
+            No active parking session found. The report will be linked to your active package's building, if any.
+          </div>
+        )}
 
         {/* Form */}
         <div className="rounded-3xl border border-white/10 bg-slate-900/55 p-6">

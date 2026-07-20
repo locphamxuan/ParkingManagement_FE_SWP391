@@ -3,14 +3,17 @@
  * `plate.util.js`). Canonical form: `59G2-038.80`.
  *
  *   - province: 2 digits
- *   - series:   1 letter + 1 digit (G2, A1, F1) OR 2 letters (LD, MD). A bare
- *               single letter (e.g. `59G`) is NOT valid.
+ *   - series:   1–2 letters + optional 1 digit:
+ *       - car (ô tô)          → 1 letter:        30A, 51F, 36C
+ *       - motorcycle (xe máy) → 1 letter + digit: 59X1, 29B1, 60F8
+ *       - special/joint-venture → 2 letters:      51LD, 80NG
+ *       - rare                → 2 letters + digit: 59AB1
  *   - number:   4 or 5 digits. 5-digit groups render as `NNN.NN`; 4-digit plain.
  *
  * `normalizePlate` is idempotent on canonical input.
  */
 
-export const CANONICAL_PLATE_REGEX = /^\d{2}(?:[A-Z]\d|[A-Z]{2})-(?:\d{3}\.\d{2}|\d{4})$/;
+export const CANONICAL_PLATE_REGEX = /^\d{2}[A-Z]{1,2}\d?-(?:\d{3}\.\d{2}|\d{4})$/;
 
 /** Popular car makes on Vietnamese roads. */
 export const CAR_BRANDS = [

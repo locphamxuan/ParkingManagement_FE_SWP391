@@ -29,6 +29,42 @@ export const videoConstraintFor = (
 ): MediaTrackConstraints =>
   deviceId ? { deviceId: { exact: deviceId } } : { facingMode: fallbackFacing };
 
+/**
+ * Kiểm tra trước khi gọi getUserMedia — tránh treo mù 8 giây cho 2 lỗi phổ biến mà
+ * trình duyệt không luôn báo lỗi rõ ràng/nhanh:
+ *  - Không có camera device nào (enumerateDevices rỗng videoinput).
+ *  - Quyền camera đã bị chặn ở cấp hệ điều hành/trình duyệt (Permissions API).
+ * Ném lỗi cùng `name` như DOMException để tái dùng logic xử lý lỗi sẵn có.
+ * Bỏ qua an toàn nếu trình duyệt không hỗ trợ API kiểm tra (Firefox không hỗ trợ
+ * Permissions API cho 'camera') — để getUserMedia tự báo lỗi như bình thường.
+ */
+export async function preflightCameraCheck(): Promise<void> {
+  if (navigator.mediaDevices?.enumerateDevices) {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      if (!devices.some((d) => d.kind === 'videoinput')) {
+        throw Object.assign(new Error('No camera device found'), { name: 'NotFoundError' });
+      }
+    } catch (err) {
+      if ((err as { name?: string })?.name === 'NotFoundError') throw err;
+      // enumerateDevices tự nó lỗi (hiếm) — bỏ qua, để getUserMedia thử tiếp.
+    }
+  }
+
+  const permissionsApi = navigator.permissions as (Permissions & { query: (d: { name: string }) => Promise<PermissionStatus> }) | undefined;
+  if (permissionsApi?.query) {
+    try {
+      const status = await permissionsApi.query({ name: 'camera' });
+      if (status.state === 'denied') {
+        throw Object.assign(new Error('Camera permission denied at OS/browser level'), { name: 'NotAllowedError' });
+      }
+    } catch (err) {
+      if ((err as { name?: string })?.name === 'NotAllowedError') throw err;
+      // 'camera' không phải tên quyền hợp lệ trên trình duyệt này (vd Firefox) — bỏ qua.
+    }
+  }
+}
+
 export function useCameraDevices() {
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
   const [assignment, setAssignment] = useState<CameraAssignment>(readAssignment);

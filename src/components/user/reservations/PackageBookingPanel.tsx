@@ -1,6 +1,5 @@
 import { motion } from 'framer-motion';
 import { CalendarClock } from 'lucide-react';
-import { MiniCalendar } from '@/components/user/MiniCalendar';
 import { PackageCard } from '@/components/user/PackageCard';
 import { packageCategory, categoryColors, isCarPackage } from '@/pages/user/reservationsHelper';
 import type { VehicleKind } from '@/pages/user/reservationsHelper';
@@ -13,9 +12,6 @@ interface PackageBookingPanelProps {
   selectedPkg: LongTermPackage | null;
   onSelectPackage: (pkg: LongTermPackage) => void;
   selectedVehicleType: VehicleKind | '';
-  pkgStartDate: Date | null;
-  onSelectPkgStartDate: (date: Date | null) => void;
-  maxCalDate: Date;
 }
 
 export function PackageBookingPanel({
@@ -25,9 +21,6 @@ export function PackageBookingPanel({
   selectedPkg,
   onSelectPackage,
   selectedVehicleType,
-  pkgStartDate,
-  onSelectPkgStartDate,
-  maxCalDate,
 }: PackageBookingPanelProps) {
   return (
     <motion.div
@@ -78,24 +71,17 @@ export function PackageBookingPanel({
         )}
       </div>
 
-      {/* Package Date */}
+      {/* Package Date — always starts immediately at purchase time */}
       {selectedPkg && (
         <div className="glass-panel-white rounded-3xl p-6 relative">
           {disabled && (
-            <div className="absolute inset-0 bg-transparent cursor-not-allowed z-20" title="Please select vehicle type before selecting start date." />
+            <div className="absolute inset-0 bg-transparent cursor-not-allowed z-20" title="Please select vehicle type before purchasing." />
           )}
-          <div className="flex items-center gap-2 mb-4">
+          <div className="flex items-center gap-2 mb-2">
             <CalendarClock size={16} className="text-purple-300/70" />
             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-purple-300/70">Package Start Date</span>
           </div>
-          <MiniCalendar selectedDate={pkgStartDate} onSelect={onSelectPkgStartDate} maxDate={maxCalDate} />
-          <p className="mt-2 text-[10px] font-semibold text-slate-500">
-            {selectedPkg.durationDays <= 7
-              ? 'Weekly package: select within next 7 days'
-              : selectedPkg.durationDays <= 30
-                ? 'Monthly package: select this month or next month'
-                : 'Yearly package: select this year or next year'}
-          </p>
+          <p className="text-sm font-bold text-slate-200">Starts today, valid for {selectedPkg.durationDays} days.</p>
         </div>
       )}
     </motion.div>

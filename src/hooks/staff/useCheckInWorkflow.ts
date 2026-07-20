@@ -142,6 +142,14 @@ export function useCheckInWorkflow() {
   // Load free slots cho package (floating) lẫn standard. Gói có slot cố định thì KHÔNG
   // cần chọn (BE tự gán slot cố định).
   const needsSlotSelection = (hasActivePackage && !packageFixedSlot) || checkInKind === 'standard';
+  // Đối tượng của lượt check-in — PHẢI khớp resolveCustomerUsageType ở BE (checkIn.service)
+  // để /free-slots lọc & xếp hạng đúng dãy/zone (thiếu tham số này BE trả về TOÀN BỘ
+  // slot trống của tòa nhà, không lọc theo zone manager đã cấu hình).
+  const checkInUsageType = hasActivePackage
+    ? 'subscriber'
+    : plateAccountInfo?.hasAccount
+      ? 'registered'
+      : 'walk_in';
   useEffect(() => {
     if (!needsSlotSelection || !buildingId) {
       setFreeSlots([]);
@@ -150,7 +158,7 @@ export function useCheckInWorkflow() {
     }
     let cancelled = false;
     staffApi
-      .freeSlots(buildingId)
+      .freeSlots(buildingId, { usageType: checkInUsageType, vehicleType })
       .then((res) => {
         if (!cancelled) setFreeSlots((res as { data?: { items?: typeof freeSlots } })?.data?.items ?? []);
       })
@@ -158,7 +166,7 @@ export function useCheckInWorkflow() {
     return () => {
       cancelled = true;
     };
-  }, [needsSlotSelection, buildingId]);
+  }, [needsSlotSelection, buildingId, checkInUsageType, vehicleType]);
 
   // Áp biển số đã nhận diện (AI/QR) → lookup chạy tự động qua effect theo plateNumber.
   const applyPlate = (plate: string, brand: string | null = null) => {
