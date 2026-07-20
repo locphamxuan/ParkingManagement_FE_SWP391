@@ -104,6 +104,8 @@ export interface LongTermSubscription {
   status: 'pending' | 'active' | 'expired' | 'cancelled';
   cancelReason?: 'change_vehicle' | 'no_longer_needed' | 'pricing_issue' | 'other' | null;
   cancelNote?: string | null;
+  /** Slot cố định đã chọn lúc mua gói. null/undefined = gói floating (staff gán slot lúc check-in). */
+  slot?: { _id: string; code?: string } | null;
   /** Snapshot % và số tiền đã hoàn lúc hủy (theo refund policy tại thời điểm đó). */
   refundPercent?: number | null;
   refundAmount?: number | null;
@@ -181,6 +183,8 @@ export interface Notification {
     | 'subscription_expired'
     | 'subscription_slot_released'
     | 'subscription_overage'
+    | 'incident_update'
+    | 'incident_resolved'
     | 'feedback_reply'
     | 'general';
   title: string;
@@ -276,8 +280,9 @@ export const userApi = {
     get: (id: string) =>
       api.get<Wrap<{ subscription: LongTermSubscription }>>(`/users/long-term/subscriptions/${id}`),
 
-    /** Subscribe to a long-term package. slotId tùy chọn: chọn slot cố định (dãy subscriber). */
-    create: (body: { packageId: string; plateNumber: string; startDate?: string; slotId?: string }) =>
+    /** Subscribe to a long-term package — always starts immediately at purchase time.
+     * slotId tùy chọn: chọn slot cố định (dãy subscriber). */
+    create: (body: { packageId: string; plateNumber: string; slotId?: string }) =>
       api.post<Wrap<{ subscription: LongTermSubscription }>>(
         '/users/long-term/subscriptions',
         body

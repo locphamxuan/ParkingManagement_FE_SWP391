@@ -16,7 +16,6 @@ import {
 import {
   type VehicleKind,
   isCarPackage,
-  getMaxCalendarDate,
   normalizeVehicleTypeCode,
 } from '@/pages/user/reservationsHelper';
 
@@ -66,7 +65,6 @@ export function usePackagePurchase() {
   /* ── Package state ── */
   const [packages, setPackages] = useState<LongTermPackage[]>([]);
   const [selectedPkg, setSelectedPkg] = useState<LongTermPackage | null>(null);
-  const [pkgStartDate, setPkgStartDate] = useState<Date | null>(null);
 
   /* ── Fixed-slot picker (tùy chọn) — chỉ ô dãy 'subscriber' ── */
   const [floorsData, setFloorsData] = useState<FloorAvailability[]>([]);
@@ -161,11 +159,6 @@ export function usePackagePurchase() {
     [rows, selectedBuildingId],
   );
 
-  const maxCalDate = useMemo(
-    () => getMaxCalendarDate('package', selectedPkg),
-    [selectedPkg],
-  );
-
   const selectedVehicleTypeId = useMemo(() => {
     if (!selectedVehicleType) return undefined;
     const vt = vehicleTypesForBuilding.find((v) => {
@@ -221,12 +214,14 @@ export function usePackagePurchase() {
     return () => { ignore = true; };
   }, [selectedBuildingId, selectedFloorIdModal, selectedVehicleTypeId]);
 
+  // Gói luôn bắt đầu NGAY tại thời điểm mua — không cho chọn ngày tương lai
+  // (tránh trạng thái "active" nhưng chưa tới hạn dùng được).
   const startDateTime = useMemo(() => {
-    if (!pkgStartDate) return null;
-    const d = new Date(pkgStartDate);
+    if (!selectedPkg) return null;
+    const d = new Date();
     d.setHours(0, 0, 0, 0);
     return d;
-  }, [pkgStartDate]);
+  }, [selectedPkg]);
 
   const endDateTime = useMemo(() => {
     if (startDateTime && selectedPkg) {
@@ -283,7 +278,6 @@ export function usePackagePurchase() {
 
   const handleSelectPackage = (pkg: LongTermPackage) => {
     setSelectedPkg(pkg);
-    setPkgStartDate(null);
     setSelectedSlot(null);
     const nextType = isCarPackage(pkg) ? 'car' : 'motorcycle';
     if (selectedVehicleType !== nextType) {
@@ -305,7 +299,6 @@ export function usePackagePurchase() {
     if (!selectedVehicleType) { setBookingError('Please select vehicle type before purchasing.'); return; }
     if (!selectedPlate) { setBookingError('Please select license plate.'); return; }
     if (!selectedPkg) { setBookingError('Please select a long-term package.'); return; }
-    if (!startDateTime) { setBookingError('Please select package start date.'); return; }
     if (!selectedBuildingId) return;
 
     setIsSubmitting(true);
@@ -314,7 +307,6 @@ export function usePackagePurchase() {
       const res = await userApi.longTermSubscriptions.create({
         packageId: selectedPkg._id,
         plateNumber: selectedPlate,
-        startDate: startDateTime.toISOString(),
         slotId: slotRecord?._id,
       });
       const data = res.data as { subscription?: unknown; checkoutUrl?: string };
@@ -344,15 +336,12 @@ export function usePackagePurchase() {
     setSelectedPlate,
     packages,
     selectedPkg,
-    pkgStartDate,
-    setPkgStartDate,
     isLoadingBuildings,
     isSubmitting,
     bookingError,
     setBookingError,
     bookingSuccess,
     setBookingSuccess,
-    maxCalDate,
     startDateTime,
     endDateTime,
     estimatedAmount,

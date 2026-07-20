@@ -6,8 +6,9 @@ import { userApi } from '@/services/user/userApi';
 import { normalizePlate, isValidVietnamPlate, brandsForVehicleType } from '@/utils/plate';
 
 // ─── Vietnamese license plate validation (shared util — canonical 59G2-038.80) ─
-// Series must be letter+digit (59G2) or two letters (30LD); a bare single letter
-// like `59G` is rejected. Number group is 4–5 digits (5-digit → NNN.NN).
+// Series is 1–2 letters + optional digit: single letter for cars (30A), letter+digit
+// for motorcycles (59G2), or two letters for special plates (30LD). Number group is
+// 4–5 digits (5-digit → NNN.NN).
 interface PlateValidationResult {
   ok: boolean;
   error?: string;
@@ -24,7 +25,7 @@ function validatePlate(raw: string, existingPlates: Array<{ plateNumber: string;
   if (!isValidVietnamPlate(plate)) {
     return {
       ok: false,
-      error: 'Invalid license plate format. Example: 59G2-03880 or 59G2-038.80.',
+      error: 'Invalid license plate format. Example: 30A-97022 (car) or 59G2-038.80 (motorcycle).',
     };
   }
 

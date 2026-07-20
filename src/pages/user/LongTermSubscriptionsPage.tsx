@@ -157,6 +157,17 @@ export default function LongTermSubscriptionsPage() {
                         Free hours: <span className="font-bold text-slate-200">{item.package.maxHoursPerDay}h/day</span>
                       </p>
                     )}
+                    {(item.status === 'active' || item.status === 'pending') && (
+                      item.slot?.code ? (
+                        <p className="mt-1.5 inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-300">
+                          Slot reserved: {item.slot.code}
+                        </p>
+                      ) : (
+                        <p className="mt-1.5 inline-flex items-center gap-1 rounded-full border border-slate-500/30 bg-slate-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-slate-400">
+                          No fixed slot — assigned at check-in
+                        </p>
+                      )
+                    )}
                     {item.status === 'expired' && (
                       <p className="mt-2 text-[10px] text-amber-400/90 leading-relaxed border-t border-white/5 pt-1.5">
                         Package expired — hourly rates apply. Renew to continue receiving parking benefits.

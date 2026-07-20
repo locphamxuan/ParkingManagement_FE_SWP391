@@ -46,9 +46,6 @@ export default function PackagePurchasePage() {
               selectedPkg={b.selectedPkg}
               onSelectPackage={b.handleSelectPackage}
               selectedVehicleType={b.selectedVehicleType}
-              pkgStartDate={b.pkgStartDate}
-              onSelectPkgStartDate={b.setPkgStartDate}
-              maxCalDate={b.maxCalDate}
             />
 
             {/* Chọn slot cố định (tùy chọn) — chỉ hiện khi đã chọn gói. */}

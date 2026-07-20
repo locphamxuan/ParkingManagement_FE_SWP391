@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { RefreshCcw, CheckCircle2, Car, ScanLine, QrCode, UserSquare, ArrowLeft, ArrowRight } from 'lucide-react';
+import { RefreshCcw, CheckCircle2, Car, ScanLine, QrCode, UserSquare, ArrowLeft, ArrowRight, AlertTriangle as AlertTriangleIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useBuildingContext } from '@/hooks/useBuildingContext';
@@ -77,6 +77,9 @@ export function StaffParkedPage({ view = 'list' }: { view?: 'scanner' | 'list' }
   // Scanner tìm xe (tuần tự — chỉ 1 camera). Wizard checkout: 1 chụp chân dung ra · 2 thu phí.
   const [identifyMode, setIdentifyMode] = useState<'plate' | 'qr'>('plate');
   const [coStep, setCoStep] = useState<1 | 2>(1);
+  // Bước 1 chỉ mở 1 camera tại 1 thời điểm (portrait HOẶC plate) — tránh 2 getUserMedia
+  // tranh chấp cùng 1 webcam vật lý (máy chỉ có 1 camera thì cả 2 sẽ timeout).
+  const [coCamMode, setCoCamMode] = useState<'portrait' | 'plate'>('portrait');
 
   const [bankTransfer, setBankTransfer] = useState<BankTransferState | null>(null);
   const [verifying, setVerifying] = useState(false);
@@ -85,7 +88,10 @@ export function StaffParkedPage({ view = 'list' }: { view?: 'scanner' | 'list' }
   // check-in (plate + portrait) so staff can verify it's the right vehicle/person.
   const [capturedPlateImage, setCapturedPlateImage] = useState<string | null>(null);
   const [capturedPortraitImage, setCapturedPortraitImage] = useState<string | null>(null);
+  // Biển AI đọc được lúc RA khác biển của phiên đang checkout → cảnh báo tráo xe.
+  const [exitPlateMismatch, setExitPlateMismatch] = useState<string | null>(null);
   const portraitCamRef = useRef<LiveCameraHandle>(null);
+  const exitPlateCamRef = useRef<LiveCameraHandle>(null);
 
   const refreshSessions = useCallback(() => {
     setLoading(true);
@@ -122,6 +128,8 @@ export function StaffParkedPage({ view = 'list' }: { view?: 'scanner' | 'list' }
     // Giữ ảnh biển số LÚC RA nếu đã quét được (đường quét); card-click thì null.
     setCapturedPlateImage(exitPlateImage);
     setCapturedPortraitImage(null);
+    setExitPlateMismatch(null);
+    setCoCamMode('portrait');
     try {
       const res = await staffApi.sessions.detail(session._id);
       const full = (res as { data?: ParkingSession })?.data;
@@ -153,9 +161,19 @@ export function StaffParkedPage({ view = 'list' }: { view?: 'scanner' | 'list' }
     }
   };
 
-  // Camera biển số: lưu khung ảnh LÚC RA + tìm xe để mở thu phí.
+  // Camera biển số (scanner view): lưu khung ảnh LÚC RA + tìm xe để mở thu phí.
   const handlePlateDetected = ({ plateNumber, plateImage }: PlateScanResult) => {
     openCheckoutByPlate(plateNumber, plateImage);
+  };
+
+  // Camera biển số trong wizard checkout (list view — xe đã xác định sẵn từ danh
+  // sách): lưu ảnh LÚC RA để đối chiếu ở bước 2, và VERIFY biển AI đọc được khớp
+  // với xe đang checkout — bắt trường hợp tráo xe / đưa nhầm xe khác ra.
+  const handleExitPlateDetected = ({ plateNumber, plateImage }: PlateScanResult) => {
+    setCapturedPlateImage(plateImage);
+    const expected = checkoutTarget ? normalizePlate(checkoutTarget.plateNumber) || checkoutTarget.plateNumber : '';
+    const detected = plateNumber ? normalizePlate(plateNumber) || plateNumber : '';
+    setExitPlateMismatch(detected && expected && detected !== expected ? plateNumber : null);
   };
 
   // Camera 3 — QR (token biển số PLT- / ID tài khoản). Khách chỉ cần quét QR
@@ -221,6 +239,7 @@ export function StaffParkedPage({ view = 'list' }: { view?: 'scanner' | 'list' }
       setCheckoutTarget(null);
       setCapturedPlateImage(null);
       setCapturedPortraitImage(null);
+      setExitPlateMismatch(null);
       setReloadTick((n) => n + 1);
     } catch (err) {
       setOpMessage({ type: 'err', text: err instanceof Error ? err.message : 'Check-out failed' });
@@ -246,6 +265,7 @@ export function StaffParkedPage({ view = 'list' }: { view?: 'scanner' | 'list' }
       setCheckoutTarget(null);
       setCapturedPlateImage(null);
       setCapturedPortraitImage(null);
+      setExitPlateMismatch(null);
     } catch (err) {
       setOpMessage({ type: 'err', text: err instanceof Error ? err.message : 'Rejection failed' });
     }
@@ -498,12 +518,12 @@ export function StaffParkedPage({ view = 'list' }: { view?: 'scanner' | 'list' }
                 <p className="text-[10px] font-black uppercase tracking-[0.24em] text-primary">Payment · Check-out</p>
                 <h3 className="text-xl font-semibold text-foreground font-mono">{checkoutTarget.plateNumber}</h3>
               </div>
-              <button onClick={() => { setCheckoutTarget(null); setPaymentMethod('cash'); setCoStep(1); setCapturedPlateImage(null); setCapturedPortraitImage(null); }} className="text-muted-foreground hover:text-foreground transition">✕</button>
+              <button onClick={() => { setCheckoutTarget(null); setPaymentMethod('cash'); setCoStep(1); setCapturedPlateImage(null); setCapturedPortraitImage(null); setExitPlateMismatch(null); }} className="text-muted-foreground hover:text-foreground transition">✕</button>
             </div>
 
             {/* Step indicator */}
             <div className="mb-4 flex items-center gap-2 text-[11px] font-bold">
-              {[{ n: 1, label: 'Capture Exit Portrait' }, { n: 2, label: 'Compare & Collect' }].map((s, i) => (
+              {[{ n: 1, label: 'Capture Exit Photos' }, { n: 2, label: 'Compare & Collect' }].map((s, i) => (
                 <div key={s.n} className="flex items-center gap-2">
                   <span className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] ${coStep >= s.n ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>{s.n}</span>
                   <span className={coStep === s.n ? 'text-foreground' : 'text-muted-foreground'}>{s.label}</span>
@@ -512,13 +532,62 @@ export function StaffParkedPage({ view = 'list' }: { view?: 'scanner' | 'list' }
               ))}
             </div>
 
-            {/* ── BƯỚC 1 — Capture Portrait lúc ra ── */}
+            {/* ── BƯỚC 1 — Xác minh xe & tài xế trước khi cho ra ── */}
             {coStep === 1 && (
               <div className="space-y-4">
-                <LivePortraitCamera ref={portraitCamRef} />
+                <p className="text-xs text-muted-foreground">
+                  Verify the vehicle and driver before releasing <span className="font-mono font-bold text-foreground">{checkoutTarget.plateNumber}</span>.
+                </p>
+
+                {exitPlateMismatch && (
+                  <div className="flex items-start gap-2 rounded-lg border border-rose-500/40 bg-rose-500/10 p-3 text-xs text-rose-300">
+                    <AlertTriangleIcon size={14} className="mt-0.5 shrink-0" />
+                    <span>
+                      Plate mismatch: camera reads <strong className="font-mono">{exitPlateMismatch}</strong>, but this session is for{' '}
+                      <strong className="font-mono">{checkoutTarget.plateNumber}</strong>. Verify it&apos;s the correct vehicle before continuing.
+                    </span>
+                  </div>
+                )}
+
+                {/* Chỉ mở 1 camera tại 1 thời điểm — tránh 2 getUserMedia tranh chấp
+                    cùng 1 webcam vật lý (quầy chỉ có 1 camera thì cả 2 sẽ timeout). */}
+                <div className="flex gap-2 p-1 rounded-lg bg-muted border border-border">
+                  <button
+                    type="button"
+                    onClick={() => setCoCamMode('portrait')}
+                    className={`flex-1 flex items-center justify-center gap-1.5 h-9 rounded-md text-xs font-bold transition-all ${coCamMode === 'portrait' ? 'bg-primary text-primary-foreground shadow' : 'text-muted-foreground hover:text-foreground'}`}
+                  >
+                    <UserSquare size={13} /> Driver Portrait {capturedPortraitImage && <CheckCircle2 size={12} className="text-emerald-400" />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCoCamMode('plate')}
+                    className={`flex-1 flex items-center justify-center gap-1.5 h-9 rounded-md text-xs font-bold transition-all ${coCamMode === 'plate' ? 'bg-primary text-primary-foreground shadow' : 'text-muted-foreground hover:text-foreground'}`}
+                  >
+                    <ScanLine size={13} /> Exit Plate {capturedPlateImage && <CheckCircle2 size={12} className="text-emerald-400" />}
+                  </button>
+                </div>
+
+                {coCamMode === 'portrait' ? (
+                  <LivePortraitCamera ref={portraitCamRef} />
+                ) : (
+                  <LivePlateCamera
+                    ref={exitPlateCamRef}
+                    onDetected={handleExitPlateDetected}
+                    busy={loading}
+                    title="Verify Exit Plate"
+                    captureLabel="Verify Plate"
+                  />
+                )}
+
                 {capturedPortraitImage && (
                   <div className="flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-2 text-xs text-emerald-400">
                     <UserSquare size={14} /> Exit portrait captured. You can retake it.
+                  </div>
+                )}
+                {capturedPlateImage && !exitPlateMismatch && (
+                  <div className="flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-2 text-xs text-emerald-400">
+                    <ScanLine size={14} /> Exit plate photo captured. You can retake it.
                   </div>
                 )}
                 <div className="flex gap-2">
@@ -527,15 +596,22 @@ export function StaffParkedPage({ view = 'list' }: { view?: 'scanner' | 'list' }
                   </Button>
                   <Button
                     onClick={() => {
-                      const img = portraitCamRef.current?.capture() ?? null;
-                      if (!img) { setOpMessage({ type: 'err', text: 'Portrait camera is not ready. Please try again.' }); return; }
-                      setCapturedPortraitImage(img);
+                      if (!capturedPortraitImage) {
+                        if (coCamMode !== 'portrait') {
+                          setCoCamMode('portrait');
+                          setOpMessage({ type: 'err', text: 'Please capture the driver portrait first.' });
+                          return;
+                        }
+                        const portraitImg = portraitCamRef.current?.capture() ?? null;
+                        if (!portraitImg) { setOpMessage({ type: 'err', text: 'Portrait camera is not ready. Please try again.' }); return; }
+                        setCapturedPortraitImage(portraitImg);
+                      }
                       setOpMessage(null);
                       setCoStep(2);
                     }}
                     className="flex-1 h-11 gap-2 bg-gradient-to-r from-orange-500 to-amber-400 text-slate-950 hover:brightness-110"
                   >
-                    <UserSquare size={16} /> {capturedPortraitImage ? 'Retake & Continue' : 'Capture Portrait & Continue'} <ArrowRight size={16} />
+                    <UserSquare size={16} /> {capturedPortraitImage ? 'Continue' : 'Capture & Continue'} <ArrowRight size={16} />
                   </Button>
                 </div>
               </div>

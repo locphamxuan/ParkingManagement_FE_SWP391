@@ -50,7 +50,6 @@ export function ManagerStaffShiftsPage() {
     staff: string;
     shift: string;
     workDate: string;
-    gate?: string | null;
     note?: string;
   }) => {
     setIsSubmitting(true);
@@ -106,21 +105,6 @@ export function ManagerStaffShiftsPage() {
           </div>
         ) : (
           <span className="text-xs italic text-muted-foreground">Staff member removed</span>
-        ),
-    },
-    {
-      key: 'gate',
-      title: 'Gate',
-      render: (row) =>
-        row.gate ? (
-          <div>
-            <div className="font-medium">{row.gate.code}</div>
-            <div className="text-xs text-muted-foreground">
-              {row.gate.direction === 'in' ? 'Entry Gate' : row.gate.direction === 'out' ? 'Exit Gate' : 'Bidirectional'}
-            </div>
-          </div>
-        ) : (
-          <span className="text-muted-foreground">—</span>
         ),
     },
     {

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { X, Loader } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
-import { managerApi, type StaffShift, type Gate } from '@/services/manager/managerApi';
+import { managerApi, type StaffShift } from '@/services/manager/managerApi';
 import { CustomSelect } from '@/components/ui/select';
 import { DatePicker } from '@/components/ui/date-picker';
 
@@ -13,19 +13,12 @@ interface AssignStaffModalProps {
     staff: string;
     shift: string;
     workDate: string;
-    gate?: string | null;
     note?: string;
   }) => Promise<void>;
   buildingId: string;
   editingData?: StaffShift | null;
   isSubmitting?: boolean;
 }
-
-const directionLabel: Record<Gate['direction'], string> = {
-  in: 'Entry Gate',
-  out: 'Exit Gate',
-  both: 'Two-way',
-};
 
 interface Staff {
   _id: string;
@@ -52,18 +45,16 @@ export function AssignStaffModal({
 }: AssignStaffModalProps) {
   const [staffList, setStaffList] = useState<Staff[]>([]);
   const [shiftList, setShiftList] = useState<Shift[]>([]);
-  const [gateList, setGateList] = useState<Gate[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Form state
   const [selectedStaff, setSelectedStaff] = useState('');
   const [selectedShift, setSelectedShift] = useState('');
-  const [selectedGate, setSelectedGate] = useState('');
   const [workDate, setWorkDate] = useState('');
   const [note, setNote] = useState('');
 
-  // Load staff, shifts and gates on mount
+  // Load staff and shifts on mount
   useEffect(() => {
     if (!isOpen || !buildingId) return;
 
@@ -73,12 +64,10 @@ export function AssignStaffModal({
     Promise.all([
       managerApi.shifts.listStaff(buildingId),
       managerApi.shifts.list(buildingId),
-      managerApi.gates.list(buildingId),
     ])
-      .then(([staffRes, shiftsRes, gatesRes]) => {
+      .then(([staffRes, shiftsRes]) => {
         setStaffList(staffRes.data.items);
         setShiftList(shiftsRes.data.items);
-        setGateList(gatesRes.data.items);
       })
       .catch((err) => {
         setError(err instanceof Error ? err.message : 'Failed to load data');
@@ -91,14 +80,12 @@ export function AssignStaffModal({
     if (editingData) {
       setSelectedStaff(editingData.staff._id);
       setSelectedShift(editingData.shift._id);
-      setSelectedGate(editingData.gate?._id ?? '');
       setWorkDate(editingData.workDate);
       setNote(editingData.note || '');
     } else {
       // Reset form for creating new
       setSelectedStaff('');
       setSelectedShift('');
-      setSelectedGate('');
       setWorkDate('');
       setNote('');
     }
@@ -127,7 +114,6 @@ export function AssignStaffModal({
         staff: selectedStaff,
         shift: selectedShift,
         workDate,
-        gate: selectedGate || null,
         note: note.trim() || undefined,
       });
     } catch (err) {
@@ -204,27 +190,6 @@ export function AssignStaffModal({
                   })),
                 ]}
                 placeholder="-- Select shift --"
-                className="h-10 text-sm font-semibold"
-              />
-            </div>
-
-            {/* Gate Selection */}
-            <div className="grid gap-2">
-              <label className="text-sm font-medium text-foreground">
-                Assigned Gate
-              </label>
-              <CustomSelect
-                value={selectedGate || ''}
-                onChange={setSelectedGate}
-                disabled={isSubmitting}
-                options={[
-                  { value: '', label: '-- No gate assigned --' },
-                  ...gateList.map((gate) => ({
-                    value: gate._id,
-                    label: `${gate.code}${gate.name ? ` — ${gate.name}` : ''} (${directionLabel[gate.direction]})`,
-                  })),
-                ]}
-                placeholder="-- No gate assigned --"
                 className="h-10 text-sm font-semibold"
               />
             </div>

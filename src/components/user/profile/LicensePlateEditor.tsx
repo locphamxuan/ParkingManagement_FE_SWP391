@@ -251,7 +251,7 @@ export function LicensePlateEditor({
       </AnimatePresence>
 
       <p className="text-[9px] text-slate-500 font-semibold leading-relaxed">
-        * Format: 2 digits + series (e.g. <span className="font-mono text-slate-400">G2</span> or <span className="font-mono text-slate-400">LD</span>) + hyphen + 4-5 digits. Example: <span className="font-mono text-slate-400">59G2-03880</span>, <span className="font-mono text-slate-400">59G2-038.80</span>. Press <kbd className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-mono text-[8px]">Enter</kbd> or click Add to confirm.
+        * Format: 2 digits + series (e.g. <span className="font-mono text-slate-400">A</span> for cars, <span className="font-mono text-slate-400">G2</span> for motorcycles, or <span className="font-mono text-slate-400">LD</span>) + hyphen + 4-5 digits. Example: <span className="font-mono text-slate-400">30A-97022</span>, <span className="font-mono text-slate-400">59G2-038.80</span>. Press <kbd className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-mono text-[8px]">Enter</kbd> or click Add to confirm.
       </p>
     </div>
   );

@@ -1,7 +1,7 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { ScanLine, Loader2, AlertCircle, CheckCircle2, RefreshCw, Upload } from 'lucide-react';
 import { staffApi } from '@/services/staff/staffApi';
-import { videoConstraintFor } from '@/hooks/useCameraDevices';
+import { videoConstraintFor, preflightCameraCheck } from '@/hooks/useCameraDevices';
 
 export interface PlateScanResult {
   plateNumber: string;
@@ -21,6 +21,10 @@ interface LivePlateCameraProps {
   busy?: boolean;
   /** Devices camera vật lý gán cho vai trò này (nếu có nhiều camera). */
   deviceId?: string;
+  /** Header label — overridable so the same scan/AI pipeline can read "Verify Exit Plate" at check-out vs "License Plate Scan" at check-in. */
+  title?: string;
+  /** "Capture & Recognize" button label — overridable to match the calling context. */
+  captureLabel?: string;
 }
 
 /**
@@ -29,7 +33,7 @@ interface LivePlateCameraProps {
  * and returns the recognized plate + the captured image (saved to DB).
  */
 export const LivePlateCamera = forwardRef<LiveCameraHandle, LivePlateCameraProps>(function LivePlateCamera(
-  { onDetected, busy = false, deviceId },
+  { onDetected, busy = false, deviceId, title = 'Camera 1 · License Plate Scan', captureLabel = 'Capture & Recognize' },
   ref,
 ) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -40,6 +44,10 @@ export const LivePlateCamera = forwardRef<LiveCameraHandle, LivePlateCameraProps
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  // AbortError xảy ra khi driver camera chưa kịp nhả thiết bị từ lần mount trước
+  // (thường do React StrictMode double-invoke effect ở dev mode) — tự retry 1 lần
+  // thay vì bắt người dùng bấm Retry thủ công cho lỗi thoáng qua này.
+  const autoRetriesRef = useRef(0);
 
   useEffect(() => {
     let stream: MediaStream | null = null;
@@ -54,6 +62,8 @@ export const LivePlateCamera = forwardRef<LiveCameraHandle, LivePlateCameraProps
         if (!navigator.mediaDevices?.getUserMedia) {
           throw Object.assign(new Error('API not supported'), { name: 'NotSupportedError' });
         }
+        await preflightCameraCheck();
+        if (cancelled) return;
         // Small delay to let any tracks released by React StrictMode cleanup be freed by the browser.
         await new Promise<void>((r) => setTimeout(r, 150));
         if (cancelled) return;
@@ -83,13 +93,18 @@ export const LivePlateCamera = forwardRef<LiveCameraHandle, LivePlateCameraProps
         if (!cancelled) {
           const name = (err as { name?: string })?.name ?? '';
           if (name === 'NotAllowedError' || name === 'PermissionDeniedError' || name === 'SecurityError') {
-            setError('Camera permission has not been granted. Click the lock icon in the address bar -> Permissions -> Camera -> Allow.');
+            setError('Camera access is blocked. Check the browser\'s address-bar permission icon AND your OS camera privacy setting (Windows: Settings > Privacy > Camera > allow desktop apps/browser), then click Retry.');
           } else if (name === 'NotFoundError' || name === 'DevicesNotFoundError' || name === 'NotSupportedError') {
-            setError('No camera device found. Connect a camera and click Retry.');
+            setError('No camera device found on this machine. Connect a camera and click Retry.');
           } else if (name === 'NotReadableError' || name === 'TrackStartError') {
             setError('Camera is being used by another app. Close it and click Retry.');
           } else if (name === 'AbortError') {
-            setError('Camera connection was interrupted. Click Retry.');
+            if (autoRetriesRef.current < 1) {
+              autoRetriesRef.current += 1;
+              setTimeout(() => { if (!cancelled) setRetryCount((c) => c + 1); }, 400);
+            } else {
+              setError('Camera connection was interrupted. Click Retry.');
+            }
           } else if (name === 'OverconstrainedError') {
             setError('Camera does not support the requested format. Click Retry.');
           } else {
@@ -216,7 +231,7 @@ export const LivePlateCamera = forwardRef<LiveCameraHandle, LivePlateCameraProps
     <div className="rounded-xl border border-border bg-card/40 p-3 space-y-2.5">
       <div className="flex items-center gap-2">
         <ScanLine size={15} className="text-primary" />
-        <p className="text-sm font-semibold text-foreground">Camera 1 · License Plate Scan</p>
+        <p className="text-sm font-semibold text-foreground">{title}</p>
       </div>
 
       <div className="relative aspect-[4/3] overflow-hidden rounded-lg border border-white/10 bg-black/60">
@@ -296,7 +311,7 @@ export const LivePlateCamera = forwardRef<LiveCameraHandle, LivePlateCameraProps
           className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition hover:brightness-110 disabled:opacity-60"
         >
           {processing ? <Loader2 size={15} className="animate-spin" /> : <ScanLine size={15} />}
-          Capture &amp; Recognize
+          {captureLabel}
         </button>
         <button
           type="button"

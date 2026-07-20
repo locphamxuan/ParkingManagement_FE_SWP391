@@ -1,7 +1,7 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { UserSquare, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import type { LiveCameraHandle } from '@/components/staff/LivePlateCamera';
-import { videoConstraintFor } from '@/hooks/useCameraDevices';
+import { videoConstraintFor, preflightCameraCheck } from '@/hooks/useCameraDevices';
 
 interface LivePortraitCameraProps {
   /** Pause stream rendering (kept for API parity; portrait cam always on). */
@@ -22,6 +22,10 @@ export const LivePortraitCamera = forwardRef<LiveCameraHandle, LivePortraitCamer
     const [active, setActive] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [retryCount, setRetryCount] = useState(0);
+    // AbortError xảy ra khi driver camera chưa kịp nhả thiết bị từ lần mount trước
+    // (thường do React StrictMode double-invoke effect ở dev mode) — tự retry 1 lần
+    // thay vì bắt người dùng bấm Retry thủ công cho lỗi thoáng qua này.
+    const autoRetriesRef = useRef(0);
 
     useImperativeHandle(ref, () => ({
       capture: () => {
@@ -50,6 +54,8 @@ export const LivePortraitCamera = forwardRef<LiveCameraHandle, LivePortraitCamer
           if (!navigator.mediaDevices?.getUserMedia) {
             throw Object.assign(new Error('API not supported'), { name: 'NotSupportedError' });
           }
+          await preflightCameraCheck();
+          if (cancelled) return;
           await new Promise<void>((r) => setTimeout(r, 150));
           if (cancelled) return;
           stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraintFor(deviceId, 'user') });
@@ -72,13 +78,18 @@ export const LivePortraitCamera = forwardRef<LiveCameraHandle, LivePortraitCamer
           if (!cancelled) {
             const name = (err as { name?: string })?.name ?? '';
             if (name === 'NotAllowedError' || name === 'PermissionDeniedError' || name === 'SecurityError') {
-              setError('Camera permission has not been granted. Click the lock icon in the address bar -> Camera -> Allow.');
+              setError('Camera access is blocked. Check the browser\'s address-bar permission icon AND your OS camera privacy setting (Windows: Settings > Privacy > Camera > allow desktop apps/browser), then click Retry.');
             } else if (name === 'NotFoundError' || name === 'DevicesNotFoundError' || name === 'NotSupportedError') {
-              setError('No camera found. Click Retry or Skip to continue without a photo.');
+              setError('No camera device found on this machine. Click Retry or Skip to continue without a photo.');
             } else if (name === 'NotReadableError' || name === 'TrackStartError') {
               setError('Camera is being used by another app. Close it and click Retry.');
             } else if (name === 'AbortError') {
-              setError('Camera connection was interrupted. Click Retry.');
+              if (autoRetriesRef.current < 1) {
+                autoRetriesRef.current += 1;
+                setTimeout(() => { if (!cancelled) setRetryCount((c) => c + 1); }, 400);
+              } else {
+                setError('Camera connection was interrupted. Click Retry.');
+              }
             } else {
               setError(`Unable to access portrait camera (${name || 'unknown error'}). Click Retry.`);
             }

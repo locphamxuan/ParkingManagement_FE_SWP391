@@ -7,8 +7,8 @@ export type AppNotificationType =
   | 'subscription_expired'
   | 'subscription_slot_released'
   | 'subscription_overage'
-  | 'reservation_expired'
-  | 'reservation_overstay'
+  | 'incident_update'
+  | 'incident_resolved'
   | 'feedback_reply'
   | 'general';
 
@@ -30,8 +30,8 @@ export const NOTIFICATION_TYPE_LABEL: Record<AppNotificationType, string> = {
   subscription_expired: 'Sub Expired',
   subscription_slot_released: 'Slot Released',
   subscription_overage: 'Sub Overage',
-  reservation_expired: 'Reservation Expired',
-  reservation_overstay: 'Reservation Overstay',
+  incident_update: 'Incident Update',
+  incident_resolved: 'Incident Resolved',
   feedback_reply: 'Feedback Reply',
   general: 'General',
 };
