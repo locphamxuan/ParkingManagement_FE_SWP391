@@ -31,7 +31,7 @@ export function StaffProfilePage() {
   const [phoneError, setPhoneError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  if (!session?.token || session?.role !== 'staff') {
+  if (!session || session.role !== 'staff') {
     return <Navigate to="/auth/login" replace />;
   }
 

@@ -7,14 +7,32 @@ import type { TestContext } from 'vitest';
 import { loginWithBackend, fetchCurrentUser, type AuthSession } from '@/services/authService';
 import { setStoredToken } from '@/services/client/apiClient';
 
+const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined) || 'http://localhost:5000/api';
+
+// Login trực tiếp qua fetch (không qua loginWithBackend) để lấy token thô —
+// dùng cho test fetchCurrentUser(token), vì AuthSession phía FE không còn
+// giữ token (xác thực trình duyệt dựa vào httpOnly cookie, không phải giá trị này).
+async function fetchRawToken(email: string, password: string): Promise<string> {
+  const res = await fetch(`${API_BASE}/users/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+  const body = await res.json();
+  const token: string | undefined = body?.data?.token;
+  if (!token) throw new Error('BE không trả về token sau khi login');
+  return token;
+}
+
 // Login một lần trong beforeAll, chia sẻ session cho các test — tránh rate-limit
 let staffSession: AuthSession | null = null;
 let managerSession: AuthSession | null = null;
+let staffToken = '';
 let isReady = false;
 
 beforeAll(async () => {
   try {
-    [staffSession, managerSession] = await Promise.all([
+    [staffSession, managerSession, staffToken] = await Promise.all([
       loginWithBackend({
         email: import.meta.env.VITE_TEST_STAFF_EMAIL as string,
         password: import.meta.env.VITE_TEST_STAFF_PASSWORD as string,
@@ -23,6 +41,10 @@ beforeAll(async () => {
         email: import.meta.env.VITE_TEST_MANAGER_EMAIL as string,
         password: import.meta.env.VITE_TEST_MANAGER_PASSWORD as string,
       }),
+      fetchRawToken(
+        import.meta.env.VITE_TEST_STAFF_EMAIL as string,
+        import.meta.env.VITE_TEST_STAFF_PASSWORD as string,
+      ),
     ]);
     isReady = true;
   } catch (err) {
@@ -43,8 +65,8 @@ beforeEach((ctx: TestContext) => {
 describe('Auth — loginWithBackend', () => {
   it('login thành công → trả về AuthSession với đầy đủ trường', () => {
     // Kiểm tra session đã được tạo trong beforeAll — không login lại
+    // (token không còn nằm trong AuthSession phía FE: BE set qua httpOnly cookie)
     expect(staffSession).not.toBeNull();
-    expect(staffSession!.token).toBeTruthy();
     expect(staffSession!.userId).toBeTruthy();
     expect(staffSession!.email).toBeTruthy();
     expect(staffSession!.displayName).toBeTruthy();
@@ -82,11 +104,9 @@ describe('Auth — loginWithBackend', () => {
 
 describe('Auth — fetchCurrentUser', () => {
   it('lấy được thông tin user từ token hiện tại', async () => {
-    // Dùng token đã có từ beforeAll — không login lại
-    const token = staffSession!.token;
-    const meSession = await fetchCurrentUser(token);
+    // Dùng token thô đã lấy trong beforeAll — không login lại
+    const meSession = await fetchCurrentUser(staffToken);
 
-    expect(meSession.token).toBe(token);
     expect(meSession.email).toBe(staffSession!.email);
     expect(meSession.role).toBe(staffSession!.role);
     expect(meSession.userId).toBe(staffSession!.userId);

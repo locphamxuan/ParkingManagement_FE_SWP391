@@ -232,19 +232,3 @@ describe('Admin — revenue.report', () => {
   });
 });
 
-// ── PRICE POLICIES ────────────────────────────────────────────────────────────
-
-describe('Admin — pricePolicies.list', () => {
-  it('trả về chính sách giá toàn hệ thống', async () => {
-    const res = await adminApi.pricePolicies.list();
-    expect(res.data).toBeDefined();
-    expect(Array.isArray(res.data.items)).toBe(true);
-
-    if (res.data.items.length > 0) {
-      const policy = res.data.items[0];
-      expect(policy).toHaveProperty('_id');
-      expect(typeof policy.hourlyRate).toBe('number');
-      expect(typeof policy.isActive).toBe('boolean');
-    }
-  });
-});

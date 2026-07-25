@@ -18,13 +18,11 @@ interface ApiUser {
 
 interface ApiAuthResponse {
   data?: {
-    token?: string;
     user?: ApiUser;
   };
 }
 
 export interface AuthSession {
-  token: string;
   userId: string;
   role: 'admin' | 'manager' | 'staff' | 'user';
   email: string;
@@ -47,14 +45,15 @@ export interface RegisterVerifyInput {
 }
 
 /**
- * Map the backend `{ token, user }` payload into the FE AuthSession shape.
- * Shared by login / register / register-verify (all return the same envelope).
+ * Map the backend `{ user }` payload into the FE AuthSession shape (the auth
+ * token itself lives only in the httpOnly cookie the backend sets alongside
+ * this response — the browser client never reads or stores it).
+ * Shared by login / register / register-verify / me (all return the same envelope).
  */
 function mapAuthSession(payload: ApiAuthResponse): AuthSession {
-  const token = payload?.data?.token;
   const user = payload?.data?.user;
 
-  if (!token || !user) {
+  if (!user) {
     throw new Error('Invalid authentication response from the server.');
   }
 
@@ -82,7 +81,6 @@ function mapAuthSession(payload: ApiAuthResponse): AuthSession {
     : [];
 
   return {
-    token,
     userId: String(user._id),
     role: user.role,
     email: user.email,
@@ -161,16 +159,26 @@ export async function verifyRegistration(input: RegisterVerifyInput): Promise<Au
 
 /**
  * Fetch the current authenticated user. GET /users/auth/me → { user }.
+ * Used to bootstrap/restore the browser session on app load, where the
+ * httpOnly auth cookie is sent automatically and no token is passed. The
+ * optional `token` param exists only for non-browser callers (integration
+ * tests) that authenticate via an explicit Bearer token instead of a cookie.
  */
-export async function fetchCurrentUser(token: string): Promise<AuthSession> {
+export async function fetchCurrentUser(token?: string): Promise<AuthSession> {
   const payload = await requestJson<ApiAuthResponse>({
     path: '/users/auth/me',
     method: 'GET',
     token,
   });
 
-  // /me returns { data: { user } } (no token) — reuse the stored token.
-  return mapAuthSession({ data: { token, user: payload?.data?.user } });
+  return mapAuthSession(payload);
+}
+
+/**
+ * Clears the httpOnly auth cookie server-side. POST /users/auth/logout.
+ */
+export async function logoutFromBackend(): Promise<void> {
+  await requestJson({ path: '/users/auth/logout', method: 'POST' });
 }
 
 export async function forgotPassword(email: string): Promise<{ message: string }> {

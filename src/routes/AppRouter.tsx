@@ -33,7 +33,6 @@ const UserDashboardPage = lazy(() => import('@/pages/user/UserDashboardPage'));
 // ── Manager ─────────────────────────────────────────────────────────────────
 const ManagerBuildingsPage = lazy(() => import('@/pages/manager/ManagerBuildingsPage').then((m) => ({ default: m.ManagerBuildingsPage })));
 const ManagerDashboardPage = lazy(() => import('@/pages/manager/ManagerDashboardPage').then((m) => ({ default: m.ManagerDashboardPage })));
-const ManagerPlaceholderPage = lazy(() => import('@/pages/manager/ManagerPlaceholderPage').then((m) => ({ default: m.ManagerPlaceholderPage })));
 const ManagerProfilePage = lazy(() => import('@/pages/manager/ManagerProfilePage').then((m) => ({ default: m.ManagerProfilePage })));
 const ManagerVehicleTypesPage = lazy(() => import('@/pages/manager/ManagerVehicleTypesPage').then((m) => ({ default: m.ManagerVehicleTypesPage })));
 const ManagerFloorsPage = lazy(() => import('@/pages/manager/ManagerFloorsPage').then((m) => ({ default: m.ManagerFloorsPage })));
@@ -67,7 +66,6 @@ const UsersPage = lazy(() => import('@/pages/admin/UsersPage').then((m) => ({ de
 const RevenueAnalyticsPage = lazy(() => import('@/pages/admin/RevenueAnalyticsPage').then((m) => ({ default: m.RevenueAnalyticsPage })));
 const AuditLogsPage = lazy(() => import('@/pages/admin/AuditLogsPage').then((m) => ({ default: m.AuditLogsPage })));
 const AdminProfilePage = lazy(() => import('@/pages/admin/AdminProfilePage').then((m) => ({ default: m.AdminProfilePage })));
-const ModulePlaceholderPage = lazy(() => import('@/pages/admin/ModulePlaceholderPage').then((m) => ({ default: m.ModulePlaceholderPage })));
 
 /** Giữ tương thích bookmark cũ: /admin/dashboard/<page> → /admin/<page>. */
 function LegacyAdminRedirect() {
@@ -139,15 +137,6 @@ export function AppRouter() {
           <Route path="incidents" element={<ManagerIncidentsPage />} />
           <Route path="sessions" element={<ManagerSessionsPage />} />
           <Route path="wallet" element={<ManagerWalletPage />} />
-          <Route
-            path="settings"
-            element={
-              <ManagerPlaceholderPage
-                title="Settings"
-                description="Configure security, notifications, and operating parameters for managers."
-              />
-            }
-          />
         </Route>
       </Route>
 
@@ -180,14 +169,6 @@ export function AppRouter() {
           <Route path="revenue-analytics" element={<RevenueAnalyticsPage />} />
           <Route path="audit-logs" element={<AuditLogsPage />} />
           <Route path="profile" element={<AdminProfilePage />} />
-          <Route
-            path="notifications"
-            element={<ModulePlaceholderPage title="Notifications" description="Notification templates, queue monitoring, and delivery channels." />}
-          />
-          <Route
-            path="settings"
-            element={<ModulePlaceholderPage title="Settings" description="Platform configuration, access policies, and operating preferences." />}
-          />
         </Route>
       </Route>
 

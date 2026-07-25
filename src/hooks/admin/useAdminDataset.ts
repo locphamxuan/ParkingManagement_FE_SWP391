@@ -16,8 +16,7 @@ export function useAdminDataset(): UseAdminDatasetResult {
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
-    const token = session?.token;
-    if (!token) {
+    if (!session) {
       setData(null);
       setError('You are not signed in to an admin session.');
       setIsLoading(false);
@@ -27,7 +26,7 @@ export function useAdminDataset(): UseAdminDatasetResult {
     setIsLoading(true);
 
     try {
-      const result = await getAdminDataset(token);
+      const result = await getAdminDataset();
       setData(result);
       setError(null);
     } catch (err: unknown) {
@@ -36,7 +35,7 @@ export function useAdminDataset(): UseAdminDatasetResult {
     } finally {
       setIsLoading(false);
     }
-  }, [session?.token]);
+  }, [session]);
 
   useEffect(() => {
     refresh().catch(() => undefined);

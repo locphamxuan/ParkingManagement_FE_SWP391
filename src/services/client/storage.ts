@@ -1,7 +1,8 @@
 // Giá trị key phải giữ nguyên vĩnh viễn — đổi là mất dữ liệu người dùng đã lưu.
+// Lưu ý: KHÔNG có key nào cho auth token ở đây — token xác thực sống trong
+// httpOnly cookie do BE quản lý; session (user) được khôi phục qua GET
+// /users/auth/me mỗi lần tải lại trang, không cache trong localStorage.
 export const STORAGE_KEYS = {
-  token: 'pbms.token',
-  user: 'pbms.user',
   forgotEmailPending: 'pbms.forgotEmail_pending',
   savedAccounts: 'pbms_saved_accounts',
   staffCameraDevices: 'pbms.staffCameraDevices',
@@ -9,11 +10,6 @@ export const STORAGE_KEYS = {
 } as const;
 
 export type StorageKey = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS];
-
-export interface LocalSession {
-  token: string;
-  user: Record<string, unknown> | null;
-}
 
 export function loadJson<T = unknown>(key: string): T | null {
   try {
@@ -54,29 +50,6 @@ export function removeStored(key: StorageKey): void {
   } catch {
     // localStorage không khả dụng — bỏ qua
   }
-}
-
-export function loadSession(): LocalSession {
-  const token = localStorage.getItem(STORAGE_KEYS.token) || '';
-  const user = loadJson<Record<string, unknown>>(STORAGE_KEYS.user);
-
-  return { token, user };
-}
-
-export function saveSession(session: LocalSession): void {
-  if (session?.token) {
-    localStorage.setItem(STORAGE_KEYS.token, session.token);
-    localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(session.user || null));
-    return;
-  }
-
-  localStorage.removeItem(STORAGE_KEYS.token);
-  localStorage.removeItem(STORAGE_KEYS.user);
-}
-
-export function clearSession(): void {
-  localStorage.removeItem(STORAGE_KEYS.token);
-  localStorage.removeItem(STORAGE_KEYS.user);
 }
 
 export function saveForgotEmail(email: string): void {

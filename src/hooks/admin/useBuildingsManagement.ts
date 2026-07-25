@@ -1,17 +1,5 @@
 import { useMemo, useState } from 'react';
 import { useAdminDataset } from '@/hooks/admin/useAdminDataset';
-import { useAuth } from '@/hooks/useAuth';
-import {
-  createBuilding,
-  deleteAdminUser,
-  deleteBuilding,
-  updateBuilding,
-  updateBuildingStatus,
-  revokeStaffFromBuilding,
-  revokeManagerFromBuilding,
-  assignManagerToBuilding,
-  assignStaffToBuilding,
-} from '@/services/admin/adminApi';
 import {
   adminApi,
   type AdminUser,
@@ -42,7 +30,6 @@ export interface DetailState {
  */
 export function useBuildingsManagement() {
   const { data, isLoading, error, refresh } = useAdminDataset();
-  const { session } = useAuth();
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [page, setPage] = useState(1);
@@ -90,8 +77,6 @@ export function useBuildingsManagement() {
       return matchesSearch && matchesStatus;
     });
   }, [data?.buildings, query, statusFilter]);
-
-  const token = session?.token || '';
 
   const openViewMembers = async (building: Building) => {
     const bid = building.backendId || building.id;
@@ -149,11 +134,11 @@ export function useBuildingsManagement() {
   };
 
   const handleAssignManager = async (managerId: string) => {
-    if (!token || !membersState) return;
+    if (!membersState) return;
     setIsMembersLoading(true);
     setMembersError(null);
     try {
-      await assignManagerToBuilding(token, membersState.buildingId, managerId);
+      await adminApi.buildings.assignManager(membersState.buildingId, managerId);
       const res = await adminApi.buildings.getMembers(membersState.buildingId);
       setMembersState({
         ...membersState,
@@ -169,11 +154,11 @@ export function useBuildingsManagement() {
   };
 
   const handleAssignStaff = async (staffId: string) => {
-    if (!token || !membersState) return;
+    if (!membersState) return;
     setIsMembersLoading(true);
     setMembersError(null);
     try {
-      await assignStaffToBuilding(token, membersState.buildingId, staffId);
+      await adminApi.buildings.assignStaff(membersState.buildingId, staffId);
       const res = await adminApi.buildings.getMembers(membersState.buildingId);
       setMembersState({
         ...membersState,
@@ -212,17 +197,17 @@ export function useBuildingsManagement() {
   };
 
   const confirmDeleteMember = async () => {
-    if (!token || !pendingDeleteMember || !membersState) return;
+    if (!pendingDeleteMember || !membersState) return;
     const isManager = membersState.manager?._id === pendingDeleteMember._id;
     const buildingId = membersState.buildingId;
     try {
       setIsDeletingMember(true);
       if (isManager) {
-        await revokeManagerFromBuilding(token, buildingId, pendingDeleteMember._id);
+        await adminApi.buildings.revokeManager(buildingId, pendingDeleteMember._id);
       } else {
-        await revokeStaffFromBuilding(token, buildingId, pendingDeleteMember._id);
+        await adminApi.buildings.revokeStaff(buildingId, pendingDeleteMember._id);
       }
-      await deleteAdminUser(token, pendingDeleteMember._id);
+      await adminApi.users.remove(pendingDeleteMember._id);
       setMembersState((prev) =>
         prev
           ? {
@@ -269,24 +254,25 @@ export function useBuildingsManagement() {
   };
 
   const saveBuilding = async () => {
-    if (!token) return;
     try {
       setIsSaving(true);
       setActionError(null);
       if (selectedBuilding) {
-        await updateBuilding(token, selectedBuilding.backendId || selectedBuilding.id, {
+        await adminApi.buildings.update(selectedBuilding.backendId || selectedBuilding.id, {
           name: form.name,
           code: form.code,
           totalFloors: Number(form.floors),
-          fullAddress: form.address,
+          address: { fullAddress: form.address },
         });
       } else {
-        await createBuilding(token, {
+        await adminApi.buildings.create({
           name: form.name,
           code: form.code,
           totalFloors: Number(form.floors),
-          fullAddress: form.address,
-          hourlyRate: Number(form.hourlyRate),
+          address: { fullAddress: form.address },
+          pricing: { hourlyRate: Number(form.hourlyRate) },
+          operatingHours: { open: '06:00', close: '22:00' },
+          status: 'active',
         });
       }
       await refresh();
@@ -298,11 +284,10 @@ export function useBuildingsManagement() {
   };
 
   const toggleBuildingStatus = async (building: Building) => {
-    if (!token) return;
     try {
       setActionError(null);
       const nextStatus = building.status === 'active' ? 'inactive' : 'active';
-      await updateBuildingStatus(token, building.backendId || building.id, nextStatus);
+      await adminApi.buildings.updateStatus(building.backendId || building.id, nextStatus);
       await refresh();
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'Failed to change building status');
@@ -310,16 +295,15 @@ export function useBuildingsManagement() {
   };
 
   const removeBuildingById = (building: Building) => {
-    if (!token) return;
     setPendingDeleteBuilding(building);
   };
 
   const confirmRemoveBuilding = async () => {
-    if (!token || !pendingDeleteBuilding) return;
+    if (!pendingDeleteBuilding) return;
     try {
       setIsDeleting(true);
       setActionError(null);
-      await deleteBuilding(token, pendingDeleteBuilding.backendId || pendingDeleteBuilding.id);
+      await adminApi.buildings.remove(pendingDeleteBuilding.backendId || pendingDeleteBuilding.id);
       await refresh();
       setPendingDeleteBuilding(null);
     } catch (err) {

@@ -90,7 +90,6 @@ const titles: Record<string, string> = {
   '/manager/incidents': 'Incidents',
   '/manager/wallet': 'Building Wallet',
   '/manager/profile': 'Profile',
-  '/manager/settings': 'Settings',
 };
 
 export function ManagerLayout() {
