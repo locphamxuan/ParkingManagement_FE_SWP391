@@ -8,18 +8,11 @@ import { StatusBadge } from '@/components/common/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { CustomSelect } from '@/components/ui/select';
 import { useAdminDataset } from '@/hooks/admin/useAdminDataset';
-import {
-  createAdminUser,
-  deleteAdminUser,
-  updateAdminUser,
-  updateAdminUserStatus,
-} from '@/services/admin/adminApi';
-import { useAuth } from '@/hooks/useAuth';
+import { adminApi } from '@/services/admin/adminApi';
 import type { UserRecord } from '@/types';
 
 export function UsersPage() {
   const { data, isLoading, error, refresh } = useAdminDataset();
-  const { session } = useAuth();
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedUser, setSelectedUser] = useState<UserRecord | null>(null);
@@ -67,8 +60,6 @@ export function UsersPage() {
     return <div className="text-sm text-red-600">{error || 'Failed to load users.'}</div>;
   }
 
-  const token = session?.token || '';
-
   const openCreateModal = () => {
     setActionError(null);
     setForm({ fullName: '', email: '', password: '', phone: '', role: 'user', buildingId: '' });
@@ -96,18 +87,22 @@ export function UsersPage() {
   };
 
   const saveCreate = async () => {
-    if (!token) return;
     try {
       setIsSaving(true);
       setActionError(null);
-      await createAdminUser(token, {
+      const res = await adminApi.users.create({
         fullName: form.fullName,
         email: form.email,
         password: form.password,
         phone: form.phone,
         role: form.role,
-        buildingId: form.buildingId || undefined,
       });
+      const userId = res.data.user._id;
+      if (userId && form.buildingId && (form.role === 'staff' || form.role === 'manager')) {
+        await (form.role === 'staff'
+          ? adminApi.buildings.assignStaff(form.buildingId, userId)
+          : adminApi.buildings.assignManager(form.buildingId, userId));
+      }
       await refresh();
       closeModals();
     } catch (err) {
@@ -117,11 +112,11 @@ export function UsersPage() {
   };
 
   const saveUpdate = async () => {
-    if (!token || !selectedUser) return;
+    if (!selectedUser) return;
     try {
       setIsSaving(true);
       setActionError(null);
-      await updateAdminUser(token, selectedUser.id, {
+      await adminApi.users.update(selectedUser.id, {
         fullName: form.fullName,
         phone: form.phone,
       });
@@ -134,10 +129,9 @@ export function UsersPage() {
   };
 
   const toggleStatus = async (user: UserRecord) => {
-    if (!token) return;
     try {
       setActionError(null);
-      await updateAdminUserStatus(token, user.id, user.status !== 'active');
+      await adminApi.users.updateStatus(user.id, user.status !== 'active');
       await refresh();
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'Failed to change user status');
@@ -145,11 +139,11 @@ export function UsersPage() {
   };
 
   const confirmDeleteUser = async () => {
-    if (!token || !pendingDeleteUser) return;
+    if (!pendingDeleteUser) return;
     try {
       setIsDeleting(true);
       setActionError(null);
-      await deleteAdminUser(token, pendingDeleteUser.id);
+      await adminApi.users.remove(pendingDeleteUser.id);
       await refresh();
       setPendingDeleteUser(null);
     } catch (err) {

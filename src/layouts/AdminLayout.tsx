@@ -27,9 +27,7 @@ const titles: Record<string, string> = {
   '/admin/users': 'User Management',
   '/admin/revenue-analytics': 'Revenue Analytics',
   '/admin/audit-logs': 'Audit Logs',
-  '/admin/notifications': 'Notifications',
   '/admin/profile': 'Profile',
-  '/admin/settings': 'Settings',
 };
 
 export function AdminLayout() {

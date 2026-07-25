@@ -17,10 +17,16 @@ const fallbackFor = (userRole: UserRole): string => {
 
 export function ProtectedRoute({ role }: ProtectedRouteProps) {
   const location = useLocation();
-  const { token, user } = useAuth();
+  const { user, isBootstrapping } = useAuth();
 
-  if (!token) {
-    return <Navigate to="/auth/login" replace state={{ from: location.pathname }} />;
+  // Wait for the GET /users/auth/me session check to resolve before deciding
+  // to redirect — otherwise a hard refresh always bounces to /auth/login first.
+  if (isBootstrapping) {
+    return (
+      <div className="flex min-h-[40vh] items-center justify-center text-sm text-slate-400">
+        Loading…
+      </div>
+    );
   }
 
   if (!user) {

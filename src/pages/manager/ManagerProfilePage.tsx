@@ -30,7 +30,7 @@ export function ManagerProfilePage() {
   const [phoneError, setPhoneError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  if (!session?.token || session?.role !== 'manager') {
+  if (!session || session.role !== 'manager') {
     return <Navigate to="/auth/login" replace />;
   }
 

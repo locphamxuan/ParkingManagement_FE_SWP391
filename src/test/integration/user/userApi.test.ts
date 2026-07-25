@@ -6,6 +6,7 @@
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 import type { TestContext } from 'vitest';
 import { userApi } from '@/services/user/userApi';
+import { getStoredToken } from '@/services/client/apiClient';
 import { loginAsUser, clearToken } from '../helpers/auth';
 
 let isReady = false;
@@ -251,7 +252,7 @@ describe('User — profile', () => {
     // Lấy tên hiện tại trước
     const meRes = await fetch(
       `${(import.meta.env.VITE_API_BASE as string) || 'http://localhost:5000/api'}/users/auth/me`,
-      { headers: { Authorization: `Bearer ${localStorage.getItem('pbms.token')}` } },
+      { headers: { Authorization: `Bearer ${getStoredToken()}` } },
     );
     const me = await meRes.json();
     const currentName: string = me?.data?.user?.fullName || 'Test User';

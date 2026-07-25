@@ -90,13 +90,16 @@ src/
 ## 3. Tầng Services
 
 ### 3.1 HTTP client (`services/client/`)
-- **`apiClient.ts`** — **client HTTP duy nhất**: `api.get/post/put/patch/delete`, tự gắn
-  `Authorization: Bearer <token>` từ `localStorage` (hoặc token override), ném
-  `ApiError { status, payload }`, build query string, dispatch `auth-unauthorized` khi 401.
-  Cũng export `requestJson(...)` — adapter tương thích (chữ ký cũ của pbmsApi) cho
-  `authService` và `admin`, nội bộ vẫn gọi `apiRequest` → một triển khai duy nhất.
+- **`apiClient.ts`** — **client HTTP duy nhất**: `api.get/post/put/patch/delete`, luôn gửi
+  `credentials: 'include'` để trình duyệt tự đính kèm **httpOnly auth cookie** do BE set
+  (`pbms_token`, xem `utils/authCookie.js` phía BE) — **không** lưu token vào `localStorage`.
+  `getStoredToken/setStoredToken` chỉ còn backing bằng biến in-memory (mất khi reload), dùng
+  cho test helpers gọi thẳng API không qua trình duyệt. Ném `ApiError { status, payload }`,
+  build query string, dispatch `auth-unauthorized` khi 401. Cũng export `requestJson(...)` —
+  adapter tương thích cho `authService`, nội bộ vẫn gọi `apiRequest` → một triển khai duy nhất.
   Base URL đọc từ `VITE_API_BASE` hoặc `VITE_API_BASE_URL`.
-- **`storage.ts`** — đọc/ghi session vào `localStorage` (key token `pbms.token`).
+- **`storage.ts`** — chỉ còn localStorage cho dữ liệu KHÔNG nhạy cảm (email đã lưu, thiết bị
+  camera đã chọn, loại xe đã chọn...). Session/token không cache ở đây nữa — xem mục 4.
 
 ### 3.2 API theo vai trò
 `admin/`, `manager/`, `staff/`, `user/` — mỗi thư mục gom endpoint + type của vai trò
@@ -116,8 +119,11 @@ src/
 | Dữ liệu màn hình (list/detail) | hooks trong component | `useUserApi`, `useAdminDataset` |
 | Form/UI cục bộ | `useState` trong page | filter, modal mở/đóng |
 
-`useAuth()` là facade mỏng bọc `authStore`, cung cấp `session/token/user`,
-`login/logout/updateProfile`.
+`useAuth()` là facade mỏng bọc `authStore`, cung cấp `session/user/isBootstrapping`,
+`login/logout/updateProfile`. Không còn `token` trong session phía FE (auth dựa vào httpOnly
+cookie) — `App.tsx` gọi `authStore.bootstrap()` một lần khi tải trang (GET `/users/auth/me`
+qua cookie) để khôi phục phiên; `ProtectedRoute`/`PublicLoginRoute` chờ `isBootstrapping` xong
+trước khi quyết định điều hướng, tránh bị bật về `/auth/login` mỗi lần refresh.
 
 ### Hook pattern (`hooks/user/useUserApi.ts`)
 - **List hook** → `{ items, isLoading, error, pagination?, refresh() }`
@@ -145,14 +151,17 @@ src/
 ## 6. Luồng request/response tiêu biểu
 
 ```
-Page → hook (useReservations) → userApi.reservations.list({page,limit})
-     → apiClient.api.get('/users/reservations', {query})
-     → fetch  (Authorization: Bearer <token>)
+Page → hook (useUserApi) → userApi.parkingHistory.list({page,limit})
+     → apiClient.api.get('/users/parking-history', {query})
+     → fetch  (credentials:'include' → cookie pbms_token tự đính kèm)
      → BE → 200 { data: { items, pagination } }  |  4xx/5xx → ApiError
 hook: setState({items|error, isLoading:false}) → component re-render
 ```
 
-Lỗi 401 → xóa token, điều hướng về đăng nhập. Lỗi 4xx/5xx → hiển thị thông báo + nút thử lại.
+Lỗi 401 → clear session state trong `authStore`, dispatch `auth-unauthorized`, điều hướng về
+đăng nhập (cookie hết hạn/không hợp lệ vẫn được BE dọn qua `clearAuthCookie`). Lỗi 4xx/5xx khác
+→ hiển thị thông báo + nút thử lại. Chi tiết luồng đăng nhập/khôi phục phiên đầy đủ: xem
+`docs/CODEBASE_GUIDE.md` ở thư mục gốc repo (mục "Luồng đăng nhập & phiên").
 
 ---
 

@@ -1,5 +1,3 @@
-const STORAGE_TOKEN = 'pbms.token';
-
 // Hỗ trợ cả hai tên biến môi trường từng dùng (VITE_API_BASE và VITE_API_BASE_URL)
 // để giữ tương thích sau khi hợp nhất 2 HTTP client về một.
 const API_BASE =
@@ -7,13 +5,20 @@ const API_BASE =
   (import.meta.env.VITE_API_BASE_URL as string | undefined) ||
   'http://localhost:5000/api';
 
+// Auth chính dùng httpOnly cookie (BE set + đọc, xem utils/authCookie.js phía BE)
+// — trình duyệt tự đính kèm cookie này nhờ `credentials: 'include'` bên dưới,
+// KHÔNG lưu token vào localStorage. Biến in-memory dưới đây chỉ tồn tại trong
+// vòng đời tab hiện tại (mất khi reload) và chỉ thực sự cần cho test helpers
+// gọi thẳng API không qua trình duyệt (xem test/integration/helpers/auth.ts);
+// app thật không cần gọi setStoredToken vì cookie đã tự lo việc xác thực.
+let inMemoryToken: string | null = null;
+
 export function setStoredToken(token: string | null): void {
-  if (token) localStorage.setItem(STORAGE_TOKEN, token);
-  else localStorage.removeItem(STORAGE_TOKEN);
+  inMemoryToken = token;
 }
 
 export function getStoredToken(): string | null {
-  return localStorage.getItem(STORAGE_TOKEN);
+  return inMemoryToken;
 }
 
 type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
@@ -57,6 +62,7 @@ export async function apiRequest<T = unknown>(
 
   const res = await fetch(url, {
     method,
+    credentials: 'include', // gửi kèm httpOnly auth cookie (cross-origin FE/BE)
     headers: {
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),

@@ -71,7 +71,7 @@ export function AdminProfilePage() {
     void loadUsers(activeRole);
   }, [activeRole, loadUsers]);
 
-  if (!session?.token || session?.role !== 'admin') {
+  if (!session || session.role !== 'admin') {
     return <Navigate to="/admin/login" replace />;
   }
 

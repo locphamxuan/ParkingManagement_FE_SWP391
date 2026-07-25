@@ -268,9 +268,6 @@ export const staffApi = {
       }>
     >(`/staff/users/lookup-plate-qr/${qrCode}`),
 
-  addCustomerPlate: (customerId: string, payload: { plateNumber: string; vehicleType?: string }) =>
-    api.post<Wrap<{ success: boolean }>>(`/staff/users/${customerId}/license-plates`, payload),
-
   // AI camera (Camera 1): send a captured frame (base64, data-URL prefix allowed),
   // get back the recognized plate + brand and the resolved owner account.
   scanVehicle: (image: string) =>

@@ -88,17 +88,6 @@ export interface PricePolicy {
   isActive: boolean;
 }
 
-export interface PolicyPushLog {
-  _id: string;
-  building: string;
-  pricePolicy: { _id: string; name: string };
-  actor: { _id: string; fullName: string; email: string; role: string };
-  action: string;
-  previousValue?: unknown;
-  newValue?: unknown;
-  createdAt: string;
-}
-
 export interface LongTermPackage {
   _id: string;
   building: string;
@@ -354,8 +343,6 @@ export const managerApi = {
     update: (b: string, id: string, body: Partial<PricePolicy>) =>
       api.put<Wrap<{ item: PricePolicy }>>(path(b, `/price-policies/${id}`), body),
     deactivate: (b: string, id: string) => api.delete(path(b, `/price-policies/${id}`)),
-    pushLogs: (b: string) =>
-      api.get<Wrap<{ items: PolicyPushLog[]; pagination: unknown }>>(path(b, '/policy-push-logs')),
   },
 
   packages: {

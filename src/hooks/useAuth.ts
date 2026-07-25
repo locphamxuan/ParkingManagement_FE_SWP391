@@ -2,6 +2,7 @@ import { useAuthStore } from '@/store/authStore';
 
 export function useAuth() {
   const session = useAuthStore((state) => state.session);
+  const isBootstrapping = useAuthStore((state) => state.isBootstrapping);
   const login = useAuthStore((state) => state.login);
   const logout = useAuthStore((state) => state.logout);
   const updateProfile = useAuthStore((state) => state.updateProfile);
@@ -9,7 +10,6 @@ export function useAuth() {
   const isAuthenticating = useAuthStore((state) => state.isAuthenticating);
   const error = useAuthStore((state) => state.error);
 
-  const token = session?.token ?? null;
   const user = session
     ? {
         userId: session.userId,
@@ -23,7 +23,7 @@ export function useAuth() {
 
   return {
     session,
-    token,
+    isBootstrapping,
     user,
     login,
     logout,
@@ -31,8 +31,8 @@ export function useAuth() {
     setDefaultLicensePlate,
     isAuthenticating,
     error,
-    isAdmin: Boolean(session?.token) && session?.role === 'admin',
-    isManager: Boolean(session?.token) && session?.role === 'manager',
-    isStaff: Boolean(session?.token) && session?.role === 'staff',
+    isAdmin: session?.role === 'admin',
+    isManager: session?.role === 'manager',
+    isStaff: session?.role === 'staff',
   };
 }

@@ -106,10 +106,12 @@ function usePublicAuthFlow(initialMode: 'login' | 'register') {
 }
 
 export function PublicLoginRoute() {
-  const { token, user } = useAuth();
+  const { user, isBootstrapping } = useAuth();
   const flow = usePublicAuthFlow('login');
 
-  if (token && user) {
+  if (isBootstrapping) return null;
+
+  if (user) {
     const redirectPath = user.role === 'admin' ? '/admin/dashboard' : user.role === 'manager' ? '/manager/dashboard' : user.role === 'staff' ? '/staff' : '/';
     return <Navigate to={redirectPath} replace />;
   }
