@@ -68,9 +68,20 @@ src/
 
 ## Commit (chỉ khi được yêu cầu)
 
-Dùng conventional commits, không chứa tên AI/Claude:
-```
-feat(scope): mô tả ngắn gọn
-fix(scope): mô tả ngắn gọn
-refactor(scope): mô tả ngắn gọn
-```
+- **Message viết bằng tiếng Anh**, theo conventional commits, tuyệt đối không chứa
+  tên/nhãn/logo AI hay Claude (không `Co-Authored-By: Claude`, không nhắc "AI-generated").
+- **Tách commit hợp lý theo từng đơn vị thay đổi độc lập** (1 commit = 1 mối quan tâm:
+  vd tách riêng "update docs" / "remove dead code" / "refactor service layer"
+  / "chore: dependency bump") — không gộp nhiều việc không liên quan vào 1 commit,
+  cũng không tách vụn một thay đổi logic duy nhất thành nhiều commit rời rạc.
+- Format:
+  ```
+  <type>(<scope>): <short imperative summary>
+
+  <optional body: why, not what>
+  ```
+  Ví dụ: `feat(admin): add building status filter`,
+  `fix(checkout): correct overstay fee rounding`,
+  `refactor(services): split parkingSession into checkIn/checkOut modules`,
+  `docs(be): add backend developer guide`.
+- `<type>` dùng: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `perf`, `style`.
