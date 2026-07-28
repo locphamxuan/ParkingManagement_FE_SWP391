@@ -3,28 +3,30 @@ import { CartoonCar3D } from './CartoonCar3D';
 import { useParkingSimulation } from './useParkingSimulation';
 import { Activity, Info, Zap } from 'lucide-react';
 
-export interface AnimatedParkingMap3DProps {
-  rotateX?: any;
-  rotateZ?: any;
-  scale?: any;
-  x?: any;
-  y?: any;
+// Kiểu tối thiểu component cần để tự vẽ (code/status); TSlot giữ nguyên kiểu
+// slot thật (vd ParkingSlot) xuyên suốt để onEditSlot trả về đủ field cho caller
+// (vd mở modal edit cần building/floor/reservable...), tránh phải ép kiểu `any`.
+export interface AnimatedParkingMap3DSlot {
+  code: string;
+  status: 'available' | 'occupied' | 'reserved' | 'maintenance' | string;
+}
+
+export interface AnimatedParkingMap3DProps<TSlot extends AnimatedParkingMap3DSlot = AnimatedParkingMap3DSlot> {
+  rotateX?: number;
+  rotateZ?: number;
+  scale?: number;
+  x?: number;
+  y?: number;
   interactive?: boolean;
   selectedSlot?: string | null;
   activeReservations?: Array<{ slotCode: string; plateNumber: string; vehicleType: 'car' | 'motorcycle' }>;
   interactiveUnavailableSlots?: string[];
   onSlotClick?: (slotCode: string) => void;
-  slots?: Array<{
-    _id?: string;
-    code: string;
-    status: 'available' | 'occupied' | 'reserved' | 'maintenance' | string;
-    vehicleType?: any;
-    note?: string;
-  }>;
-  onEditSlot?: (slot: any) => void;
+  slots?: TSlot[];
+  onEditSlot?: (slot: TSlot) => void;
 }
 
-export function AnimatedParkingMap3D({
+export function AnimatedParkingMap3D<TSlot extends AnimatedParkingMap3DSlot = AnimatedParkingMap3DSlot>({
   rotateX,
   rotateZ,
   scale,
@@ -37,7 +39,7 @@ export function AnimatedParkingMap3D({
   onSlotClick,
   slots = [],
   onEditSlot,
-}: AnimatedParkingMap3DProps = {}) {
+}: AnimatedParkingMap3DProps<TSlot> = {}) {
   const {
     hudMessage, simPhase,
     gateAOpen, gateBOpen,
@@ -324,7 +326,7 @@ export function AnimatedParkingMap3D({
             {(slots && slots.length > 0 ? slots.slice(0, 10) : [1, 2, 3, 4, 5]).map((item, index) => {
               const id = index + 1;
               const isRawSlot = typeof item === 'object' && item !== null;
-              const rawSlot = isRawSlot ? (item as any) : null;
+              const rawSlot = isRawSlot ? (item as TSlot) : null;
               const slotCode = rawSlot ? rawSlot.code : `A-0${id}`;
               const isEV = id === 3 || slotCode.toLowerCase().includes('ev');
               
@@ -345,7 +347,7 @@ export function AnimatedParkingMap3D({
 
               return (
                 <motion.div 
-                  key={rawSlot?._id || slotCode || id}
+                  key={slotCode || id}
                   onClick={() => {
                     if (onEditSlot && rawSlot) {
                       onEditSlot(rawSlot);
@@ -411,7 +413,7 @@ export function AnimatedParkingMap3D({
           </div>
 
           {/* Floating exhaust smoke particles */}
-          {!interactive && smokeParticles.map((p: any) => (
+          {!interactive && smokeParticles.map((p) => (
             <motion.span 
               key={p.id}
               initial={{ scale: 0.3, opacity: 0.8, z: 6 }}
