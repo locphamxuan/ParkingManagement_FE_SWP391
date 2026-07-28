@@ -340,12 +340,9 @@ export function ManagerSlotsPage() {
             </div>
           ) : (
             <Slots3DMapView
-              floors={floors}
               slotsByFloor={slotsByFloor}
               items={items}
               floorFilter={floorFilter}
-              statusFilter={statusFilter}
-              vehicleTypes={vehicleTypes}
               onSlotClick={openEdit}
               onOpenMultiSlot={openBatchModal}
             />
@@ -436,7 +433,6 @@ export function ManagerSlotsPage() {
         onSubmit={onMultiSlotSubmit}
         floors={floors}
         zones={zones}
-        slots={items}
         defaultFloor={floorFilter}
         defaultQuantity={batchQty}
       />

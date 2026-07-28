@@ -27,7 +27,6 @@ interface MultiSlotFormProps {
   onSubmit: (form: SlotBatchForm) => Promise<void>;
   floors: Floor[];
   zones: Zone[];
-  slots?: ParkingSlot[];
   defaultFloor?: string;
   defaultQuantity?: number;
 }
@@ -43,7 +42,6 @@ export function MultiSlotForm({
   onSubmit,
   floors,
   zones,
-  slots = [],
   defaultFloor = '',
   defaultQuantity = 5,
 }: MultiSlotFormProps) {

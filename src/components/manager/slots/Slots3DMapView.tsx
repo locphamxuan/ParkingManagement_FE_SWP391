@@ -1,27 +1,21 @@
 import { useState } from 'react';
 import { Plus, RotateCcw, Zap } from 'lucide-react';
 import { AnimatedParkingMap3D } from '@/components/map/AnimatedParkingMap3D';
-import type { Floor, ParkingSlot, VehicleType } from '@/services/manager/managerApi';
+import type { ParkingSlot } from '@/services/manager/managerApi';
 
 interface Slots3DMapViewProps {
-  floors: Floor[];
   slotsByFloor: Record<string, ParkingSlot[]>;
   items: ParkingSlot[];
   floorFilter: string;
-  statusFilter: string;
-  vehicleTypes: VehicleType[];
   onSlotClick: (slot: ParkingSlot) => void;
   onOpenMultiSlot?: (qty?: number) => void;
 }
 
 // Bản đồ slot 3D đồng nhất với User role + panel chỉnh góc nhìn & quick batch action.
 export function Slots3DMapView({
-  floors,
   slotsByFloor,
   items,
   floorFilter,
-  statusFilter,
-  vehicleTypes,
   onSlotClick,
   onOpenMultiSlot,
 }: Slots3DMapViewProps) {
