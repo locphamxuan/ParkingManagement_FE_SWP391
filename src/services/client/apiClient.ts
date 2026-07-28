@@ -27,7 +27,7 @@ interface ApiOptions {
   body?: unknown;
   query?: Record<string, string | number | boolean | undefined | null>;
   signal?: AbortSignal;
-  /** Ghi đè token (nếu không truyền sẽ lấy từ localStorage). */
+  /** Ghi đè token cho request này (chỉ dùng cho integration test gọi thẳng API, không phải phiên trình duyệt thật — xem getStoredToken/setStoredToken ở trên). */
   token?: string;
 }
 
