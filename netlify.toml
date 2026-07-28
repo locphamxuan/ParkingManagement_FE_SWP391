@@ -1,0 +1,13 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# SPA: mọi route client-side (React Router) đều trả về index.html,
+# tránh 404 khi người dùng F5 ở route con (vd /manager/slots).
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
