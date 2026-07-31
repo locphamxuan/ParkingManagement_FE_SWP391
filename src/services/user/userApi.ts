@@ -226,6 +226,22 @@ export type UserIncidentType =
   | 'security'
   | 'other';
 
+/**
+ * Loại vi phạm do manager tự cấu hình cho từng tòa nhà. BE cố tình không trả
+ * `fee` — mức phạt là thông tin nội bộ của manager/staff, người báo cáo không thấy.
+ */
+export interface BuildingViolationType {
+  _id: string;
+  code: string;
+  label: string;
+}
+
+/**
+ * `type` khi báo sự cố nhận cả nhóm cố định lẫn `code` của một violation type
+ * đã cấu hình cho tòa nhà, nên không thu hẹp về union được.
+ */
+export type IncidentReportType = UserIncidentType | (string & {});
+
 export interface UserIncident {
   _id: string;
   code: string;
@@ -314,6 +330,12 @@ export const userApi = {
     /** Get vehicle types for a building */
     vehicleTypes: (buildingId: string) =>
       api.get<Wrap<ListResult<VehicleType>>>(`/users/buildings/${buildingId}/vehicle-types`),
+
+    /** GET /users/buildings/:buildingId/violation-types → loại vi phạm manager cấu hình. */
+    violationTypes: (buildingId: string) =>
+      api.get<Wrap<ListResult<BuildingViolationType>>>(
+        `/users/buildings/${buildingId}/violation-types`
+      ),
 
     /** Get floors for a building with live availability counts (BE returns { building, floors }).
      *  usage='subscriber' → chỉ đếm ô dãy gói (mua gói chọn slot cố định). */
@@ -424,7 +446,7 @@ export const userApi = {
   // ========== INCIDENTS (báo cáo sự cố) ==========
   incidents: {
     create: (body: {
-      type: UserIncidentType;
+      type: IncidentReportType;
       note?: string;
       slotId?: string;
       buildingId?: string;

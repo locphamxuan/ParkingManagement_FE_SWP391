@@ -2,7 +2,14 @@ import { useCallback, useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { AlertTriangle, CheckCircle2, Loader2, ParkingCircle, ShieldAlert } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { userApi, type ParkingHistory, type UserIncident, type UserIncidentType } from '@/services/user/userApi';
+import {
+  userApi,
+  type BuildingViolationType,
+  type IncidentReportType,
+  type ParkingHistory,
+  type UserIncident,
+  type UserIncidentType,
+} from '@/services/user/userApi';
 import { resolveErrorMessage } from '@/utils/apiErrors';
 
 const INCIDENT_TYPES: { value: UserIncidentType; label: string }[] = [
@@ -25,13 +32,12 @@ const STATUS_BADGE: Record<string, string> = {
   closed: 'border-slate-500/30 bg-slate-500/10 text-slate-300',
 };
 
-const typeLabel = (t: string) => INCIDENT_TYPES.find((x) => x.value === t)?.label ?? t;
 const fmtDate = (s?: string | null) => (s ? new Date(s).toLocaleString('en-US') : '—');
 
 export default function ReportIncidentPage() {
   const { session } = useAuth();
 
-  const [type, setType] = useState<UserIncidentType>('slot_occupied');
+  const [type, setType] = useState<IncidentReportType>('slot_occupied');
   const [note, setNote] = useState('');
   const [violatorPlate, setViolatorPlate] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -44,6 +50,12 @@ export default function ReportIncidentPage() {
   // xe/tòa nhà nào, và gửi kèm buildingId/slotId rõ ràng thay vì để BE tự suy đoán.
   const [activeSession, setActiveSession] = useState<ParkingHistory | null>(null);
   const [loadingSession, setLoadingSession] = useState(true);
+
+  // Bảng vi phạm do manager của tòa nhà tự cấu hình — chỉ tải được khi đã biết
+  // tòa nhà, tức khi user đang có phiên đỗ. Không có phiên thì chỉ báo được các
+  // loại sự cố cố định của hệ thống.
+  const [violationTypes, setViolationTypes] = useState<BuildingViolationType[]>([]);
+  const buildingId = activeSession?.building?._id;
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -70,7 +82,28 @@ export default function ReportIncidentPage() {
       .finally(() => setLoadingSession(false));
   }, [session, refresh]);
 
+  useEffect(() => {
+    if (!buildingId) {
+      setViolationTypes([]);
+      return;
+    }
+    userApi.buildings
+      .violationTypes(buildingId)
+      .then((res) => setViolationTypes(res.data.items ?? []))
+      .catch(() => setViolationTypes([]));
+  }, [buildingId]);
+
   if (!session) return <Navigate to="/auth/login" replace />;
+
+  const isViolationType = violationTypes.some((v) => v.code === type);
+  // Người báo cáo cần khai biển số xe vi phạm cho cả nhóm "chiếm chỗ" lẫn mọi
+  // loại vi phạm của tòa nhà — BE tra biển số này để quyết định escalate.
+  const asksViolatorPlate = type === 'slot_occupied' || isViolationType;
+
+  const typeLabel = (t: string) =>
+    violationTypes.find((v) => v.code === t)?.label ??
+    INCIDENT_TYPES.find((x) => x.value === t)?.label ??
+    t;
 
   const handleSubmit = async () => {
     setMessage(null);
@@ -83,8 +116,8 @@ export default function ReportIncidentPage() {
       await userApi.incidents.create({
         type,
         note: note.trim(),
-        violatorPlate: type === 'slot_occupied' ? violatorPlate.trim() || undefined : undefined,
-        buildingId: activeSession?.building?._id,
+        violatorPlate: asksViolatorPlate ? violatorPlate.trim() || undefined : undefined,
+        buildingId,
         slotId: activeSession?.slot?._id,
       });
       setMessage({ type: 'ok', text: 'Incident reported. Staff and the building manager will handle it.' });
@@ -135,15 +168,24 @@ export default function ReportIncidentPage() {
           <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-400">Incident type</label>
           <select
             value={type}
-            onChange={(e) => setType(e.target.value as UserIncidentType)}
+            onChange={(e) => setType(e.target.value)}
             className="w-full rounded-xl px-3 py-2.5 text-sm font-semibold text-white"
           >
-            {INCIDENT_TYPES.map((t) => (
-              <option key={t.value} value={t.value}>{t.label}</option>
-            ))}
+            <optgroup label="General incidents">
+              {INCIDENT_TYPES.map((t) => (
+                <option key={t.value} value={t.value}>{t.label}</option>
+              ))}
+            </optgroup>
+            {violationTypes.length > 0 && (
+              <optgroup label={`Violations at ${activeSession?.building?.name ?? 'this building'}`}>
+                {violationTypes.map((v) => (
+                  <option key={v._id} value={v.code}>{v.label}</option>
+                ))}
+              </optgroup>
+            )}
           </select>
 
-          {type === 'slot_occupied' && (
+          {asksViolatorPlate && (
             <div className="mt-4">
               <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-400">
                 Offending vehicle plate (optional)
