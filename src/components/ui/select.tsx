@@ -43,6 +43,20 @@ export function CustomSelect({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Không có Escape thì danh sách đang mở nuốt mọi cú click vào phần dưới form —
+  // người dùng bàn phím không còn cách nào đóng nó ngoài việc chọn đại một mục.
+  useEffect(() => {
+    if (!isOpen) return;
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key !== 'Escape') return;
+      event.stopPropagation();
+      setIsOpen(false);
+      containerRef.current?.querySelector('button')?.focus();
+    }
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [isOpen]);
+
   const isLight = theme === 'light';
 
   return (
@@ -50,6 +64,8 @@ export function CustomSelect({
       <button
         type="button"
         disabled={disabled}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
           "flex h-full w-full items-center justify-between rounded-xl border px-4 text-sm font-semibold outline-none transition-all duration-300",
