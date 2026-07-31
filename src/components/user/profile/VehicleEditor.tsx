@@ -45,13 +45,13 @@ export function VehicleEditor({
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono">
-          Phương tiện đã đăng ký
+          Registered vehicles
         </label>
         <span className={`text-[9px] font-black font-mono px-2 py-0.5 rounded-full ${atLimit
           ? 'bg-rose-500/15 text-rose-400'
           : 'bg-slate-800 text-slate-500'
           }`}>
-          {vehicles.length}/{MAX_VEHICLES} xe
+          {vehicles.length}/{MAX_VEHICLES} vehicles
         </span>
       </div>
 
@@ -104,7 +104,7 @@ export function VehicleEditor({
                     whileHover={{ scale: 1.2 }}
                     onClick={() => onShowQr(item)}
                     className="ml-1.5 rounded p-0.5 text-slate-400 transition-all duration-150 hover:bg-cyan-500/10 hover:text-cyan-400"
-                    title={`Xem mã QR của ${item.plateNumber}`}
+                    title={`Show QR code for ${item.plateNumber}`}
                   >
                     <QrCode size={11} className="stroke-[3]" />
                   </motion.button>
@@ -116,7 +116,7 @@ export function VehicleEditor({
                   className={`ml-1 rounded p-0.5 transition-all duration-150 hover:bg-sky-500/10 hover:text-sky-400 ${
                     editingVehicleId === item._id ? 'text-sky-400' : 'text-slate-400'
                   }`}
-                  title={`Sửa thông tin xe ${item.plateNumber}`}
+                  title={`Edit ${item.plateNumber}`}
                 >
                   <Pencil size={11} className="stroke-[3]" />
                 </motion.button>
@@ -126,7 +126,7 @@ export function VehicleEditor({
                     whileHover={{ scale: 1.2 }}
                     onClick={() => void handleSetDefaultVehicle(item)}
                     className="ml-1 rounded p-0.5 transition-all duration-150 hover:bg-amber-500/10 text-slate-400 hover:text-amber-400"
-                    title="Đặt làm xe mặc định"
+                    title="Set as default vehicle"
                   >
                     <span className="text-xs font-black">☆</span>
                   </motion.button>
@@ -136,7 +136,7 @@ export function VehicleEditor({
                   whileHover={{ scale: 1.2 }}
                   onClick={() => void handleRemoveVehicle(item._id)}
                   className="ml-1 rounded p-0.5 text-slate-400 transition-all duration-150 hover:bg-rose-500/10 hover:text-rose-400"
-                  title={`Xoá xe ${item.plateNumber}`}
+                  title={`Remove ${item.plateNumber}`}
                 >
                   <X size={11} className="stroke-[3]" />
                 </motion.button>
@@ -146,7 +146,7 @@ export function VehicleEditor({
         </AnimatePresence>
         {vehicles.length === 0 && (
           <span className="text-[11px] text-slate-600 font-semibold italic self-center pl-1">
-            {vehiclesLoading ? 'Đang tải phương tiện…' : 'Chưa có phương tiện nào…'}
+            {vehiclesLoading ? 'Loading vehicles…' : 'No vehicles yet…'}
           </span>
         )}
       </div>
@@ -156,20 +156,20 @@ export function VehicleEditor({
           {isEditing && (
             <div className="flex items-center justify-between rounded-xl border border-sky-500/20 bg-sky-500/5 px-3 py-2">
               <span className="text-[10px] font-black uppercase tracking-wider text-sky-300 font-mono">
-                Đang sửa xe {vehicles.find((v) => v._id === editingVehicleId)?.plateNumber}
+                Editing {vehicles.find((v) => v._id === editingVehicleId)?.plateNumber}
               </span>
               <button
                 type="button"
                 onClick={handleCancelEditVehicle}
                 className="text-[10px] font-bold text-slate-400 hover:text-white transition-colors"
               >
-                Huỷ
+                Cancel
               </button>
             </div>
           )}
 
           <div className="flex items-center gap-3">
-            <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono shrink-0">Loại xe:</span>
+            <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono shrink-0">Type:</span>
             <CustomSelect
               value={category}
               onChange={(val) => {
@@ -178,13 +178,13 @@ export function VehicleEditor({
                 setCustomBrand('');
               }}
               options={categoryOptions}
-              placeholder="— Chọn loại xe —"
+              placeholder="— Select vehicle type —"
               className="flex-1 h-10 text-xs sm:text-sm font-semibold"
             />
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono shrink-0">Hãng xe:</span>
+            <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono shrink-0">Make:</span>
             <CustomSelect
               value={vehicleBrand}
               onChange={(val) => {
@@ -192,20 +192,20 @@ export function VehicleEditor({
                 if (val !== 'Other') setCustomBrand('');
               }}
               options={vehicleBrandOptions}
-              placeholder="— Chọn hãng (không bắt buộc) —"
+              placeholder="— Select make (optional) —"
               className="flex-1 h-10 text-xs sm:text-sm font-semibold"
             />
           </div>
 
           {vehicleBrand === 'Other' && (
             <div className="flex items-center gap-3">
-              <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono shrink-0">Nhập hãng:</span>
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono shrink-0">Custom make:</span>
               <input
                 type="text"
                 value={customBrand}
                 onChange={(e) => setCustomBrand(e.target.value)}
                 maxLength={50}
-                placeholder="Nhập hãng xe của bạn"
+                placeholder="Enter your vehicle make"
                 className="flex-1 rounded-xl border border-white/10 bg-slate-950/80 text-white placeholder-slate-600 text-sm h-10 px-3 outline-none transition-all duration-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20"
                 autoComplete="off"
               />
@@ -225,7 +225,7 @@ export function VehicleEditor({
               // Backend không cho đổi biển số của xe đã đăng ký — xoá rồi thêm lại mới đúng quy trình.
               disabled={isEditing}
               className="flex-1 rounded-xl border border-white/10 bg-slate-950/80 text-white placeholder-slate-600 text-sm h-10 px-4 transition-all duration-300 outline-none font-mono tracking-wider focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20 disabled:cursor-not-allowed disabled:opacity-60"
-              placeholder="Ví dụ: 59G2-038.80"
+              placeholder="e.g. 59G2-038.80"
               maxLength={12}
               autoComplete="off"
               spellCheck={false}
@@ -239,14 +239,14 @@ export function VehicleEditor({
               className="px-4 h-10 rounded-xl font-black text-xs uppercase tracking-wider transition-all duration-300 inline-flex items-center gap-1.5 shrink-0 bg-amber-500/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/30 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isEditing ? <Save size={14} className="stroke-[3]" /> : <Plus size={14} className="stroke-[3]" />}
-              {isSavingVehicle ? 'Đang lưu…' : isEditing ? 'Lưu' : 'Thêm'}
+              {isSavingVehicle ? 'Saving…' : isEditing ? 'Save' : 'Add'}
             </motion.button>
           </div>
         </div>
       ) : (
         <div className="flex items-center gap-2 rounded-xl border border-rose-500/20 bg-rose-500/5 px-4 py-2.5">
           <AlertCircle size={14} className="text-rose-400 shrink-0" />
-          <span className="text-[11px] text-rose-300 font-semibold">Đã đạt giới hạn {MAX_VEHICLES} phương tiện. Xoá bớt một xe để thêm xe mới.</span>
+          <span className="text-[11px] text-rose-300 font-semibold">Vehicle limit of {MAX_VEHICLES} reached. Remove one to add another.</span>
         </div>
       )}
 
@@ -281,7 +281,7 @@ export function VehicleEditor({
       </AnimatePresence>
 
       <p className="text-[9px] text-slate-500 font-semibold leading-relaxed">
-        * Định dạng: 2 chữ số + sê-ri (<span className="font-mono text-slate-400">A</span> cho ô tô, <span className="font-mono text-slate-400">G2</span> cho xe máy, hoặc <span className="font-mono text-slate-400">LD</span>) + gạch nối + 4–5 chữ số. Ví dụ: <span className="font-mono text-slate-400">30A-97022</span>, <span className="font-mono text-slate-400">59G2-038.80</span>. Mỗi thao tác được lưu ngay lập tức.
+        * Format: 2 digits + series (<span className="font-mono text-slate-400">A</span> for cars, <span className="font-mono text-slate-400">G2</span> for motorcycles, or <span className="font-mono text-slate-400">LD</span>) + hyphen + 4–5 digits. Examples: <span className="font-mono text-slate-400">30A-97022</span>, <span className="font-mono text-slate-400">59G2-038.80</span>. Every action is saved immediately.
       </p>
     </div>
   );

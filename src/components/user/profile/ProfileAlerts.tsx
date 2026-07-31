@@ -43,13 +43,13 @@ export function ProfileAlerts({ successMessage, hasMissingInfo, isEditing, user,
               <ShieldAlert size={18} className="stroke-[2.5]" />
             </div>
             <div>
-              <h4 className="text-xs font-black uppercase tracking-wider text-amber-400 font-mono">Hồ sơ chưa đầy đủ</h4>
+              <h4 className="text-xs font-black uppercase tracking-wider text-amber-400 font-mono">Incomplete profile</h4>
               <p className="text-[11px] text-amber-200/80 mt-1 font-semibold leading-relaxed">
                 {!user.phone || user.phone.trim() === ''
-                  ? 'Tài khoản chưa có số điện thoại.'
+                  ? 'Your account has no phone number.'
                   : ''}
-                {!hasVehicles ? ' Tài khoản chưa đăng ký phương tiện nào.' : ''}
-                {' '}Bấm “Chỉnh sửa hồ sơ” để cập nhật, giúp hệ thống nhận diện bạn tự động tại cổng ra/vào.
+                {!hasVehicles ? ' Your account has no registered vehicle.' : ''}
+                {' '}Use “Edit Profile” to complete it so the gates can identify you automatically.
               </p>
             </div>
           </motion.div>

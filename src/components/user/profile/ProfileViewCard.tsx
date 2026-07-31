@@ -68,7 +68,7 @@ export function ProfileViewCard({
                 type="button"
                 onClick={() => onShowQr(item)}
                 className="ml-1 rounded p-0.5 text-slate-400 hover:text-purple-300 hover:bg-purple-500/10 transition-colors"
-                title="Xem mã QR của xe"
+                title="Show vehicle QR code"
               >
                 <QrCode size={12} className="stroke-[2.5]" />
               </button>
@@ -77,23 +77,23 @@ export function ProfileViewCard({
         })}
       </div>
     ) : vehiclesLoading ? (
-      <span className="text-slate-500 font-bold text-xs mt-1">Đang tải phương tiện…</span>
+      <span className="text-slate-500 font-bold text-xs mt-1">Loading vehicles…</span>
     ) : (
       <span className="text-amber-400 font-bold text-xs flex items-center gap-1.5 mt-1 animate-pulse">
-        <ShieldAlert size={14} /> Chưa đăng ký phương tiện nào
+        <ShieldAlert size={14} /> No vehicles registered yet
       </span>
     );
 
   return (
     <div className="grid gap-4 rounded-3xl bg-slate-950/40 p-6 border border-white/5 animate-fadeIn">
       {[
-        { label: 'Họ tên', value: user.fullName },
+        { label: 'Full name', value: user.fullName },
         { label: 'Email', value: user.email },
-        { label: 'Số điện thoại', value: user.phone },
+        { label: 'Phone number', value: user.phone },
         ...(user.role === 'user'
-          ? [{ label: 'Phương tiện đã đăng ký', value: vehicleList, isCustom: true }]
+          ? [{ label: 'Registered vehicles', value: vehicleList, isCustom: true }]
           : []),
-        { label: 'Vai trò', value: user.role, uppercase: true },
+        { label: 'Role', value: user.role, uppercase: true },
       ].map((field, idx) => (
         <motion.div
           key={field.label}
@@ -107,7 +107,7 @@ export function ProfileViewCard({
             <div>{field.value}</div>
           ) : (
             <p className={`text-base font-black text-slate-200 ${field.uppercase ? 'uppercase font-mono text-orange-400 text-sm' : ''}`}>
-              {field.value || '— Chưa cập nhật —'}
+              {field.value || '— Not set —'}
             </p>
           )}
         </motion.div>

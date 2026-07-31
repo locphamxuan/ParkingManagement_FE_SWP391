@@ -19,8 +19,8 @@ export default function ProfilePage() {
     <main className="relative z-10">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 relative z-10">
         <div className="mb-8">
-          <h1 className="text-2xl font-black text-white">Hồ sơ của tôi</h1>
-          <p className="mt-1 text-xs font-semibold text-slate-400">Thông tin cá nhân, phương tiện và bảo mật tài khoản.</p>
+          <h1 className="text-2xl font-black text-white">My Profile</h1>
+          <p className="mt-1 text-xs font-semibold text-slate-400">Personal details, vehicles and account security.</p>
         </div>
 
         <ProfileAlerts

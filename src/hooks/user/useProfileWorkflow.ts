@@ -25,19 +25,19 @@ interface PlateValidationResult {
 
 function validatePlate(raw: string, existing: Vehicle[]): PlateValidationResult {
   if (!raw || raw.trim() === '') {
-    return { ok: false, error: 'Vui lòng nhập biển số xe.' };
+    return { ok: false, error: 'Please enter a license plate.' };
   }
 
   const plate = normalizePlate(raw);
   if (!isValidVietnamPlate(plate)) {
     return {
       ok: false,
-      error: 'Biển số không hợp lệ. Ví dụ: 30A-97022 (ô tô) hoặc 59G2-038.80 (xe máy).',
+      error: 'Invalid plate. Example: 30A-97022 (car) or 59G2-038.80 (motorcycle).',
     };
   }
 
   if (existing.some((v) => v.plateNumber.toUpperCase() === plate)) {
-    return { ok: false, error: `Biển số "${plate}" đã có trong danh sách.` };
+    return { ok: false, error: `Plate "${plate}" is already in your list.` };
   }
 
   return { ok: true };
@@ -91,7 +91,7 @@ export function useProfileWorkflow() {
   const vehicleBrandOptions = useMemo(() => {
     const list = brandsForCategory(category);
     return [
-      { value: '', label: '— Chọn hãng xe (không bắt buộc) —' },
+      { value: '', label: '— Select make (optional) —' },
       ...list.map((b) => ({ value: b, label: b })),
     ];
   }, [category]);
@@ -148,13 +148,13 @@ export function useProfileWorkflow() {
     setPlateSuccess(null);
 
     if (vehicles.length >= MAX_VEHICLES) {
-      setPlateError(`Mỗi tài khoản tối đa ${MAX_VEHICLES} phương tiện.`);
+      setPlateError(`Each account can register up to ${MAX_VEHICLES} vehicles.`);
       return;
     }
 
     const result = validatePlate(plateInput, vehicles);
     if (!result.ok) {
-      setPlateError(result.error ?? 'Biển số không hợp lệ.');
+      setPlateError(result.error ?? 'Invalid license plate.');
       return;
     }
 
@@ -164,10 +164,10 @@ export function useProfileWorkflow() {
       const created = await add({ plateNumber: normalizePlate(plateInput), category, brand });
       setPlateInput('');
       resetVehicleForm();
-      flashSuccess(`Đã thêm ${created.plateNumber}${brand ? ` · ${brand}` : ''}.`);
+      flashSuccess(`Added ${created.plateNumber}${brand ? ` · ${brand}` : ''}.`);
       plateInputRef.current?.focus();
     } catch (err) {
-      setPlateError(err instanceof Error ? err.message : 'Không thêm được phương tiện.');
+      setPlateError(err instanceof Error ? err.message : 'Could not add the vehicle.');
     } finally {
       setIsSavingVehicle(false);
     }
@@ -198,10 +198,10 @@ export function useProfileWorkflow() {
     try {
       const updated = await update(editingVehicleId, { category, brand: brandValue() });
       resetVehicleForm();
-      flashSuccess(`Đã cập nhật ${updated.plateNumber}.`);
+      flashSuccess(`Updated ${updated.plateNumber}.`);
     } catch (err) {
       // Backend chặn đổi thể loại khi xe đang gửi hoặc còn gói — hiện nguyên văn lý do.
-      setPlateError(err instanceof Error ? err.message : 'Không cập nhật được phương tiện.');
+      setPlateError(err instanceof Error ? err.message : 'Could not update the vehicle.');
     } finally {
       setIsSavingVehicle(false);
     }
@@ -212,10 +212,10 @@ export function useProfileWorkflow() {
     try {
       await remove(vehicleId);
       if (editingVehicleId === vehicleId) resetVehicleForm();
-      flashSuccess('Đã xoá phương tiện.');
+      flashSuccess('Vehicle removed.');
     } catch (err) {
       // Backend chặn xoá khi xe đang gửi hoặc còn gói — hiện nguyên văn lý do.
-      setPlateError(err instanceof Error ? err.message : 'Không xoá được phương tiện.');
+      setPlateError(err instanceof Error ? err.message : 'Could not remove the vehicle.');
     }
   };
 
@@ -223,9 +223,9 @@ export function useProfileWorkflow() {
     setPlateError(null);
     try {
       await setDefault(vehicle._id);
-      flashSuccess(`Đã đặt ${vehicle.plateNumber} làm xe mặc định.`);
+      flashSuccess(`${vehicle.plateNumber} is now your default vehicle.`);
     } catch (err) {
-      setPlateError(err instanceof Error ? err.message : 'Không đặt được xe mặc định.');
+      setPlateError(err instanceof Error ? err.message : 'Could not set the default vehicle.');
     }
   };
 

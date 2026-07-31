@@ -19,13 +19,13 @@ const MS_PER_HOUR = 60 * 60 * 1000;
 
 /** "1 ngày 4 giờ" / "3 giờ 12 phút" / "sắp hết hạn" — đủ để người dùng biết cần làm gì. */
 function formatRemaining(ms: number): string {
-  if (ms <= 0) return 'đã hết hạn';
+  if (ms <= 0) return 'expired';
   const days = Math.floor(ms / (24 * MS_PER_HOUR));
   const hours = Math.floor((ms % (24 * MS_PER_HOUR)) / MS_PER_HOUR);
   const minutes = Math.floor((ms % MS_PER_HOUR) / (60 * 1000));
-  if (days > 0) return `còn ${days} ngày ${hours} giờ`;
-  if (hours > 0) return `còn ${hours} giờ ${minutes} phút`;
-  return `còn ${minutes} phút`;
+  if (days > 0) return `${days}d ${hours}h left`;
+  if (hours > 0) return `${hours}h ${minutes}m left`;
+  return `${minutes}m left`;
 }
 
 export function VehicleQRModal({
@@ -91,7 +91,7 @@ export function VehicleQRModal({
     try {
       await onRefreshQr(vehicle._id);
     } catch (err) {
-      setRefreshError(err instanceof Error ? err.message : 'Không cấp lại được mã QR.');
+      setRefreshError(err instanceof Error ? err.message : 'Could not reissue the QR code.');
     } finally {
       setIsRefreshing(false);
     }
@@ -120,7 +120,7 @@ export function VehicleQRModal({
             <div className="w-full max-w-md rounded-3xl bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 border border-white/10 shadow-2xl overflow-hidden my-8">
               <div className="relative bg-gradient-to-r from-purple-500/10 to-fuchsia-500/10 border-b border-white/5 p-6 flex items-center justify-between">
                 <div className="space-y-1">
-                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-purple-400 font-mono">Mã QR phương tiện</p>
+                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-purple-400 font-mono">Vehicle QR code</p>
                   <h2 className="text-xl font-black text-white font-mono">{vehicle.plateNumber}</h2>
                 </div>
                 <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-lg transition-colors duration-200">
@@ -136,8 +136,8 @@ export function VehicleQRModal({
                   {isExpired && (
                     <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-center px-6">
                       <AlertTriangle size={28} className="text-rose-400" />
-                      <p className="text-sm font-black text-rose-300">Mã đã hết hạn</p>
-                      <p className="text-[11px] font-semibold text-rose-200/80">Bấm “Cấp lại mã” để lấy mã mới.</p>
+                      <p className="text-sm font-black text-rose-300">This code has expired</p>
+                      <p className="text-[11px] font-semibold text-rose-200/80">Use “Reissue code” to get a new one.</p>
                     </div>
                   )}
                 </div>
@@ -150,14 +150,14 @@ export function VehicleQRModal({
                 }`}>
                   <Clock size={14} className="shrink-0" />
                   <p className="text-[11px] font-bold">
-                    Hiệu lực {qrTtlDays} ngày — {formatRemaining(remainingMs)}
+                    Valid for {qrTtlDays} days — {formatRemaining(remainingMs)}
                   </p>
                 </div>
 
                 <div className="space-y-3 rounded-2xl bg-slate-950/60 border border-white/5 p-4">
                   <div>
                     <p className="text-[9px] font-black uppercase tracking-wider text-slate-500 font-mono mb-1">
-                      Phương tiện {vehicle.brand ?? ''}
+                      Vehicle {vehicle.brand ?? ''}
                     </p>
                     <p className="text-sm font-semibold text-white font-mono">{vehicle.plateNumber}</p>
                   </div>
@@ -168,7 +168,7 @@ export function VehicleQRModal({
                       <button
                         onClick={handleCopy}
                         className="p-1.5 hover:bg-white/10 rounded-lg transition-colors duration-200 flex-shrink-0"
-                        title="Sao chép mã"
+                        title="Copy code"
                       >
                         {copied ? <Check size={16} className="text-emerald-400" /> : <Copy size={16} className="text-slate-400 hover:text-white" />}
                       </button>
@@ -178,8 +178,8 @@ export function VehicleQRModal({
 
                 <div className="rounded-2xl bg-purple-500/5 border border-purple-500/20 p-4">
                   <p className="text-xs text-purple-200 leading-relaxed font-semibold">
-                    🛵 <strong>Hướng dẫn:</strong> Nhân viên dùng <strong>Camera 2 (quét QR)</strong> để nhận diện xe khi không đọc được biển số.
-                    Mã tự hết hạn sau {qrTtlDays} ngày; mở lại màn hình này là hệ thống cấp mã mới.
+                    🛵 <strong>How it works:</strong> staff use <strong>Camera 2 (QR scan)</strong> to identify your vehicle when the plate cannot be read.
+                    The code expires after {qrTtlDays} days; reopening this screen issues a fresh one.
                   </p>
                 </div>
 
@@ -194,7 +194,7 @@ export function VehicleQRModal({
                     className="flex-1 min-w-[130px] px-4 py-3 rounded-xl bg-slate-800 border border-white/10 text-white font-black text-xs uppercase tracking-wider transition-all duration-300 hover:bg-slate-700 inline-flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <RefreshCw size={14} className={`stroke-[2.5] ${isRefreshing ? 'animate-spin' : ''}`} />
-                    {isRefreshing ? 'Đang cấp…' : 'Cấp lại mã'}
+                    {isRefreshing ? 'Reissuing…' : 'Reissue code'}
                   </button>
                   <button
                     onClick={handleDownload}
@@ -202,7 +202,7 @@ export function VehicleQRModal({
                     className="flex-1 min-w-[130px] px-4 py-3 rounded-xl bg-gradient-to-r from-purple-500 to-fuchsia-500 text-white font-black text-xs uppercase tracking-wider transition-all duration-300 hover:scale-105 inline-flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
                   >
                     <Download size={14} className="stroke-[2.5]" />
-                    Tải về
+                    Download
                   </button>
                 </div>
               </div>
