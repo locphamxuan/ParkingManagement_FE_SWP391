@@ -97,6 +97,10 @@ export function AppRouter() {
       <Route path="/auth/register" element={<PublicRegisterRoute />} />
       <Route path="/auth/reset-password" element={<PublicResetPasswordRoute />} />
       <Route path="/auth/reset_password" element={<PublicResetPasswordRoute />} />
+      {/* Bọc ProtectedRoute để chờ GET /auth/me xong mới quyết định chuyển hướng —
+          nếu không, tải thẳng/refresh một trang user sẽ bị đá về trang chủ do
+          session chưa kịp khôi phục. */}
+      <Route element={<ProtectedRoute role="user" />}>
       <Route element={<UserLayout />}>
         <Route path="/buildings" element={<BuildingsUserPage />} />
         <Route path="/profile" element={<ProfilePage />} />
@@ -107,6 +111,7 @@ export function AppRouter() {
         <Route path="/parking-history" element={<ParkingHistoryPage />} />
         <Route path="/report-incident" element={<ReportIncidentPage />} />
         <Route path="/user-dashboard" element={<UserDashboardPage />} />
+      </Route>
       </Route>
       <Route path="/reservations" element={<Navigate to="/packages/buy" replace />} />
       <Route path="/reviews" element={<ReviewsPage />} />

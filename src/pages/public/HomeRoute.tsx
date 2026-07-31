@@ -3,10 +3,12 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import HomePage from '@/pages/HomePage';
 import { mainFlowModules } from '@/data/mainFlow';
 import { useAuth } from '@/hooks/useAuth';
+import { useVehicles } from '@/hooks/user/useVehicles';
 
 export function HomeRoute() {
   const navigate = useNavigate();
   const { session, logout } = useAuth();
+  const { hasVehicles } = useVehicles();
 
   // ALL hooks must be declared before any conditional returns (Rules of Hooks)
   const userMapped = useMemo(() => {
@@ -16,7 +18,6 @@ export function HomeRoute() {
       email: session.email,
       role: session.role,
       phone: session.phone || '',
-      licensePlates: session.licensePlates || [],
     };
   }, [session]);
 
@@ -62,6 +63,7 @@ export function HomeRoute() {
       onViewProfile={onViewProfile}
       onAction={onAction}
       user={userMapped}
+      hasVehicles={hasVehicles}
       onLogout={onLogout}
     />
   );

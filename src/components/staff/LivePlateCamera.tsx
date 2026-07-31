@@ -1,7 +1,7 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { ScanLine, Loader2, AlertCircle, CheckCircle2, RefreshCw, Upload } from 'lucide-react';
 import { staffApi } from '@/services/staff/staffApi';
-import { videoConstraintFor, preflightCameraCheck } from '@/hooks/useCameraDevices';
+import { openCameraStream, preflightCameraCheck } from '@/hooks/useCameraDevices';
 
 export interface PlateScanResult {
   plateNumber: string;
@@ -67,12 +67,9 @@ export const LivePlateCamera = forwardRef<LiveCameraHandle, LivePlateCameraProps
         // Small delay to let any tracks released by React StrictMode cleanup be freed by the browser.
         await new Promise<void>((r) => setTimeout(r, 150));
         if (cancelled) return;
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            ...videoConstraintFor(deviceId, 'environment'),
-            width: { ideal: 1920 },
-            height: { ideal: 1080 },
-          },
+        stream = await openCameraStream(deviceId, 'environment', {
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
         });
         clearTimeout(timeout);
         if (cancelled) {

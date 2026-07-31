@@ -1,7 +1,7 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { UserSquare, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import type { LiveCameraHandle } from '@/components/staff/LivePlateCamera';
-import { videoConstraintFor, preflightCameraCheck } from '@/hooks/useCameraDevices';
+import { openCameraStream, preflightCameraCheck } from '@/hooks/useCameraDevices';
 
 interface LivePortraitCameraProps {
   /** Pause stream rendering (kept for API parity; portrait cam always on). */
@@ -58,7 +58,7 @@ export const LivePortraitCamera = forwardRef<LiveCameraHandle, LivePortraitCamer
           if (cancelled) return;
           await new Promise<void>((r) => setTimeout(r, 150));
           if (cancelled) return;
-          stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraintFor(deviceId, 'user') });
+          stream = await openCameraStream(deviceId, 'user');
           clearTimeout(timeout);
           if (cancelled) {
             stream.getTracks().forEach((t) => t.stop());

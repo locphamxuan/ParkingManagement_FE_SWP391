@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useVehicles } from '@/hooks/user/useVehicles';
+import { isTwoWheelCategory } from '@/utils/plate';
 import { resolveErrorMessage } from '@/utils/apiErrors';
 import { STORAGE_KEYS, loadString, removeStored, saveString } from '@/services/client/storage';
 
@@ -43,9 +45,11 @@ export function usePackagePurchase() {
   const { session } = useAuth();
   const state = (location.state as PackagePurchaseLocationState | null) ?? null;
 
+  const { vehicles } = useVehicles();
+
   const user = useMemo(() => {
     if (!session) return null;
-    return { userId: session.userId, fullName: session.displayName, licensePlates: session.licensePlates || [] };
+    return { userId: session.userId, fullName: session.displayName };
   }, [session]);
 
   /* ── Core state ── */
@@ -232,17 +236,18 @@ export function usePackagePurchase() {
 
   const estimatedAmount = useMemo(() => selectedPkg?.price ?? 0, [selectedPkg]);
 
+  // Lọc xe theo NHÓM (2 bánh / 4 bánh) đúng như backend đối chiếu gói với loại xe,
+  // nên xe hiện ở đây chắc chắn mua được gói đang chọn.
   const plateOptions = useMemo(() => {
-    if (!user) return [];
     const base = selectedVehicleType
-      ? user.licensePlates.filter((p) => {
-        const t = p.vehicleType?.toLowerCase();
-        if (selectedVehicleType === 'motorcycle') return t === 'motorcycle' || t === 'bike';
-        return t !== 'motorcycle' && t !== 'bike';
-      })
-      : user.licensePlates;
-    return base.filter((p) => !bookedPlates.includes(p.plateNumber));
-  }, [user, selectedVehicleType, bookedPlates]);
+      ? vehicles.filter((v) =>
+          selectedVehicleType === 'motorcycle'
+            ? isTwoWheelCategory(v.category)
+            : !isTwoWheelCategory(v.category),
+        )
+      : vehicles;
+    return base.filter((v) => !bookedPlates.includes(v.plateNumber));
+  }, [vehicles, selectedVehicleType, bookedPlates]);
 
   const canSubmit = Boolean(selectedBuildingId && !isSubmitting);
 

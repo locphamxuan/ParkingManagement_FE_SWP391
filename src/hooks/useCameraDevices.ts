@@ -30,6 +30,32 @@ export const videoConstraintFor = (
   deviceId ? { deviceId: { exact: deviceId } } : { facingMode: fallbackFacing };
 
 /**
+ * Mở luồng camera cho một vai trò, tự gỡ ràng buộc thiết bị khi thiết bị đó không còn.
+ *
+ * deviceId được lưu localStorage nên đi theo trình duyệt, không đi theo máy: staff
+ * đăng nhập ở máy khác (hoặc rút camera USB) sẽ dính OverconstrainedError, mà bấm
+ * Retry lại gửi đúng deviceId cũ nên kẹt vĩnh viễn. Rơi về facingMode để camera vẫn
+ * chạy được với thiết bị bất kỳ đang có.
+ */
+export async function openCameraStream(
+  deviceId: string | undefined,
+  fallbackFacing: 'user' | 'environment',
+  extra: MediaTrackConstraints = {},
+): Promise<MediaStream> {
+  const attempt = (constraint: MediaTrackConstraints) =>
+    navigator.mediaDevices.getUserMedia({ video: { ...constraint, ...extra } });
+
+  try {
+    return await attempt(videoConstraintFor(deviceId, fallbackFacing));
+  } catch (err) {
+    const name = (err as { name?: string })?.name ?? '';
+    const deviceGone = name === 'OverconstrainedError' || name === 'NotFoundError';
+    if (!deviceId || !deviceGone) throw err;
+    return attempt(videoConstraintFor(undefined, fallbackFacing));
+  }
+}
+
+/**
  * Kiểm tra trước khi gọi getUserMedia — tránh treo mù 8 giây cho 2 lỗi phổ biến mà
  * trình duyệt không luôn báo lỗi rõ ràng/nhanh:
  *  - Không có camera device nào (enumerateDevices rỗng videoinput).

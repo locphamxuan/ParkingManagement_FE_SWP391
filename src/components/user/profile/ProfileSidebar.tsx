@@ -1,12 +1,12 @@
 import { motion } from 'framer-motion';
 import { User } from 'lucide-react';
 import type { ProfileWorkflow } from '@/hooks/user/useProfileWorkflow';
-import { MAX_PLATES } from '@/hooks/user/useProfileWorkflow';
+import { MAX_VEHICLES } from '@/hooks/user/useProfileWorkflow';
 
-type ProfileSidebarProps = Pick<ProfileWorkflow, 'user'>;
+type ProfileSidebarProps = Pick<ProfileWorkflow, 'user' | 'vehicles'>;
 
 // Cột phải: thẻ tài khoản nhanh, thông tin chi tiết, và chỉ báo số biển số đã liên kết.
-export function ProfileSidebar({ user }: ProfileSidebarProps) {
+export function ProfileSidebar({ user, vehicles }: ProfileSidebarProps) {
   if (!user) return null;
 
   return (
@@ -39,7 +39,7 @@ export function ProfileSidebar({ user }: ProfileSidebarProps) {
             </div>
             <div className="rounded-2xl border border-white/5 bg-slate-950/70 p-4">
               <p className="text-[10px] font-black uppercase text-slate-500 font-mono">Phone Number</p>
-              <p className="mt-1 text-slate-200 font-bold">{user.phone || '— Not updated —'}</p>
+              <p className="mt-1 text-slate-200 font-bold">{user.phone || '— Not set —'}</p>
             </div>
             <div className="rounded-2xl border border-white/5 bg-slate-950/70 p-4">
               <p className="text-[10px] font-black uppercase text-slate-500 font-mono">Role</p>
@@ -47,9 +47,9 @@ export function ProfileSidebar({ user }: ProfileSidebarProps) {
             </div>
             {user.role === 'user' && (
               <div className="rounded-2xl border border-white/5 bg-slate-950/70 p-4">
-                <p className="text-[10px] font-black uppercase text-slate-500 font-mono">Linked Plates</p>
-                <p className={`mt-1 font-mono font-black text-sm ${user.licensePlates.length > 0 ? 'text-emerald-400' : 'text-amber-400'}`}>
-                  {user.licensePlates.length > 0 ? `${user.licensePlates.length}/${MAX_PLATES} plates` : 'None'}
+                <p className="text-[10px] font-black uppercase text-slate-500 font-mono">Vehicles</p>
+                <p className={`mt-1 font-mono font-black text-sm ${vehicles.length > 0 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                  {vehicles.length > 0 ? `${vehicles.length}/${MAX_VEHICLES} vehicles` : 'None yet'}
                 </p>
               </div>
             )}
@@ -59,10 +59,10 @@ export function ProfileSidebar({ user }: ProfileSidebarProps) {
         {/* Plate count visual indicator */}
         {user.role === 'user' && (
           <div className="rounded-3xl bg-slate-950/40 border border-white/5 p-6 shadow-md space-y-3">
-            <h2 className="text-xs font-black uppercase tracking-wider text-slate-400 font-mono">License Plate Slots</h2>
+            <h2 className="text-xs font-black uppercase tracking-wider text-slate-400 font-mono">Vehicle Slots</h2>
             <div className="flex gap-2">
-              {Array.from({ length: MAX_PLATES }).map((_, idx) => {
-                const hasPl = idx < user.licensePlates.length;
+              {Array.from({ length: MAX_VEHICLES }).map((_, idx) => {
+                const hasPl = idx < vehicles.length;
                 return (
                   <div
                     key={idx}
@@ -75,11 +75,11 @@ export function ProfileSidebar({ user }: ProfileSidebarProps) {
               })}
             </div>
             <p className="text-[9px] text-slate-500 font-semibold">
-              {user.licensePlates.length === 0
-                ? 'No license plates linked yet.'
-                : user.licensePlates.length < MAX_PLATES
-                  ? `${MAX_PLATES - user.licensePlates.length} empty slots remaining.`
-                  : 'Maximum limit reached.'}
+              {vehicles.length === 0
+                ? 'No vehicles registered yet.'
+                : vehicles.length < MAX_VEHICLES
+                  ? `${MAX_VEHICLES - vehicles.length} slots remaining.`
+                  : 'Limit reached.'}
             </p>
           </div>
         )}

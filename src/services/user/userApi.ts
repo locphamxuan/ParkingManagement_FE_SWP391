@@ -1,4 +1,11 @@
 import { api } from '@/services/client/apiClient';
+import type {
+  Vehicle,
+  VehicleCatalog,
+  VehicleCategoryCode,
+  VehicleInput,
+  VehicleUpdateInput,
+} from '@/services/vehicleService';
 
 // ========== INTERFACES ==========
 
@@ -14,10 +21,16 @@ export interface Building {
   contactPhone?: string;
 }
 
+/** Danh mục loại xe RIÊNG của một tòa nhà (manager tự đặt tên/mã). */
 export interface VehicleType {
   _id: string;
   code: string;
   name: string;
+  /**
+   * Thể loại xe chuẩn của hệ thống mà danh mục này đại diện. Nhờ trường này mà việc
+   * khớp xe của khách với danh mục của tòa là so sánh dữ liệu, không phải đoán tên.
+   */
+  category?: VehicleCategoryCode;
 }
 
 export interface ParkingSlot {
@@ -118,17 +131,6 @@ export interface LongTermSubscription {
   updatedAt?: string;
 }
 
-export type UserVehicleType = 'motorcycle' | 'car' | 'suv' | 'truck' | 'other';
-
-export interface LicensePlate {
-  _id: string;
-  plateNumber: string;
-  vehicleType: UserVehicleType;
-  isDefault: boolean;
-  qrCode?: string;
-  brand?: string | null;
-}
-
 export interface UserProfile {
   _id: string;
   email: string;
@@ -137,7 +139,7 @@ export interface UserProfile {
   avatar?: string;
   role: 'admin' | 'manager' | 'staff' | 'user';
   walletBalance?: number;
-  licensePlates?: LicensePlate[];
+  // Phương tiện là tài nguyên riêng (GET /users/vehicles), không đính kèm hồ sơ.
 }
 
 export interface UserWallet {
@@ -223,6 +225,22 @@ export type UserIncidentType =
   | 'lost_ticket'
   | 'security'
   | 'other';
+
+/**
+ * Loại vi phạm do manager tự cấu hình cho từng tòa nhà. BE cố tình không trả
+ * `fee` — mức phạt là thông tin nội bộ của manager/staff, người báo cáo không thấy.
+ */
+export interface BuildingViolationType {
+  _id: string;
+  code: string;
+  label: string;
+}
+
+/**
+ * `type` khi báo sự cố nhận cả nhóm cố định lẫn `code` của một violation type
+ * đã cấu hình cho tòa nhà, nên không thu hẹp về union được.
+ */
+export type IncidentReportType = UserIncidentType | (string & {});
 
 export interface UserIncident {
   _id: string;
@@ -313,6 +331,12 @@ export const userApi = {
     vehicleTypes: (buildingId: string) =>
       api.get<Wrap<ListResult<VehicleType>>>(`/users/buildings/${buildingId}/vehicle-types`),
 
+    /** GET /users/buildings/:buildingId/violation-types → loại vi phạm manager cấu hình. */
+    violationTypes: (buildingId: string) =>
+      api.get<Wrap<ListResult<BuildingViolationType>>>(
+        `/users/buildings/${buildingId}/violation-types`
+      ),
+
     /** Get floors for a building with live availability counts (BE returns { building, floors }).
      *  usage='subscriber' → chỉ đếm ô dãy gói (mua gói chọn slot cố định). */
     floors: (buildingId: string, query?: { vehicleTypeId?: string; usage?: 'subscriber' }) =>
@@ -340,27 +364,38 @@ export const userApi = {
       api.put<{ data: { message: string } }>('/users/profile/password', body),
   },
 
-  // ========== LICENSE PLATES ==========
-  licensePlates: {
-    /** GET /users/license-plates → { licensePlates }. */
-    list: () =>
-      api.get<Wrap<{ licensePlates: LicensePlate[] }>>('/users/license-plates'),
+  // ========== VEHICLES ==========
+  // Lớp mỏng bám sát endpoint; state dùng trong UI nằm ở `store/vehicleStore`.
+  vehicles: {
+    /** GET /users/vehicle-categories → danh mục thể loại xe + hạn dùng QR. */
+    categories: () =>
+      api.get<Wrap<VehicleCatalog>>('/users/vehicle-categories'),
 
-    /** POST /users/license-plates → returns the full updated list. */
-    add: (body: { plateNumber: string; vehicleType?: UserVehicleType }) =>
-      api.post<Wrap<{ licensePlates: LicensePlate[] }>>('/users/license-plates', body),
+    /** GET /users/vehicles → { vehicles }. Mã QR quá hạn được backend cấp lại tại đây. */
+    list: () => api.get<Wrap<{ vehicles: Vehicle[] }>>('/users/vehicles'),
 
-    /** PUT /users/license-plates/:plateId (vehicleType only). */
-    update: (plateId: string, body: { vehicleType: UserVehicleType }) =>
-      api.put<Wrap<{ licensePlates: LicensePlate[] }>>(`/users/license-plates/${plateId}`, body),
+    /** GET /users/vehicles/:vehicleId. */
+    get: (vehicleId: string) =>
+      api.get<Wrap<{ vehicle: Vehicle }>>(`/users/vehicles/${vehicleId}`),
 
-    /** DELETE /users/license-plates/:plateId. */
-    remove: (plateId: string) =>
-      api.delete<Wrap<{ licensePlates: LicensePlate[] }>>(`/users/license-plates/${plateId}`),
+    /** POST /users/vehicles → xe vừa tạo. */
+    add: (body: VehicleInput) => api.post<Wrap<{ vehicle: Vehicle }>>('/users/vehicles', body),
 
-    /** PATCH /users/license-plates/:plateId/default. */
-    setDefault: (plateId: string) =>
-      api.patch<Wrap<{ licensePlates: LicensePlate[] }>>(`/users/license-plates/${plateId}/default`),
+    /** PUT /users/vehicles/:vehicleId — sửa loại xe và mô tả (biển số không đổi được). */
+    update: (vehicleId: string, body: VehicleUpdateInput) =>
+      api.put<Wrap<{ vehicle: Vehicle }>>(`/users/vehicles/${vehicleId}`, body),
+
+    /** DELETE /users/vehicles/:vehicleId → danh sách còn lại. */
+    remove: (vehicleId: string) =>
+      api.delete<Wrap<{ vehicles: Vehicle[] }>>(`/users/vehicles/${vehicleId}`),
+
+    /** PATCH /users/vehicles/:vehicleId/default → danh sách sau khi đổi. */
+    setDefault: (vehicleId: string) =>
+      api.patch<Wrap<{ vehicles: Vehicle[] }>>(`/users/vehicles/${vehicleId}/default`),
+
+    /** POST /users/vehicles/:vehicleId/qr/refresh — huỷ token cũ, cấp token mới. */
+    refreshQr: (vehicleId: string) =>
+      api.post<Wrap<{ vehicle: Vehicle }>>(`/users/vehicles/${vehicleId}/qr/refresh`),
   },
 
   // ========== WALLET ==========
@@ -411,7 +446,7 @@ export const userApi = {
   // ========== INCIDENTS (báo cáo sự cố) ==========
   incidents: {
     create: (body: {
-      type: UserIncidentType;
+      type: IncidentReportType;
       note?: string;
       slotId?: string;
       buildingId?: string;

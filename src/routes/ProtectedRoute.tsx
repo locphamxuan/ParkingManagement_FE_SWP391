@@ -5,7 +5,7 @@ import type { AuthSession } from '@/services/authService';
 type UserRole = AuthSession['role'];
 
 interface ProtectedRouteProps {
-  role: Extract<UserRole, 'admin' | 'manager' | 'staff'>;
+  role: UserRole;
 }
 
 const fallbackFor = (userRole: UserRole): string => {

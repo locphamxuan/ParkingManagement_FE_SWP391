@@ -13,7 +13,6 @@ interface ApiUser {
   role: 'admin' | 'manager' | 'staff' | 'user';
   assignedBuildings?: Array<{ _id?: string } | string>;
   phone?: string;
-  licensePlates?: Array<{ _id?: string; plateNumber?: string; vehicleType?: string; brand?: string | null; isDefault?: boolean } | string>;
 }
 
 interface ApiAuthResponse {
@@ -29,7 +28,8 @@ export interface AuthSession {
   displayName: string;
   assignedBuildingIds: string[];
   phone?: string;
-  licensePlates?: Array<{ _id?: string; plateNumber: string; vehicleType: 'car' | 'motorcycle'; brand?: string | null; isDefault?: boolean }>;
+  // Phương tiện KHÔNG nằm trong phiên đăng nhập: chúng thay đổi độc lập với việc
+  // đăng nhập, nên giữ bản sao ở đây sẽ tạo dữ liệu cũ. Đọc qua `vehicleStore`.
 }
 
 export interface RegisterInput {
@@ -63,23 +63,6 @@ function mapAuthSession(payload: ApiAuthResponse): AuthSession {
         .filter(Boolean)
     : [];
 
-  const licensePlates = Array.isArray(user.licensePlates)
-    ? user.licensePlates
-        .map((item) => {
-          if (typeof item === 'string') {
-            return { plateNumber: item, vehicleType: 'car' as const, brand: null, isDefault: false };
-          }
-          return {
-            _id: item._id ? String(item._id) : undefined,
-            plateNumber: item.plateNumber || '',
-            vehicleType: item.vehicleType === 'motorcycle' ? ('motorcycle' as const) : ('car' as const),
-            brand: item.brand ?? null,
-            isDefault: Boolean(item.isDefault),
-          };
-        })
-        .filter((item) => Boolean(item.plateNumber))
-    : [];
-
   return {
     userId: String(user._id),
     role: user.role,
@@ -87,7 +70,6 @@ function mapAuthSession(payload: ApiAuthResponse): AuthSession {
     displayName: user.fullName,
     assignedBuildingIds,
     phone: user.phone || '',
-    licensePlates,
   };
 }
 

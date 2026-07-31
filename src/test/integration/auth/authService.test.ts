@@ -72,7 +72,10 @@ describe('Auth — loginWithBackend', () => {
     expect(staffSession!.displayName).toBeTruthy();
     expect(typeof staffSession!.role).toBe('string');
     expect(Array.isArray(staffSession!.assignedBuildingIds)).toBe(true);
-    expect(Array.isArray(staffSession!.licensePlates)).toBe(true);
+    // Phương tiện KHÔNG nằm trong phiên đăng nhập — chúng có API riêng
+    // (/users/vehicles) để dữ liệu luôn là hiện tại, không phải ảnh chụp lúc login.
+    expect(staffSession).not.toHaveProperty('licensePlates');
+    expect(staffSession).not.toHaveProperty('vehicles');
   });
 
   it('staff login → role = staff, có assignedBuildingIds', () => {

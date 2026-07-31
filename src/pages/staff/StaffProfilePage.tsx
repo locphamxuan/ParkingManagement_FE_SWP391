@@ -67,7 +67,7 @@ export function StaffProfilePage() {
       setPhoneError('Phone number must start with 0 and contain exactly 10 digits.');
       return;
     }
-    updateProfile({ fullName: trimmedName, phone: newPhone, licensePlates: session.licensePlates || [] });
+    updateProfile({ fullName: trimmedName, phone: newPhone });
     setIsEditing(false);
     setSuccess('Profile updated successfully.');
     setTimeout(() => setSuccess(null), 4000);
