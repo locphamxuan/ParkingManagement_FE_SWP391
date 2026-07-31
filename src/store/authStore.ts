@@ -66,6 +66,9 @@ export const useAuthStore = create<AuthState>()(
 
 if (typeof window !== 'undefined') {
   window.addEventListener('auth-unauthorized', () => {
+    // Không có phiên thì chẳng có gì để dọn — gọi logout() lúc này chỉ tạo thêm
+    // một request 401 nữa (vd khách chưa đăng nhập mở trang login, /auth/me 401).
+    if (!useAuthStore.getState().session) return;
     useAuthStore.getState().logout();
   });
 }

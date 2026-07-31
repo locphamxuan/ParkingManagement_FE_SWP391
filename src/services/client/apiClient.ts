@@ -83,7 +83,10 @@ export async function apiRequest<T = unknown>(
       (payload && typeof payload === 'object' && 'message' in payload
         ? String((payload as { message?: unknown }).message)
         : null) || `Request failed (${res.status})`;
-    if (res.status === 401) {
+    // 401 trên chính /auth/logout nghĩa là "đã đăng xuất rồi" — báo ra ngoài sẽ
+    // khiến store gọi logout tiếp và lặp vô tận, mà mỗi lần server lại trả
+    // Set-Cookie xoá cookie, thổi bay cả phiên vừa đăng nhập xong.
+    if (res.status === 401 && !path.startsWith('/users/auth/logout')) {
       setStoredToken(null);
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new Event('auth-unauthorized'));
