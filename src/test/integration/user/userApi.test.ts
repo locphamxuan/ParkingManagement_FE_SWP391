@@ -170,20 +170,33 @@ describe('User — longTermSubscriptions', () => {
   });
 });
 
-// ── LICENSE PLATES ────────────────────────────────────────────────────────────
+// ── VEHICLES ──────────────────────────────────────────────────────────────────
 
-describe('User — licensePlates', () => {
-  it('list: trả về biển số xe với shape đúng', async () => {
-    const res = await userApi.licensePlates.list();
+describe('User — vehicles', () => {
+  it('list: trả về phương tiện với shape đúng', async () => {
+    const res = await userApi.vehicles.list();
     expect(res.data).toBeDefined();
-    expect(Array.isArray(res.data.licensePlates)).toBe(true);
+    expect(Array.isArray(res.data.vehicles)).toBe(true);
 
-    if (res.data.licensePlates.length > 0) {
-      const plate = res.data.licensePlates[0];
-      expect(plate).toHaveProperty('_id');
-      expect(plate).toHaveProperty('plateNumber');
-      expect(typeof plate.isDefault).toBe('boolean');
+    if (res.data.vehicles.length > 0) {
+      const vehicle = res.data.vehicles[0];
+      expect(vehicle).toHaveProperty('_id');
+      expect(vehicle).toHaveProperty('plateNumber');
+      expect(vehicle).toHaveProperty('category');
+      expect(typeof vehicle.isDefault).toBe('boolean');
+      // Mã QR trả về phải còn hạn — backend tự cấp lại nếu đã quá hạn.
+      expect(vehicle.qrCode).toMatch(/^PLT-/);
+      expect(new Date(vehicle.qrExpiresAt!).getTime()).toBeGreaterThan(Date.now());
     }
+  });
+
+  it('categories: danh mục loại xe do backend cấp, kèm hạn dùng QR', async () => {
+    const res = await userApi.vehicles.categories();
+    expect(Array.isArray(res.data.categories)).toBe(true);
+    expect(res.data.categories.length).toBeGreaterThan(0);
+    expect(res.data.categories[0]).toHaveProperty('code');
+    expect(res.data.categories[0]).toHaveProperty('label');
+    expect(res.data.qrTtlDays).toBeGreaterThan(0);
   });
 });
 

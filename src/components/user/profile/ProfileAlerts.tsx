@@ -2,10 +2,15 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { CheckCircle2, ShieldAlert } from 'lucide-react';
 import type { ProfileWorkflow } from '@/hooks/user/useProfileWorkflow';
 
-type ProfileAlertsProps = Pick<ProfileWorkflow, 'successMessage' | 'hasMissingInfo' | 'isEditing' | 'user'>;
+type ProfileAlertsProps = Pick<
+  ProfileWorkflow,
+  'successMessage' | 'hasMissingInfo' | 'isEditing' | 'user'
+> & {
+  hasVehicles: boolean;
+};
 
 // Banner thông báo thành công (sau khi lưu) + cảnh báo hồ sơ thiếu thông tin.
-export function ProfileAlerts({ successMessage, hasMissingInfo, isEditing, user }: ProfileAlertsProps) {
+export function ProfileAlerts({ successMessage, hasMissingInfo, isEditing, user, hasVehicles }: ProfileAlertsProps) {
   return (
     <>
       {/* Success Alert Banner */}
@@ -24,7 +29,7 @@ export function ProfileAlerts({ successMessage, hasMissingInfo, isEditing, user 
         )}
       </AnimatePresence>
 
-      {/* Warning Alert Box when licensePlates is empty or phone missing */}
+      {/* Warning Alert Box when the user has no vehicle or phone is missing */}
       <AnimatePresence>
         {hasMissingInfo && !isEditing && user && (
           <motion.div
@@ -38,15 +43,13 @@ export function ProfileAlerts({ successMessage, hasMissingInfo, isEditing, user 
               <ShieldAlert size={18} className="stroke-[2.5]" />
             </div>
             <div>
-              <h4 className="text-xs font-black uppercase tracking-wider text-amber-400 font-mono">Incomplete Profile Information</h4>
+              <h4 className="text-xs font-black uppercase tracking-wider text-amber-400 font-mono">Hồ sơ chưa đầy đủ</h4>
               <p className="text-[11px] text-amber-200/80 mt-1 font-semibold leading-relaxed">
                 {!user.phone || user.phone.trim() === ''
-                  ? 'Your account has no phone number.'
+                  ? 'Tài khoản chưa có số điện thoại.'
                   : ''}
-                {user.licensePlates.length === 0
-                  ? ' No license plate is linked to your account.'
-                  : ''}
-                {' '}Please click "Edit Profile" to update, so the PBMS system can automatically recognize you at control gates.
+                {!hasVehicles ? ' Tài khoản chưa đăng ký phương tiện nào.' : ''}
+                {' '}Bấm “Chỉnh sửa hồ sơ” để cập nhật, giúp hệ thống nhận diện bạn tự động tại cổng ra/vào.
               </p>
             </div>
           </motion.div>

@@ -1,91 +1,100 @@
-import { useMemo, useState, useRef, useEffect } from 'react';
+import { useMemo, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { syncPlates, listPlates, type PlateRecord } from '@/services/licensePlateService';
+import { useVehicles } from '@/hooks/user/useVehicles';
 import { userApi } from '@/services/user/userApi';
-import { normalizePlate, isValidVietnamPlate, brandsForVehicleType } from '@/utils/plate';
+import type { Vehicle, VehicleCategoryCode } from '@/services/vehicleService';
+import { normalizePlate, isValidVietnamPlate, brandsForCategory } from '@/utils/plate';
 
-// ─── Vietnamese license plate validation (shared util — canonical 59G2-038.80) ─
-// Series is 1–2 letters + optional digit: single letter for cars (30A), letter+digit
-// for motorcycles (59G2), or two letters for special plates (30LD). Number group is
-// 4–5 digits (5-digit → NNN.NN).
+/**
+ * State + business logic của trang Hồ sơ: thông tin cá nhân và phương tiện.
+ *
+ * Phương tiện được thao tác TRỰC TIẾP với API (thêm/xoá/đặt mặc định là gọi ngay),
+ * không còn gom lại rồi "đồng bộ" lúc bấm Lưu như trước. Cách cũ phải so sánh danh
+ * sách cũ–mới để đoán cần thêm/xoá gì, nên màn hình dễ hiển thị thứ chưa hề được
+ * lưu; giờ mỗi thao tác thành công là dữ liệu server đã đổi thật.
+ */
+
+/** Giới hạn do backend đặt (MAX_VEHICLES_PER_USER) — hiển thị cho khớp. */
+export const MAX_VEHICLES = 5;
+
 interface PlateValidationResult {
   ok: boolean;
   error?: string;
 }
 
-function validatePlate(raw: string, existingPlates: Array<{ plateNumber: string; vehicleType: 'car' | 'motorcycle' }>): PlateValidationResult {
-  // Step 1: empty check
+function validatePlate(raw: string, existing: Vehicle[]): PlateValidationResult {
   if (!raw || raw.trim() === '') {
-    return { ok: false, error: 'Please enter a license plate.' };
+    return { ok: false, error: 'Vui lòng nhập biển số xe.' };
   }
 
-  // Step 2: normalize to canonical VN form + format check
   const plate = normalizePlate(raw);
   if (!isValidVietnamPlate(plate)) {
     return {
       ok: false,
-      error: 'Invalid license plate format. Example: 30A-97022 (car) or 59G2-038.80 (motorcycle).',
+      error: 'Biển số không hợp lệ. Ví dụ: 30A-97022 (ô tô) hoặc 59G2-038.80 (xe máy).',
     };
   }
 
-  // Step 3: duplicate check
-  if (existingPlates.some((p) => p.plateNumber.toUpperCase() === plate)) {
-    return { ok: false, error: `License plate "${plate}" has already been added.` };
+  if (existing.some((v) => v.plateNumber.toUpperCase() === plate)) {
+    return { ok: false, error: `Biển số "${plate}" đã có trong danh sách.` };
   }
 
   return { ok: true };
 }
-// ─────────────────────────────────────────────────────────────────────────────
 
-export const MAX_PLATES = 3;
-
-export interface EditPlate {
-  _id?: string;
-  plateNumber: string;
-  vehicleType: 'car' | 'motorcycle';
-  brand?: string | null;
-  isDefault?: boolean;
-}
-
-/**
- * Toàn bộ state + business logic của trang Profile (thông tin cá nhân, quản lý
- * biển số xe liên kết). Tách khỏi ProfilePage để page chỉ còn lo phần hiển thị.
- */
 export function useProfileWorkflow() {
   const navigate = useNavigate();
-  const { session, logout, updateProfile, setDefaultLicensePlate } = useAuth();
+  const { session, logout, updateProfile } = useAuth();
+  const {
+    vehicles,
+    categories,
+    qrTtlDays,
+    isLoading: vehiclesLoading,
+    isLoaded: vehiclesLoaded,
+    add,
+    update,
+    remove,
+    setDefault,
+    refreshQr,
+  } = useVehicles();
+
   const [isEditing, setIsEditing] = useState(false);
-  const [form, setForm] = useState({
-    fullName: '',
-    phone: '',
-  });
-  // License plate tag state (while editing)
-  const [editPlates, setEditPlates] = useState<EditPlate[]>([]);
-  const [vehicleType, setVehicleType] = useState<'car' | 'motorcycle'>('car');
-  const [vehicleBrand, setVehicleBrand] = useState<string>('');
-  const [customBrand, setCustomBrand] = useState<string>('');
+  const [form, setForm] = useState({ fullName: '', phone: '' });
+
+  // Form thêm/sửa xe. `editingVehicleId` khác null nghĩa là đang sửa xe đã có —
+  // dùng chung một form để hai đường không bao giờ lệch nhau về danh sách trường.
+  const [category, setCategory] = useState<VehicleCategoryCode>('car');
+  const [vehicleBrand, setVehicleBrand] = useState('');
+  const [customBrand, setCustomBrand] = useState('');
+  const [editingVehicleId, setEditingVehicleId] = useState<string | null>(null);
   const [plateInput, setPlateInput] = useState('');
   const [plateError, setPlateError] = useState<string | null>(null);
   const [plateSuccess, setPlateSuccess] = useState<string | null>(null);
+  const [isSavingVehicle, setIsSavingVehicle] = useState(false);
   const plateInputRef = useRef<HTMLInputElement | null>(null);
-
-  const vehicleBrandOptions = useMemo(() => {
-    const list = brandsForVehicleType(vehicleType);
-    return [
-      { value: '', label: '— Select vehicle brand (optional) —' },
-      ...list.map((b) => ({ value: b, label: b })),
-    ];
-  }, [vehicleType]);
 
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const [showQRModal, setShowQRModal] = useState(false);
-  // Server plates carry the per-plate QR token (PLT-...) used by the plate-QR modal.
-  const [serverPlates, setServerPlates] = useState<PlateRecord[]>([]);
-  const [plateQrTarget, setPlateQrTarget] = useState<{ qrToken: string; plateNumber: string; brand?: string | null } | null>(null);
+  const [qrVehicle, setQrVehicle] = useState<Vehicle | null>(null);
+
+  // Dropdown loại xe lấy thẳng từ backend — thêm loại mới ở BE là FE có ngay,
+  // không phải sửa danh sách cứng ở đây.
+  const categoryOptions = useMemo(
+    () => categories.map((c) => ({ value: c.code, label: c.label })),
+    [categories]
+  );
+
+  const vehicleBrandOptions = useMemo(() => {
+    const list = brandsForCategory(category);
+    return [
+      { value: '', label: '— Chọn hãng xe (không bắt buộc) —' },
+      ...list.map((b) => ({ value: b, label: b })),
+    ];
+  }, [category]);
 
   const user = useMemo(() => {
     if (!session) return null;
@@ -93,18 +102,14 @@ export function useProfileWorkflow() {
       fullName: session.displayName,
       email: session.email,
       phone: session.phone || '',
-      licensePlates: session.licensePlates || [],
       role: session.role,
     };
   }, [session]);
 
-  // Fetch plates (with their PLT- QR tokens) so each plate can show its scannable QR.
-  useEffect(() => {
-    listPlates().then(setServerPlates).catch(() => undefined);
-  }, []);
-
-  const plateQrToken = (plateNumber: string): string | null =>
-    serverPlates.find((p) => p.plateNumber.toUpperCase() === plateNumber.toUpperCase())?.qrCode ?? null;
+  const flashSuccess = (message: string) => {
+    setPlateSuccess(message);
+    setTimeout(() => setPlateSuccess(null), 2500);
+  };
 
   const handleLogout = () => {
     logout();
@@ -113,17 +118,7 @@ export function useProfileWorkflow() {
 
   const handleStartEdit = () => {
     if (!user) return;
-    setForm({
-      fullName: user.fullName || '',
-      phone: user.phone || '',
-    });
-    setEditPlates([...user.licensePlates]);
-    setVehicleType('car');
-    setVehicleBrand('');
-    setCustomBrand('');
-    setPlateInput('');
-    setPlateError(null);
-    setPlateSuccess(null);
+    setForm({ fullName: user.fullName || '', phone: user.phone || '' });
     setProfileError(null);
     setIsEditing(true);
     setSuccessMessage(null);
@@ -137,71 +132,123 @@ export function useProfileWorkflow() {
     setProfileError(null);
   };
 
-  // Add a plate tag via the 4-step validation
-  const handleAddPlate = () => {
-    setPlateError(null);
-    setPlateSuccess(null);
-
-    if (editPlates.length >= MAX_PLATES) {
-      setPlateError(`Maximum of ${MAX_PLATES} license plates per account.`);
-      return;
-    }
-
-    const result = validatePlate(plateInput, editPlates);
-    if (!result.ok) {
-      setPlateError(result.error ?? 'Invalid license plate.');
-      return;
-    }
-
-    const normalized = normalizePlate(plateInput);
-    const brand = (vehicleBrand === 'Other' ? customBrand.trim() : vehicleBrand.trim()) || null;
-    setEditPlates((prev) => [...prev, { plateNumber: normalized, vehicleType, brand }]);
-    setPlateInput('');
+  const resetVehicleForm = () => {
     setVehicleBrand('');
     setCustomBrand('');
-    setPlateSuccess(`Added "${normalized}" (${vehicleType === 'car' ? 'Car' : 'Motorcycle'}${brand ? ` · ${brand}` : ''}) — click SAVE CHANGES to update the system.`);
-    setTimeout(() => setPlateSuccess(null), 2500);
-    plateInputRef.current?.focus();
+    setEditingVehicleId(null);
   };
 
-  const handleRemovePlate = (plateToRemove: string) => {
-    setEditPlates((prev) => prev.filter((p) => p.plateNumber !== plateToRemove));
+  /** Chuỗi rỗng gửi thành null để người dùng xoá được hãng cũ, không lưu chuỗi trắng. */
+  const brandValue = () =>
+    (vehicleBrand === 'Other' ? customBrand.trim() : vehicleBrand.trim()) || null;
+
+  /** Thêm xe — gọi API ngay, không chờ bấm Lưu. */
+  const handleAddVehicle = async () => {
     setPlateError(null);
     setPlateSuccess(null);
+
+    if (vehicles.length >= MAX_VEHICLES) {
+      setPlateError(`Mỗi tài khoản tối đa ${MAX_VEHICLES} phương tiện.`);
+      return;
+    }
+
+    const result = validatePlate(plateInput, vehicles);
+    if (!result.ok) {
+      setPlateError(result.error ?? 'Biển số không hợp lệ.');
+      return;
+    }
+
+    const brand = brandValue();
+    setIsSavingVehicle(true);
+    try {
+      const created = await add({ plateNumber: normalizePlate(plateInput), category, brand });
+      setPlateInput('');
+      resetVehicleForm();
+      flashSuccess(`Đã thêm ${created.plateNumber}${brand ? ` · ${brand}` : ''}.`);
+      plateInputRef.current?.focus();
+    } catch (err) {
+      setPlateError(err instanceof Error ? err.message : 'Không thêm được phương tiện.');
+    } finally {
+      setIsSavingVehicle(false);
+    }
   };
 
-  const handleSetDefaultEditPlate = async (plate: EditPlate) => {
-    // 1. Cập nhật state editPlates ngay lập tức để hiển thị trên giao diện
-    setEditPlates((prev) =>
-      prev.map((p) => ({
-        ...p,
-        isDefault: p.plateNumber === plate.plateNumber,
-      }))
-    );
+  /** Nạp xe đang có vào form để sửa. Biển số không sửa được — backend chỉ nhận mô tả. */
+  const handleStartEditVehicle = (vehicle: Vehicle) => {
+    setPlateError(null);
+    setPlateSuccess(null);
+    setEditingVehicleId(vehicle._id);
+    setCategory(vehicle.category);
+    const known = brandsForCategory(vehicle.category).includes(vehicle.brand ?? '');
+    setVehicleBrand(vehicle.brand ? (known ? vehicle.brand : 'Other') : '');
+    setCustomBrand(vehicle.brand && !known ? vehicle.brand : '');
+  };
 
-    // 2. Nếu đã có _id trên Backend, gọi API setDefaultLicensePlate để lưu thay đổi
-    if (plate._id) {
-      try {
-        await setDefaultLicensePlate(plate._id);
-        setPlateSuccess(`Set "${plate.plateNumber}" as default plate! 🌟`);
-        setTimeout(() => setPlateSuccess(null), 2500);
-      } catch (err) {
-        setPlateError(err instanceof Error ? err.message : 'Failed to set default plate.');
-      }
+  const handleCancelEditVehicle = () => {
+    resetVehicleForm();
+    setPlateError(null);
+  };
+
+  const handleSaveVehicleEdit = async () => {
+    if (!editingVehicleId) return;
+    setPlateError(null);
+    setPlateSuccess(null);
+
+    setIsSavingVehicle(true);
+    try {
+      const updated = await update(editingVehicleId, { category, brand: brandValue() });
+      resetVehicleForm();
+      flashSuccess(`Đã cập nhật ${updated.plateNumber}.`);
+    } catch (err) {
+      // Backend chặn đổi thể loại khi xe đang gửi hoặc còn gói — hiện nguyên văn lý do.
+      setPlateError(err instanceof Error ? err.message : 'Không cập nhật được phương tiện.');
+    } finally {
+      setIsSavingVehicle(false);
     }
+  };
+
+  const handleRemoveVehicle = async (vehicleId: string) => {
+    setPlateError(null);
+    try {
+      await remove(vehicleId);
+      if (editingVehicleId === vehicleId) resetVehicleForm();
+      flashSuccess('Đã xoá phương tiện.');
+    } catch (err) {
+      // Backend chặn xoá khi xe đang gửi hoặc còn gói — hiện nguyên văn lý do.
+      setPlateError(err instanceof Error ? err.message : 'Không xoá được phương tiện.');
+    }
+  };
+
+  const handleSetDefaultVehicle = async (vehicle: Vehicle) => {
+    setPlateError(null);
+    try {
+      await setDefault(vehicle._id);
+      flashSuccess(`Đã đặt ${vehicle.plateNumber} làm xe mặc định.`);
+    } catch (err) {
+      setPlateError(err instanceof Error ? err.message : 'Không đặt được xe mặc định.');
+    }
+  };
+
+  const handleRefreshQr = async (vehicleId: string) => {
+    const updated = await refreshQr(vehicleId);
+    setQrVehicle(updated);
+    return updated;
   };
 
   const handlePlateKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      handleAddPlate();
+      if (editingVehicleId) void handleSaveVehicleEdit();
+      else void handleAddVehicle();
     }
     if (e.key === 'Escape') {
-      setPlateInput('');
+      if (editingVehicleId) handleCancelEditVehicle();
+      else setPlateInput('');
       setPlateError(null);
     }
   };
 
+  /** Lưu hồ sơ — chỉ còn họ tên và số điện thoại; phương tiện đã lưu ngay khi thao tác. */
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
@@ -210,88 +257,32 @@ export function useProfileWorkflow() {
 
     const newPhone = form.phone.trim();
 
-    // Format check (BE kiểm tra trùng SĐT khi PUT /users/profile → 409 PHONE_TAKEN).
-    const phoneRegex = /^0[0-9]{9}$/;
-    if (!phoneRegex.test(newPhone)) {
-      setProfileError('Phone number must start with 0 and contain exactly 10 digits!');
+    // Chỉ kiểm tra định dạng; trùng số điện thoại do BE trả 409 PHONE_TAKEN.
+    if (!/^0[0-9]{9}$/.test(newPhone)) {
+      setProfileError('Số điện thoại phải bắt đầu bằng 0 và có đúng 10 chữ số.');
       return;
     }
 
     setIsSaving(true);
-
     try {
-      // Sync license plates with MongoDB backend
-      // Current server-side plates (with _id) come from the session
-      const currentServerPlates = (user.licensePlates || []).map((p) => ({
-        _id: p._id,
-        plateNumber: p.plateNumber,
-        vehicleType: p.vehicleType,
-        brand: p.brand ?? null,
-      }));
-
-      // Sync license plates FIRST so a profile-update failure can't block them.
-      // syncPlates now throws if any add/remove fails (instead of silently swallowing),
-      // so a plate that "looks added" but didn't persist surfaces a clear error here.
-      const freshPlates = await syncPlates(currentServerPlates, editPlates);
-      setServerPlates(freshPlates); // refresh per-plate QR tokens
-
-      // Persist fullName / phone to the backend (PUT /users/profile).
       await userApi.profile.update({ fullName: form.fullName.trim(), phone: newPhone });
-
-      // Tìm kiếm biển số xe có isDefault === true từ danh sách đã chỉnh sửa
-      const defaultPlateInEdit = editPlates.find((ep) => ep.isDefault === true);
-
-      // Nếu có biển số mặc định, đối chiếu với freshPlates để lấy _id thật từ server MongoDB và kích hoạt API setDefaultLicensePlate
-      if (defaultPlateInEdit) {
-        const matchingFresh = freshPlates.find(
-          (fp) => fp.plateNumber.toUpperCase() === defaultPlateInEdit.plateNumber.toUpperCase()
-        );
-        if (matchingFresh && matchingFresh._id) {
-          await setDefaultLicensePlate(matchingFresh._id);
-        }
-      }
-
-      // Map to the session format (with _id preserved and isDefault status copied from editPlates)
-      const sessionPlates = freshPlates.map((p) => {
-        const matchingEdit = editPlates.find(
-          (ep) => ep.plateNumber.toUpperCase() === p.plateNumber.toUpperCase()
-        );
-        return {
-          _id: p._id,
-          plateNumber: p.plateNumber,
-          vehicleType: (p.vehicleType === 'motorcycle' ? 'motorcycle' : 'car') as 'car' | 'motorcycle',
-          brand: (p.brand ?? matchingEdit?.brand) ?? null,
-          isDefault: matchingEdit?.isDefault === true,
-        };
-      });
-
-      updateProfile({
-        fullName: form.fullName.trim(),
-        phone: newPhone,
-        licensePlates: sessionPlates,
-      });
-
-      // Nếu có biển số xe mặc định, gọi API setDefaultLicensePlate để đồng bộ database MongoDB
-      const defaultPlate = sessionPlates.find((p) => p.isDefault);
-      if (defaultPlate && defaultPlate._id) {
-        await setDefaultLicensePlate(defaultPlate._id);
-      }
+      updateProfile({ fullName: form.fullName.trim(), phone: newPhone });
 
       setIsEditing(false);
-      setSuccessMessage('Profile & license plates updated successfully!');
+      setSuccessMessage('Đã cập nhật hồ sơ.');
       setTimeout(() => setSuccessMessage(null), 5000);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to save profile. Please try again.';
-      setApiError(message);
+      setApiError(err instanceof Error ? err.message : 'Không lưu được hồ sơ, vui lòng thử lại.');
     } finally {
       setIsSaving(false);
     }
   };
 
+  // Chỉ kết luận "thiếu xe" sau khi API trả về, tránh cảnh báo nhấp nháy lúc đang tải.
   const hasMissingInfo =
     !!user &&
     user.role === 'user' &&
-    (!user.phone || user.phone.trim() === '' || user.licensePlates.length === 0);
+    (!user.phone || user.phone.trim() === '' || (vehiclesLoaded && vehicles.length === 0));
 
   return {
     session,
@@ -299,13 +290,18 @@ export function useProfileWorkflow() {
     isEditing,
     form,
     setForm,
-    editPlates,
-    vehicleType,
-    setVehicleType,
+    vehicles,
+    vehiclesLoading,
+    vehiclesLoaded,
+    qrTtlDays,
+    category,
+    setCategory,
+    categoryOptions,
     vehicleBrand,
     setVehicleBrand,
     customBrand,
     setCustomBrand,
+    editingVehicleId,
     plateInput,
     setPlateInput,
     plateError,
@@ -313,22 +309,26 @@ export function useProfileWorkflow() {
     plateSuccess,
     plateInputRef,
     vehicleBrandOptions,
+    isSavingVehicle,
     successMessage,
     profileError,
     isSaving,
     apiError,
     showQRModal,
     setShowQRModal,
-    plateQrTarget,
-    setPlateQrTarget,
-    plateQrToken,
+    qrVehicle,
+    setQrVehicle,
     hasMissingInfo,
     handleLogout,
     handleStartEdit,
     handleCancel,
-    handleAddPlate,
-    handleRemovePlate,
-    handleSetDefaultEditPlate,
+    handleAddVehicle,
+    handleStartEditVehicle,
+    handleCancelEditVehicle,
+    handleSaveVehicleEdit,
+    handleRemoveVehicle,
+    handleSetDefaultVehicle,
+    handleRefreshQr,
     handlePlateKeyDown,
     handleSave,
   };

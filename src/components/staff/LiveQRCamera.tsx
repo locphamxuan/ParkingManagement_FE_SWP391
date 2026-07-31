@@ -2,7 +2,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 're
 import { QrCode, Loader2, CheckCircle2 } from 'lucide-react';
 import jsQR from 'jsqr';
 import type { LiveCameraHandle } from '@/components/staff/LivePlateCamera';
-import { videoConstraintFor } from '@/hooks/useCameraDevices';
+import { openCameraStream } from '@/hooks/useCameraDevices';
 
 interface LiveQRCameraProps {
   /** Fired when a QR is decoded (account ID or vehicle PLT- token). */
@@ -89,7 +89,7 @@ export const LiveQRCamera = forwardRef<LiveCameraHandle, LiveQRCameraProps>(func
       try {
         await new Promise<void>((r) => setTimeout(r, 150));
         if (cancelled) return;
-        stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraintFor(deviceId, 'environment') });
+        stream = await openCameraStream(deviceId, 'environment');
         if (cancelled) {
           stream.getTracks().forEach((t) => t.stop());
           return;

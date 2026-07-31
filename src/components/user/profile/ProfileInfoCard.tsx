@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { Edit, QrCode } from 'lucide-react';
 import type { ProfileWorkflow } from '@/hooks/user/useProfileWorkflow';
+import type { Vehicle } from '@/services/vehicleService';
 import { ProfileEditForm } from './ProfileEditForm';
 import { ProfileViewCard } from './ProfileViewCard';
 
@@ -8,11 +9,16 @@ type ProfileInfoCardProps = Pick<
   ProfileWorkflow,
   | 'user' | 'isEditing' | 'setShowQRModal' | 'handleStartEdit'
   | 'form' | 'setForm' | 'profileError' | 'apiError' | 'isSaving' | 'handleSave' | 'handleCancel'
-  | 'editPlates' | 'vehicleType' | 'setVehicleType' | 'vehicleBrand' | 'setVehicleBrand'
-  | 'customBrand' | 'setCustomBrand' | 'vehicleBrandOptions' | 'plateInput' | 'setPlateInput'
-  | 'plateInputRef' | 'plateError' | 'setPlateError' | 'plateSuccess' | 'handleAddPlate' | 'handleRemovePlate'
-  | 'handleSetDefaultEditPlate' | 'handlePlateKeyDown' | 'plateQrToken' | 'setPlateQrTarget'
->;
+  | 'vehicles' | 'vehiclesLoading' | 'category' | 'setCategory' | 'categoryOptions'
+  | 'vehicleBrand' | 'setVehicleBrand' | 'customBrand' | 'setCustomBrand'
+  | 'editingVehicleId'
+  | 'vehicleBrandOptions' | 'plateInput' | 'setPlateInput' | 'plateInputRef'
+  | 'plateError' | 'setPlateError' | 'plateSuccess' | 'isSavingVehicle'
+  | 'handleAddVehicle' | 'handleRemoveVehicle' | 'handleSetDefaultVehicle' | 'handlePlateKeyDown'
+  | 'handleStartEditVehicle' | 'handleCancelEditVehicle' | 'handleSaveVehicleEdit'
+> & {
+  onShowQr: (vehicle: Vehicle) => void;
+};
 
 // Khối thông tin hồ sơ người dùng (bên trái): tiêu đề + nút Edit/QR + form chỉnh sửa hoặc bảng chỉ xem.
 export function ProfileInfoCard({
@@ -59,7 +65,13 @@ export function ProfileInfoCard({
       {isEditing ? (
         <ProfileEditForm user={user} {...formProps} />
       ) : (
-        <ProfileViewCard user={user} plateQrToken={formProps.plateQrToken} setPlateQrTarget={formProps.setPlateQrTarget} />
+        <ProfileViewCard
+          user={user}
+          vehicles={formProps.vehicles}
+          vehiclesLoading={formProps.vehiclesLoading}
+          categoryOptions={formProps.categoryOptions}
+          onShowQr={formProps.onShowQr}
+        />
       )}
     </motion.section>
   );

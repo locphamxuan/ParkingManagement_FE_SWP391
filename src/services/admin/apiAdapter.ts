@@ -64,7 +64,7 @@ interface ApiUser {
   role: 'admin' | 'manager' | 'staff' | 'user';
   isActive?: boolean;
   walletBalance?: number;
-  licensePlates?: Array<{ plateNumber?: string }>;
+  vehicles?: Array<{ plateNumber?: string }>;
   phone?: string;
 }
 
@@ -133,9 +133,9 @@ const toBuilding = (
 };
 
 const toUser = (item: ApiUser): UserRecord => {
-  const backendPlates = (item.licensePlates || []).map((p) =>
-    typeof p === 'string' ? p : p.plateNumber || ''
-  ).filter(Boolean);
+  const backendPlates = (item.vehicles || [])
+    .map((vehicle) => vehicle.plateNumber || '')
+    .filter(Boolean);
 
   return {
     id: item._id,

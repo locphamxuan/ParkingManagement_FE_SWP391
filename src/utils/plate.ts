@@ -30,9 +30,19 @@ export const MOTORCYCLE_BRANDS = [
   'Other',
 ] as const;
 
-/** Return the brand list matching a vehicle type (defaults to car list). */
-export function brandsForVehicleType(vehicleType: 'car' | 'motorcycle'): readonly string[] {
-  return vehicleType === 'motorcycle' ? MOTORCYCLE_BRANDS : CAR_BRANDS;
+/**
+ * Danh sách hãng gợi ý theo NHÓM xe (2 bánh / 4 bánh) — chỉ là gợi ý nhập liệu,
+ * backend nhận mọi chuỗi. Nhóm được suy từ thể loại xe, khớp `kindOfCategory` ở BE.
+ */
+const TWO_WHEEL_CATEGORIES = new Set(['motorcycle', 'ebike', 'emotorbike']);
+
+export function brandsForCategory(category: string | null | undefined): readonly string[] {
+  return TWO_WHEEL_CATEGORIES.has(`${category ?? ''}`) ? MOTORCYCLE_BRANDS : CAR_BRANDS;
+}
+
+/** True khi thể loại xe thuộc nhóm 2 bánh — dùng để chọn icon/màu trong UI. */
+export function isTwoWheelCategory(category: string | null | undefined): boolean {
+  return TWO_WHEEL_CATEGORIES.has(`${category ?? ''}`);
 }
 
 /** Normalize arbitrary input to the canonical VN plate form, or '' if unparseable. */

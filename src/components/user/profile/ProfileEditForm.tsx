@@ -1,21 +1,27 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { Save, X, AlertCircle, Loader2 } from 'lucide-react';
 import type { ProfileWorkflow } from '@/hooks/user/useProfileWorkflow';
-import { LicensePlateEditor } from './LicensePlateEditor';
+import { VehicleEditor } from './VehicleEditor';
+import type { Vehicle } from '@/services/vehicleService';
 
 type ProfileEditFormProps = Pick<
   ProfileWorkflow,
   | 'user' | 'form' | 'setForm' | 'profileError' | 'apiError' | 'isSaving' | 'handleSave' | 'handleCancel'
-  | 'editPlates' | 'vehicleType' | 'setVehicleType' | 'vehicleBrand' | 'setVehicleBrand'
-  | 'customBrand' | 'setCustomBrand' | 'vehicleBrandOptions' | 'plateInput' | 'setPlateInput'
-  | 'plateInputRef' | 'plateError' | 'setPlateError' | 'plateSuccess' | 'handleAddPlate' | 'handleRemovePlate'
-  | 'handleSetDefaultEditPlate' | 'handlePlateKeyDown'
->;
+  | 'vehicles' | 'vehiclesLoading' | 'category' | 'setCategory' | 'categoryOptions'
+  | 'vehicleBrand' | 'setVehicleBrand' | 'customBrand' | 'setCustomBrand'
+  | 'editingVehicleId'
+  | 'vehicleBrandOptions' | 'plateInput' | 'setPlateInput' | 'plateInputRef'
+  | 'plateError' | 'setPlateError' | 'plateSuccess' | 'isSavingVehicle'
+  | 'handleAddVehicle' | 'handleRemoveVehicle' | 'handleSetDefaultVehicle' | 'handlePlateKeyDown'
+  | 'handleStartEditVehicle' | 'handleCancelEditVehicle' | 'handleSaveVehicleEdit'
+> & {
+  onShowQr: (vehicle: Vehicle) => void;
+};
 
-// Form chỉnh sửa hồ sơ: họ tên, số điện thoại, và trình quản lý biển số xe.
+// Form chỉnh sửa hồ sơ: họ tên, số điện thoại, và trình quản lý phương tiện.
 export function ProfileEditForm({
   user, form, setForm, profileError, apiError, isSaving, handleSave, handleCancel,
-  ...plateEditorProps
+  ...vehicleEditorProps
 }: ProfileEditFormProps) {
   return (
     <form onSubmit={handleSave} className="space-y-5 rounded-3xl bg-slate-950/40 p-6 border border-white/5 animate-fadeIn">
@@ -77,9 +83,8 @@ export function ProfileEditForm({
         />
       </div>
 
-      {/* ── License Plate Tag Manager ─────────────────── */}
-      {user?.role === 'user' && <LicensePlateEditor {...plateEditorProps} />}
-      {/* ── End License Plate Tag Manager ────────────── */}
+      {/* ── Quản lý phương tiện (mỗi thao tác lưu ngay) ─────────────── */}
+      {user?.role === 'user' && <VehicleEditor {...vehicleEditorProps} />}
 
       <div className="flex gap-3 pt-3 border-t border-white/5">
         <button

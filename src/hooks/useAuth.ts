@@ -6,10 +6,10 @@ export function useAuth() {
   const login = useAuthStore((state) => state.login);
   const logout = useAuthStore((state) => state.logout);
   const updateProfile = useAuthStore((state) => state.updateProfile);
-  const setDefaultLicensePlate = useAuthStore((state) => state.setDefaultLicensePlate);
   const isAuthenticating = useAuthStore((state) => state.isAuthenticating);
   const error = useAuthStore((state) => state.error);
 
+  // Phương tiện KHÔNG có ở đây — dùng `useVehicles()` để lấy dữ liệu sống từ API.
   const user = session
     ? {
         userId: session.userId,
@@ -17,7 +17,6 @@ export function useAuth() {
         role: session.role,
         fullName: session.displayName,
         phone: session.phone || '',
-        licensePlates: session.licensePlates || [],
       }
     : null;
 
@@ -28,7 +27,6 @@ export function useAuth() {
     login,
     logout,
     updateProfile,
-    setDefaultLicensePlate,
     isAuthenticating,
     error,
     isAdmin: session?.role === 'admin',

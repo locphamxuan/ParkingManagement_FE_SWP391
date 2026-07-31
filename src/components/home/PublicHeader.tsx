@@ -3,6 +3,7 @@ import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BellRing, ChevronDown, LogOut, MapPinned, Ticket, User, Wallet } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { useVehicles } from '@/hooks/user/useVehicles';
 import { notificationApi } from '@/services/notificationApi';
 import { navigationLinks } from './homeNavigation.constants';
 import { Logo } from '@/components/layout/Logo';
@@ -18,8 +19,13 @@ export function PublicHeader() {
   const menuRef = useRef<HTMLDivElement | null>(null);
 
   const isUserRole = session?.role === 'user';
+  // Chỉ cảnh báo "thiếu thông tin" sau khi ĐÃ nạp xong danh sách xe — nếu không thì
+  // mọi lần tải trang đều nháy cảnh báo trước khi API kịp trả về.
+  const { hasVehicles, isLoaded: vehiclesLoaded } = useVehicles();
   const hasMissingInfo = Boolean(
-    session && isUserRole && (!session.phone || session.phone.trim() === '' || !session.licensePlates || session.licensePlates.length === 0),
+    session &&
+      isUserRole &&
+      (!session.phone || session.phone.trim() === '' || (vehiclesLoaded && !hasVehicles)),
   );
 
   useEffect(() => {

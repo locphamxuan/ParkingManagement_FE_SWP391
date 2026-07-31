@@ -23,7 +23,9 @@ interface HomePageProps {
   onOpenAuth: (mode?: 'login' | 'register') => void;
   onViewProfile: () => void;
   onAction: (module: LegacyModule) => void;
-  user?: { fullName?: string; email?: string; phone?: string; role?: string; licensePlates?: Array<{ plateNumber: string; vehicleType: 'car' | 'motorcycle' }> } | null;
+  user?: { fullName?: string; email?: string; phone?: string; role?: string } | null;
+  /** Đã đăng ký xe nào chưa — quyết định có hiện banner nhắc thêm xe. */
+  hasVehicles?: boolean;
   onLogout?: () => void;
 }
 
@@ -51,7 +53,7 @@ const benefits = [
   },
 ];
 
-export default function HomePage({ modules, onViewProfile, onAction, user }: HomePageProps) {
+export default function HomePage({ modules, onViewProfile, onAction, user, hasVehicles }: HomePageProps) {
   const productModules = useMemo(() => modules.filter((m) => m.available && !(m.id === 'auth' && user)), [modules, user]);
   const serviceModules = useMemo(() => modules.filter((m) => !m.available), [modules]);
   const [showPlateBanner, setShowPlateBanner] = useState(true);
@@ -82,7 +84,7 @@ export default function HomePage({ modules, onViewProfile, onAction, user }: Hom
       <PublicHeader />
       {/* Missing License Plate Warning Banner */}
       <AnimatePresence>
-        {user && user.role === 'user' && (!user.licensePlates || user.licensePlates.length === 0) && showPlateBanner && (
+        {user && user.role === 'user' && !hasVehicles && showPlateBanner && (
           <motion.div
             key="plate-banner"
             initial={{ opacity: 0, y: -8 }}

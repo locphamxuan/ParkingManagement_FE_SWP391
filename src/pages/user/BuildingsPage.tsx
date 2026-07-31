@@ -15,15 +15,15 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { useBuildings } from '@/hooks/user';
-import { useAuth } from '@/hooks/useAuth';
+import { useVehicles } from '@/hooks/user/useVehicles';
+import type { Vehicle, VehicleCategory } from '@/services/vehicleService';
 import {
   userApi,
   type Building,
   type FloorAvailability,
   type VehicleType,
-  type LicensePlate,
-  type UserVehicleType,
 } from '@/services/user/userApi';
+import { isTwoWheelCategory } from '@/utils/plate';
 
 /* ─── Helpers ──────────────────────────────────────────────────────────────── */
 
@@ -36,15 +36,17 @@ function addressText(building: Building): string {
   return building.address ? JSON.stringify(building.address) : 'Address not updated';
 }
 
-/** Map FE vehicleType strings to backend vehicle type code for matching. */
-function plateMatchesVehicleTypes(plate: LicensePlate, vtypes: VehicleType[]): boolean {
-  if (vtypes.length === 0) return true; // no filter
-  const t = plate.vehicleType?.toLowerCase() ?? '';
-  return vtypes.some((vt) => {
-    const c = (vt.code || vt.name || '').toLowerCase();
-    if (t === 'motorcycle' || t === 'bike') return /motor|xe|máy|bike|moto/i.test(c);
-    return /car|oto|ô t|auto/i.test(c); // car, suv, truck all map to car
-  });
+/**
+ * Tòa nhà này có nhận loại xe của chiếc xe đang chọn không.
+ *
+ * Trước đây hàm này đoán bằng regex trên mã/tên danh mục ('motor|xe|máy'…), nên
+ * manager đặt tên khác quy ước là lọc sai. Giờ mỗi VehicleType khai báo `category`,
+ * ta so ở mức NHÓM (2 bánh / 4 bánh) — đúng cách backend tính giá và gán ô đỗ.
+ */
+function vehicleMatchesBuildingTypes(vehicle: Vehicle, vtypes: VehicleType[]): boolean {
+  if (vtypes.length === 0) return true; // tòa chưa khai báo loại xe → không lọc
+  const wantsTwoWheel = isTwoWheelCategory(vehicle.category);
+  return vtypes.some((vt) => isTwoWheelCategory(vt.category) === wantsTwoWheel);
 }
 
 /* ─── Sub Components ───────────────────────────────────────────────────────── */
@@ -124,31 +126,32 @@ function BuildingCard({
   );
 }
 
-/* ─── Vehicle / License Plate Dropdown ─────────────────────────────────────── */
+/* ─── Vehicle Dropdown ─────────────────────────────────────────────────────── */
 
-function VehiclePlateDropdown({
-  plates,
+function VehicleDropdown({
+  vehicles,
+  categories,
   selectedPlate,
   onSelect,
 }: {
-  plates: LicensePlate[];
+  vehicles: Vehicle[];
+  categories: VehicleCategory[];
   selectedPlate: string;
   onSelect: (plateNumber: string) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const selected = plates.find((p) => p.plateNumber === selectedPlate);
+  const selected = vehicles.find((v) => v.plateNumber === selectedPlate);
 
-  const vehicleIcon = (type: string) => {
-    const t = type?.toLowerCase() ?? '';
-    if (t === 'motorcycle' || t === 'bike') return <Bike size={16} className="text-purple-400" />;
-    return <Car size={16} className="text-cyan-400" />;
-  };
+  const vehicleIcon = (category: string) =>
+    isTwoWheelCategory(category) ? (
+      <Bike size={16} className="text-purple-400" />
+    ) : (
+      <Car size={16} className="text-cyan-400" />
+    );
 
-  const vehicleLabel = (type: string) => {
-    const t = type?.toLowerCase() ?? '';
-    if (t === 'motorcycle' || t === 'bike') return 'Motorcycle';
-    return 'Car';
-  };
+  // Nhãn thể loại do backend cấp; chỉ rơi về mã gốc khi danh mục chưa nạp xong.
+  const vehicleLabel = (category: string) =>
+    categories.find((option) => option.code === category)?.label || category;
 
   return (
     <div className="relative">
@@ -165,11 +168,11 @@ function VehiclePlateDropdown({
           {selected ? (
             <>
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/[0.04] border border-white/[0.08]">
-                {vehicleIcon(selected.vehicleType)}
+                {vehicleIcon(selected.category)}
               </div>
               <div className="text-left min-w-0">
                 <p className="text-sm font-black text-white tracking-wide truncate">{selected.plateNumber}</p>
-                <p className="text-[9px] font-bold uppercase tracking-wider text-slate-500">{vehicleLabel(selected.vehicleType)}</p>
+                <p className="text-[9px] font-bold uppercase tracking-wider text-slate-500">{vehicleLabel(selected.category)}</p>
               </div>
             </>
           ) : (
@@ -190,20 +193,20 @@ function VehiclePlateDropdown({
             transition={{ duration: 0.15 }}
             className="absolute left-0 top-full z-50 w-full overflow-hidden rounded-2xl border border-white/10 bg-[#0c1220]/95 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] backdrop-blur-xl"
           >
-            {plates.length === 0 ? (
+            {vehicles.length === 0 ? (
               <div className="px-4 py-6 text-center text-xs font-semibold text-slate-500">
-                You have not registered a license plate compatible with this building.
+                You have not registered a vehicle compatible with this building.
               </div>
             ) : (
               <div className="max-h-52 overflow-y-auto p-1.5">
-                {plates.map((plate) => {
-                  const isActive = plate.plateNumber === selectedPlate;
+                {vehicles.map((vehicle) => {
+                  const isActive = vehicle.plateNumber === selectedPlate;
                   return (
                     <button
-                      key={plate._id}
+                      key={vehicle._id}
                       type="button"
                       onClick={() => {
-                        onSelect(plate.plateNumber);
+                        onSelect(vehicle.plateNumber);
                         setOpen(false);
                       }}
                       className={`flex w-full items-center gap-3 rounded-xl px-3.5 py-3 text-left transition-all duration-150 ${
@@ -213,16 +216,16 @@ function VehiclePlateDropdown({
                       }`}
                     >
                       <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/[0.04] border border-white/[0.06]">
-                        {vehicleIcon(plate.vehicleType)}
+                        {vehicleIcon(vehicle.category)}
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className={`text-sm font-black tracking-wide ${isActive ? 'text-orange-300' : 'text-white'}`}>
-                          {plate.plateNumber}
+                          {vehicle.plateNumber}
                         </p>
-                        <p className="text-[9px] font-bold uppercase tracking-wider text-slate-500">{vehicleLabel(plate.vehicleType)}</p>
+                        <p className="text-[9px] font-bold uppercase tracking-wider text-slate-500">{vehicleLabel(vehicle.category)}</p>
                       </div>
                       {isActive && <CheckCircle2 size={14} className="text-orange-400 shrink-0" />}
-                      {plate.isDefault && (
+                      {vehicle.isDefault && (
                         <span className="rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5 text-[9px] font-bold text-emerald-400 shrink-0">
                           Default
                         </span>
@@ -243,7 +246,6 @@ function VehiclePlateDropdown({
 
 export default function BuildingsPage() {
   const navigate = useNavigate();
-  const { session } = useAuth();
   const { items: buildings, isLoading } = useBuildings();
   const [selectedId, setSelectedId] = useState('');
   const [query, setQuery] = useState('');
@@ -252,14 +254,8 @@ export default function BuildingsPage() {
   const [detail, setDetail] = useState<{ floors: FloorAvailability[]; vehicleTypes: VehicleType[] } | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
-  const userPlates: LicensePlate[] = useMemo(() => {
-    return (session?.licensePlates || []).map((p) => ({
-      _id: p._id || '',
-      plateNumber: p.plateNumber,
-      vehicleType: p.vehicleType as UserVehicleType,
-      isDefault: !!p.isDefault,
-    }));
-  }, [session]);
+  // Danh sách xe lấy trực tiếp từ API (không phải bản sao trong phiên đăng nhập).
+  const { vehicles, categories } = useVehicles();
 
   // Auto-select first building
   useEffect(() => {
@@ -312,19 +308,19 @@ export default function BuildingsPage() {
     };
   }, [selectedBuilding?._id]);
 
-  // Filter user plates to those matching building vehicle types
-  const compatiblePlates = useMemo(() => {
-    if (!detail?.vehicleTypes) return userPlates;
-    return userPlates.filter((plate) => plateMatchesVehicleTypes(plate, detail.vehicleTypes));
-  }, [userPlates, detail?.vehicleTypes]);
+  // Filter user vehicles to those matching building vehicle types
+  const compatibleVehicles = useMemo(() => {
+    if (!detail?.vehicleTypes) return vehicles;
+    return vehicles.filter((vehicle) => vehicleMatchesBuildingTypes(vehicle, detail.vehicleTypes));
+  }, [vehicles, detail?.vehicleTypes]);
 
-  // Auto-select default plate
+  // Auto-select default vehicle
   useEffect(() => {
-    if (compatiblePlates.length > 0 && !selectedPlate) {
-      const defaultPlate = compatiblePlates.find((p) => p.isDefault);
-      setSelectedPlate(defaultPlate?.plateNumber || compatiblePlates[0].plateNumber);
+    if (compatibleVehicles.length > 0 && !selectedPlate) {
+      const defaultVehicle = compatibleVehicles.find((v) => v.isDefault);
+      setSelectedPlate(defaultVehicle?.plateNumber || compatibleVehicles[0].plateNumber);
     }
-  }, [compatiblePlates, selectedPlate]);
+  }, [compatibleVehicles, selectedPlate]);
 
   // Reset plate when building changes
   useEffect(() => {
@@ -460,7 +456,7 @@ export default function BuildingsPage() {
                   ) : (detail?.vehicleTypes.length ?? 0) > 0 ? (
                     <div className="mt-2.5 flex flex-wrap gap-2">
                       {detail!.vehicleTypes.map((vt) => {
-                        const isBike = /motor|xe|máy|bike|moto/i.test((vt.code || vt.name || ''));
+                        const isBike = isTwoWheelCategory(vt.category);
                         return (
                           <span
                             key={vt._id}
@@ -488,8 +484,9 @@ export default function BuildingsPage() {
                 {/* Vehicle / Plate Dropdown */}
                 <div className="mt-5">
                   <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">Select Your Vehicle</p>
-                  <VehiclePlateDropdown
-                    plates={compatiblePlates}
+                  <VehicleDropdown
+                    vehicles={compatibleVehicles}
+                    categories={categories}
                     selectedPlate={selectedPlate}
                     onSelect={setSelectedPlate}
                   />

@@ -14,6 +14,8 @@ import {
   Wallet,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { useVehicles } from '@/hooks/user/useVehicles';
+import { isTwoWheelCategory } from '@/utils/plate';
 import {
   userApi,
   type UserWallet,
@@ -27,6 +29,7 @@ const fmtTime = (s?: string | null) =>
 export default function UserDashboardPage() {
   const navigate = useNavigate();
   const { session } = useAuth();
+  const { vehicles } = useVehicles();
 
   const [wallet, setWallet] = useState<UserWallet | null>(null);
   const [activeSession, setActiveSession] = useState<ParkingHistory | null>(null);
@@ -145,26 +148,30 @@ export default function UserDashboardPage() {
           </div>
         </div>
 
-        {/* License plates */}
-        {session.licensePlates && session.licensePlates.length > 0 && (
+        {/* Phương tiện đã đăng ký */}
+        {vehicles.length > 0 && (
           <div>
-            <p className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-400">My License Plates</p>
+            <p className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-400">Phương tiện của tôi</p>
             <div className="flex flex-wrap gap-2">
-              {session.licensePlates.map((p) => (
-                <span
-                  key={p.plateNumber}
-                  className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 font-mono text-xs font-black tracking-wider ${
-                    p.isDefault
-                      ? 'border-amber-500/30 bg-amber-500/10 text-amber-400'
-                      : p.vehicleType === 'motorcycle'
-                      ? 'border-purple-500/30 bg-purple-500/10 text-purple-400'
-                      : 'border-blue-500/30 bg-blue-500/10 text-blue-400'
-                  }`}
-                >
-                  {p.vehicleType === 'motorcycle' ? '🏍️' : '🚗'} {p.plateNumber}
-                  {p.isDefault && <span className="text-[9px] font-sans font-bold uppercase">(Default)</span>}
-                </span>
-              ))}
+              {vehicles.map((v) => {
+                const twoWheel = isTwoWheelCategory(v.category);
+                return (
+                  <span
+                    key={v._id}
+                    className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 font-mono text-xs font-black tracking-wider ${
+                      v.isDefault
+                        ? 'border-amber-500/30 bg-amber-500/10 text-amber-400'
+                        : twoWheel
+                        ? 'border-purple-500/30 bg-purple-500/10 text-purple-400'
+                        : 'border-blue-500/30 bg-blue-500/10 text-blue-400'
+                    }`}
+                  >
+                    {twoWheel ? '🏍️' : '🚗'} {v.plateNumber}
+                    {v.brand && <span className="text-[9px] font-sans font-bold uppercase">{v.brand}</span>}
+                    {v.isDefault && <span className="text-[9px] font-sans font-bold uppercase">(Mặc định)</span>}
+                  </span>
+                );
+              })}
             </div>
           </div>
         )}
