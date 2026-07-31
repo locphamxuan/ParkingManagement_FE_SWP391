@@ -1,0 +1,50 @@
+name: Frontend CI
+
+# Chỉ KIỂM TRA, không deploy: Netlify tự build từ git integration của nó.
+# Trước đây frontend không có workflow nào, nên typecheck/lint/test chỉ chạy khi
+# ai đó nhớ chạy tay — backend thì đã có cổng chặn này từ trước.
+on:
+  pull_request:
+    branches: [main, dev]
+  push:
+    branches: [main, dev]
+  workflow_dispatch:
+
+concurrency:
+  group: frontend-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Typecheck, lint and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm test
+
+      # Bản build thật mới bắt được lỗi mà `tsc --noEmit` bỏ qua (import sai
+      # đường dẫn asset, biến môi trường thiếu lúc bundle).
+      - name: Build
+        run: npm run build
