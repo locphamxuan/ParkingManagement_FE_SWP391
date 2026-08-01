@@ -285,7 +285,7 @@ export function MultiSlotForm({
                   disabled={submitting}
                   className="w-4 h-4 rounded border-slate-200 text-orange-500 focus:ring-orange-500/20 cursor-pointer"
                 />
-                <span>Allow advance reservation</span>
+                <span>Let users pick this slot for packages</span>
               </label>
             </div>
           </div>

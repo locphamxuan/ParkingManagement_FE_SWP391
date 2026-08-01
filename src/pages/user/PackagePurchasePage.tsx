@@ -5,10 +5,10 @@ import { usePackagePurchase } from '@/hooks/user/usePackagePurchase';
 import { SlotSelectionModal } from '@/components/user/SlotSelectionModal';
 import { BookingNotificationModal } from '@/components/user/BookingNotificationModal';
 import { BookingSummarySidebar } from '@/components/user/BookingSummarySidebar';
-import { BasicInfoPanel } from '@/components/user/reservations/BasicInfoPanel';
-import { PackageBookingPanel } from '@/components/user/reservations/PackageBookingPanel';
-import { SlotPickerPanel, PackageInfoPanel } from '@/components/user/reservations/SlotPickerPanel';
-import { BookingFooter } from '@/components/user/reservations/BookingFooter';
+import { BasicInfoPanel } from '@/components/user/packages/BasicInfoPanel';
+import { PackageBookingPanel } from '@/components/user/packages/PackageBookingPanel';
+import { SlotPickerPanel, PackageInfoPanel } from '@/components/user/packages/SlotPickerPanel';
+import { BookingFooter } from '@/components/user/packages/BookingFooter';
 
 /* ─── Trang mua gói dài hạn ─────────────────────────────────────────────────── */
 

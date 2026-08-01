@@ -23,7 +23,6 @@ export interface ParkingSlot {
 export interface ParkingMap2DProps {
   slots: ParkingSlot[];
   selectedSlot?: string | null;
-  activeReservations?: Array<{ slotCode: string; plateNumber: string; vehicleType: 'car' | 'motorcycle' }>;
   unavailableSlots?: string[];
   maintenanceSlots?: string[];
   unsupportedSlots?: string[];
@@ -95,13 +94,11 @@ function getDetailedStatus(
   selectedSlot: string | null | undefined,
   maintenanceSlots: string[],
   unsupportedSlots: string[],
-  activeReservations: Array<{ slotCode: string }>,
   unavailableSlots: string[],
 ): SlotDetailedStatus {
   if (selectedSlot === slotCode) return 'selected';
   if (maintenanceSlots.includes(slotCode)) return 'maintenance';
   if (unsupportedSlots.includes(slotCode)) return 'unsupported';
-  if (activeReservations.some((r) => r.slotCode === slotCode)) return 'reserved';
   if (unavailableSlots.includes(slotCode)) return 'occupied';
   return 'available';
 }
@@ -233,7 +230,6 @@ function ParkingRow({
   selectedSlot,
   maintenanceSlots,
   unsupportedSlots,
-  activeReservations,
   unavailableSlots,
   interactive,
   onSlotClick,
@@ -244,7 +240,6 @@ function ParkingRow({
   selectedSlot: string | null | undefined;
   maintenanceSlots: string[];
   unsupportedSlots: string[];
-  activeReservations: Array<{ slotCode: string; plateNumber: string; vehicleType: 'car' | 'motorcycle' }>;
   unavailableSlots: string[];
   interactive: boolean;
   onSlotClick?: (code: string) => void;
@@ -262,7 +257,7 @@ function ParkingRow({
   const rightSide = sorted.slice(mid);
 
   const renderSlot = (slot: ParkingSlot) => {
-    const status = getDetailedStatus(slot.code, selectedSlot, maintenanceSlots, unsupportedSlots, activeReservations, unavailableSlots);
+    const status = getDetailedStatus(slot.code, selectedSlot, maintenanceSlots, unsupportedSlots, unavailableSlots);
     return (
       <SlotCell
         key={slot.code}
@@ -387,7 +382,6 @@ function ViewToggle({ view, onChange }: { view: '2D' | '3D'; onChange: (v: '2D' 
 export function ParkingMap2D({
   slots,
   selectedSlot = null,
-  activeReservations = [],
   unavailableSlots = [],
   maintenanceSlots = [],
   unsupportedSlots = [],
@@ -581,7 +575,6 @@ export function ParkingMap2D({
                     selectedSlot={selectedSlot}
                     maintenanceSlots={maintenanceSlots}
                     unsupportedSlots={unsupportedSlots}
-                    activeReservations={activeReservations}
                     unavailableSlots={unavailableSlots}
                     interactive={interactive}
                     onSlotClick={handleSlotClick}
@@ -623,8 +616,7 @@ export function ParkingMap2D({
                         selectedSlot={selectedSlot}
                         maintenanceSlots={maintenanceSlots}
                         unsupportedSlots={unsupportedSlots}
-                        activeReservations={activeReservations}
-                        unavailableSlots={unavailableSlots}
+                            unavailableSlots={unavailableSlots}
                         interactive={interactive}
                         onSlotClick={handleSlotClick}
                         is3D={true}

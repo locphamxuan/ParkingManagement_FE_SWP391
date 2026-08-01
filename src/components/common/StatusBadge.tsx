@@ -29,7 +29,7 @@ export function StatusBadge({ status }: StatusBadgeProps) {
     available: 'Available',
     occupied: 'Occupied',
     reserved: 'Reserved',
-    // Reservation statuses
+    // Trạng thái vòng đời phiên gửi xe / gói dài hạn
     confirmed: 'Confirmed',
     checked_in: 'Checked in',
     completed: 'Completed',

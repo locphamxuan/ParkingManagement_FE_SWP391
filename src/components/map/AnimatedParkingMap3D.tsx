@@ -19,7 +19,6 @@ export interface AnimatedParkingMap3DProps<TSlot extends AnimatedParkingMap3DSlo
   y?: number;
   interactive?: boolean;
   selectedSlot?: string | null;
-  activeReservations?: Array<{ slotCode: string; plateNumber: string; vehicleType: 'car' | 'motorcycle' }>;
   interactiveUnavailableSlots?: string[];
   onSlotClick?: (slotCode: string) => void;
   slots?: TSlot[];
@@ -34,7 +33,6 @@ export function AnimatedParkingMap3D<TSlot extends AnimatedParkingMap3DSlot = An
   y,
   interactive = false,
   selectedSlot = null,
-  activeReservations = [],
   interactiveUnavailableSlots = [],
   onSlotClick,
   slots = [],
@@ -330,13 +328,12 @@ export function AnimatedParkingMap3D<TSlot extends AnimatedParkingMap3DSlot = An
               const slotCode = rawSlot ? rawSlot.code : `A-0${id}`;
               const isEV = id === 3 || slotCode.toLowerCase().includes('ev');
               
-              const reservation = interactive && activeReservations?.find((r) => r.slotCode === slotCode);
               const blockedBySlotStatus = interactiveUnavailableSlots.includes(slotCode);
               
               const isOccupied = rawSlot 
                 ? rawSlot.status === 'occupied' 
                 : (interactive 
-                  ? Boolean(reservation || blockedBySlotStatus)
+                  ? blockedBySlotStatus
                   : (id === 1 || id === 2 || (id === 3 && carAState === 'parked') || (id === 4 && carBState === 'parked') || id === 5));
               const isReserved = rawSlot ? rawSlot.status === 'reserved' : false;
               const isMaintenance = rawSlot ? rawSlot.status === 'maintenance' : false;

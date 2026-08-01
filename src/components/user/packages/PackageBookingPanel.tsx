@@ -1,8 +1,8 @@
 import { motion } from 'framer-motion';
 import { CalendarClock } from 'lucide-react';
 import { PackageCard } from '@/components/user/PackageCard';
-import { packageCategory, categoryColors, isCarPackage } from '@/pages/user/reservationsHelper';
-import type { VehicleKind } from '@/pages/user/reservationsHelper';
+import { packageCategory, categoryColors, isCarPackage } from '@/pages/user/packagePurchaseHelper';
+import type { VehicleKind } from '@/pages/user/packagePurchaseHelper';
 import type { LongTermPackage } from '@/services/user/userApi';
 
 interface PackageBookingPanelProps {

@@ -16,7 +16,7 @@ const TARGET_LABELS: Record<string, string> = {
   vehicle_types: 'Vehicle Types',
   price_policies: 'Price Policies',
   long_term_packages: 'Long-term Packages',
-  reservation_policies: 'Reservation Policies',
+  refund_policies: 'Refund Policies',
   shifts: 'Shifts',
   staff_shifts: 'Staff Shift Assignments',
   feedbacks: 'Feedback',

@@ -26,7 +26,7 @@ export function ManagerSubscriptionsPage() {
   const [cancelReason, setCancelReason] = useState('');
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
-  // % hoàn tiền hiện hành của building (ReservationPolicy) — chỉ để xem trước trong
+  // % hoàn tiền hiện hành của building (RefundPolicy) — chỉ để xem trước trong
   // modal xác nhận hủy; số thực tế áp dụng do BE tính lúc hủy.
   const [previewRefundPercent, setPreviewRefundPercent] = useState<number | null>(null);
 

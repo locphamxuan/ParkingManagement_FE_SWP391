@@ -21,10 +21,8 @@ export const TX_REASON_LABELS: Record<string, string> = {
   // Backend reason codes (from WalletTransaction model)
   payos_topup: 'Wallet Deposit (PayOS)',
   topup: 'Wallet Deposit',
-  reservation_fee: 'Reservation Fee',
   parking_checkout: 'Parking Fee',
   parking_fee: 'Parking Fee',
-  reservation_refund: 'Reservation Refund',
   refund: 'Refund',
   long_term_subscription: 'Long-term Subscription',
   wallet_payment: 'Wallet Payment',

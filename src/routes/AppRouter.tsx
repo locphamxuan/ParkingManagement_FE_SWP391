@@ -113,7 +113,6 @@ export function AppRouter() {
         <Route path="/user-dashboard" element={<UserDashboardPage />} />
       </Route>
       </Route>
-      <Route path="/reservations" element={<Navigate to="/packages/buy" replace />} />
       <Route path="/reviews" element={<ReviewsPage />} />
       <Route path="/kiosk" element={<KioskCheckInPage />} />
 

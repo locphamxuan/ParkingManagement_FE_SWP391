@@ -3,7 +3,7 @@ import { MapPin } from 'lucide-react';
 import { ParkingMap2D } from '@/components/map/ParkingMap2D';
 import { CustomSelect } from '@/components/ui/select';
 import type { FloorAvailability } from '@/services/user/userApi';
-import type { VehicleKind } from '@/pages/user/reservationsHelper';
+import type { VehicleKind } from '@/pages/user/packagePurchaseHelper';
 
 interface MappedSlot {
   _id: string;

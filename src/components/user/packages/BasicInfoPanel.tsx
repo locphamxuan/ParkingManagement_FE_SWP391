@@ -1,7 +1,7 @@
 import { Building2, Zap } from 'lucide-react';
 import { CustomSelect } from '@/components/ui/select';
 import type { Building } from '@/services/user/userApi';
-import type { VehicleKind } from '@/pages/user/reservationsHelper';
+import type { VehicleKind } from '@/pages/user/packagePurchaseHelper';
 
 interface PlateOption {
   plateNumber: string;

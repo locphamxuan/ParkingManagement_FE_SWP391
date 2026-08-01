@@ -16,7 +16,7 @@ const toForm = (p: RefundPolicy | null): FormState => ({
   isActive: p?.isActive ?? true,
 });
 
-// Chính sách hoàn tiền khi user hủy gói dài hạn (thay trang reservation policy cũ).
+// Chính sách hoàn tiền khi user hủy gói dài hạn.
 export function ManagerRefundPolicyPage() {
   const { buildingId } = useBuildingContext();
   const [policy, setPolicy] = useState<RefundPolicy | null>(null);

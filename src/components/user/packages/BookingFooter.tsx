@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { ShieldCheck } from 'lucide-react';
-import { fmtMoney, fmtShort, type BookingMode } from '@/pages/user/reservationsHelper';
+import { fmtMoney, fmtShort, type BookingMode } from '@/pages/user/packagePurchaseHelper';
 
 interface BookingFooterProps {
   startDateTime: Date | null;
