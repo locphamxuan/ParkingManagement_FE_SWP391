@@ -110,7 +110,7 @@ export function useProfileWorkflow() {
   const vehicleBrandOptions = useMemo(() => {
     const list = brandsForCategory(category);
     return [
-      { value: '', label: '— Select make (optional) —' },
+      { value: '', label: '— Select brand (optional) —' },
       ...list.map((b) => ({ value: b, label: b })),
     ];
   }, [category]);
