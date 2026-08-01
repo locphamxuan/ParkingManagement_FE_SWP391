@@ -59,11 +59,6 @@ describe('staffApi.lookupPlate', () => {
     expect(lastCall().url).toContain(`building=${BUILDING}`);
   });
 
-  it('biến thể trong namespace sessions gửi cùng một thứ', async () => {
-    await staffApi.sessions.lookupPlate('59G2-038.80', BUILDING);
-
-    expect(lastCall().url).toContain(`building=${BUILDING}`);
-  });
 });
 
 describe('staffApi.resolveQr', () => {

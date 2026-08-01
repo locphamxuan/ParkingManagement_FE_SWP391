@@ -344,7 +344,16 @@ export const staffApi = {
       query: buildingId ? { building: buildingId } : undefined,
     }),
 
-  // Sessions (namespaced, for backward compat)
+  /**
+   * Các truy vấn phiên gửi xe KHÔNG có bản tương đương ở cấp trên.
+   *
+   * Namespace này từng chứa thêm bản sao của check-in, check-out, thanh toán và
+   * tra cứu biển số. Mỗi bản sao đều yếu hơn bản thật (thiếu tòa nhà, thiếu ảnh
+   * bằng chứng, thiếu cờ bỏ qua cảnh báo lệch loại xe) và không nơi nào gọi —
+   * chúng chỉ nằm chờ để một người viết mới chọn nhầm. Đã xoá; dùng
+   * `staffApi.checkIn` / `checkOut` / `initiateSessionPayment` /
+   * `verifySessionPayment` / `lookupPlate` ở cấp trên.
+   */
   sessions: {
     list: (buildingId: string, q?: Record<string, string | undefined>) =>
       api.get<Wrap<{ items: ParkingSession[] }>>(
@@ -362,30 +371,6 @@ export const staffApi = {
 
     detail: (sessionId: string) =>
       api.get<Wrap<ParkingSession>>(`/staff/parking-sessions/${sessionId}`),
-
-    checkIn: (
-      _buildingId: string,
-      body: { plateNumber: string; vehicleType?: string; gate?: string; forceCheckIn?: boolean }
-    ) =>
-      api.post<Wrap<{ item: ParkingSession }>>('/staff/parking-sessions/check-in', body),
-
-    checkOut: (_buildingId: string, sessionId: string, body: { paymentMethod: string }) =>
-      api.patch<Wrap<{ item: ParkingSession }>>(
-        `/staff/parking-sessions/${sessionId}/check-out`,
-        body
-      ),
-
-    initiatePayment: (sessionId: string) =>
-      api.post<Wrap<PaymentData>>(`/staff/parking-sessions/${sessionId}/initiate-payment`, {}),
-
-    getPaymentStatus: (orderCode: number) =>
-      api.get<Wrap<PaymentStatus>>(`/staff/parking-sessions/payment/${orderCode}/status`),
-
-    /** Xem ghi chú ở `staffApi.lookupPlate` — `building` là bắt buộc. */
-    lookupPlate: (plateNumber: string, building: string) =>
-      api.get<Wrap<PlateInfo>>(`/staff/parking-sessions/lookup-plate/${plateNumber}`, {
-        query: { building },
-      }),
 
     /** Lịch sử xe vào hôm nay của nhân viên cổng VÀO — có location (cổng, tầng, ô). */
     myCheckIns: (buildingId: string) =>
