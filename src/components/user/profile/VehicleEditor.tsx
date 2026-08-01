@@ -84,7 +84,7 @@ export function VehicleEditor({
                   <Car size={11} className="text-blue-400" />
                 )}
                 <span>{item.plateNumber}</span>
-                <span className={`text-[8px] px-1.5 py-0.5 rounded font-sans font-extrabold tracking-normal uppercase ${
+                <span className={`text-[8px] px-1.5 py-0.5 rounded font-sans font-extrabold tracking-normal uppercase notranslate ${
                   item.isDefault
                     ? 'bg-amber-500/25 text-amber-300'
                     : twoWheel
