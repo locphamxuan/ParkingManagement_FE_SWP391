@@ -92,8 +92,13 @@ const METHOD_LABELS: Record<string, string> = {
   card: 'Bank Card',
 };
 
+// Dưới 1 triệu thì rút gọn theo "triệu" làm tròn mất hết ý nghĩa (200.000đ hiện là
+// "0.2M", 69.998đ hiện là "0.0M" — trông như không có doanh thu). Ở khoảng đó hiện
+// nguyên số tiền.
 const formatCompactCurrency = (amount: number): string =>
-  `${(amount / 1_000_000).toFixed(1)}M VND`;
+  amount >= 1_000_000
+    ? `${(amount / 1_000_000).toFixed(1)}M VND`
+    : `${Math.round(amount).toLocaleString('vi-VN')} VND`;
 
 const formatChartDate = (dateValue: string): string => {
   const date = new Date(dateValue);
@@ -195,27 +200,32 @@ export async function getApiAdminDataset(): Promise<AdminDataset> {
   const users: UserRecord[] = userItems.map(toUser);
   const auditLogs: AuditLog[] = auditItems.map(toAudit);
 
-  // System-wide 7-day revenue trend, also backend-aggregated.
-  const avgOccupancy =
-    buildings.length > 0
-      ? buildings.reduce((sum, b) => sum + Number(b.occupancyRate || 0), 0) / buildings.length
-      : 0;
-
+  // System-wide 7-day revenue trend, backend-aggregated with every day present
+  // (empty days come back as 0), so the line chart never interpolates over a gap.
   const revenueTrend: RevenuePoint[] = (overviewRes.data.revenue.weekly || [])
     .slice(-7)
     .map((point) => ({
       date: formatChartDate(point.date),
       revenue: Math.round(Number(point.revenue || 0)),
-      occupancy: Math.round(avgOccupancy * 10) / 10,
       sessions: Number(point.sessions || 0),
     }));
 
-  const paymentMethodDistribution = Object.entries(overviewRes.data.revenue.byMethod || {}).map(
+  // Biểu đồ tròn hiển thị TỶ TRỌNG, nên `share` phải là phần trăm thật tính từ tổng
+  // doanh thu — trước đây chỗ này đưa thẳng số tiền vào rồi gắn ký hiệu "%".
+  const methodEntries = Object.entries(overviewRes.data.revenue.byMethod || {}).map(
     ([method, summary]) => ({
       name: METHOD_LABELS[method] || method,
-      value: Number(summary.amount || 0),
+      amount: Number(summary.amount || 0),
+      count: Number(summary.count || 0),
     }),
   );
+  const methodTotal = methodEntries.reduce((sum, entry) => sum + entry.amount, 0);
+  const paymentMethodDistribution = methodEntries.map((entry) => ({
+    name: entry.name,
+    value: entry.amount,
+    share: methodTotal > 0 ? Math.round((entry.amount / methodTotal) * 1000) / 10 : 0,
+    count: entry.count,
+  }));
 
   const dashboardStats = [
     {

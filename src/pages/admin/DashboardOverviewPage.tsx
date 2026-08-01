@@ -122,6 +122,11 @@ export function DashboardOverviewPage() {
           </div>
 
           <div className="h-[240px] w-full flex items-center justify-center cyber-scanline rounded-xl">
+            {data.paymentMethodDistribution.length === 0 ? (
+              <p className="px-4 text-center text-xs italic text-slate-500">
+                No successful payments recorded for this period yet.
+              </p>
+            ) : (
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -145,12 +150,14 @@ export function DashboardOverviewPage() {
                 <Tooltip
                   content={({ active, payload }) => {
                     if (active && payload && payload.length) {
+                      const slice = payload[0].payload as { share: number; count: number; fill: string };
                       return (
                         <div className="glass-premium border border-white/10 px-3 py-2 rounded-xl shadow-2xl text-[10px] text-white">
                           <p className="font-mono font-black uppercase tracking-wider text-slate-400">{payload[0].name}</p>
-                          <p className="font-black mt-1 font-mono text-xs" style={{ color: payload[0].payload.fill }}>
-                            {payload[0].value}%
+                          <p className="font-black mt-1 font-mono text-xs" style={{ color: slice.fill }}>
+                            {Number(payload[0].value).toLocaleString('vi-VN')} VND · {slice.share}%
                           </p>
+                          <p className="mt-0.5 font-mono text-slate-500">{slice.count} transactions</p>
                         </div>
                       );
                     }
@@ -159,9 +166,10 @@ export function DashboardOverviewPage() {
                 />
               </PieChart>
             </ResponsiveContainer>
+            )}
           </div>
 
-          {/* Neon legend rows */}
+          {/* Neon legend rows — số tiền thật kèm tỷ trọng thật trên tổng doanh thu */}
           <div className="mt-3 space-y-2">
             {data.paymentMethodDistribution.map((entry, idx) => {
               const color = pieColors[idx % pieColors.length];
@@ -171,7 +179,9 @@ export function DashboardOverviewPage() {
                     <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: color, boxShadow: `0 0 6px ${color}80` }} />
                     <span className="text-slate-400 uppercase tracking-wider">{entry.name}</span>
                   </div>
-                  <span className="font-black" style={{ color }}>{entry.value}%</span>
+                  <span className="font-black" style={{ color }}>
+                    {entry.value.toLocaleString('vi-VN')} VND · {entry.share}%
+                  </span>
                 </div>
               );
             })}

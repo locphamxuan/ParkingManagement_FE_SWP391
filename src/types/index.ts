@@ -23,10 +23,15 @@ export interface UserRecord {
   phone?: string;
 }
 
+/**
+ * Một ngày trong chuỗi doanh thu. Chỉ chứa các số backend thực sự tổng hợp được
+ * theo ngày; tỷ lệ lấp đầy KHÔNG có ở đây vì hệ thống chỉ đo được lấp đầy tại
+ * thời điểm hiện tại, không lưu lịch sử theo ngày.
+ */
 export interface RevenuePoint {
   date: string;
   revenue: number;
-  occupancy: number;
+  /** Số giao dịch doanh thu ghi nhận trong ngày. */
   sessions: number;
 }
 
