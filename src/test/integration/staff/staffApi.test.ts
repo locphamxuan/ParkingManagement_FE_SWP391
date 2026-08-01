@@ -112,8 +112,9 @@ describe('Staff — getActiveSessions', () => {
 // ── LOOKUP PLATE ──────────────────────────────────────────────────────────────
 
 describe('Staff — lookupPlate', () => {
-  it('trả về thông tin biển số (kể cả không có tài khoản)', async () => {
-    const res = await staffApi.lookupPlate('99Z-999.99');
+  it('trả về thông tin biển số (kể cả không có tài khoản)', async (ctx: TestContext) => {
+    if (!resolvedBuildingId) ctx.skip();
+    const res = await staffApi.lookupPlate('99Z-999.99', resolvedBuildingId!);
     expect(res.data).toBeDefined();
     expect(res.data).toHaveProperty('plateNumber');
     expect(typeof res.data.hasAccount).toBe('boolean');

@@ -113,13 +113,14 @@ export function useCheckInWorkflow() {
     return null;
   }, [allowedTypes, vehicleType]);
 
-  // Tự động tra cứu chủ biển số
+  // Tự động tra cứu chủ biển số. Cần buildingId: kết quả tra cứu (phiên đang mở,
+  // gói dài hạn, slot cố định) được BE giới hạn trong phạm vi tòa nhà đang trực.
   useEffect(() => {
     const clean = plateNumber.trim().toUpperCase();
-    if (clean.length >= 7) {
+    if (clean.length >= 7 && buildingId) {
       let cancelled = false;
       staffApi
-        .lookupPlate(clean)
+        .lookupPlate(clean, buildingId)
         .then((res) => {
           if (!cancelled) setPlateAccountInfo((res as { data?: PlateInfo })?.data ?? null);
         })
@@ -128,7 +129,7 @@ export function useCheckInWorkflow() {
     } else {
       setPlateAccountInfo(null);
     }
-  }, [plateNumber]);
+  }, [plateNumber, buildingId]);
 
   // License Plate có gói còn hạn → tải slot trống của tòa nhà để staff gán chỗ.
   const hasActivePackage = Boolean(plateAccountInfo?.hasActivePackage);

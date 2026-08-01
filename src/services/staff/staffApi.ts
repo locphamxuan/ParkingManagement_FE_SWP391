@@ -253,8 +253,14 @@ export const staffApi = {
   verifySessionPayment: (orderCode: number) =>
     api.get<Wrap<PaymentStatus>>(`/staff/parking-sessions/payment/${orderCode}/status`),
 
-  lookupPlate: (plateNumber: string) =>
-    api.get<Wrap<PlateInfo>>(`/staff/parking-sessions/lookup-plate/${plateNumber}`),
+  /**
+   * `building` là BẮT BUỘC — BE trả 400 BUILDING_REQUIRED nếu thiếu, vì kết quả
+   * (phiên đang mở, gói dài hạn, slot cố định) chỉ có nghĩa trong phạm vi một tòa.
+   */
+  lookupPlate: (plateNumber: string, building: string) =>
+    api.get<Wrap<PlateInfo>>(`/staff/parking-sessions/lookup-plate/${plateNumber}`, {
+      query: { building },
+    }),
 
   lookupUserQr: (qrCode: string) =>
     api.get<Wrap<{ hasAccount: boolean; user: { id: string; fullName: string; email: string } | null }>>(
@@ -350,8 +356,11 @@ export const staffApi = {
     getPaymentStatus: (orderCode: number) =>
       api.get<Wrap<PaymentStatus>>(`/staff/parking-sessions/payment/${orderCode}/status`),
 
-    lookupPlate: (plateNumber: string) =>
-      api.get<Wrap<PlateInfo>>(`/staff/parking-sessions/lookup-plate/${plateNumber}`),
+    /** Xem ghi chú ở `staffApi.lookupPlate` — `building` là bắt buộc. */
+    lookupPlate: (plateNumber: string, building: string) =>
+      api.get<Wrap<PlateInfo>>(`/staff/parking-sessions/lookup-plate/${plateNumber}`, {
+        query: { building },
+      }),
 
     lookupUser: (qrCode: string) =>
       api.get<Wrap<{ hasAccount: boolean; user: { id: string; fullName: string; email: string } | null }>>(
