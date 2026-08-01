@@ -2,6 +2,7 @@ import type { FormEvent } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { motion } from 'framer-motion';
 import type { AuthPageFormState } from '@/hooks/useAuthPageForm';
+import { MIN_PASSWORD_LENGTH } from '@/utils/constants';
 
 type ResetPasswordFormProps = Pick<
   AuthPageFormState,
@@ -30,7 +31,7 @@ export function ResetPasswordForm({
       <div className="space-y-2 mb-4">
         <h3 className="text-sm font-bold text-foreground">Enter new password</h3>
         <p className="text-xs text-slate-400">
-          Password must be at least 6 characters.
+          Password must be at least {MIN_PASSWORD_LENGTH} characters.
         </p>
       </div>
 

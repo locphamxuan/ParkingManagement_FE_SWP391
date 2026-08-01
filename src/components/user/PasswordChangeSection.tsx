@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { AlertCircle, CheckCircle2, KeyRound, Loader2 } from 'lucide-react';
 import { userApi } from '@/services/user/userApi';
+import { MIN_PASSWORD_LENGTH } from '@/utils/constants';
 
 export function PasswordChangeSection() {
   const [form, setForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
@@ -17,8 +18,8 @@ export function PasswordChangeSection() {
       setError('Please fill in all fields.');
       return;
     }
-    if (form.newPassword.length < 6) {
-      setError('New password must be at least 6 characters.');
+    if (form.newPassword.length < MIN_PASSWORD_LENGTH) {
+      setError(`New password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
       return;
     }
     if (form.newPassword !== form.confirmPassword) {
