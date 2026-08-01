@@ -10,8 +10,8 @@ import {
   X,
 } from 'lucide-react';
 import type { LegacyModule } from '../data/mainFlow';
-import homeBg from '@/assets/back3.png';
-import carGarage from '@/assets/white_car_garage.png';
+import homeBg from '@/assets/back3.webp';
+import carGarage from '@/assets/white_car_garage.webp';
 import { HotSpot } from '@/components/home/HotSpot';
 import { ModuleCard } from '@/components/home/ModuleCard';
 import { moduleIcons } from '@/components/home/moduleCard.constants';

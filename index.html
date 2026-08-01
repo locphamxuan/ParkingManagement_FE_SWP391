@@ -12,10 +12,24 @@
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!--
+      Tải font KHÔNG chặn render: `media="print"` khiến trình duyệt hạ ưu tiên và
+      không giữ lần vẽ đầu tiên lại chờ CSS này, rồi `onload` trả về `all` để áp
+      dụng font. Kết hợp với `display=swap` sẵn có, chữ hiện ngay bằng font hệ
+      thống thay vì đợi round-trip tới Google Fonts trên mạng chậm.
+    -->
     <link
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap"
+      media="print"
+      onload="this.media='all'"
     />
+    <noscript>
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap"
+      />
+    </noscript>
   </head>
   <body>
     <div id="root"></div>

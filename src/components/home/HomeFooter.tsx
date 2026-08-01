@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence, useMotionValue, useSpring, useTransform, animate } from 'framer-motion';
 import { ArrowRight, Building2, Mail, PhoneCall } from 'lucide-react';
-import footerBg from '@/assets/footer.png';
+import footerBg from '@/assets/footer.webp';
 import { navigationLinks } from './homeNavigation.constants';
 import { Logo } from '@/components/layout/Logo';
 
