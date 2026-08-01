@@ -42,7 +42,7 @@ export function VehicleEditor({
   const showForm = isEditing || !atLimit;
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 notranslate">
       <div className="flex items-center justify-between">
         <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono">
           Registered vehicles
@@ -192,7 +192,7 @@ export function VehicleEditor({
                 if (val !== 'Other') setCustomBrand('');
               }}
               options={vehicleBrandOptions}
-              placeholder="— Select brand (optional) —"
+              placeholder="— Select brand (required) —"
               className="flex-1 h-10 text-xs sm:text-sm font-semibold"
             />
           </div>

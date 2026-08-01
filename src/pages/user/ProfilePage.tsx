@@ -25,10 +25,6 @@ export default function ProfilePage() {
 
         <ProfileAlerts
           successMessage={profile.successMessage}
-          hasMissingInfo={profile.hasMissingInfo}
-          isEditing={profile.isEditing}
-          user={profile.user}
-          hasVehicles={profile.vehicles.length > 0}
         />
 
         <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">

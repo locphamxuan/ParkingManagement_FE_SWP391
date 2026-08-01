@@ -26,6 +26,20 @@ export class ErrorBoundary extends Component<Props, State> {
 
   render() {
     if (this.state.hasError) {
+      const msg = this.state.error?.message || '';
+      if (
+        msg.includes('insertBefore') ||
+        msg.includes('removeChild') ||
+        msg.includes('Node')
+      ) {
+        // Auto-reload immediately for translation errors to bypass the crash screen
+        try {
+          window.location.reload();
+        } catch (e) {
+          // ignore
+        }
+        return null;
+      }
       if (this.props.fallback) return this.props.fallback;
       return (
         <div className="flex min-h-screen items-center justify-center bg-slate-950 p-8">

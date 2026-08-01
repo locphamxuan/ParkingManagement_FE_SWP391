@@ -110,7 +110,7 @@ export function useProfileWorkflow() {
   const vehicleBrandOptions = useMemo(() => {
     const list = brandsForCategory(category);
     return [
-      { value: '', label: '— Select brand (optional) —' },
+      { value: '', label: '— Select brand (required) —' },
       ...list.map((b) => ({ value: b, label: b })),
     ];
   }, [category]);
@@ -178,6 +178,11 @@ export function useProfileWorkflow() {
     }
 
     const brand = brandValue();
+    if (!brand) {
+      setPlateError('Vui lòng chọn hoặc nhập hãng xe của bạn. / Please select or enter your vehicle brand.');
+      return;
+    }
+
     setIsSavingVehicle(true);
     try {
       const created = await add({ plateNumber: normalizePlate(plateInput), category, brand });
@@ -224,9 +229,15 @@ export function useProfileWorkflow() {
       return;
     }
 
+    const brand = brandValue();
+    if (!brand) {
+      setPlateError('Vui lòng chọn hoặc nhập hãng xe của bạn. / Please select or enter your vehicle brand.');
+      return;
+    }
+
     setIsSavingVehicle(true);
     try {
-      const updated = await update(editingVehicleId, { category, brand: brandValue() });
+      const updated = await update(editingVehicleId, { category, brand });
       resetVehicleForm();
       flashSuccess(`Updated ${updated.plateNumber}.`);
     } catch (err) {

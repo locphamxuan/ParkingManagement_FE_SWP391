@@ -1,16 +1,14 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { CheckCircle2, ShieldAlert } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 import type { ProfileWorkflow } from '@/hooks/user/useProfileWorkflow';
 
 type ProfileAlertsProps = Pick<
   ProfileWorkflow,
-  'successMessage' | 'hasMissingInfo' | 'isEditing' | 'user'
-> & {
-  hasVehicles: boolean;
-};
+  'successMessage'
+>;
 
-// Banner thông báo thành công (sau khi lưu) + cảnh báo hồ sơ thiếu thông tin.
-export function ProfileAlerts({ successMessage, hasMissingInfo, isEditing, user, hasVehicles }: ProfileAlertsProps) {
+// Banner thông báo thành công (sau khi lưu). Cảnh báo hồ sơ thiếu thông tin đã được gỡ bỏ theo yêu cầu của người dùng.
+export function ProfileAlerts({ successMessage }: ProfileAlertsProps) {
   return (
     <>
       {/* Success Alert Banner */}
@@ -21,37 +19,10 @@ export function ProfileAlerts({ successMessage, hasMissingInfo, isEditing, user,
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="mb-6 rounded-2xl border border-emerald-500/25 bg-emerald-950/20 p-4 text-xs font-black uppercase tracking-wider font-mono text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.1)] backdrop-blur-md flex items-center gap-3"
+            className="mb-6 rounded-2xl border border-emerald-500/25 bg-emerald-950/20 p-4 text-xs font-black uppercase tracking-wider font-mono text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.1)] backdrop-blur-md flex items-center gap-3 notranslate"
           >
             <CheckCircle2 size={16} />
-            {successMessage}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Warning Alert Box when the user has no vehicle or phone is missing */}
-      <AnimatePresence>
-        {hasMissingInfo && !isEditing && user && (
-          <motion.div
-            key="warning"
-            initial={{ opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.96 }}
-            className="mb-6 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-5 shadow-lg shadow-amber-500/5 flex items-start gap-4"
-          >
-            <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400 shrink-0">
-              <ShieldAlert size={18} className="stroke-[2.5]" />
-            </div>
-            <div>
-              <h4 className="text-xs font-black uppercase tracking-wider text-amber-400 font-mono">Incomplete profile</h4>
-              <p className="text-[11px] text-amber-200/80 mt-1 font-semibold leading-relaxed">
-                {!user.phone || user.phone.trim() === ''
-                  ? 'Your account has no phone number.'
-                  : ''}
-                {!hasVehicles ? ' Your account has no registered vehicle.' : ''}
-                {' '}Use “Edit Profile” to complete it so the gates can identify you automatically.
-              </p>
-            </div>
+            <span>{successMessage}</span>
           </motion.div>
         )}
       </AnimatePresence>
