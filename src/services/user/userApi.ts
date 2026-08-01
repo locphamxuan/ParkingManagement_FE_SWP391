@@ -264,8 +264,13 @@ export const userApi = {
   // ========== PARKING HISTORY ==========
   parkingHistory: {
     /** Get user's parking history */
-    list: (query?: { limit?: number; page?: number; fromDate?: string; toDate?: string }) =>
-      api.get<Wrap<ListResult<ParkingHistory>>>('/users/parking-history', { query }),
+    list: (query?: {
+      limit?: number;
+      page?: number;
+      fromDate?: string;
+      toDate?: string;
+      status?: ParkingHistory['status'];
+    }) => api.get<Wrap<ListResult<ParkingHistory>>>('/users/parking-history', { query }),
 
     /** Get parking session detail */
     get: (id: string) =>
@@ -445,11 +450,13 @@ export const userApi = {
 
   // ========== INCIDENTS (báo cáo sự cố) ==========
   incidents: {
+    /** BE chỉ nhận khi user đang có phiên đỗ; sessionId chọn xe nếu đang đỗ nhiều xe. */
     create: (body: {
       type: IncidentReportType;
       note?: string;
       slotId?: string;
       buildingId?: string;
+      sessionId?: string;
       violatorPlate?: string;
     }) => api.post<Wrap<{ item: UserIncident }>>('/users/incidents', body),
 

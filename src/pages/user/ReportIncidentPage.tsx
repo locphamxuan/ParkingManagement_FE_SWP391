@@ -46,14 +46,16 @@ export default function ReportIncidentPage() {
   const [items, setItems] = useState<UserIncident[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Phiên đang đỗ hiện tại (nếu có) — hiển thị để user biết báo cáo sẽ gắn vào
-  // xe/tòa nhà nào, và gửi kèm buildingId/slotId rõ ràng thay vì để BE tự suy đoán.
-  const [activeSession, setActiveSession] = useState<ParkingHistory | null>(null);
+  // Chỉ xe ĐANG đỗ mới được báo sự cố (BE cũng chặn) — nên tải toàn bộ phiên
+  // active, không dò trong trang lịch sử. Đỗ nhiều xe thì user tự chọn phiên.
+  const [activeSessions, setActiveSessions] = useState<ParkingHistory[]>([]);
+  const [sessionId, setSessionId] = useState('');
   const [loadingSession, setLoadingSession] = useState(true);
 
-  // Bảng vi phạm do manager của tòa nhà tự cấu hình — chỉ tải được khi đã biết
-  // tòa nhà, tức khi user đang có phiên đỗ. Không có phiên thì chỉ báo được các
-  // loại sự cố cố định của hệ thống.
+  const activeSession = activeSessions.find((s) => s._id === sessionId) ?? null;
+
+  // Bảng vi phạm do manager của chính tòa nhà đang đỗ cấu hình — mỗi tòa một bảng
+  // khác nhau, nên phải tải lại mỗi khi user đổi sang xe đỗ ở tòa khác.
   const [violationTypes, setViolationTypes] = useState<BuildingViolationType[]>([]);
   const buildingId = activeSession?.building?._id;
 
@@ -73,12 +75,13 @@ export default function ReportIncidentPage() {
     if (!session) return;
     void refresh();
     setLoadingSession(true);
-    userApi.parkingHistory.list({ limit: 5 })
+    userApi.parkingHistory.list({ status: 'active', limit: 20 })
       .then((res) => {
-        const found = (res.data.items ?? []).find((s) => s.status === 'active');
-        setActiveSession(found ?? null);
+        const found = res.data.items ?? [];
+        setActiveSessions(found);
+        setSessionId(found[0]?._id ?? '');
       })
-      .catch(() => setActiveSession(null))
+      .catch(() => setActiveSessions([]))
       .finally(() => setLoadingSession(false));
   }, [session, refresh]);
 
@@ -92,6 +95,14 @@ export default function ReportIncidentPage() {
       .then((res) => setViolationTypes(res.data.items ?? []))
       .catch(() => setViolationTypes([]));
   }, [buildingId]);
+
+  // Đổi xe sang tòa khác thì loại vi phạm đang chọn có thể không còn tồn tại ở
+  // tòa mới — đưa về loại cố định để không gửi lên một code lạ.
+  useEffect(() => {
+    if (!INCIDENT_TYPES.some((t) => t.value === type) && !violationTypes.some((v) => v.code === type)) {
+      setType('slot_occupied');
+    }
+  }, [violationTypes, type]);
 
   if (!session) return <Navigate to="/auth/login" replace />;
 
@@ -107,6 +118,10 @@ export default function ReportIncidentPage() {
 
   const handleSubmit = async () => {
     setMessage(null);
+    if (!activeSession) {
+      setMessage({ type: 'err', text: 'You can only report an incident while your vehicle is parked.' });
+      return;
+    }
     if (!note.trim()) {
       setMessage({ type: 'err', text: 'Please describe the incident.' });
       return;
@@ -118,7 +133,8 @@ export default function ReportIncidentPage() {
         note: note.trim(),
         violatorPlate: asksViolatorPlate ? violatorPlate.trim() || undefined : undefined,
         buildingId,
-        slotId: activeSession?.slot?._id,
+        sessionId: activeSession._id,
+        slotId: activeSession.slot?._id,
       });
       setMessage({ type: 'ok', text: 'Incident reported. Staff and the building manager will handle it.' });
       setNote('');
@@ -147,29 +163,84 @@ export default function ReportIncidentPage() {
             <Loader2 size={14} className="mx-auto mb-1 animate-spin text-cyan-300" /> Checking your active session...
           </div>
         ) : activeSession ? (
-          <div className="mb-4 flex items-center gap-3 rounded-2xl border border-cyan-400/25 bg-cyan-500/10 p-4">
-            <ParkingCircle size={20} className="shrink-0 text-cyan-300" />
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-cyan-300">This report will be linked to your current session</p>
-              <p className="mt-0.5 text-sm font-semibold text-white">
-                {activeSession.plateNumber} · {activeSession.building?.name ?? 'Unknown building'}
-                {activeSession.slot?.code ? ` · Slot ${activeSession.slot.code}` : ''}
-              </p>
+          <div className="mb-4 rounded-2xl border border-cyan-400/25 bg-cyan-500/10 p-4">
+            <div className="flex items-center gap-3">
+              <ParkingCircle size={20} className="shrink-0 text-cyan-300" />
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-cyan-300">This report will be linked to your parked vehicle</p>
+                <p className="mt-0.5 text-sm font-semibold text-white">
+                  {activeSession.plateNumber} · {activeSession.building?.name ?? 'Unknown building'}
+                  {activeSession.slot?.code ? ` · Slot ${activeSession.slot.code}` : ''}
+                </p>
+              </div>
             </div>
+
+            {activeSessions.length > 1 && (
+              <div className="mt-3">
+                <label
+                  htmlFor="incident-session"
+                  className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-cyan-300"
+                >
+                  Which parked vehicle?
+                </label>
+                <select
+                  id="incident-session"
+                  value={sessionId}
+                  onChange={(e) => setSessionId(e.target.value)}
+                  className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-sm font-semibold text-white outline-none focus:border-orange-400/60"
+                >
+                  {activeSessions.map((s) => (
+                    <option key={s._id} value={s._id}>
+                      {s.plateNumber} — {s.building?.name ?? 'Unknown building'}
+                      {s.slot?.code ? ` (Slot ${s.slot.code})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
         ) : (
           <div className="mb-4 rounded-2xl border border-amber-400/25 bg-amber-500/10 p-4 text-xs font-semibold text-amber-300">
-            No active parking session found. The report will be linked to your active package's building, if any.
+            You have no vehicle currently parked. Incidents can only be reported while your vehicle is inside a building.
+          </div>
+        )}
+
+        {/* Bảng vi phạm của tòa nhà đang đỗ — mỗi manager tự cấu hình một bảng riêng. */}
+        {activeSession && violationTypes.length > 0 && (
+          <div className="mb-4 overflow-hidden rounded-2xl border border-white/10 bg-slate-900/55">
+            <div className="border-b border-white/10 px-4 py-3">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                Violation rules at {activeSession.building?.name ?? 'this building'}
+              </p>
+              <p className="mt-0.5 text-[11px] text-slate-500">
+                Set by the building manager. Select one below to report a violation.
+              </p>
+            </div>
+            <ul className="divide-y divide-white/5">
+              {violationTypes.map((v) => (
+                <li key={v._id} className="flex items-center justify-between gap-3 px-4 py-2.5">
+                  <span className="text-xs font-semibold text-slate-200">{v.label}</span>
+                  <span className="shrink-0 font-mono text-[10px] uppercase tracking-wider text-slate-500">{v.code}</span>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
 
         {/* Form */}
         <div className="rounded-3xl border border-white/10 bg-slate-900/55 p-6">
-          <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-400">Incident type</label>
+          <label
+            htmlFor="incident-type"
+            className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-400"
+          >
+            Incident type
+          </label>
           <select
+            id="incident-type"
             value={type}
             onChange={(e) => setType(e.target.value)}
-            className="w-full rounded-xl px-3 py-2.5 text-sm font-semibold text-white"
+            disabled={!activeSession}
+            className="w-full rounded-xl px-3 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
           >
             <optgroup label="General incidents">
               {INCIDENT_TYPES.map((t) => (
@@ -187,26 +258,38 @@ export default function ReportIncidentPage() {
 
           {asksViolatorPlate && (
             <div className="mt-4">
-              <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              <label
+                htmlFor="incident-violator-plate"
+                className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-400"
+              >
                 Offending vehicle plate (optional)
               </label>
               <input
+                id="incident-violator-plate"
                 value={violatorPlate}
                 onChange={(e) => setViolatorPlate(e.target.value.toUpperCase())}
                 placeholder="e.g. 59G2-038.80"
-                className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-sm font-semibold text-white outline-none focus:border-orange-400/60"
+                disabled={!activeSession}
+                className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-sm font-semibold text-white outline-none focus:border-orange-400/60 disabled:opacity-50"
               />
             </div>
           )}
 
           <div className="mt-4">
-            <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-400">Description</label>
+            <label
+              htmlFor="incident-note"
+              className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-400"
+            >
+              Description
+            </label>
             <textarea
+              id="incident-note"
               value={note}
               onChange={(e) => setNote(e.target.value)}
               rows={4}
               placeholder="Describe what happened..."
-              className="w-full resize-none rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-sm font-semibold text-white outline-none focus:border-orange-400/60"
+              disabled={!activeSession}
+              className="w-full resize-none rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-sm font-semibold text-white outline-none focus:border-orange-400/60 disabled:opacity-50"
             />
           </div>
 
@@ -226,7 +309,7 @@ export default function ReportIncidentPage() {
           <button
             type="button"
             onClick={handleSubmit}
-            disabled={submitting}
+            disabled={submitting || !activeSession}
             className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-orange-600 px-5 py-3 text-sm font-black uppercase tracking-wider text-white transition-all hover:bg-orange-500 disabled:opacity-60"
           >
             {submitting ? <Loader2 size={16} className="animate-spin" /> : <ShieldAlert size={16} />}
