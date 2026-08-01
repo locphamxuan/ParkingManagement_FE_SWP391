@@ -3,7 +3,6 @@ import { Eye, EyeOff, X } from 'lucide-react';
 import { motion } from 'framer-motion';
 import type { AuthMode } from '@/pages/AuthPage';
 import type { AuthPageFormState } from '@/hooks/useAuthPageForm';
-import { AuthSocialButtons } from '@/components/auth/AuthSocialButtons';
 
 type LoginRegisterFormProps = Pick<
   AuthPageFormState,
@@ -260,20 +259,6 @@ export function LoginRegisterForm({
           </button>
         </div>
 
-        {mode === 'login' && (
-          <div className="mt-2 space-y-4 animate-fadeIn">
-            {/* Divider */}
-            <div className="flex items-center my-3">
-              <div className="flex-1 h-px bg-white/10" />
-              <span className="px-3 text-[9px] font-mono text-slate-500 tracking-widest uppercase font-black">
-                Or sign in with
-              </span>
-              <div className="flex-1 h-px bg-white/10" />
-            </div>
-
-            <AuthSocialButtons />
-          </div>
-        )}
       </div>
     </form>
   );
