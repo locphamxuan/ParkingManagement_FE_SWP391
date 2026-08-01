@@ -58,7 +58,8 @@ export function ManagerWalletPage() {
   const [paymentsByMethod, setPaymentsByMethod] = useState<Record<string, PaymentRecord[]>>({});
   const [paymentsLoading, setPaymentsLoading] = useState(false);
 
-  // Không setLoading(true) ở đây — poll nền 30s sẽ làm nháy màn hình loading toàn trang.
+  // Không setLoading(true) ở đây — các lần gọi lại sau thao tác không được làm nháy
+  // màn hình loading toàn trang; chỉ lần tải đầu mới bật cờ loading.
   const refresh = useCallback(async () => {
     if (!buildingId) return;
     setError(null);
@@ -101,19 +102,14 @@ export function ManagerWalletPage() {
     [buildingId]
   );
 
-  // Tải lần đầu + tự làm mới mỗi 30s (đồng bộ cách làm với trang Sessions).
+  // Tải lần đầu; làm mới do người dùng chủ động bấm Refresh.
   useEffect(() => {
     setLoading(true);
     refresh();
-    const timer = setInterval(refresh, 30_000);
-    return () => clearInterval(timer);
   }, [refresh]);
 
-  // Load payments for selected method + auto-refresh every 30s
   useEffect(() => {
     loadPaymentsByMethod(selectedMethod);
-    const timer = setInterval(() => loadPaymentsByMethod(selectedMethod), 30_000);
-    return () => clearInterval(timer);
   }, [selectedMethod, loadPaymentsByMethod]);
 
   const handleInitiateTopup = useCallback(async () => {

@@ -36,8 +36,6 @@ export function StaffSessionsPage() {
 
   useEffect(() => {
     void refresh();
-    const timer = setInterval(() => void refresh(), 30_000);
-    return () => clearInterval(timer);
   }, [refresh]);
 
   return (
