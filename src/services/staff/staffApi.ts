@@ -134,14 +134,25 @@ export interface Dashboard {
 export interface PlateInfo {
   plateNumber: string;
   hasAccount: boolean;
-  registeredVehicleType?: 'car' | 'motorcycle' | null;
+  /** Đối tượng khách suy từ trạng thái biển số — quyết định pool slot của `/free-slots`. */
+  usageType?: 'walk_in' | 'registered' | 'subscriber';
+  /**
+   * Nhóm 2 bánh/4 bánh của xe ĐÃ ĐĂNG KÝ với biển này. Tên trường phải khớp
+   * `registeredVehicleKind` của BE — đặt sai tên thì cảnh báo lệch loại xe ở
+   * bước check-in im lặng không bao giờ bật.
+   */
+  registeredVehicleKind?: 'car' | 'motorcycle' | null;
+  /** Mô tả thể loại đầy đủ để nhân viên đối chiếu bằng mắt. */
+  registeredVehicle?: {
+    category: string;
+    categoryLabel: string | null;
+    brand: string | null;
+  } | null;
+  /** Cổng chỉ nhận được tên hiển thị — BE cố tình KHÔNG trả email/điện thoại/số dư ví. */
   user?: {
     id: string;
     fullName: string;
-    email: string;
-    phone: string;
-    walletBalance: number;
-  };
+  } | null;
   activeSession?: {
     id: string;
     building: string;
@@ -161,6 +172,54 @@ export interface PlateInfo {
       floor?: { name?: string; code?: string } | null;
     } | null;
   } | null;
+}
+
+/** Phiên đang mở mà cổng cần để nhận diện — BE cố tình không kèm phí hay PII. */
+export interface QrSessionSummary {
+  id: string;
+  plateNumber: string;
+  entryTime: string;
+}
+
+/** Kết quả `resolve-qr`: một trong hai nhánh, phân biệt bằng `kind`. */
+export type QrResolution =
+  | {
+      kind: 'vehicle';
+      qrCode: string;
+      found: boolean;
+      /** Chỉ chiếc xe VỪA QUÉT — không kèm chủ xe hay các xe khác của họ. */
+      vehicle: { plateNumber: string; category: string; categoryLabel: string | null; brand: string | null };
+      activeSessions: QrSessionSummary[];
+    }
+  | {
+      kind: 'user';
+      userId: string;
+      hasAccount: boolean;
+      user: { id: string; fullName: string; isActive: boolean } | null;
+      activeSessions: QrSessionSummary[];
+      activePackages: {
+        id: string;
+        name: string;
+        code: string | null;
+        plateNumber: string;
+        startDate?: string;
+        endDate?: string;
+      }[];
+    };
+
+/**
+ * Kết quả quét ảnh của Camera 1 = phần nhận diện + đúng payload `lookupPlate`.
+ * `scanStatus: 'unavailable'` nghĩa là provider OCR đang chết: BE vẫn trả 200 với
+ * biển rỗng để nhân viên nhập tay, KHÔNG phải lỗi cần chặn cổng.
+ */
+export interface ScanResult extends PlateInfo {
+  scanStatus: 'available' | 'unavailable';
+  plateConfidence: number;
+  /** PaddleOCR chỉ đọc chữ nên luôn null ở đây — nhân viên tự chọn loại xe trên UI. */
+  vehicleType: 'car' | 'motorcycle' | null;
+  brand: string | null;
+  brandConfidence: number;
+  vehicleTypeMismatch: boolean;
 }
 
 export interface FreeSlot {
@@ -248,43 +307,24 @@ export const staffApi = {
   verifySessionPayment: (orderCode: number) =>
     api.get<Wrap<PaymentStatus>>(`/staff/parking-sessions/payment/${orderCode}/status`),
 
-  lookupPlate: (plateNumber: string) =>
-    api.get<Wrap<PlateInfo>>(`/staff/parking-sessions/lookup-plate/${plateNumber}`),
+  /**
+   * `building` là BẮT BUỘC — thiếu là 400 BUILDING_REQUIRED, vì phiên đang mở,
+   * gói dài hạn và slot cố định chỉ có nghĩa trong phạm vi MỘT tòa nhà.
+   */
+  lookupPlate: (plateNumber: string, building: string) =>
+    api.get<Wrap<PlateInfo>>(`/staff/parking-sessions/lookup-plate/${plateNumber}`, {
+      query: { building },
+    }),
 
-  lookupUserQr: (qrCode: string) =>
-    api.get<Wrap<{ hasAccount: boolean; user: { id: string; fullName: string; email: string } | null }>>(
-      `/staff/users/lookup-qr/${qrCode}`
-    ),
-
-  // Lookup a license plate by its unique QR token (PLT-...)
-  lookupPlateQr: (qrCode: string) =>
-    api.get<
-      Wrap<{
-        qrCode: string;
-        found: boolean;
-        plate: { plateNumber: string; vehicleType: string } | null;
-        user: { id: string; fullName: string; email: string; phone: string | null; walletBalance: number; isActive: boolean } | null;
-        activeSessions: { id: string; building: string; plateNumber: string; entryTime: string; fee: number }[];
-      }>
-    >(`/staff/users/lookup-plate-qr/${qrCode}`),
-
-  // AI camera (Camera 1): send a captured frame (base64, data-URL prefix allowed),
-  // get back the recognized plate + brand and the resolved owner account.
-  scanVehicle: (image: string) =>
-    api.post<
-      Wrap<{
-        plateNumber: string;
-        plateConfidence: number;
-        vehicleType: 'car' | 'motorcycle' | null;
-        brand: string | null;
-        brandConfidence: number;
-        vehicleTypeMismatch: boolean;
-        hasAccount: boolean;
-        registeredVehicleType: 'car' | 'motorcycle' | null;
-        user: { id: string; fullName: string; email: string; phone: string | null; walletBalance: number } | null;
-        activeSession: { id: string; building: string; entryTime: string } | null;
-      }>
-    >('/staff/parking-sessions/scan', { image }),
+  /**
+   * AI camera (Camera 1). Hai ràng buộc của BE, sai một trong hai là hỏng cả cổng vào:
+   *  - `building` BẮT BUỘC nằm trong body → thiếu là 400 BUILDING_REQUIRED.
+   *  - `image` phải là DATA URL đầy đủ (`data:image/jpeg;base64,...`). BE đối chiếu
+   *    magic byte với MIME đã khai trước khi gửi ảnh ra provider, nên chuỗi base64
+   *    trần bị chặn ngay với 400 IMAGE_MALFORMED.
+   */
+  scanVehicle: (image: string, building: string) =>
+    api.post<Wrap<ScanResult>>('/staff/parking-sessions/scan', { image, building }),
 
   // Staff rejects a check-in/check-out → backend notifies the plate owner.
   reject: (payload: { plateNumber: string; stage: 'check-in' | 'check-out'; reason: string; building?: string }) =>
@@ -293,20 +333,16 @@ export const staffApi = {
       payload
     ),
 
-  // Camera 2: unified QR resolver — PLT- plate token or account ID.
+  /**
+   * Camera 2 — QR resolver dùng chung: token biển số `PLT-` hoặc ID tài khoản.
+   * `kind` của BE là `'vehicle' | 'user'` (KHÔNG phải `'plate'`), và nhánh xe trả
+   * về dưới key `vehicle` với `category` chứ không phải `vehicleType`.
+   * Chỉ trả tên hiển thị — BE không lộ email/điện thoại/số dư ví ở đường quét cổng.
+   */
   resolveQr: (code: string, buildingId?: string) =>
-    api.get<
-      Wrap<{
-        kind: 'plate' | 'user';
-        found?: boolean;
-        hasAccount?: boolean;
-        plate?: { plateNumber: string; vehicleType: string; brand?: string | null } | null;
-        user: { id: string; fullName: string; email: string; phone?: string | null; walletBalance?: number } | null;
-        activeSessions?: { id: string; building: string; plateNumber: string; entryTime: string; fee: number }[];
-        /** Gói dài hạn đang hoạt động của user (chỉ có khi kind === 'user'). */
-        activePackages?: { id: string; name: string; code: string | null; plateNumber: string; startDate?: string; endDate?: string }[];
-      }>
-    >(`/staff/users/resolve-qr/${encodeURIComponent(code)}`, { query: buildingId ? { building: buildingId } : undefined }),
+    api.get<Wrap<QrResolution>>(`/staff/users/resolve-qr/${encodeURIComponent(code)}`, {
+      query: buildingId ? { building: buildingId } : undefined,
+    }),
 
   // Sessions (namespaced, for backward compat)
   sessions: {
@@ -345,13 +381,11 @@ export const staffApi = {
     getPaymentStatus: (orderCode: number) =>
       api.get<Wrap<PaymentStatus>>(`/staff/parking-sessions/payment/${orderCode}/status`),
 
-    lookupPlate: (plateNumber: string) =>
-      api.get<Wrap<PlateInfo>>(`/staff/parking-sessions/lookup-plate/${plateNumber}`),
-
-    lookupUser: (qrCode: string) =>
-      api.get<Wrap<{ hasAccount: boolean; user: { id: string; fullName: string; email: string } | null }>>(
-        `/staff/users/lookup-qr/${qrCode}`
-      ),
+    /** Xem ghi chú ở `staffApi.lookupPlate` — `building` là bắt buộc. */
+    lookupPlate: (plateNumber: string, building: string) =>
+      api.get<Wrap<PlateInfo>>(`/staff/parking-sessions/lookup-plate/${plateNumber}`, {
+        query: { building },
+      }),
 
     /** Lịch sử xe vào hôm nay của nhân viên cổng VÀO — có location (cổng, tầng, ô). */
     myCheckIns: (buildingId: string) =>

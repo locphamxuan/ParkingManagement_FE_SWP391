@@ -12,7 +12,7 @@ import type { CheckInWorkflow } from '@/hooks/staff/useCheckInWorkflow';
 type MultiCameraCheckInProps = Pick<
   CheckInWorkflow,
   | 'plateCamRef' | 'portraitCamRef' | 'qrCamRef' | 'handlePlateDetected' | 'handleResolveIdQr'
-  | 'loading' | 'assignment' | 'distinctDeviceCount'
+  | 'loading' | 'assignment' | 'distinctDeviceCount' | 'buildingId'
   | 'plateNumber' | 'setPlateNumber' | 'onCheckIn' | 'vehicleBrand' | 'plateAccountInfo' | 'checkInKind'
   | 'vehicleType' | 'setVehicleType' | 'allowedTypes' | 'plateTypeWarning' | 'buildingSupportWarning' | 'vehicleTypeMismatch'
   | 'needsSlotSelection' | 'hasActivePackage' | 'freeSlots' | 'selectedSlotId' | 'setSelectedSlotId'
@@ -22,7 +22,7 @@ type MultiCameraCheckInProps = Pick<
 // Chế độ nhiều camera — mở cả 3 camera cùng lúc để chụp đồng thời (quầy có nhiều camera vật lý).
 export function MultiCameraCheckIn({
   plateCamRef, portraitCamRef, qrCamRef, handlePlateDetected, handleResolveIdQr,
-  loading, assignment, distinctDeviceCount,
+  loading, assignment, distinctDeviceCount, buildingId,
   plateNumber, setPlateNumber, onCheckIn, vehicleBrand, plateAccountInfo, checkInKind,
   vehicleType, setVehicleType, allowedTypes, plateTypeWarning, buildingSupportWarning, vehicleTypeMismatch,
   needsSlotSelection, hasActivePackage, freeSlots, selectedSlotId, setSelectedSlotId,
@@ -40,7 +40,7 @@ export function MultiCameraCheckIn({
   return (
     <div className="space-y-5">
       <div className="grid gap-3 lg:grid-cols-3">
-        <LivePlateCamera ref={plateCamRef} onDetected={handlePlateDetected} busy={loading} deviceId={assignment.plate} />
+        <LivePlateCamera ref={plateCamRef} onDetected={handlePlateDetected} buildingId={buildingId} busy={loading} deviceId={assignment.plate} />
         <LivePortraitCamera ref={portraitCamRef} deviceId={assignment.portrait} />
         <LiveQRCamera ref={qrCamRef} onResult={handleResolveIdQr} deviceId={assignment.qr} />
       </div>
@@ -69,7 +69,10 @@ export function MultiCameraCheckIn({
         )}
         {plateNumber.trim().length >= 7 && plateAccountInfo?.hasAccount && (
           <div className="mt-1 rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-2.5 text-xs text-emerald-400">
-            Member: <strong className="text-foreground">{plateAccountInfo.user?.fullName}</strong> ({plateAccountInfo.user?.email})
+            Member: <strong className="text-foreground">{plateAccountInfo.user?.fullName}</strong>
+            {plateAccountInfo.registeredVehicle?.categoryLabel
+              ? ` · registered ${plateAccountInfo.registeredVehicle.categoryLabel}${plateAccountInfo.registeredVehicle.brand ? ` ${plateAccountInfo.registeredVehicle.brand}` : ''}`
+              : ''}
           </div>
         )}
         {plateNumber.trim().length >= 7 && plateAccountInfo && !plateAccountInfo.hasAccount && (
@@ -98,7 +101,7 @@ export function MultiCameraCheckIn({
         plateTypeWarning={plateTypeWarning}
         buildingSupportWarning={buildingSupportWarning}
         mismatch={vehicleTypeMismatch}
-        registeredVehicleType={plateAccountInfo?.registeredVehicleType}
+        registeredVehicleKind={plateAccountInfo?.registeredVehicleKind}
       />
 
       {needsSlotSelection && (

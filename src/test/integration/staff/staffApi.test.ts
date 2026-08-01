@@ -113,7 +113,10 @@ describe('Staff — getActiveSessions', () => {
 
 describe('Staff — lookupPlate', () => {
   it('trả về thông tin biển số (kể cả không có tài khoản)', async () => {
-    const res = await staffApi.lookupPlate('99Z-999.99');
+    // `building` là bắt buộc — thiếu là BE trả 400 BUILDING_REQUIRED.
+    if (!resolvedBuildingId) return;
+
+    const res = await staffApi.lookupPlate('99Z-999.99', resolvedBuildingId);
     expect(res.data).toBeDefined();
     expect(res.data).toHaveProperty('plateNumber');
     expect(typeof res.data.hasAccount).toBe('boolean');

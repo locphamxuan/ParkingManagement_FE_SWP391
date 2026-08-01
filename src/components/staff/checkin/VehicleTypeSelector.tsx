@@ -10,7 +10,7 @@ interface VehicleTypeSelectorProps {
   buildingSupportWarning: string | null;
   /** Registered type differs from what's selected — shown only when the plate lookup found a mismatch. */
   mismatch?: boolean;
-  registeredVehicleType?: VehicleKind | null;
+  registeredVehicleKind?: VehicleKind | null;
   /** When provided, the mismatch banner also offers a quick Reject action (used in the Confirm step). */
   onRejectMismatch?: () => void;
 }
@@ -22,7 +22,7 @@ export function VehicleTypeSelector({
   plateTypeWarning,
   buildingSupportWarning,
   mismatch,
-  registeredVehicleType,
+  registeredVehicleKind,
   onRejectMismatch,
 }: VehicleTypeSelectorProps) {
   return (
@@ -52,7 +52,7 @@ export function VehicleTypeSelector({
         onRejectMismatch ? (
           <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 p-2.5 text-[11px] text-rose-300 flex items-center justify-between gap-2">
             <span className="flex items-center gap-1">
-              <AlertCircle size={12} /> Vehicle type does not match the registration (registered: <strong>{registeredVehicleType === 'car' ? 'Car' : 'Motorcycle'}</strong>).
+              <AlertCircle size={12} /> Vehicle type does not match the registration (registered: <strong>{registeredVehicleKind === 'car' ? 'Car' : 'Motorcycle'}</strong>).
             </span>
             <button type="button" onClick={onRejectMismatch} className="shrink-0 rounded-md bg-rose-500 px-2.5 py-1 text-[10px] font-bold text-white hover:bg-rose-400">
               Reject
@@ -60,7 +60,7 @@ export function VehicleTypeSelector({
           </div>
         ) : (
           <p className="text-[11px] text-rose-300 flex items-center gap-1">
-            <AlertCircle size={12} /> Vehicle type does not match the registration (registered: <strong>{registeredVehicleType === 'car' ? 'Car' : 'Motorcycle'}</strong>).
+            <AlertCircle size={12} /> Vehicle type does not match the registration (registered: <strong>{registeredVehicleKind === 'car' ? 'Car' : 'Motorcycle'}</strong>).
           </p>
         )
       )}

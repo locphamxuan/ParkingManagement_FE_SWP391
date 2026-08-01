@@ -94,8 +94,12 @@ export function ConfirmCheckInStep({
         {plateNumber.trim().length >= 7 && plateAccountInfo?.hasAccount && (
           <div className="mt-1 rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-2.5 flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-emerald-500" />
+            {/* Xem ghi chú ở IdentifyVehicleStep: không có email trong payload này. */}
             <p className="text-xs text-emerald-400">
-              Member: <strong className="text-foreground">{plateAccountInfo.user?.fullName}</strong> ({plateAccountInfo.user?.email})
+              Member: <strong className="text-foreground">{plateAccountInfo.user?.fullName}</strong>
+              {plateAccountInfo.registeredVehicle?.categoryLabel
+                ? ` · registered ${plateAccountInfo.registeredVehicle.categoryLabel}${plateAccountInfo.registeredVehicle.brand ? ` ${plateAccountInfo.registeredVehicle.brand}` : ''}`
+                : ''}
             </p>
           </div>
         )}
@@ -116,7 +120,7 @@ export function ConfirmCheckInStep({
         plateTypeWarning={plateTypeWarning}
         buildingSupportWarning={buildingSupportWarning}
         mismatch={vehicleTypeMismatch}
-        registeredVehicleType={plateAccountInfo?.registeredVehicleType}
+        registeredVehicleKind={plateAccountInfo?.registeredVehicleKind}
         onRejectMismatch={() => setRejectOpen(true)}
       />
 
