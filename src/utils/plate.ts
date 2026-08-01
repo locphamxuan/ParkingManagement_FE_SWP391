@@ -45,6 +45,35 @@ export function isTwoWheelCategory(category: string | null | undefined): boolean
   return TWO_WHEEL_CATEGORIES.has(`${category ?? ''}`);
 }
 
+/**
+ * Nhóm xe suy ra TỪ CHÍNH BIỂN SỐ — bản sao của `plateVehicleKind` bên backend
+ * (`utils/plate.util.js`), để báo lỗi ngay khi gõ thay vì đợi server từ chối.
+ * Backend vẫn là nơi chốt: đây chỉ là lớp báo sớm.
+ *
+ * Một chữ cái = ô tô (30A), một chữ cái + một chữ số = xe máy (59X1). Biển hai
+ * chữ cái (51LD, 80NG) là biển đặc biệt, không suy được → null, bỏ qua kiểm tra.
+ */
+export function plateVehicleKind(raw: string | null | undefined): 'motorcycle' | 'car' | null {
+  const canonical = normalizePlate(raw);
+  if (!isValidVietnamPlate(canonical)) return null;
+  const series = canonical.match(/^\d{2}([A-Z]{1,2})(\d?)-/);
+  if (!series || series[1].length !== 1) return null;
+  return series[2] ? 'motorcycle' : 'car';
+}
+
+/**
+ * True khi biển số và thể loại đã chọn thuộc cùng nhóm (hoặc không suy được).
+ * Sai nhóm là sai bảng giá và sai ô đỗ, nên phải chặn trước khi gửi lên.
+ */
+export function plateMatchesCategory(
+  raw: string | null | undefined,
+  category: string | null | undefined
+): boolean {
+  const plateKind = plateVehicleKind(raw);
+  if (!plateKind) return true;
+  return plateKind === (isTwoWheelCategory(category) ? 'motorcycle' : 'car');
+}
+
 /** Normalize arbitrary input to the canonical VN plate form, or '' if unparseable. */
 export function normalizePlate(raw: string | null | undefined): string {
   const s = `${raw ?? ''}`.toUpperCase();
