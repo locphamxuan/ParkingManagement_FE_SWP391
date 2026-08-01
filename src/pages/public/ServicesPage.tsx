@@ -25,12 +25,14 @@ const driverServices = [
     title: 'Long-term Packages',
     description: 'Weekly or monthly packages for regular commuters. Register a plate once, then check in without any manual steps.',
     highlights: ['Priority slot assignment at check-in', 'Auto renewal reminder', 'Refund policy on early cancellation'],
+    action: { to: '/packages/buy', label: 'Buy Package' },
   },
   {
     icon: Wallet,
     title: 'E-Wallet Payments',
     description: 'Top up via PayOS QR banking and pay every parking fee cashless. Every transaction is itemized and traceable.',
     highlights: ['Instant QR top-up', 'Transaction history & filters', 'No cash needed at the gate'],
+    action: { to: '/wallet', label: 'Top Up Wallet' },
   },
   {
     icon: ShieldAlert,
@@ -106,7 +108,7 @@ export default function ServicesPage() {
                     <div className="p-3 rounded-xl bg-cyan-500/10 border border-cyan-500/15 text-cyan-400 shrink-0">
                       <Icon size={20} />
                     </div>
-                    <div>
+                    <div className="flex-1">
                       <h3 className="text-sm font-black text-white">{service.title}</h3>
                       <p className="mt-2 text-xs text-slate-400 font-semibold leading-relaxed">{service.description}</p>
                       <ul className="mt-3 space-y-1.5">
@@ -117,6 +119,17 @@ export default function ServicesPage() {
                           </li>
                         ))}
                       </ul>
+                      {service.action && (
+                        <div className="mt-4">
+                          <Link
+                            to={service.action.to}
+                            className="inline-flex items-center gap-1.5 rounded-xl bg-cyan-500 px-4 py-2 text-[10px] font-black uppercase tracking-wider text-slate-950 transition hover:bg-cyan-400 hover:scale-105 active:scale-98 shadow-[0_0_15px_rgba(6,182,212,0.25)]"
+                          >
+                            <span>{service.action.label}</span>
+                            <ArrowRight size={11} className="stroke-[3]" />
+                          </Link>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </motion.article>
