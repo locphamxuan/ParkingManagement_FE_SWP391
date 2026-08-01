@@ -4,6 +4,7 @@ export function useAuth() {
   const session = useAuthStore((state) => state.session);
   const isBootstrapping = useAuthStore((state) => state.isBootstrapping);
   const login = useAuthStore((state) => state.login);
+  const adoptSession = useAuthStore((state) => state.adoptSession);
   const logout = useAuthStore((state) => state.logout);
   const updateProfile = useAuthStore((state) => state.updateProfile);
   const isAuthenticating = useAuthStore((state) => state.isAuthenticating);
@@ -25,6 +26,7 @@ export function useAuth() {
     isBootstrapping,
     user,
     login,
+    adoptSession,
     logout,
     updateProfile,
     isAuthenticating,

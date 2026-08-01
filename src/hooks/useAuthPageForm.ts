@@ -4,6 +4,7 @@ import { useMotionValue, useSpring, useTransform } from 'framer-motion';
 import { useSearchParams } from 'react-router-dom';
 import { forgotPassword, resetPassword } from '@/services/authService';
 import { STORAGE_KEYS, clearForgotEmail, loadJson, saveJson } from '@/services/client/storage';
+import { MIN_PASSWORD_LENGTH } from '@/utils/constants';
 import type { AuthMode } from '@/pages/AuthPage';
 
 const initialForm = {
@@ -37,10 +38,16 @@ export function useAuthPageForm({ mode, notice, onModeChange, onSubmit }: UseAut
   const [resetToken, setResetToken] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  // Đăng ký đi 2 bước: xin mã OTP qua email rồi mới tạo tài khoản. Giữ lại thông
+  // tin đã nhập ở bước 1 vì mật khẩu chỉ được gửi lên ở bước 2 (xem authService).
+  const [pendingRegistration, setPendingRegistration] = useState<Record<string, string> | null>(null);
+  const [otpCode, setOtpCode] = useState('');
 
   useEffect(() => {
     setShowPassword(false);
     setShowConfirmPassword(false);
+    setPendingRegistration(null);
+    setOtpCode('');
   }, [mode]);
 
   // Modal thông báo (thành công/thất bại) cho luồng quên & đặt lại mật khẩu.
@@ -129,20 +136,25 @@ export function useAuthPageForm({ mode, notice, onModeChange, onSubmit }: UseAut
   const rotateY = useTransform(springX, [0, 1], [-8, 8]);
   const rotateX = useTransform(springY, [0, 1], [8, -8]);
 
+  const otpStep = Boolean(pendingRegistration);
+
   const title = useMemo(() => {
     if (mode === 'reset-password') return 'Reset Password';
     if (mode === 'forgot-password') return 'Recover Password';
+    if (mode === 'register' && otpStep) return 'Verify Your Email';
     return mode === 'login' ? 'Login to PBMS' : 'Create PBMS Account';
-  }, [mode]);
+  }, [mode, otpStep]);
   const description = useMemo(() => {
     if (mode === 'reset-password')
       return 'Enter your new password to complete the reset process.';
     if (mode === 'forgot-password')
       return 'Enter the email address associated with your account to receive a reset link.';
+    if (mode === 'register' && otpStep)
+      return 'We sent a 6-digit code to your email. Enter it to finish creating your account.';
     return mode === 'login'
       ? 'Log in to continue using the smart parking management system.'
       : 'Create a new account to start using the smart parking platform.';
-  }, [mode]);
+  }, [mode, otpStep]);
 
   function handleChange(e: ChangeEvent<HTMLInputElement>) {
     const { name, value } = e.target;
@@ -169,6 +181,17 @@ export function useAuthPageForm({ mode, notice, onModeChange, onSubmit }: UseAut
         return;
       }
 
+      // Chặn sớm đúng ngưỡng của BE (`utils/passwordPolicy`, 12 ký tự): mật khẩu
+      // chỉ được gửi ở bước 2, nên nếu không kiểm ở đây thì người dùng phải chờ
+      // nhận email, gõ mã xong mới biết mật khẩu bị từ chối.
+      if (form.password.length < MIN_PASSWORD_LENGTH) {
+        setLocalNotice({
+          message: `Password must be at least ${MIN_PASSWORD_LENGTH} characters!`,
+          type: 'error',
+        });
+        return;
+      }
+
       const payload: Record<string, string> = {
         email: form.email.trim(),
         password: form.password,
@@ -177,8 +200,11 @@ export function useAuthPageForm({ mode, notice, onModeChange, onSubmit }: UseAut
       };
 
       try {
-        // BE kiểm tra trùng email/phone (409 PHONE_TAKEN) — lỗi hiển thị qua notice của parent.
+        // Bước 1 — chỉ xin mã OTP. BE kiểm tra trùng email/phone (409 PHONE_TAKEN)
+        // ở bước 2; lỗi hiển thị qua notice của parent.
         await onSubmit({ mode, payload });
+        setPendingRegistration(payload);
+        setOtpCode('');
       } catch {
         // Error already mapped in public auth flow hook
       }
@@ -200,6 +226,45 @@ export function useAuthPageForm({ mode, notice, onModeChange, onSubmit }: UseAut
       }
     }
   }
+
+  /** Bước 2 của đăng ký: gửi mã + mật khẩu đã nhập ở bước 1 để tạo tài khoản. */
+  async function handleVerifyOtp(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setLocalNotice(null);
+
+    if (!pendingRegistration) return;
+
+    const otp = otpCode.trim();
+    if (!/^\d{6}$/.test(otp)) {
+      setLocalNotice({ message: 'The verification code is 6 digits.', type: 'error' });
+      return;
+    }
+
+    try {
+      await onSubmit({ mode: 'register', payload: { ...pendingRegistration, otp } });
+    } catch {
+      // Thông báo lỗi (mã sai, hết hạn, email/SĐT đã dùng) do parent map và hiển thị.
+    }
+  }
+
+  /** Gửi lại mã: dùng đúng dữ liệu bước 1, không bắt người dùng gõ lại form. */
+  async function handleResendOtp() {
+    if (!pendingRegistration) return;
+    setLocalNotice(null);
+    try {
+      await onSubmit({ mode: 'register', payload: pendingRegistration });
+      setOtpCode('');
+    } catch {
+      // Đã hiển thị ở notice của parent.
+    }
+  }
+
+  /** Quay lại form đăng ký; mã cũ vẫn còn hiệu lực ở BE cho tới khi hết hạn. */
+  const handleCancelOtp = () => {
+    setPendingRegistration(null);
+    setOtpCode('');
+    setLocalNotice(null);
+  };
 
   async function handleForgotPassword(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -260,8 +325,11 @@ export function useAuthPageForm({ mode, notice, onModeChange, onSubmit }: UseAut
     }
 
     // Validation: Độ dài mật khẩu >= 6
-    if (newPassword.length < 6) {
-      setLocalNotice({ message: 'Password must be at least 6 characters!', type: 'error' });
+    if (newPassword.length < MIN_PASSWORD_LENGTH) {
+      setLocalNotice({
+        message: `Password must be at least ${MIN_PASSWORD_LENGTH} characters!`,
+        type: 'error',
+      });
       return;
     }
 
@@ -357,6 +425,13 @@ export function useAuthPageForm({ mode, notice, onModeChange, onSubmit }: UseAut
     emailInputRef,
     passwordInputRef,
     dropdownRef,
+    otpStep,
+    otpCode,
+    setOtpCode,
+    pendingEmail: pendingRegistration?.email ?? '',
+    handleVerifyOtp,
+    handleResendOtp,
+    handleCancelOtp,
     forgotEmail,
     setForgotEmail,
     handleForgotPassword,

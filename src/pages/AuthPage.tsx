@@ -6,6 +6,7 @@ import { AuthNoticeBanner } from '@/components/auth/AuthNoticeBanner';
 import { ForgotPasswordForm } from '@/components/auth/ForgotPasswordForm';
 import { ResetPasswordForm } from '@/components/auth/ResetPasswordForm';
 import { LoginRegisterForm } from '@/components/auth/LoginRegisterForm';
+import { RegisterOtpForm } from '@/components/auth/RegisterOtpForm';
 import { useAuthPageForm } from '@/hooks/useAuthPageForm';
 
 export type AuthMode = 'login' | 'register' | 'forgot-password' | 'reset-password';
@@ -68,6 +69,16 @@ export default function AuthPage({ mode, notice, onModeChange, onSubmit, isLoadi
               showConfirmPassword={state.showConfirmPassword}
               setShowConfirmPassword={state.setShowConfirmPassword}
               forgotEmail={state.forgotEmail}
+              isLoading={isLoading}
+            />
+          ) : mode === 'register' && state.otpStep ? (
+            <RegisterOtpForm
+              otpCode={state.otpCode}
+              setOtpCode={state.setOtpCode}
+              pendingEmail={state.pendingEmail}
+              handleVerifyOtp={state.handleVerifyOtp}
+              handleResendOtp={state.handleResendOtp}
+              handleCancelOtp={state.handleCancelOtp}
               isLoading={isLoading}
             />
           ) : (

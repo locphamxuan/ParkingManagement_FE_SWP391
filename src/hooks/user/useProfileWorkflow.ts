@@ -4,7 +4,13 @@ import { useAuth } from '@/hooks/useAuth';
 import { useVehicles } from '@/hooks/user/useVehicles';
 import { userApi } from '@/services/user/userApi';
 import type { Vehicle, VehicleCategoryCode } from '@/services/vehicleService';
-import { normalizePlate, isValidVietnamPlate, brandsForCategory } from '@/utils/plate';
+import {
+  normalizePlate,
+  isValidVietnamPlate,
+  brandsForCategory,
+  plateMatchesCategory,
+  plateVehicleKind,
+} from '@/utils/plate';
 
 /**
  * State + business logic của trang Hồ sơ: thông tin cá nhân và phương tiện.
@@ -23,7 +29,11 @@ interface PlateValidationResult {
   error?: string;
 }
 
-function validatePlate(raw: string, existing: Vehicle[]): PlateValidationResult {
+function validatePlate(
+  raw: string,
+  existing: Vehicle[],
+  category: string
+): PlateValidationResult {
   if (!raw || raw.trim() === '') {
     return { ok: false, error: 'Please enter a license plate.' };
   }
@@ -38,6 +48,15 @@ function validatePlate(raw: string, existing: Vehicle[]): PlateValidationResult 
 
   if (existing.some((v) => v.plateNumber.toUpperCase() === plate)) {
     return { ok: false, error: `Plate "${plate}" is already in your list.` };
+  }
+
+  // Sê-ri biển đã nói lên loại xe; khai lệch là sai bảng giá và sai ô đỗ.
+  if (!plateMatchesCategory(plate, category)) {
+    const expected = plateVehicleKind(plate) === 'motorcycle' ? 'a motorcycle' : 'a car';
+    return {
+      ok: false,
+      error: `${plate} is ${expected} plate — it does not match the vehicle type you selected.`,
+    };
   }
 
   return { ok: true };
@@ -152,7 +171,7 @@ export function useProfileWorkflow() {
       return;
     }
 
-    const result = validatePlate(plateInput, vehicles);
+    const result = validatePlate(plateInput, vehicles, category);
     if (!result.ok) {
       setPlateError(result.error ?? 'Invalid license plate.');
       return;
@@ -193,6 +212,17 @@ export function useProfileWorkflow() {
     if (!editingVehicleId) return;
     setPlateError(null);
     setPlateSuccess(null);
+
+    // Đổi thể loại cũng phải khớp sê-ri biển như lúc thêm mới, nếu không thì chỉ
+    // cần thêm xe đúng rồi sửa lại là lách được.
+    const editing = vehicles.find((v) => v._id === editingVehicleId);
+    if (editing && !plateMatchesCategory(editing.plateNumber, category)) {
+      const expected = plateVehicleKind(editing.plateNumber) === 'motorcycle' ? 'a motorcycle' : 'a car';
+      setPlateError(
+        `${editing.plateNumber} is ${expected} plate — it does not match the vehicle type you selected.`
+      );
+      return;
+    }
 
     setIsSavingVehicle(true);
     try {

@@ -10,6 +10,12 @@ interface AuthState {
   error: string | null;
   bootstrap: () => Promise<void>;
   login: (email: string, password: string) => Promise<AuthSession>;
+  /**
+   * Nhận phiên do một lối vào khác `login` tạo ra (đăng ký qua OTP): backend đã
+   * set cookie httpOnly ngay trong phản hồi verify, nên ở đây chỉ đồng bộ state
+   * cho UI chứ không gọi thêm request nào.
+   */
+  adoptSession: (session: AuthSession) => void;
   logout: () => void;
   // Phương tiện KHÔNG thuộc hồ sơ phiên đăng nhập — quản lý ở `vehicleStore`.
   updateProfile: (profile: { fullName: string; phone: string }) => void;
@@ -42,6 +48,9 @@ export const useAuthStore = create<AuthState>()(
           throw error;
         }
       },
+      adoptSession(session) {
+        set({ session, isAuthenticating: false, error: null });
+      },
       logout() {
         set({ session: null, error: null });
         // Xoá luôn dữ liệu xe của tài khoản vừa thoát, tránh hiện nhầm cho người kế tiếp.
@@ -66,6 +75,9 @@ export const useAuthStore = create<AuthState>()(
 
 if (typeof window !== 'undefined') {
   window.addEventListener('auth-unauthorized', () => {
+    // Không có phiên thì chẳng có gì để dọn — gọi logout() lúc này chỉ tạo thêm
+    // một request 401 nữa (vd khách chưa đăng nhập mở trang login, /auth/me 401).
+    if (!useAuthStore.getState().session) return;
     useAuthStore.getState().logout();
   });
 }
