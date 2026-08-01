@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import AuthPage, { AuthMode } from '@/pages/AuthPage';
-import { registerWithBackend } from '@/services/authService';
+import { requestRegistration, verifyRegistration } from '@/services/authService';
 import { useAuth } from '@/hooks/useAuth';
 
 function mapAuthErrorMessage(message: string): string {
@@ -16,9 +16,9 @@ function mapAuthErrorMessage(message: string): string {
   if (normalized.includes('email already registered')) {
     return 'This email is already registered.';
   }
-  if (normalized.includes('password must be at least 6 characters')) {
-    return 'Password must be at least 6 characters.';
-  }
+  // Thông báo về độ mạnh mật khẩu (độ dài, mật khẩu quá phổ biến, chuỗi liên
+  // tiếp…) do backend quyết định và đã đủ rõ — trả nguyên văn ở nhánh mặc định,
+  // đừng chép ngưỡng sang đây rồi để nó trôi lệch.
   if (normalized.includes('valid email is required')) {
     return 'Please enter a valid email address.';
   }
@@ -47,7 +47,7 @@ function usePublicAuthFlow(initialMode: 'login' | 'register') {
     [navigate],
   );
 
-  const { login } = useAuth();
+  const { login, adoptSession } = useAuth();
 
   const onSubmit = useCallback(
     async ({
@@ -77,19 +77,31 @@ function usePublicAuthFlow(initialMode: 'login' | 'register') {
           } else {
             navigate('/', { replace: true });
           }
-        } else {
-          await registerWithBackend({
+        } else if (payload.otp) {
+          // Bước 2: mã đúng thì tài khoản mới thực sự được tạo, và backend set
+          // luôn cookie phiên trong phản hồi — chỉ cần nhận session vào store.
+          const session = await verifyRegistration({
             email: payload.email,
+            otp: payload.otp,
             password: payload.password,
-            fullName: payload.fullName,
-            phone: payload.phone || undefined,
           });
+          adoptSession(session);
 
           setNotice({
             message: 'Registration successful.',
             type: 'success',
           });
           navigate('/', { replace: true });
+        } else {
+          // Bước 1: chỉ xin mã OTP. Backend luôn trả cùng một câu dù email đã tồn
+          // tại hay chưa (chống dò tài khoản), nên form vẫn chuyển sang ô nhập mã.
+          const { message } = await requestRegistration({
+            email: payload.email,
+            fullName: payload.fullName,
+            phone: payload.phone || undefined,
+          });
+
+          setNotice({ message, type: 'success' });
         }
       } catch (error) {
         const message = error instanceof Error ? mapAuthErrorMessage(error.message) : 'Unable to process your request.';
@@ -99,7 +111,7 @@ function usePublicAuthFlow(initialMode: 'login' | 'register') {
         setLoading(false);
       }
     },
-    [login, navigate],
+    [login, adoptSession, navigate],
   );
 
   return { mode, notice, onModeChange, onBackHome, onSubmit, isLoading };

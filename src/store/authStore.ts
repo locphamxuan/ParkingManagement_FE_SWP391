@@ -10,6 +10,12 @@ interface AuthState {
   error: string | null;
   bootstrap: () => Promise<void>;
   login: (email: string, password: string) => Promise<AuthSession>;
+  /**
+   * Nhận phiên do một lối vào khác `login` tạo ra (đăng ký qua OTP): backend đã
+   * set cookie httpOnly ngay trong phản hồi verify, nên ở đây chỉ đồng bộ state
+   * cho UI chứ không gọi thêm request nào.
+   */
+  adoptSession: (session: AuthSession) => void;
   logout: () => void;
   // Phương tiện KHÔNG thuộc hồ sơ phiên đăng nhập — quản lý ở `vehicleStore`.
   updateProfile: (profile: { fullName: string; phone: string }) => void;
@@ -41,6 +47,9 @@ export const useAuthStore = create<AuthState>()(
           set({ error: message, isAuthenticating: false });
           throw error;
         }
+      },
+      adoptSession(session) {
+        set({ session, isAuthenticating: false, error: null });
       },
       logout() {
         set({ session: null, error: null });

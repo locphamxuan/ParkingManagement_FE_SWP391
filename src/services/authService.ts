@@ -42,6 +42,12 @@ export interface RegisterInput {
 export interface RegisterVerifyInput {
   email: string;
   otp: string;
+  /**
+   * Mật khẩu chỉ được gửi ở BƯỚC 2 — bước xin OTP cố tình vứt nó đi
+   * (`validateRegisterRequest` xoá `password`), nên nó không nằm chờ trong bản
+   * ghi OTP mà đi thẳng vào lệnh tạo tài khoản.
+   */
+  password: string;
 }
 
 /**
@@ -86,35 +92,24 @@ export async function loginWithBackend(input: LoginInput): Promise<AuthSession> 
   return mapAuthSession(payload);
 }
 
-/**
- * Register directly (no OTP). POST /users/auth/register → { token, user }.
+/*
+ * Đăng ký thẳng (POST /users/auth/register) đã bị backend gỡ và trả 410: lối đó
+ * bỏ qua bước xác minh email nên ai cũng tạo được tài khoản trên địa chỉ của
+ * người khác. Đăng ký giờ đi hai bước: requestRegistration → verifyRegistration.
  */
-export async function registerWithBackend(input: RegisterInput): Promise<AuthSession> {
-  const payload = await requestJson<ApiAuthResponse>({
-    path: '/users/auth/register',
-    method: 'POST',
-    body: {
-      email: input.email.trim().toLowerCase(),
-      password: input.password,
-      fullName: input.fullName.trim(),
-      ...(input.phone ? { phone: input.phone.trim() } : {}),
-    },
-  });
-
-  return mapAuthSession(payload);
-}
 
 /**
  * Step 1 of OTP registration. POST /users/auth/register-request → sends an OTP
  * to the email. Returns the server message.
  */
-export async function requestRegistration(input: RegisterInput): Promise<{ message: string }> {
+export async function requestRegistration(input: Omit<RegisterInput, 'password'>): Promise<{ message: string }> {
   const payload = await requestJson<{ message?: string }>({
     path: '/users/auth/register-request',
     method: 'POST',
+    // Không gửi mật khẩu ở bước này: backend xoá nó ngay đầu vào, gửi lên chỉ
+    // là để mật khẩu đi qua thêm một chặng mà chẳng dùng vào việc gì.
     body: {
       email: input.email.trim().toLowerCase(),
-      password: input.password,
       fullName: input.fullName.trim(),
       ...(input.phone ? { phone: input.phone.trim() } : {}),
     },
@@ -124,7 +119,8 @@ export async function requestRegistration(input: RegisterInput): Promise<{ messa
 }
 
 /**
- * Step 2 of OTP registration. POST /users/auth/register-verify → { token, user }.
+ * Step 2 of OTP registration. POST /users/auth/register-verify → { user }; the
+ * session token comes back only as the httpOnly cookie (see `mapAuthSession`).
  */
 export async function verifyRegistration(input: RegisterVerifyInput): Promise<AuthSession> {
   const payload = await requestJson<ApiAuthResponse>({
@@ -133,6 +129,7 @@ export async function verifyRegistration(input: RegisterVerifyInput): Promise<Au
     body: {
       email: input.email.trim().toLowerCase(),
       otp: input.otp.trim(),
+      password: input.password,
     },
   });
 
