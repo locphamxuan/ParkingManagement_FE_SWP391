@@ -7,7 +7,9 @@ async function fetchToken(email: string, password: string): Promise<string> {
   const res = await fetch(`${API_BASE}/users/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
+    // clientType 'mobile' = client không dùng cookie được, BE mới trả token
+    // trong body. Test gọi thẳng API nên đi đúng đường đó.
+    body: JSON.stringify({ email, password, clientType: 'mobile' }),
   });
 
   if (!res.ok) {
