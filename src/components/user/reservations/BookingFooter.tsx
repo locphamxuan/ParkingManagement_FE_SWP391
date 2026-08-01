@@ -43,7 +43,9 @@ export function BookingFooter({
           onClick={onConfirm}
           whileHover={canSubmit ? { scale: 1.02 } : {}}
           whileTap={canSubmit ? { scale: 0.98 } : {}}
-          className="flex items-center gap-2 rounded-2xl btn-sand btn-sand-orange border border-white/10 bg-white/[0.03] backdrop-blur-sm px-6 py-3 text-sm font-black uppercase tracking-wider text-white transition-all disabled:cursor-not-allowed disabled:from-slate-700 disabled:to-slate-700 disabled:text-slate-400 disabled:shadow-none"
+          className={`flex items-center gap-2 rounded-2xl btn-sand btn-sand-orange border border-white/10 bg-white/[0.03] backdrop-blur-sm px-6 py-3 text-sm font-black uppercase tracking-wider text-white transition-all disabled:cursor-not-allowed disabled:from-slate-700 disabled:to-slate-700 disabled:text-slate-400 disabled:shadow-none ${
+            canSubmit ? 'btn-sand-active shadow-[0_0_20px_rgba(245,158,11,0.45)]' : ''
+          }`}
         >
           <span className="relative z-10 flex items-center gap-2">
             <ShieldCheck size={16} />

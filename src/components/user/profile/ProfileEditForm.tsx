@@ -34,10 +34,10 @@ export function ProfileEditForm({
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
-            className="rounded-2xl border border-rose-500/25 bg-rose-950/20 p-4 text-xs font-black uppercase tracking-wider font-mono text-rose-400 shadow-[0_0_15px_rgba(244,63,94,0.1)] backdrop-blur-md flex items-center gap-3"
+            className="rounded-2xl border border-rose-500/25 bg-rose-950/20 p-4 text-xs font-black uppercase tracking-wider font-mono text-rose-400 shadow-[0_0_15px_rgba(244,63,94,0.1)] backdrop-blur-md flex items-center gap-3 notranslate"
           >
             <AlertCircle size={16} />
-            {profileError}
+            <span>{profileError}</span>
           </motion.div>
         )}
       </AnimatePresence>
@@ -50,7 +50,7 @@ export function ProfileEditForm({
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
-            className="rounded-2xl border border-rose-500/25 bg-rose-950/20 p-4 text-xs font-semibold font-mono text-rose-300 shadow-[0_0_15px_rgba(244,63,94,0.1)] backdrop-blur-md flex items-center gap-3"
+            className="rounded-2xl border border-rose-500/25 bg-rose-950/20 p-4 text-xs font-semibold font-mono text-rose-300 shadow-[0_0_15px_rgba(244,63,94,0.1)] backdrop-blur-md flex items-center gap-3 notranslate"
           >
             <AlertCircle size={16} className="shrink-0" />
             <span>Connection error: {apiError}</span>

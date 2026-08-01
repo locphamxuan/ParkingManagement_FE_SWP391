@@ -42,7 +42,7 @@ export function VehicleEditor({
   const showForm = isEditing || !atLimit;
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 notranslate">
       <div className="flex items-center justify-between">
         <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono">
           Registered vehicles
@@ -84,7 +84,7 @@ export function VehicleEditor({
                   <Car size={11} className="text-blue-400" />
                 )}
                 <span>{item.plateNumber}</span>
-                <span className={`text-[8px] px-1.5 py-0.5 rounded font-sans font-extrabold tracking-normal uppercase ${
+                <span className={`text-[8px] px-1.5 py-0.5 rounded font-sans font-extrabold tracking-normal uppercase notranslate ${
                   item.isDefault
                     ? 'bg-amber-500/25 text-amber-300'
                     : twoWheel
@@ -184,7 +184,7 @@ export function VehicleEditor({
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono shrink-0">Make:</span>
+            <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono shrink-0">Brand:</span>
             <CustomSelect
               value={vehicleBrand}
               onChange={(val) => {
@@ -192,20 +192,20 @@ export function VehicleEditor({
                 if (val !== 'Other') setCustomBrand('');
               }}
               options={vehicleBrandOptions}
-              placeholder="— Select make (optional) —"
+              placeholder="— Select brand (required) —"
               className="flex-1 h-10 text-xs sm:text-sm font-semibold"
             />
           </div>
 
           {vehicleBrand === 'Other' && (
             <div className="flex items-center gap-3">
-              <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono shrink-0">Custom make:</span>
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono shrink-0">Custom brand:</span>
               <input
                 type="text"
                 value={customBrand}
                 onChange={(e) => setCustomBrand(e.target.value)}
                 maxLength={50}
-                placeholder="Enter your vehicle make"
+                placeholder="Enter your vehicle brand"
                 className="flex-1 rounded-xl border border-white/10 bg-slate-950/80 text-white placeholder-slate-600 text-sm h-10 px-3 outline-none transition-all duration-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20"
                 autoComplete="off"
               />

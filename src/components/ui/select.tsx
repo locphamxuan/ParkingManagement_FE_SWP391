@@ -76,11 +76,11 @@ export function CustomSelect({
           disabled && "cursor-not-allowed opacity-50"
         )}
       >
-        <span className="truncate text-left block w-full">
+        <span className="truncate text-left block w-full notranslate">
           {selectedOption ? (
             selectedOption.label
           ) : (
-            <span className={isLight ? "text-slate-400 font-medium" : "text-slate-500"}>{placeholder}</span>
+            <span className={isLight ? "text-slate-400 font-medium translate-yes" : "text-slate-500 translate-yes"}>{placeholder}</span>
           )}
         </span>
         <motion.div
@@ -137,7 +137,7 @@ export function CustomSelect({
                       }
                     }}
                     className={cn(
-                      "relative flex cursor-pointer select-none items-center rounded-xl px-3.5 py-2.5 text-xs font-semibold transition-all duration-150",
+                      "relative flex cursor-pointer select-none items-center rounded-xl px-3.5 py-2.5 text-xs font-semibold transition-all duration-150 notranslate",
                       isLight
                         ? "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                         : "text-slate-300 hover:bg-white/[0.06] hover:text-white",
