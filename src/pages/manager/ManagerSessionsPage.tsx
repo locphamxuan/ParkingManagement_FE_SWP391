@@ -89,8 +89,6 @@ export function ManagerSessionsPage() {
   useEffect(() => {
     setLoading(true);
     refresh();
-    const timer = setInterval(refresh, 30_000);
-    return () => clearInterval(timer);
   }, [refresh]);
 
   const filtered = useMemo(() => {
@@ -142,14 +140,14 @@ export function ManagerSessionsPage() {
           <p className="text-[10px] font-bold uppercase tracking-wider text-primary">Live Monitoring</p>
           <h2 className="mt-0.5 text-xl font-bold text-foreground">Parked Sessions</h2>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            All vehicles currently parked in this building. Auto-refreshes every 30 seconds.
+            All vehicles currently parked in this building. Use Refresh to pull the latest data.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2.5">
           <StatChip label="Parked" value={loading ? '–' : sessions.length} icon={Car} />
           <StatChip label="Members" value={loading ? '–' : memberCount} icon={Users} />
           <StatChip label="Walk-in" value={loading ? '–' : sessions.length - memberCount} icon={Clock} />
-          <StatChip label="Estimated Fees" value={loading ? '–' : fmtMoney(totalFee)} icon={Wallet} />
+          <StatChip label="Amount Due" value={loading ? '–' : fmtMoney(totalFee)} icon={Wallet} />
           <Button variant="secondary" onClick={() => { setLoading(true); void refresh(); }} className="h-11 gap-2">
             <RefreshCcw size={14} /> Refresh
           </Button>
@@ -278,14 +276,16 @@ export function ManagerSessionsPage() {
                 </div>
                 <div className="mt-2 flex items-center justify-between border-t border-border/60 pt-2">
                   <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                    {s.isLongTerm ? 'Overage Fee' : 'Estimated Fee'}
+                    {s.isLongTerm ? 'Overage Fee' : 'Amount Due'}
                   </span>
-                  <span className="font-bold text-primary">
-                    {(s.currentFee ?? s.fee ?? 0) > 0
-                      ? fmtMoney(s.currentFee ?? s.fee)
-                      : s.isLongTerm
-                        ? 'Free'
-                        : fmtMoney(0)}
+                  <span className={`font-bold ${s.pricePolicyConfigured === false ? 'text-amber-400' : 'text-primary'}`}>
+                    {s.pricePolicyConfigured === false
+                      ? 'No price policy'
+                      : (s.currentFee ?? s.fee ?? 0) > 0
+                        ? fmtMoney(s.currentFee ?? s.fee)
+                        : s.isLongTerm
+                          ? 'Free'
+                          : fmtMoney(0)}
                   </span>
                 </div>
               </button>
@@ -360,14 +360,16 @@ export function ManagerSessionsPage() {
               )}
               <div className="flex items-center justify-between border-t border-border/60 pt-2">
                 <span className="text-sm font-semibold text-foreground">
-                  {selected.isLongTerm ? 'Overage Fee' : 'Estimated Fee'}
+                  {selected.isLongTerm ? 'Overage Fee' : 'Amount Due'}
                 </span>
-                <span className="font-mono text-lg font-black text-primary">
-                  {(selected.currentFee ?? selected.fee ?? 0) > 0
-                    ? fmtMoney(selected.currentFee ?? selected.fee)
-                    : selected.isLongTerm
-                      ? 'Free'
-                      : fmtMoney(0)}
+                <span className={`font-mono text-lg font-black ${selected.pricePolicyConfigured === false ? 'text-amber-400' : 'text-primary'}`}>
+                  {selected.pricePolicyConfigured === false
+                    ? 'No price policy'
+                    : (selected.currentFee ?? selected.fee ?? 0) > 0
+                      ? fmtMoney(selected.currentFee ?? selected.fee)
+                      : selected.isLongTerm
+                        ? 'Free'
+                        : fmtMoney(0)}
                 </span>
               </div>
             </div>

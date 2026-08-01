@@ -109,8 +109,6 @@ export function StaffParkedPage({ view = 'list' }: { view?: 'scanner' | 'list' }
 
   useEffect(() => {
     refreshSessions();
-    const timer = setInterval(refreshSessions, 30_000);
-    return () => clearInterval(timer);
   }, [refreshSessions, reloadTick]);
 
   const totalFee = useMemo(
@@ -118,8 +116,15 @@ export function StaffParkedPage({ view = 'list' }: { view?: 'scanner' | 'list' }
     [sessions],
   );
 
+  // Số tiền phải thu của phiên đang mở, đã được BE tính lại theo bảng giá hiện hành
+  // khi mở modal — không dùng lại con số chụp từ lần tải danh sách.
+  const dueFee = checkoutTarget?.currentFee ?? checkoutTarget?.fee ?? 0;
+  const missingPricePolicy = checkoutTarget?.pricePolicyConfigured === false;
+
   // Open modal checkout cho 1 session. Danh sách (listActive) ĐÃ lược ảnh base64 cho
-  // nhẹ payload → fetch chi tiết để lấy ảnh LÚC VÀO (biển số + chân dung) đối chiếu.
+  // nhẹ payload → fetch chi tiết để lấy ảnh LÚC VÀO (biển số + chân dung) đối chiếu,
+  // đồng thời lấy SỐ TIỀN PHẢI THU tính lại ngay lúc này theo bảng giá của manager
+  // (con số trong danh sách được chụp từ lần tải trước nên đã cũ hơn thực tế).
   const openCheckout = useCallback(async (session: ParkingSession, exitPlateImage: string | null = null) => {
     setOpMessage(null);
     setCheckoutTarget(session);
@@ -136,7 +141,15 @@ export function StaffParkedPage({ view = 'list' }: { view?: 'scanner' | 'list' }
       if (full) {
         setCheckoutTarget((prev) =>
           prev && prev._id === session._id
-            ? { ...prev, plateImage: full.plateImage, portraitImage: full.portraitImage }
+            ? {
+                ...prev,
+                plateImage: full.plateImage,
+                portraitImage: full.portraitImage,
+                currentFee: full.currentFee,
+                pricePolicyConfigured: full.pricePolicyConfigured,
+                overageHours: full.overageHours,
+                maxHoursPerDay: full.maxHoursPerDay,
+              }
             : prev,
         );
       }
@@ -205,7 +218,13 @@ export function StaffParkedPage({ view = 'list' }: { view?: 'scanner' | 'list' }
     const target = checkoutTarget;
     if (!target) return;
     setOpMessage(null);
-    const dueFee = target.currentFee ?? target.fee ?? 0;
+    if (target.pricePolicyConfigured === false) {
+      setOpMessage({
+        type: 'err',
+        text: 'This building has no active price policy for this vehicle type. Ask the manager to configure pricing before checking the vehicle out.',
+      });
+      return;
+    }
     try {
       // Chỉ tạo QR chuyển khoản khi thực sự có tiền phải thu (gói trong hạn mức = 0đ).
       if (paymentMethod === 'bank_transfer' && dueFee > 0) {
@@ -316,7 +335,7 @@ export function StaffParkedPage({ view = 'list' }: { view?: 'scanner' | 'list' }
             <p className="text-lg font-bold text-foreground">{loading ? '–' : sessions.length}</p>
           </div>
           <div className="rounded-xl border border-border bg-background px-4 py-2 text-center">
-            <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Estimated Total Fee</p>
+            <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Total Amount Due</p>
             <p className="text-lg font-bold text-primary">{loading ? '–' : fmtMoney(totalFee)}</p>
           </div>
           <Button variant="secondary" onClick={refreshSessions} className="gap-2 h-11">
@@ -486,12 +505,14 @@ export function StaffParkedPage({ view = 'list' }: { view?: 'scanner' | 'list' }
                     </div>
                     <div className="mt-2 flex items-center justify-between">
                       <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                        {s.isLongTerm ? 'Overage Fee' : 'Estimated Fee'}
+                        {s.isLongTerm ? 'Overage Fee' : 'Amount Due'}
                       </span>
-                      <span className="font-bold text-primary">
-                        {(s.currentFee ?? s.fee ?? 0) > 0
-                          ? fmtMoney(s.currentFee ?? s.fee)
-                          : s.isLongTerm ? 'Free' : fmtMoney(0)}
+                      <span className={`font-bold ${s.pricePolicyConfigured === false ? 'text-amber-400' : 'text-primary'}`}>
+                        {s.pricePolicyConfigured === false
+                          ? 'No price policy'
+                          : (s.currentFee ?? s.fee ?? 0) > 0
+                            ? fmtMoney(s.currentFee ?? s.fee)
+                            : s.isLongTerm ? 'Free' : fmtMoney(0)}
                       </span>
                     </div>
                     {canCheckout && (
@@ -662,16 +683,30 @@ export function StaffParkedPage({ view = 'list' }: { view?: 'scanner' | 'list' }
               </div>
             )}
 
-            <div className="mt-4 rounded-xl border border-primary/30 bg-primary/10 p-4 flex items-center justify-between">
-              <span className="text-sm font-semibold text-foreground">Amount Due</span>
-              <span className="font-mono text-2xl font-black text-primary">
-                {(checkoutTarget.currentFee ?? checkoutTarget.fee ?? 0) > 0
-                  ? fmtMoney(checkoutTarget.currentFee ?? checkoutTarget.fee)
-                  : 'Free'}
-              </span>
-            </div>
+            {missingPricePolicy ? (
+              <div className="mt-4 rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 text-xs text-amber-200">
+                <p className="font-bold uppercase tracking-wide">No price policy configured</p>
+                <p className="mt-1">
+                  This building has no active price policy for{' '}
+                  <strong>{checkoutTarget.vehicleType?.name ?? 'this vehicle type'}</strong>, so no fee can be
+                  charged. Ask the manager to set pricing before releasing the vehicle.
+                </p>
+              </div>
+            ) : (
+              <div className="mt-4 rounded-xl border border-primary/30 bg-primary/10 p-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold text-foreground">Amount Due</span>
+                  <span className="font-mono text-2xl font-black text-primary">
+                    {dueFee > 0 ? fmtMoney(dueFee) : 'Free'}
+                  </span>
+                </div>
+                <p className="mt-1.5 text-[10px] text-muted-foreground">
+                  Calculated from the building&apos;s active price policy at this moment.
+                </p>
+              </div>
+            )}
 
-            {(checkoutTarget.currentFee ?? checkoutTarget.fee ?? 0) > 0 && (
+            {dueFee > 0 && !missingPricePolicy && (
               <>
                 <p className="mt-4 mb-2 text-xs uppercase tracking-[0.18em] text-muted-foreground">Payment Method</p>
                 <div className="grid gap-2 sm:grid-cols-3">
@@ -693,10 +728,12 @@ export function StaffParkedPage({ view = 'list' }: { view?: 'scanner' | 'list' }
               <Button type="button" variant="outline" onClick={() => setCoStep(1)} className="h-11 gap-1">
                 <ArrowLeft size={16} /> Back
               </Button>
-              <Button onClick={onCheckOut} disabled={loading} className="flex-1 h-11 gap-2 bg-gradient-to-r from-orange-500 to-amber-400 text-slate-950 hover:brightness-110 disabled:opacity-60">
-                <CheckCircle2 size={16} /> {(checkoutTarget.currentFee ?? checkoutTarget.fee ?? 0) <= 0
-                  ? 'Check out (free)'
-                  : paymentMethod === 'bank_transfer' ? 'Create Payment QR' : `Collect ${fmtMoney(checkoutTarget.currentFee ?? checkoutTarget.fee)} & check out`}
+              <Button onClick={onCheckOut} disabled={loading || missingPricePolicy} className="flex-1 h-11 gap-2 bg-gradient-to-r from-orange-500 to-amber-400 text-slate-950 hover:brightness-110 disabled:opacity-60">
+                <CheckCircle2 size={16} /> {missingPricePolicy
+                  ? 'Pricing not configured'
+                  : dueFee <= 0
+                    ? 'Check out (free)'
+                    : paymentMethod === 'bank_transfer' ? 'Create Payment QR' : `Collect ${fmtMoney(dueFee)} & check out`}
               </Button>
               <Button type="button" variant="outline" onClick={() => setRejectOpen(true)} className="h-11 border-rose-500/40 text-rose-400 hover:bg-rose-500/10">
                 Reject

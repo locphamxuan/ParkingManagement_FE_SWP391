@@ -59,6 +59,11 @@ export interface ParkingSession {
   duration?: number | null;
   fee?: number | null;
   currentFee?: number | null;        // live fee (per manager PricePolicy) for active sessions
+  /**
+   * false = tòa nhà CHƯA có bảng giá cho loại xe này → `currentFee` là null và
+   * check-out sẽ bị BE chặn. Phải phân biệt với 0 đồng (miễn phí thật).
+   */
+  pricePolicyConfigured?: boolean;
   isMember?: boolean;                 // true if the plate is linked to an account
   // Gói dài hạn (long_term): miễn phí trong maxHoursPerDay/ngày; currentFee = phí phần vượt.
   isLongTerm?: boolean;
