@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useBuildingContext } from '@/hooks/useBuildingContext';
-import { staffApi, type PlateInfo } from '@/services/staff/staffApi';
+import { staffApi, type PlateInfo, type QrResolution } from '@/services/staff/staffApi';
 import { useAssignedGates } from '@/hooks/staff/useAssignedGates';
 import { type PlateScanResult, type LiveCameraHandle } from '@/components/staff/LivePlateCamera';
 import { useCameraDevices } from '@/hooks/useCameraDevices';
-import { normalizePlate } from '@/utils/plate';
+import { isTwoWheelCategory, normalizePlate } from '@/utils/plate';
 import type { UserQrInfo } from '@/components/staff/UserQrInfoModal';
 import type { VehicleKind } from '@/components/staff/checkin/VehicleTypeSelector';
 
@@ -113,13 +113,14 @@ export function useCheckInWorkflow() {
     return null;
   }, [allowedTypes, vehicleType]);
 
-  // Tự động tra cứu chủ biển số
+  // Tự động tra cứu chủ biển số. Không có tòa nhà thì không tra được: BE trả
+  // 400 BUILDING_REQUIRED vì gói/phiên đang mở chỉ có nghĩa trong phạm vi 1 tòa.
   useEffect(() => {
     const clean = plateNumber.trim().toUpperCase();
-    if (clean.length >= 7) {
+    if (clean.length >= 7 && buildingId) {
       let cancelled = false;
       staffApi
-        .lookupPlate(clean)
+        .lookupPlate(clean, buildingId)
         .then((res) => {
           if (!cancelled) setPlateAccountInfo((res as { data?: PlateInfo })?.data ?? null);
         })
@@ -128,7 +129,7 @@ export function useCheckInWorkflow() {
     } else {
       setPlateAccountInfo(null);
     }
-  }, [plateNumber]);
+  }, [plateNumber, buildingId]);
 
   // License Plate có gói còn hạn → tải slot trống của tòa nhà để staff gán chỗ.
   const hasActivePackage = Boolean(plateAccountInfo?.hasActivePackage);
@@ -206,29 +207,21 @@ export function useCheckInWorkflow() {
   const handleResolveIdQr = async (code: string) => {
     try {
       const res = await staffApi.resolveQr(code, buildingId);
-      const data = (res as {
-        data?: {
-          kind: 'plate' | 'user';
-          plate?: { plateNumber: string; vehicleType?: string; brand?: string | null } | null;
-          user?: { id: string; fullName: string; email: string; walletBalance?: number } | null;
-          activePackages?: { id: string; name: string; code: string | null; plateNumber: string; endDate?: string }[];
-        };
-      })?.data;
+      const data = (res as { data?: QrResolution })?.data;
       if (!data) {
         setOpMessage({ type: 'err', text: 'Could not recognize the QR code.' });
         return;
       }
-      if (data.kind === 'plate' && data.plate?.plateNumber) {
-        if (data.plate.vehicleType === 'motorcycle') setVehicleType('motorcycle');
-        else if (data.plate.vehicleType) setVehicleType('car');
-        applyPlate(data.plate.plateNumber, data.plate.brand ?? null);
+      if (data.kind === 'vehicle' && data.vehicle?.plateNumber) {
+        // BE trả `category` (thể loại chi tiết); UI check-in chỉ chọn được nhóm
+        // 2 bánh / 4 bánh, nên quy về nhóm đúng như `kindOfCategory` bên BE.
+        setVehicleType(isTwoWheelCategory(data.vehicle.category) ? 'motorcycle' : 'car');
+        applyPlate(data.vehicle.plateNumber, data.vehicle.brand ?? null);
         // Không tự sang bước — đợi lookup để biết loại; nhân viên bấm "Continue".
-        setOpMessage({ type: 'ok', text: `Recognized license plate ${data.plate.plateNumber}. Click "Continue".` });
-      } else if (data.user) {
+        setOpMessage({ type: 'ok', text: `Recognized license plate ${data.vehicle.plateNumber}. Click "Continue".` });
+      } else if (data.kind === 'user' && data.user) {
         setUserQrInfo({
           fullName: data.user.fullName,
-          email: data.user.email,
-          walletBalance: data.user.walletBalance,
           activePackages: data.activePackages ?? [],
         });
         setOpMessage({ type: 'ok', text: `Recognized account: ${data.user.fullName}. Please scan or enter the license plate.` });
@@ -314,7 +307,7 @@ export function useCheckInWorkflow() {
 
   // Vehicle Type nhận diện/đang chọn có lệch với loại đã đăng ký không?
   const vehicleTypeMismatch = Boolean(
-    plateAccountInfo?.registeredVehicleType && plateAccountInfo.registeredVehicleType !== vehicleType
+    plateAccountInfo?.registeredVehicleKind && plateAccountInfo.registeredVehicleKind !== vehicleType
   );
 
   return {

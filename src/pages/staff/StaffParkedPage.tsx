@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useBuildingContext } from '@/hooks/useBuildingContext';
 import { useAuth } from '@/hooks/useAuth';
-import { staffApi, type ParkingSession } from '@/services/staff/staffApi';
+import { staffApi, type ParkingSession, type QrResolution } from '@/services/staff/staffApi';
 import { LivePlateCamera, type PlateScanResult, type LiveCameraHandle } from '@/components/staff/LivePlateCamera';
 import { LiveQRCamera } from '@/components/staff/LiveQRCamera';
 import { LivePortraitCamera } from '@/components/staff/LivePortraitCamera';
@@ -182,15 +182,9 @@ export function StaffParkedPage({ view = 'list' }: { view?: 'scanner' | 'list' }
   const handleResolveIdQr = async (code: string) => {
     try {
       const res = await staffApi.resolveQr(code, buildingId);
-      const data = (res as {
-        data?: {
-          kind: 'plate' | 'user';
-          plate?: { plateNumber: string } | null;
-          activeSessions?: { plateNumber: string }[];
-        };
-      })?.data;
-      if (data?.kind === 'plate' && data.plate?.plateNumber) {
-        openCheckoutByPlate(data.plate.plateNumber);
+      const data = (res as { data?: QrResolution })?.data;
+      if (data?.kind === 'vehicle' && data.vehicle?.plateNumber) {
+        openCheckoutByPlate(data.vehicle.plateNumber);
       } else if (data?.activeSessions && data.activeSessions.length > 0) {
         openCheckoutByPlate(data.activeSessions[0].plateNumber);
       } else {
@@ -351,7 +345,7 @@ export function StaffParkedPage({ view = 'list' }: { view?: 'scanner' | 'list' }
                 </button>
               </div>
               {identifyMode === 'plate' ? (
-                <LivePlateCamera onDetected={handlePlateDetected} busy={loading} />
+                <LivePlateCamera onDetected={handlePlateDetected} buildingId={buildingId} busy={loading} />
               ) : (
                 <LiveQRCamera onResult={handleResolveIdQr} />
               )}
@@ -574,6 +568,7 @@ export function StaffParkedPage({ view = 'list' }: { view?: 'scanner' | 'list' }
                   <LivePlateCamera
                     ref={exitPlateCamRef}
                     onDetected={handleExitPlateDetected}
+                    buildingId={buildingId}
                     busy={loading}
                     title="Verify Exit Plate"
                     captureLabel="Verify Plate"

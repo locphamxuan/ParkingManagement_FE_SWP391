@@ -10,14 +10,14 @@ type IdentifyVehicleStepProps = Pick<
   CheckInWorkflow,
   | 'identifyMode' | 'setIdentifyMode' | 'plateCamRef' | 'qrCamRef' | 'handlePlateDetected' | 'handleResolveIdQr'
   | 'loading' | 'assignment' | 'plateNumber' | 'setPlateNumber' | 'vehicleBrand' | 'plateAccountInfo'
-  | 'checkInKind' | 'plateImage' | 'buildingSupportWarning' | 'proceedFromIdentify'
+  | 'checkInKind' | 'plateImage' | 'buildingSupportWarning' | 'proceedFromIdentify' | 'buildingId'
 >;
 
 // Bước 1 — nhận diện xe qua camera biển số (AI) hoặc quét QR, rồi tra cứu tài khoản/gói/đặt chỗ.
 export function IdentifyVehicleStep({
   identifyMode, setIdentifyMode, plateCamRef, qrCamRef, handlePlateDetected, handleResolveIdQr,
   loading, assignment, plateNumber, setPlateNumber, vehicleBrand, plateAccountInfo,
-  checkInKind, plateImage, buildingSupportWarning, proceedFromIdentify,
+  checkInKind, plateImage, buildingSupportWarning, proceedFromIdentify, buildingId,
 }: IdentifyVehicleStepProps) {
   const canProceed = plateNumber.trim().length >= 7 && !buildingSupportWarning && !(checkInKind === 'standard' && !plateImage);
 
@@ -41,7 +41,7 @@ export function IdentifyVehicleStep({
       </div>
 
       {identifyMode === 'plate' ? (
-        <LivePlateCamera ref={plateCamRef} onDetected={handlePlateDetected} busy={loading} deviceId={assignment.plate} />
+        <LivePlateCamera ref={plateCamRef} onDetected={handlePlateDetected} buildingId={buildingId} busy={loading} deviceId={assignment.plate} />
       ) : (
         <LiveQRCamera ref={qrCamRef} onResult={handleResolveIdQr} deviceId={assignment.qr} />
       )}
@@ -67,8 +67,13 @@ export function IdentifyVehicleStep({
         {plateNumber.trim().length >= 7 && plateAccountInfo?.hasAccount && (
           <div className="mt-1 rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-2.5 flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-emerald-500" />
+            {/* Cổng chỉ được biết tên + xe đã đăng ký; email/SĐT/ví KHÔNG nằm trong
+                payload tra cứu biển số, nên đừng dựng chỗ hiển thị cho chúng. */}
             <p className="text-xs text-emerald-400">
-              Member: <strong className="text-foreground">{plateAccountInfo.user?.fullName}</strong> ({plateAccountInfo.user?.email})
+              Member: <strong className="text-foreground">{plateAccountInfo.user?.fullName}</strong>
+              {plateAccountInfo.registeredVehicle?.categoryLabel
+                ? ` · registered ${plateAccountInfo.registeredVehicle.categoryLabel}${plateAccountInfo.registeredVehicle.brand ? ` ${plateAccountInfo.registeredVehicle.brand}` : ''}`
+                : ''}
             </p>
           </div>
         )}

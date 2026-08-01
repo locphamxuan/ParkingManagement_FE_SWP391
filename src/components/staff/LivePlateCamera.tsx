@@ -17,6 +17,8 @@ export interface LiveCameraHandle {
 
 interface LivePlateCameraProps {
   onDetected: (result: PlateScanResult) => void;
+  /** Tòa nhà đang trực — BE bắt buộc có để chấm quyền trước khi gọi provider OCR. */
+  buildingId: string;
   /** Disable the capture button while the parent is busy. */
   busy?: boolean;
   /** Devices camera vật lý gán cho vai trò này (nếu có nhiều camera). */
@@ -33,7 +35,7 @@ interface LivePlateCameraProps {
  * and returns the recognized plate + the captured image (saved to DB).
  */
 export const LivePlateCamera = forwardRef<LiveCameraHandle, LivePlateCameraProps>(function LivePlateCamera(
-  { onDetected, busy = false, deviceId, title = 'Camera 1 · License Plate Scan', captureLabel = 'Capture & Recognize' },
+  { onDetected, buildingId, busy = false, deviceId, title = 'Camera 1 · License Plate Scan', captureLabel = 'Capture & Recognize' },
   ref,
 ) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -155,8 +157,9 @@ export const LivePlateCamera = forwardRef<LiveCameraHandle, LivePlateCameraProps
       const doScan = async (): Promise<{ plateNumber: string; brand: string | null; dataUrl: string } | null> => {
         const dataUrl = captureFrame();
         if (!dataUrl) return null;
-        const base64 = dataUrl.split(',')[1];
-        const res = await staffApi.scanVehicle(base64);
+        // Gửi NGUYÊN data URL: backend đối chiếu magic byte của ảnh với MIME đã
+        // khai trước khi chuyển sang provider, nên base64 trần bị chặn ngay.
+        const res = await staffApi.scanVehicle(dataUrl, buildingId);
         const data = (res as { data?: { plateNumber?: string; brand?: string | null } })?.data;
         return { plateNumber: data?.plateNumber || '', brand: data?.brand ?? null, dataUrl };
       };
@@ -204,8 +207,7 @@ export const LivePlateCamera = forwardRef<LiveCameraHandle, LivePlateCameraProps
         reader.onerror = () => reject(new Error('Could not read file'));
         reader.readAsDataURL(file);
       });
-      const base64 = dataUrl.split(',')[1];
-      const res = await staffApi.scanVehicle(base64);
+      const res = await staffApi.scanVehicle(dataUrl, buildingId);
       const data = (res as { data?: { plateNumber?: string; brand?: string | null } })?.data;
       const plateNumber = data?.plateNumber || '';
       const brand = data?.brand ?? null;
@@ -320,10 +322,12 @@ export const LivePlateCamera = forwardRef<LiveCameraHandle, LivePlateCameraProps
           <Upload size={14} />
           Upload Image
         </button>
+        {/* Đúng 3 định dạng backend chấp nhận — `image/*` để lọt GIF/HEIC rồi mới
+            bị từ chối ở server sau khi nhân viên đã chọn xong file. */}
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*"
+          accept="image/jpeg,image/png,image/webp"
           className="hidden"
           onChange={handleFileUpload}
         />

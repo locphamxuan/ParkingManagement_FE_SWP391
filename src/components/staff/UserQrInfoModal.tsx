@@ -1,10 +1,13 @@
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 
+/**
+ * Đường quét QR ở cổng CỐ TÌNH chỉ nhận tên hiển thị + gói dài hạn của đúng tòa
+ * nhà đang trực. BE không trả email, số điện thoại hay số dư ví, nên modal này
+ * cũng không được bịa ra chỗ để hiển thị chúng.
+ */
 export interface UserQrInfo {
   fullName: string;
-  email: string;
-  walletBalance?: number;
   activePackages: { id: string; name: string; code: string | null; plateNumber: string; endDate?: string }[];
 }
 
@@ -26,17 +29,9 @@ export function UserQrInfoModal({ info, onClose }: UserQrInfoModalProps) {
           <div>
             <p className="text-[10px] font-black uppercase tracking-[0.24em] text-primary">Scanned Account</p>
             <h3 className="text-lg font-semibold text-foreground">{info.fullName}</h3>
-            <p className="text-xs text-muted-foreground">{info.email}</p>
           </div>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition">✕</button>
         </div>
-
-        {info.walletBalance != null && (
-          <div className="mb-4 rounded-xl border border-violet-500/20 bg-violet-500/8 px-4 py-2.5 flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">Wallet Balance</span>
-            <span className="font-mono font-bold text-violet-400">{info.walletBalance.toLocaleString('vi-VN')} ₫</span>
-          </div>
-        )}
 
         <div className="mb-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
           Active Long-term Packages
