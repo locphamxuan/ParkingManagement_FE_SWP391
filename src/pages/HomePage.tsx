@@ -323,44 +323,44 @@ export default function HomePage({ modules, onViewProfile, onAction, user, hasVe
 
       {/* Services Roadmap Section */}
       {serviceModules.length > 0 && (
-      <section id="lo-trinh" className="py-20 relative z-10 bg-slate-950/40">
-        <div className="max-w-6xl mx-auto px-4">
-          <div className="text-center max-w-xl mx-auto mb-12">
-            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 font-mono">Development Roadmap</span>
-            <h2 className="text-2xl md:text-3xl font-black mt-2 text-cyan-400">Upcoming Features</h2>
-            <p className="text-sm text-slate-400 font-semibold mt-2">Features currently in development to expand capabilities and enhance convenience.</p>
-          </div>
+        <section id="lo-trinh" className="py-20 relative z-10 bg-slate-950/40">
+          <div className="max-w-6xl mx-auto px-4">
+            <div className="text-center max-w-xl mx-auto mb-12">
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 font-mono">Development Roadmap</span>
+              <h2 className="text-2xl md:text-3xl font-black mt-2 text-cyan-400">Upcoming Features</h2>
+              <p className="text-sm text-slate-400 font-semibold mt-2">Features currently in development to expand capabilities and enhance convenience.</p>
+            </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-            {serviceModules.map((module, index) => {
-              const Icon = moduleIcons[module.id] || Ticket;
-              return (
-                <motion.article
-                  key={module.id}
-                  initial={{ opacity: 0, scale: 0.98 }}
-                  whileInView={{ opacity: 1, scale: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.35, delay: index * 0.1 }}
-                  className="p-5 rounded-2xl border border-white/5 bg-slate-900/20 backdrop-blur-md flex flex-col justify-between min-h-[140px] hover:border-white/20 hover:shadow-[0_0_20px_rgba(255,255,255,0.06)] transition-all duration-300"
-                >
-                  <div className="flex gap-4">
-                    <div className="p-3 h-fit rounded-xl bg-white/10 border border-white/15 text-white">
-                      <Icon size={22} />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-black text-sm text-white tracking-tight">{module.title}</h3>
-                        <span className="text-[8px] font-black uppercase font-mono tracking-wider border border-white/25 bg-white/15 text-white px-1.5 py-0.5 rounded">NEXT PHASE</span>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+              {serviceModules.map((module, index) => {
+                const Icon = moduleIcons[module.id] || Ticket;
+                return (
+                  <motion.article
+                    key={module.id}
+                    initial={{ opacity: 0, scale: 0.98 }}
+                    whileInView={{ opacity: 1, scale: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.35, delay: index * 0.1 }}
+                    className="p-5 rounded-2xl border border-white/5 bg-slate-900/20 backdrop-blur-md flex flex-col justify-between min-h-[140px] hover:border-white/20 hover:shadow-[0_0_20px_rgba(255,255,255,0.06)] transition-all duration-300"
+                  >
+                    <div className="flex gap-4">
+                      <div className="p-3 h-fit rounded-xl bg-white/10 border border-white/15 text-white">
+                        <Icon size={22} />
                       </div>
-                      <p className="mt-2 text-xs text-slate-400 leading-relaxed font-semibold">{module.description}</p>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-black text-sm text-white tracking-tight">{module.title}</h3>
+                          <span className="text-[8px] font-black uppercase font-mono tracking-wider border border-white/25 bg-white/15 text-white px-1.5 py-0.5 rounded">NEXT PHASE</span>
+                        </div>
+                        <p className="mt-2 text-xs text-slate-400 leading-relaxed font-semibold">{module.description}</p>
+                      </div>
                     </div>
-                  </div>
-                </motion.article>
-              );
-            })}
+                  </motion.article>
+                );
+              })}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
       )}
 
       <PremiumCTABanner user={user} onViewProfile={onViewProfile} />

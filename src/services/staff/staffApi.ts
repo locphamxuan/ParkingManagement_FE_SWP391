@@ -62,6 +62,7 @@ export interface ParkingSession {
   isMember?: boolean;                 // true if the plate is linked to an account
   // Gói dài hạn (long_term): miễn phí trong maxHoursPerDay/ngày; currentFee = phí phần vượt.
   isLongTerm?: boolean;
+  pricePolicyConfigured?: boolean;  // true if a PricePolicy is configured for this building and vehicle type
   overageHours?: number;             // số giờ đỗ vượt hạn mức (đang tính phí)
   maxHoursPerDay?: number;           // hạn mức giờ free/ngày của gói (0 = không giới hạn)
   plateImage?: string | null;        // license-plate camera snapshot (Camera 1)

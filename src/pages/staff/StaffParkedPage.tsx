@@ -68,6 +68,7 @@ export function StaffParkedPage({ view = 'list' }: { view?: 'scanner' | 'list' }
   const [error, setError] = useState<string | null>(null);
   const [reloadTick, setReloadTick] = useState(0);
   const [opMessage, setOpMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
+  const [manualPlate, setManualPlate] = useState('');
 
   const [checkoutTarget, setCheckoutTarget] = useState<ParkingSession | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<PaymentKind>('cash');
@@ -349,6 +350,37 @@ export function StaffParkedPage({ view = 'list' }: { view?: 'scanner' | 'list' }
               ) : (
                 <LiveQRCamera onResult={handleResolveIdQr} />
               )}
+              {identifyMode === 'plate' && (
+                <div className="grid gap-1.5 mt-3 pt-3 border-t border-border/40">
+                  <label htmlFor="plate-number-checkout" className="text-[10px] uppercase font-black tracking-wider text-muted-foreground">License Plate (or manual entry)</label>
+                  <div className="flex gap-2">
+                    <input
+                      id="plate-number-checkout"
+                      value={manualPlate}
+                      onChange={(e) => setManualPlate(e.target.value)}
+                      placeholder="e.g. 30F-557.75"
+                      className="flex-1 h-9 rounded-xl border border-border bg-background px-3 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/60"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && manualPlate.trim()) {
+                          openCheckoutByPlate(manualPlate);
+                          setManualPlate('');
+                        }
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        openCheckoutByPlate(manualPlate);
+                        setManualPlate('');
+                      }}
+                      disabled={!manualPlate.trim()}
+                      className="bg-primary text-primary-foreground font-bold px-4 h-9 rounded-xl text-xs"
+                    >
+                      Check-out
+                    </Button>
+                  </div>
+                </div>
+              )}
               <p className="text-center text-[11px] text-muted-foreground">
                 Scan the license plate / vehicle QR to find the vehicle and open payment. View all vehicles in the Parked Vehicles tab.
               </p>
@@ -483,9 +515,13 @@ export function StaffParkedPage({ view = 'list' }: { view?: 'scanner' | 'list' }
                         {s.isLongTerm ? 'Overage Fee' : 'Estimated Fee'}
                       </span>
                       <span className="font-bold text-primary">
-                        {(s.currentFee ?? s.fee ?? 0) > 0
-                          ? fmtMoney(s.currentFee ?? s.fee)
-                          : s.isLongTerm ? 'Free' : fmtMoney(0)}
+                        {s.isLongTerm ? (
+                          (s.currentFee ?? s.fee ?? 0) > 0 ? fmtMoney(s.currentFee ?? s.fee) : 'Free'
+                        ) : s.pricePolicyConfigured === false ? (
+                          <span className="text-rose-500 font-extrabold text-[11px] uppercase tracking-wide">No Price Policy</span>
+                        ) : (
+                          (s.currentFee ?? s.fee ?? 0) > 0 ? fmtMoney(s.currentFee ?? s.fee) : 'Free'
+                        )}
                       </span>
                     </div>
                     {canCheckout && (
@@ -660,26 +696,38 @@ export function StaffParkedPage({ view = 'list' }: { view?: 'scanner' | 'list' }
             <div className="mt-4 rounded-xl border border-primary/30 bg-primary/10 p-4 flex items-center justify-between">
               <span className="text-sm font-semibold text-foreground">Amount Due</span>
               <span className="font-mono text-2xl font-black text-primary">
-                {(checkoutTarget.currentFee ?? checkoutTarget.fee ?? 0) > 0
-                  ? fmtMoney(checkoutTarget.currentFee ?? checkoutTarget.fee)
-                  : 'Free'}
+                {checkoutTarget.isLongTerm ? (
+                  (checkoutTarget.currentFee ?? checkoutTarget.fee ?? 0) > 0 ? fmtMoney(checkoutTarget.currentFee ?? checkoutTarget.fee) : 'Free'
+                ) : checkoutTarget.pricePolicyConfigured === false ? (
+                  <span className="text-rose-500 font-bold text-lg">No Price Policy</span>
+                ) : (
+                  (checkoutTarget.currentFee ?? checkoutTarget.fee ?? 0) > 0 ? fmtMoney(checkoutTarget.currentFee ?? checkoutTarget.fee) : 'Free'
+                )}
               </span>
             </div>
 
-            {(checkoutTarget.currentFee ?? checkoutTarget.fee ?? 0) > 0 && (
+            {(!checkoutTarget.isLongTerm && checkoutTarget.pricePolicyConfigured === false) && (
+              <div className="mt-3 rounded-lg border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-300">
+                ⚠️ Price policy is missing for this vehicle type. Please ask a Manager to configure the price policy.
+              </div>
+            )}
+
+            {((checkoutTarget.currentFee ?? checkoutTarget.fee ?? 0) > 0 || (checkoutTarget.isLongTerm && (checkoutTarget.currentFee ?? checkoutTarget.fee ?? 0) > 0)) && (
               <>
                 <p className="mt-4 mb-2 text-xs uppercase tracking-[0.18em] text-muted-foreground">Payment Method</p>
                 <div className="grid gap-2 sm:grid-cols-3">
-                  {[{ value: 'cash', label: 'Cash' }, { value: 'bank_transfer', label: 'Bank Transfer' }, { value: 'wallet', label: 'Wallet' }].map((m) => (
-                    <button
-                      key={m.value}
-                      type="button"
-                      onClick={() => setPaymentMethod(m.value as PaymentKind)}
-                      className={`rounded-xl border px-3 py-2.5 text-center text-sm font-medium transition ${paymentMethod === m.value ? 'border-primary/40 bg-primary/10 text-foreground' : 'border-border bg-card text-muted-foreground hover:border-primary/20'}`}
-                    >
-                      {m.label}
-                    </button>
-                  ))}
+                  {[{ value: 'cash', label: 'Cash' }, { value: 'bank_transfer', label: 'Bank Transfer' }, { value: 'wallet', label: 'Wallet' }]
+                    .filter((m) => m.value !== 'wallet' || (checkoutTarget.isMember ?? checkoutTarget.user))
+                    .map((m) => (
+                      <button
+                        key={m.value}
+                        type="button"
+                        onClick={() => setPaymentMethod(m.value as PaymentKind)}
+                        className={`rounded-xl border px-3 py-2.5 text-center text-sm font-medium transition ${paymentMethod === m.value ? 'border-primary/40 bg-primary/10 text-foreground' : 'border-border bg-card text-muted-foreground hover:border-primary/20'}`}
+                      >
+                        {m.label}
+                      </button>
+                    ))}
                 </div>
               </>
             )}
@@ -688,10 +736,16 @@ export function StaffParkedPage({ view = 'list' }: { view?: 'scanner' | 'list' }
               <Button type="button" variant="outline" onClick={() => setCoStep(1)} className="h-11 gap-1">
                 <ArrowLeft size={16} /> Back
               </Button>
-              <Button onClick={onCheckOut} disabled={loading} className="flex-1 h-11 gap-2 bg-gradient-to-r from-orange-500 to-amber-400 text-slate-950 hover:brightness-110 disabled:opacity-60">
-                <CheckCircle2 size={16} /> {(checkoutTarget.currentFee ?? checkoutTarget.fee ?? 0) <= 0
-                  ? 'Check out (free)'
-                  : paymentMethod === 'bank_transfer' ? 'Create Payment QR' : `Collect ${fmtMoney(checkoutTarget.currentFee ?? checkoutTarget.fee)} & check out`}
+              <Button
+                onClick={onCheckOut}
+                disabled={loading || (!checkoutTarget.isLongTerm && checkoutTarget.pricePolicyConfigured === false)}
+                className="flex-1 h-11 gap-2 bg-gradient-to-r from-orange-500 to-amber-400 text-slate-950 hover:brightness-110 disabled:opacity-60"
+              >
+                <CheckCircle2 size={16} /> {(!checkoutTarget.isLongTerm && checkoutTarget.pricePolicyConfigured === false)
+                  ? 'Price Policy Error'
+                  : (checkoutTarget.currentFee ?? checkoutTarget.fee ?? 0) <= 0
+                    ? 'Check out (free)'
+                    : paymentMethod === 'bank_transfer' ? 'Create Payment QR' : `Collect ${fmtMoney(checkoutTarget.currentFee ?? checkoutTarget.fee)} & check out`}
               </Button>
               <Button type="button" variant="outline" onClick={() => setRejectOpen(true)} className="h-11 border-rose-500/40 text-rose-400 hover:bg-rose-500/10">
                 Reject
