@@ -124,7 +124,6 @@ export function ConfirmCheckInStep({
         onRejectMismatch={() => setRejectOpen(true)}
       />
 
-      {/* Chọn ô đỗ: bắt buộc với gói dài hạn và check-in thường (khách vãng lai / user) */}
       {needsSlotSelection && (
         <SlotSelector
           hasActivePackage={hasActivePackage}
@@ -138,6 +137,15 @@ export function ConfirmCheckInStep({
           }
           emptyStateText="This building has no fixed slots. Vehicles will park by shared capacity."
         />
+      )}
+
+      {!needsSlotSelection && plateAccountInfo?.activePackage?.slot && (
+        <div className="grid gap-1.5">
+          <label className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Assigned Slot (Reserved)</label>
+          <div className="flex h-10 w-full items-center rounded-xl border border-emerald-500/30 bg-emerald-500/5 px-3 text-xs font-bold text-emerald-400">
+            Slot {plateAccountInfo.activePackage.slot.code} {plateAccountInfo.activePackage.slot.floor?.name ? `(Floor ${plateAccountInfo.activePackage.slot.floor.name})` : ''}
+          </div>
+        </div>
       )}
 
       {/* Nhắc thiếu ảnh: chân dung bắt buộc mọi loại; biển bắt buộc với vãng lai/user thường */}
