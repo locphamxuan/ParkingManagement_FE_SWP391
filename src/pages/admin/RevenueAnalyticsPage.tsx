@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Building2, CircleDollarSign, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,10 +8,19 @@ import { adminApi, type RevenueReport } from '@/services/admin/adminApi';
 const fmtVnd = (n: number | undefined | null) =>
   n != null ? `${n.toLocaleString('vi-VN')} ₫` : '—';
 
-const isoDay = (d: Date) => d.toISOString().slice(0, 10);
+// toISOString() trả về ngày theo UTC — ở GMT+7 thì trước 07:00 sáng nó lùi về hôm qua
+// và khoảng lọc mặc định cắt mất doanh thu của chính ngày hôm nay.
+const isoDay = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+const daysAgo = (days: number) => {
+  const d = new Date();
+  d.setDate(d.getDate() - days);
+  return d;
+};
 
 export function RevenueAnalyticsPage() {
-  const [from, setFrom] = useState(() => isoDay(new Date(Date.now() - 29 * 24 * 60 * 60 * 1000)));
+  const [from, setFrom] = useState(() => isoDay(daysAgo(29)));
   const [to, setTo] = useState(() => isoDay(new Date()));
   const [report, setReport] = useState<RevenueReport | null>(null);
   const [loading, setLoading] = useState(true);
@@ -31,6 +40,13 @@ export function RevenueAnalyticsPage() {
   }, [from, to]);
 
   useEffect(() => { void loadReport(); }, [loadReport]);
+
+  // BE trả về cả những tòa chỉ có tiền mặt chờ xác nhận (doanh thu = 0); đưa vào danh
+  // sách "có doanh thu" sẽ thổi phồng số tòa nhà và bày ra hàng loạt dòng 0 ₫.
+  const buildingsWithRevenue = useMemo(
+    () => (report?.items ?? []).filter((r) => r.totalRevenue > 0),
+    [report],
+  );
 
   return (
     <div className="space-y-6">
@@ -77,15 +93,30 @@ export function RevenueAnalyticsPage() {
                 <div className="mb-2 flex items-center gap-2">
                   <CircleDollarSign size={14} className="text-emerald-500" />
                   <p className="text-xs font-black uppercase tracking-wider text-emerald-600/70">
-                    Total Revenue
+                    Net Revenue
                   </p>
                 </div>
                 <p className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">
-                  {fmtVnd(report?.grandTotal)}
+                  {fmtVnd(report?.summary?.netRevenue)}
                 </p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {report?.items?.length ?? 0} buildings with revenue
-                </p>
+                <dl className="mt-3 space-y-1 text-xs text-muted-foreground">
+                  <div className="flex justify-between gap-3">
+                    <dt>Gross collected</dt>
+                    <dd className="font-mono text-foreground">{fmtVnd(report?.grandTotal)}</dd>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <dt>Refunded</dt>
+                    <dd className="font-mono text-rose-500">-{fmtVnd(report?.summary?.refunds ?? 0)}</dd>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <dt>Cash awaiting confirmation</dt>
+                    <dd className="font-mono text-amber-500">{fmtVnd(report?.summary?.pendingCash ?? 0)}</dd>
+                  </div>
+                  <div className="flex justify-between gap-3 border-t border-border pt-1">
+                    <dt>Buildings with revenue</dt>
+                    <dd className="font-mono text-foreground">{buildingsWithRevenue.length}</dd>
+                  </div>
+                </dl>
               </CardContent>
             </Card>
 
@@ -97,13 +128,13 @@ export function RevenueAnalyticsPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {!report?.items?.length ? (
+                {!buildingsWithRevenue.length ? (
                   <p className="py-2 text-sm text-muted-foreground">No revenue recorded for this period.</p>
                 ) : (
                   <div className="space-y-2">
-                    {report.items.map((r) => (
-                      <div key={r.buildingId} className="flex items-center justify-between rounded-lg border border-border bg-card/50 px-3 py-2.5">
-                        <div>
+                    {buildingsWithRevenue.map((r) => (
+                      <div key={r.buildingId} className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card/50 px-3 py-2.5">
+                        <div className="min-w-0">
                           <p className="text-sm font-semibold text-foreground">
                             {r.buildingCode && (
                               <span className="mr-1.5 font-mono text-xs text-muted-foreground">{r.buildingCode}</span>
@@ -111,12 +142,20 @@ export function RevenueAnalyticsPage() {
                             {r.buildingName ?? 'Building'}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {r.sessionCount} sessions · Cash {fmtVnd(r.cashAmount)} · Wallet {fmtVnd(r.walletAmount)} · QR {fmtVnd(r.qrAmount)}
+                            {r.sessionCount} payments · Cash {fmtVnd(r.cashAmount)} · Wallet {fmtVnd(r.walletAmount)} · Online {fmtVnd(r.qrAmount)}
+                          </p>
+                          {r.refunds > 0 && (
+                            <p className="text-xs text-rose-500">Refunded {fmtVnd(r.refunds)}</p>
+                          )}
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <p className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                            {fmtVnd(r.netRevenue)}
+                          </p>
+                          <p className="font-mono text-[11px] text-muted-foreground">
+                            gross {fmtVnd(r.totalRevenue)}
                           </p>
                         </div>
-                        <p className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                          {fmtVnd(r.totalRevenue)}
-                        </p>
                       </div>
                     ))}
                   </div>

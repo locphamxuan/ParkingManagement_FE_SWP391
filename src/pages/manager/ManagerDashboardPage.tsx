@@ -7,6 +7,14 @@ import { useAuth } from '@/hooks/useAuth';
 import { useManagerBuildings } from '@/hooks/useManagerBuildings';
 import { managerApi, type DashboardOverview } from '@/services/manager/managerApi';
 
+const METHOD_LABELS: Record<string, string> = {
+  cash: 'Cash',
+  wallet: 'App Wallet',
+  qr: 'QR',
+  payos: 'PayOS',
+  card: 'Bank Card',
+};
+
 const containerVariants = {
   hidden: { opacity: 0 },
   show: { opacity: 1, transition: { staggerChildren: 0.08 } },
@@ -60,6 +68,14 @@ export function ManagerDashboardPage() {
   useEffect(() => {
     void fetchOverview();
   }, [fetchOverview]);
+
+  const revenueByMethod = useMemo(
+    () =>
+      Object.entries(overview?.revenue?.byMethod ?? {})
+        .map(([method, summary]) => ({ method, ...summary }))
+        .sort((a, b) => b.amount - a.amount),
+    [overview],
+  );
 
   const cards = useMemo(
     () => [
@@ -272,6 +288,25 @@ export function ManagerDashboardPage() {
                     {(overview?.revenue?.today ?? 0).toLocaleString('vi-VN')}{' '}
                     <span className="text-xs font-black text-slate-400">VND</span>
                   </p>
+                  {revenueByMethod.length > 0 ? (
+                    <ul className="mt-3 space-y-1 border-t border-white/5 pt-2.5">
+                      {revenueByMethod.map((row) => (
+                        <li key={row.method} className="flex items-center justify-between text-[10px] font-bold font-mono">
+                          <span className="uppercase tracking-wider text-slate-400">
+                            {METHOD_LABELS[row.method] ?? row.method}
+                          </span>
+                          <span className="text-slate-200">
+                            {row.amount.toLocaleString('vi-VN')}
+                            <span className="ml-1.5 text-slate-500">×{row.count}</span>
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="mt-3 border-t border-white/5 pt-2.5 text-[10px] font-semibold italic text-slate-500">
+                      No payments collected today yet.
+                    </p>
+                  )}
                 </div>
               </CardContent>
             </Card>

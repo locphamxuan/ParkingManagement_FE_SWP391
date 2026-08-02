@@ -26,7 +26,6 @@ export interface UserRecord {
 export interface RevenuePoint {
   date: string;
   revenue: number;
-  occupancy: number;
   sessions: number;
 }
 

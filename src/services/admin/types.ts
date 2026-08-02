@@ -16,7 +16,11 @@ export interface DashboardStat {
 
 export interface PaymentDistribution {
   name: string;
+  /** Share of the period's revenue, in percent. */
   value: number;
+  /** Collected amount in VND, kept so the chart can show money next to the share. */
+  amount: number;
+  count: number;
 }
 
 export interface TransactionItem {

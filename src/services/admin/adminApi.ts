@@ -89,18 +89,42 @@ export interface RevenueReportRow {
   buildingId: string;
   buildingName?: string;
   buildingCode?: string;
+  /** Gross revenue; kept under the legacy name the admin UI already used. */
   totalRevenue: number;
+  grossRevenue: number;
+  refunds: number;
+  netRevenue: number;
+  pendingCash: number;
+  /** Number of successful revenue payments, not parking sessions. */
   sessionCount: number;
   cashAmount: number;
   walletAmount: number;
   qrAmount: number;
+  bySource?: {
+    parking: number;
+    subscription: number;
+    penalty: number;
+    other: number;
+  };
+}
+
+export interface RevenueSummary {
+  grossRevenue: number;
+  refunds: number;
+  netRevenue: number;
+  pendingCash: number;
+  walletFunding: number;
+  successfulPayments: number;
+  pendingCashPayments: number;
 }
 
 export interface RevenueReport {
   from: string;
   to: string;
   items: RevenueReportRow[];
+  /** Gross collected revenue over the period. */
   grandTotal: number;
+  summary: RevenueSummary;
 }
 
 interface ListResult<T> {

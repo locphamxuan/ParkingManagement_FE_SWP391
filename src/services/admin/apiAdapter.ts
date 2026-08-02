@@ -92,13 +92,32 @@ const METHOD_LABELS: Record<string, string> = {
   card: 'Bank Card',
 };
 
-const formatCompactCurrency = (amount: number): string =>
-  `${(amount / 1_000_000).toFixed(1)}M VND`;
+// Chỉ rút gọn khi con số thực sự lớn. Rút gọn vô điều kiện khiến doanh thu thật
+// 5.000 ₫ hiển thị thành "0.0M VND", đọc như thể card chưa lấy được dữ liệu.
+const formatCompactCurrency = (amount: number): string => {
+  if (amount >= 1_000_000_000) return `${(amount / 1_000_000_000).toFixed(1)}B VND`;
+  if (amount >= 1_000_000) return `${(amount / 1_000_000).toFixed(1)}M VND`;
+  return `${Math.round(amount).toLocaleString('vi-VN')} VND`;
+};
 
 const formatChartDate = (dateValue: string): string => {
-  const date = new Date(dateValue);
-  if (Number.isNaN(date.getTime())) return dateValue;
-  return date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
+  const [year, month, day] = dateValue.split('-').map(Number);
+  if (!year || !month || !day) return dateValue;
+  // Dựng bằng constructor local: new Date('2026-08-02') là mốc UTC, ở GMT+7 lùi
+  // về ngày 01 khi format theo giờ địa phương.
+  return new Date(year, month - 1, day).toLocaleDateString('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+  });
+};
+
+/** Khóa ngày "YYYY-MM-DD" theo giờ địa phương cho 7 ngày gần nhất, cũ → mới. */
+const buildLastSevenDayKeys = (): string[] => {
+  const today = new Date();
+  return Array.from({ length: 7 }, (_, index) => {
+    const day = new Date(today.getFullYear(), today.getMonth(), today.getDate() - (6 - index));
+    return `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
+  });
 };
 
 const toBuilding = (
@@ -195,27 +214,36 @@ export async function getApiAdminDataset(): Promise<AdminDataset> {
   const users: UserRecord[] = userItems.map(toUser);
   const auditLogs: AuditLog[] = auditItems.map(toAudit);
 
-  // System-wide 7-day revenue trend, also backend-aggregated.
-  const avgOccupancy =
-    buildings.length > 0
-      ? buildings.reduce((sum, b) => sum + Number(b.occupancyRate || 0), 0) / buildings.length
-      : 0;
+  // System-wide 7-day revenue trend, backend-aggregated. Backend chỉ trả về những ngày
+  // CÓ giao dịch, nên phải bù các ngày trống — nếu không, đường biểu đồ nối thẳng qua
+  // ngày không doanh thu và vẽ ra một xu hướng không có thật.
+  const revenueByDay = new Map(
+    (overviewRes.data.revenue.weekly || []).map((point) => [point.date, point]),
+  );
+  const revenueTrend: RevenuePoint[] = buildLastSevenDayKeys().map((dayKey) => {
+    const point = revenueByDay.get(dayKey);
+    return {
+      date: formatChartDate(dayKey),
+      revenue: Math.round(Number(point?.revenue || 0)),
+      sessions: Number(point?.sessions || 0),
+    };
+  });
 
-  const revenueTrend: RevenuePoint[] = (overviewRes.data.revenue.weekly || [])
-    .slice(-7)
-    .map((point) => ({
-      date: formatChartDate(point.date),
-      revenue: Math.round(Number(point.revenue || 0)),
-      occupancy: Math.round(avgOccupancy * 10) / 10,
-      sessions: Number(point.sessions || 0),
-    }));
-
-  const paymentMethodDistribution = Object.entries(overviewRes.data.revenue.byMethod || {}).map(
+  const methodEntries = Object.entries(overviewRes.data.revenue.byMethod || {}).map(
     ([method, summary]) => ({
       name: METHOD_LABELS[method] || method,
-      value: Number(summary.amount || 0),
+      amount: Number(summary.amount || 0),
+      count: Number(summary.count || 0),
     }),
   );
+  const methodTotal = methodEntries.reduce((sum, entry) => sum + entry.amount, 0);
+
+  // Biểu đồ tròn được gắn nhãn "%", nên value phải là tỉ trọng chứ không phải số tiền —
+  // trước đây đẩy thẳng số tiền vào khiến legend hiện "5000%".
+  const paymentMethodDistribution = methodEntries.map((entry) => ({
+    ...entry,
+    value: methodTotal > 0 ? Math.round((entry.amount / methodTotal) * 1000) / 10 : 0,
+  }));
 
   const dashboardStats = [
     {

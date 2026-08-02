@@ -32,12 +32,12 @@ export function RevenueChart({ data }: RevenueChartProps) {
           <div className="space-y-1.5">
             <div className="flex justify-between items-center gap-6">
               <span className="text-orange-400 font-bold">Revenue:</span>
-              <span className="font-mono font-black text-white">{payload[0].value.toLocaleString()} VND</span>
+              <span className="font-mono font-black text-white">{payload[0].value.toLocaleString('vi-VN')} VND</span>
             </div>
             {payload[1] && (
               <div className="flex justify-between items-center gap-6">
-                <span className="text-purple-400 font-bold">Occupancy:</span>
-                <span className="font-mono font-black text-white">{payload[1].value}%</span>
+                <span className="text-purple-400 font-bold">Payments:</span>
+                <span className="font-mono font-black text-white">{payload[1].value}</span>
               </div>
             )}
           </div>
@@ -54,7 +54,7 @@ export function RevenueChart({ data }: RevenueChartProps) {
       <div className="absolute -right-16 -top-16 h-36 w-36 rounded-full bg-[radial-gradient(circle_at_center,rgba(249,115,22,0.08),transparent_65%)] pointer-events-none" />
       
       <div className="mb-4">
-        <h3 className="text-sm font-black uppercase tracking-wider text-slate-400 font-mono">Revenue &amp; Occupancy Trend</h3>
+        <h3 className="text-sm font-black uppercase tracking-wider text-slate-400 font-mono">Revenue Trend (Last 7 Days)</h3>
       </div>
 
       <div className="h-[320px] w-full preserve-3d">
@@ -77,10 +77,22 @@ export function RevenueChart({ data }: RevenueChartProps) {
               tickLine={false} 
               axisLine={{ stroke: 'rgba(255,255,255,0.05)' }} 
             />
-            <YAxis 
-              tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 'bold', fontFamily: 'monospace' }} 
-              tickLine={false} 
-              axisLine={{ stroke: 'rgba(255,255,255,0.05)' }} 
+            {/* Doanh thu (hàng nghìn ₫) và số giao dịch lệch nhau nhiều bậc độ lớn nên
+                phải tách trục, nếu chung trục thì đường giao dịch bị ép sát đáy. */}
+            <YAxis
+              yAxisId="revenue"
+              tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 'bold', fontFamily: 'monospace' }}
+              tickLine={false}
+              axisLine={{ stroke: 'rgba(255,255,255,0.05)' }}
+              tickFormatter={(value: number) => value.toLocaleString('vi-VN')}
+            />
+            <YAxis
+              yAxisId="payments"
+              orientation="right"
+              allowDecimals={false}
+              tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 'bold', fontFamily: 'monospace' }}
+              tickLine={false}
+              axisLine={{ stroke: 'rgba(255,255,255,0.05)' }}
             />
             <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'rgba(249,115,22,0.15)', strokeWidth: 1 }} />
             <Legend 
@@ -88,22 +100,24 @@ export function RevenueChart({ data }: RevenueChartProps) {
               height={36} 
               wrapperStyle={{ color: '#cbd5e1', fontSize: 11, fontWeight: 'bold', fontFamily: 'monospace', textTransform: 'uppercase' }} 
             />
-            <Area 
-              type="monotone" 
+            <Area
+              type="monotone"
               name="Revenue (VND)"
-              dataKey="revenue" 
-              stroke="#f97316" 
-              strokeWidth={2.5} 
-              fill="url(#revGrad)" 
+              yAxisId="revenue"
+              dataKey="revenue"
+              stroke="#f97316"
+              strokeWidth={2.5}
+              fill="url(#revGrad)"
               activeDot={{ r: 5, strokeWidth: 0, fill: '#f97316' }}
             />
-            <Area 
-              type="monotone" 
-              name="Occupancy (%)"
-              dataKey="occupancy" 
-              stroke="#a855f7" 
-              strokeWidth={2} 
-              fill="url(#occGrad)" 
+            <Area
+              type="monotone"
+              name="Payments"
+              yAxisId="payments"
+              dataKey="sessions"
+              stroke="#a855f7"
+              strokeWidth={2}
+              fill="url(#occGrad)"
               activeDot={{ r: 4, strokeWidth: 0, fill: '#a855f7' }}
             />
           </AreaChart>
